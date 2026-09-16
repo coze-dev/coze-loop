@@ -16,6 +16,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	benefit_mocks "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
 	config_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	rpc_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc/mocks"
 	tenant_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
@@ -655,6 +657,178 @@ func TestTaskCallbackServiceImpl_AutoEvalCorrection(t *testing.T) {
 		err := impl.AutoEvalCorrection(context.Background(), event)
 		assert.NoError(t, err) // Should not return error, just log it
 	})
+}
+
+func TestTaskCallbackServiceImpl_resolveAnnotationKey(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("evalSvc_nil_returns_empty", func(t *testing.T) {
+		t.Parallel()
+		impl := &TaskCallbackServiceImpl{}
+		key := impl.resolveAnnotationKey(ctx, 123, 456)
+		assert.Equal(t, "", key)
+	})
+
+	t.Run("success_returns_name_and_version", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+		mockEval := rpc_mocks.NewMockIEvaluatorRPCAdapter(ctrl)
+		impl := &TaskCallbackServiceImpl{evalSvc: mockEval}
+
+		mockEval.EXPECT().BatchGetEvaluatorVersions(gomock.Any(), &rpc.BatchGetEvaluatorVersionsParam{
+			WorkspaceID:         456,
+			EvaluatorVersionIds: []int64{123},
+		}).Return([]*rpc.Evaluator{{
+			EvaluatorVersionID: 123,
+			EvaluatorName:      "相关性",
+			EvaluatorVersion:   "0.0.1",
+		}}, nil, nil)
+
+		key := impl.resolveAnnotationKey(ctx, 123, 456)
+		assert.Equal(t, "相关性:0.0.1", key)
+	})
+
+	t.Run("rpc_error_returns_empty", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+		mockEval := rpc_mocks.NewMockIEvaluatorRPCAdapter(ctrl)
+		impl := &TaskCallbackServiceImpl{evalSvc: mockEval}
+
+		mockEval.EXPECT().BatchGetEvaluatorVersions(gomock.Any(), gomock.Any()).Return(nil, nil, errors.New("rpc error"))
+
+		key := impl.resolveAnnotationKey(ctx, 123, 456)
+		assert.Equal(t, "", key)
+	})
+
+	t.Run("empty_evaluators_returns_empty", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+		mockEval := rpc_mocks.NewMockIEvaluatorRPCAdapter(ctrl)
+		impl := &TaskCallbackServiceImpl{evalSvc: mockEval}
+
+		mockEval.EXPECT().BatchGetEvaluatorVersions(gomock.Any(), gomock.Any()).Return([]*rpc.Evaluator{}, nil, nil)
+
+		key := impl.resolveAnnotationKey(ctx, 123, 456)
+		assert.Equal(t, "", key)
+	})
+
+	t.Run("empty_name_returns_empty", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+		mockEval := rpc_mocks.NewMockIEvaluatorRPCAdapter(ctrl)
+		impl := &TaskCallbackServiceImpl{evalSvc: mockEval}
+
+		mockEval.EXPECT().BatchGetEvaluatorVersions(gomock.Any(), gomock.Any()).Return([]*rpc.Evaluator{{
+			EvaluatorVersionID: 123,
+			EvaluatorName:      "",
+			EvaluatorVersion:   "0.0.1",
+		}}, nil, nil)
+
+		key := impl.resolveAnnotationKey(ctx, 123, 456)
+		assert.Equal(t, "", key)
+	})
+
+	t.Run("empty_version_returns_empty", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+		mockEval := rpc_mocks.NewMockIEvaluatorRPCAdapter(ctrl)
+		impl := &TaskCallbackServiceImpl{evalSvc: mockEval}
+
+		mockEval.EXPECT().BatchGetEvaluatorVersions(gomock.Any(), gomock.Any()).Return([]*rpc.Evaluator{{
+			EvaluatorVersionID: 123,
+			EvaluatorName:      "相关性",
+			EvaluatorVersion:   "",
+		}}, nil, nil)
+
+		key := impl.resolveAnnotationKey(ctx, 123, 456)
+		assert.Equal(t, "", key)
+	})
+}
+
+func TestTaskCallbackServiceImpl_CallBackWithEvalSvc(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockBenefit := benefit_mocks.NewMockIBenefitService(ctrl)
+	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
+	mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	mockConfig := config_mocks.NewMockITraceConfig(ctrl)
+	mockEval := rpc_mocks.NewMockIEvaluatorRPCAdapter(ctrl)
+
+	impl := &TaskCallbackServiceImpl{
+		benefitSvc:     mockBenefit,
+		tenantProvider: mockTenant,
+		traceRepo:      mockTraceRepo,
+		taskRepo:       mockTaskRepo,
+		config:         mockConfig,
+		evalSvc:        mockEval,
+	}
+
+	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
+	mockBenefit.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{StorageDuration: 1}, nil).AnyTimes()
+	mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(7)).AnyTimes()
+	mockTaskRepo.EXPECT().GetTask(gomock.Any(), int64(101), gomock.Any(), gomock.Any()).Return(&entity.ObservabilityTask{
+		ID:         101,
+		SpanFilter: &entity.SpanFilterFields{PlatformType: loop_span.PlatformType("callback_all")},
+	}, nil).AnyTimes()
+	mockEval.EXPECT().BatchGetEvaluatorVersions(gomock.Any(), gomock.Any()).Return([]*rpc.Evaluator{{
+		EvaluatorVersionID: 1,
+		EvaluatorName:      "文本等值判断",
+		EvaluatorVersion:   "0.0.1",
+	}}, nil, nil).AnyTimes()
+
+	now := time.Now()
+	span := &loop_span.Span{
+		SpanID:           "span-1",
+		TraceID:          "trace-1",
+		SystemTagsString: map[string]string{loop_span.SpanFieldTenant: "tenant"},
+		LogicDeleteTime:  now.Add(24 * time.Hour).UnixMicro(),
+		StartTime:        now.UnixMicro(),
+	}
+
+	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil).AnyTimes()
+	mockTaskRepo.EXPECT().IncrTaskRunSuccessCount(gomock.Any(), int64(101), int64(202), gomock.Any()).Return(nil).AnyTimes()
+	mockTraceRepo.EXPECT().InsertAnnotations(gomock.Any(), gomock.AssignableToTypeOf(&repo.InsertAnnotationParam{})).DoAndReturn(
+		func(_ context.Context, param *repo.InsertAnnotationParam) error {
+			require.NotNil(t, param.Span)
+			annotations := param.Span.Annotations
+			require.NotEmpty(t, annotations)
+			assert.Equal(t, "文本等值判断:0.0.1", annotations[len(annotations)-1].Key)
+			return nil
+		},
+	).AnyTimes()
+
+	startTime := now.Add(-time.Minute).UnixMilli()
+	event := &entity.AutoEvalEvent{
+		TurnEvalResults: []*entity.OnlineExptTurnEvalResult{
+			{
+				EvaluatorVersionID: 1,
+				Score:              0.9,
+				Reasoning:          "ok",
+				Status:             entity.EvaluatorRunStatus_Success,
+				BaseInfo:           &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: "user-1"}},
+				Ext: map[string]string{
+					"workspace_id": strconv.FormatInt(1, 10),
+					"span_id":      "span-1",
+					"trace_id":     "trace-1",
+					"start_time":   strconv.FormatInt(startTime*1000, 10),
+					"task_id":      strconv.FormatInt(101, 10),
+					"run_id":       strconv.FormatInt(202, 10),
+				},
+			},
+		},
+	}
+
+	require.NoError(t, impl.AutoEvalCallback(context.Background(), event))
 }
 
 func TestNewTaskCallbackServiceImpl(t *testing.T) {
