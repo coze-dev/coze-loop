@@ -36,6 +36,7 @@ func (e *ExptFilterConvertor) Convert(ctx context.Context, efo *domain_expt.Expt
 	}
 
 	filters.FuzzyName = efo.GetFuzzyName()
+	filters.OnlyResultSetEval = efo.GetOnlyResultSetEval()
 
 	// eval_set_source_types 与 fuzzy_name 同级 (不走 filters)。
 	// 调用方未指定 → 留空透传, 由 DAO 层默认排除 MultiSetConfig(2) (含旧数据 NULL); 显式传则按调用方意图走白名单 IN。

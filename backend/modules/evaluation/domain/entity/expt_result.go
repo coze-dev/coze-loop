@@ -509,6 +509,10 @@ type ExptListFilter struct {
 	// EvalSetSourceTypes 评测集来源模式筛选 (experiment.eval_set_source_type 列): 1=SingleSet / 2=MultiSetConfig。
 	// 与 FuzzyName 同级 (不走 Includes/Excludes)。ListExperiments 默认仅返回 1; 由 Convert 在调用方未指定时注入 [1]。
 	EvalSetSourceTypes []int64
+	// OnlyResultSetEval 结果集评测筛选: true = 仅返回无评测对象的实验 (target_id = 0)。
+	// 与 FuzzyName 同级 (不走 Includes/Excludes)。true 时 DAO 层豁免 EvalSetSourceTypes 的默认排除
+	// (结果集评测实验本身即 MultiSetConfig, 不豁免会滤成空)。缺省不过滤。
+	OnlyResultSetEval bool
 	Includes           *ExptFilterFields
 	Excludes           *ExptFilterFields
 }

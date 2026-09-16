@@ -314,19 +314,28 @@ func (d *exptDAOImpl) toConditions(f *entity.ExptListFilter, orders []*entity.Or
 
 	// eval_set_source_type 顶层筛选 (与 FuzzyName 同级, 非 Includes/Excludes):
 	// 调用方未传 EvalSetSourceTypes → 默认排除 MultiSetConfig(2), 旧数据 NULL (item-centric 改造前) 一并保留;
-	// 显式传则严格按白名单 IN。
+	// 显式传则严格按白名单 IN。OnlyResultSetEval=true (结果集评测) 豁免默认排除:
+	// 结果集评测实验本身即 MultiSetConfig, 只传该开关不传 source_types 时若仍套默认排除会滤成空。
 	if f != nil {
 		if len(f.EvalSetSourceTypes) > 0 {
 			srcTypes := f.EvalSetSourceTypes
 			conditions = append(conditions, func(db *gorm.DB) *gorm.DB {
 				return db.Where(exptPrefix+"eval_set_source_type IN (?)", srcTypes)
 			})
-		} else {
+		} else if !f.OnlyResultSetEval {
 			conditions = append(conditions, func(db *gorm.DB) *gorm.DB {
 				col := exptPrefix + "eval_set_source_type"
 				return db.Where(col+" <> ? OR "+col+" IS NULL", int64(entity.ExptEvalSetSourceType_MultiSetConfig))
 			})
 		}
+	}
+
+	// 结果集评测筛选: 仅返回无评测对象的实验 (target_id = 0)。结果集评测创建链路去掉评测对象步骤,
+	// target_id=0 是其独有落库特征 (其余创建链路必产生 target), 可命中 idx_target_id_delete_at。
+	if f != nil && f.OnlyResultSetEval {
+		conditions = append(conditions, func(db *gorm.DB) *gorm.DB {
+			return db.Where(exptPrefix+"target_id = ?", int64(0))
+		})
 	}
 
 	if f != nil {
