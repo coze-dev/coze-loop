@@ -1572,8 +1572,8 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testin
 // 于是当 trace 尚未最终一致、需要多次重试、每次 ListTrajectory RPC 又各耗一定时间时, 最后一次 RPC
 // 拿到的 ctx 剩余会 <= 0, 以 timeout=0s 失败(实测 actual≈1.48s), trajectory 丢失。
 //
-// 本测试模拟前两次抽取到"不完整"轨迹(触发重试)且每次 RPC 各耗 800ms; 断言第三次(最后一次)RPC 被调用时,
-// 其 ctx 剩余预算仍能容纳一次落库(>= persistTimeout)。修复前: 第三次 RPC 要么根本没机会跑(ctx 已 Done),
+// 本测试模拟前若干次抽取到"不完整"轨迹(触发重试)且每次 RPC 各耗 800ms; 断言最后一次 RPC 被调用时,
+// 其 ctx 剩余预算仍能容纳一次落库(>= persistTimeout)。修复前: 最后一次 RPC 要么根本没机会跑(ctx 已 Done),
 // 要么剩余远不足 persistTimeout → 断言失败。
 func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryBudgetCoversAllAttempts(t *testing.T) {
 	// do not run in parallel: involves real time for the async trajectory goroutine
@@ -1658,7 +1658,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryBudgetCoversAllAtte
 		// 最后一次 ListTrajectory 返回后, 还要走 UpdateEvalTargetRecord 落库(persistTimeout)。
 		assert.GreaterOrEqual(t, remaining, evalTargetRecordPersistTimeout,
 			"最后一次抽取时 ctx 剩余预算不足以落库, 会因 timeout=0s 丢 trajectory")
-	case <-time.After(time.Duration(extractIntervalSec+8) * time.Second):
+	case <-time.After(time.Duration(extractIntervalSec)*time.Second + time.Duration(trajectoryExtractAttempts)*perRPCCost + 8*time.Second):
 		t.Fatal("最后一次 ListTrajectory 未被调用(预算被提前耗尽)")
 	}
 }

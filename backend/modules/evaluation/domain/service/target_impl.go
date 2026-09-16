@@ -70,11 +70,15 @@ const trajectoryStartTimeBufferMS = int64(60 * 1000)
 
 const (
 	// trajectoryExtractAttempts / defaultTrajectoryRetryInterval 决定抽取轨迹时对"最终一致未就绪"的坚持窗口。
-	// observability 侧 span 落库最终一致, 顶层 root span 常在抽取发起后数十秒才可见; 在此之前 ListTrajectory
-	// 只返回 {id, agent_steps} 而 RootStep=nil, IsValid()=false。窗口过短(旧值 3 次 x 1s)会在 root span 落库前
-	// 就判 incomplete 放弃, 且不再补抽 → 轨迹永久缺失。取 6 次 x 10s(重试期 50s)覆盖实测落库延迟。
-	trajectoryExtractAttempts      = 6
-	defaultTrajectoryRetryInterval = 10 * time.Second
+	// observability 侧 span 落库最终一致, 顶层 root span(唯一 ParentID 为空/"0" 的 span, 见 BuildTrajectoryFromSpans)
+	// 与子 span 走不同上报/落库路径, 落库延迟有长尾: 子 span 已可见时 root span 仍未落, ListTrajectory 只返回
+	// {id, agent_steps} 而 RootStep=nil, IsValid()=false。此时无法用任一 agent step 顶替 root(它们都有指向未落
+	// root 的真实 ParentID), 只能等。PPE 实测该长尾可达首次抽取后 180s~540s 才对 ListTrajectory 可见, 窗口过短
+	// (旧值 6 次 x 10s ≈ 60s)仍会在 root span 落库前判 incomplete 放弃且不再补抽 → 轨迹永久缺失。抽取全程在
+	// 后台 goroutine(脱离请求路径), 只是把 trajectory 的 UpdateEvalTargetRecord 延后, 放宽窗口无用户侧延迟代价。
+	// 取 14 次 x 30s(重试期约 7min)覆盖实测长尾, 兼顾唤醒次数不过多。
+	trajectoryExtractAttempts      = 14
+	defaultTrajectoryRetryInterval = 30 * time.Second
 	// trajectoryListPerAttemptTimeout 是单次 ListTrajectory RPC 的时间预算。计算后台抽取 ctx 总预算时
 	// 必须按 attempts 次 RPC 预留, 否则 trace 未最终一致触发多次重试时, 最后一次 RPC 会拿到近乎 0 的
 	// 剩余预算, 以 timeout=0s 立即失败并丢掉 trajectory。observability 侧实测单次约 1.5s, 取 3s 留余量。
