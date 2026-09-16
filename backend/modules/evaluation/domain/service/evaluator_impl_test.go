@@ -849,6 +849,36 @@ func TestEvaluatorServiceImpl_ListEvaluator(t *testing.T) {
 			expectedTotal: 0,
 			expectedErr:   nil,
 		},
+		{
+			name: "成功 - 按更新人/创建人筛选透传 (WithVersion = false)",
+			request: &entity.ListEvaluatorRequest{
+				SpaceID:     1,
+				PageSize:    10,
+				PageNum:     1,
+				CreatorIDs:  []int64{100},
+				UpdaterIDs:  []int64{200, 300},
+				WithVersion: false,
+			},
+			setupMock: func(mockRepo *repomocks.MockIEvaluatorRepo) {
+				expectedRepoReq := &repo.ListEvaluatorRequest{
+					SpaceID:       1,
+					PageSize:      10,
+					PageNum:       1,
+					CreatorIDs:    []int64{100},
+					UpdaterIDs:    []int64{200, 300},
+					EvaluatorType: []entity.EvaluatorType{},
+					OrderBy:       []*entity.OrderBy{{Field: ptr.Of("updated_at"), IsAsc: ptr.Of(false)}},
+				}
+				mockRepo.EXPECT().ListEvaluator(gomock.Any(), gomock.Eq(expectedRepoReq)).Return(
+					&repo.ListEvaluatorResponse{
+						Evaluators: []*entity.Evaluator{{ID: 1, Name: "Eval1", SpaceID: 1}},
+						TotalCount: 1,
+					}, nil)
+			},
+			expectedList:  []*entity.Evaluator{{ID: 1, Name: "Eval1", SpaceID: 1}},
+			expectedTotal: 1,
+			expectedErr:   nil,
+		},
 	}
 
 	for _, tc := range testCases {

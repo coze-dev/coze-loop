@@ -18,6 +18,7 @@ type ListEvaluatorsRequest struct {
 	CreatorIds    []int64                   `thrift:"creator_ids,3,optional" frugal:"3,optional,list<i64>" json:"creator_ids" form:"creator_ids" `
 	EvaluatorType []evaluator.EvaluatorType `thrift:"evaluator_type,4,optional" frugal:"4,optional,list<EvaluatorType>" form:"evaluator_type" json:"evaluator_type,omitempty"`
 	WithVersion   *bool                     `thrift:"with_version,5,optional" frugal:"5,optional,bool" form:"with_version" json:"with_version,omitempty"`
+	UpdaterIds    []int64                   `thrift:"updater_ids,6,optional" frugal:"6,optional,list<i64>" json:"updater_ids" form:"updater_ids" `
 	// 是否查询预置评估器
 	Builtin *bool `thrift:"builtin,11,optional" frugal:"11,optional,bool" form:"builtin" json:"builtin,omitempty"`
 	// 筛选器选项
@@ -88,6 +89,18 @@ func (p *ListEvaluatorsRequest) GetWithVersion() (v bool) {
 		return ListEvaluatorsRequest_WithVersion_DEFAULT
 	}
 	return *p.WithVersion
+}
+
+var ListEvaluatorsRequest_UpdaterIds_DEFAULT []int64
+
+func (p *ListEvaluatorsRequest) GetUpdaterIds() (v []int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetUpdaterIds() {
+		return ListEvaluatorsRequest_UpdaterIds_DEFAULT
+	}
+	return p.UpdaterIds
 }
 
 var ListEvaluatorsRequest_Builtin_DEFAULT bool
@@ -176,6 +189,9 @@ func (p *ListEvaluatorsRequest) SetEvaluatorType(val []evaluator.EvaluatorType) 
 func (p *ListEvaluatorsRequest) SetWithVersion(val *bool) {
 	p.WithVersion = val
 }
+func (p *ListEvaluatorsRequest) SetUpdaterIds(val []int64) {
+	p.UpdaterIds = val
+}
 func (p *ListEvaluatorsRequest) SetBuiltin(val *bool) {
 	p.Builtin = val
 }
@@ -201,6 +217,7 @@ var fieldIDToName_ListEvaluatorsRequest = map[int16]string{
 	3:   "creator_ids",
 	4:   "evaluator_type",
 	5:   "with_version",
+	6:   "updater_ids",
 	11:  "builtin",
 	12:  "filter_option",
 	101: "page_size",
@@ -223,6 +240,10 @@ func (p *ListEvaluatorsRequest) IsSetEvaluatorType() bool {
 
 func (p *ListEvaluatorsRequest) IsSetWithVersion() bool {
 	return p.WithVersion != nil
+}
+
+func (p *ListEvaluatorsRequest) IsSetUpdaterIds() bool {
+	return p.UpdaterIds != nil
 }
 
 func (p *ListEvaluatorsRequest) IsSetBuiltin() bool {
@@ -304,6 +325,14 @@ func (p *ListEvaluatorsRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -471,6 +500,29 @@ func (p *ListEvaluatorsRequest) ReadField5(iprot thrift.TProtocol) error {
 	p.WithVersion = _field
 	return nil
 }
+func (p *ListEvaluatorsRequest) ReadField6(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.UpdaterIds = _field
+	return nil
+}
 func (p *ListEvaluatorsRequest) ReadField11(iprot thrift.TProtocol) error {
 
 	var _field *bool
@@ -568,6 +620,10 @@ func (p *ListEvaluatorsRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField11(oprot); err != nil {
@@ -716,6 +772,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ListEvaluatorsRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetUpdaterIds() {
+		if err = oprot.WriteFieldBegin("updater_ids", thrift.LIST, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I64, len(p.UpdaterIds)); err != nil {
+			return err
+		}
+		for _, v := range p.UpdaterIds {
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *ListEvaluatorsRequest) writeField11(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBuiltin() {
 		if err = oprot.WriteFieldBegin("builtin", thrift.BOOL, 11); err != nil {
@@ -862,6 +944,9 @@ func (p *ListEvaluatorsRequest) DeepEqual(ano *ListEvaluatorsRequest) bool {
 	if !p.Field5DeepEqual(ano.WithVersion) {
 		return false
 	}
+	if !p.Field6DeepEqual(ano.UpdaterIds) {
+		return false
+	}
 	if !p.Field11DeepEqual(ano.Builtin) {
 		return false
 	}
@@ -937,6 +1022,19 @@ func (p *ListEvaluatorsRequest) Field5DeepEqual(src *bool) bool {
 	}
 	if *p.WithVersion != *src {
 		return false
+	}
+	return true
+}
+func (p *ListEvaluatorsRequest) Field6DeepEqual(src []int64) bool {
+
+	if len(p.UpdaterIds) != len(src) {
+		return false
+	}
+	for i, v := range p.UpdaterIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
 	}
 	return true
 }

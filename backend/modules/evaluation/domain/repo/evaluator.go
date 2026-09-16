@@ -48,6 +48,7 @@ type ListEvaluatorRequest struct {
 	SpaceID       int64
 	SearchName    string
 	CreatorIDs    []int64
+	UpdaterIDs    []int64
 	EvaluatorType []entity.EvaluatorType
 	FilterOption  *entity.EvaluatorFilterOption `json:"filter_option,omitempty"` // 标签筛选条件
 	PageSize      int32

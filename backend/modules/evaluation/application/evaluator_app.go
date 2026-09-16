@@ -142,6 +142,7 @@ func buildSrvListEvaluatorRequest(request *evaluatorservice.ListEvaluatorsReques
 		SpaceID:     request.WorkspaceID,
 		SearchName:  request.GetSearchName(),
 		CreatorIDs:  request.GetCreatorIds(),
+		UpdaterIDs:  request.GetUpdaterIds(),
 		PageSize:    request.GetPageSize(),
 		PageNum:     request.GetPageNumber(),
 		WithVersion: request.GetWithVersion(),
