@@ -709,7 +709,7 @@ func (o *OpenAPIApplication) SearchTraceTreeOApi(ctx context.Context, req *opena
 	}()
 
 	if req != nil && req.GetStartTime() == 0 && req.GetEndTime() == 0 && o.timeRange != nil {
-		st, et := o.timeRange.GetTimeRange(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), "", req.GetTraceID(), 1000*60*60*24)
+		st, et := o.timeRange.GetTimeRange(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetLogid(), req.GetTraceID(), 1000*60*60*24)
 		if st != nil && et != nil {
 			req.StartTime = st
 			req.EndTime = et
@@ -769,7 +769,7 @@ func (o *OpenAPIApplication) SearchTraceTreeOApi(ctx context.Context, req *opena
 func (o *OpenAPIApplication) validateSearchTraceTreeOApiReq(ctx context.Context, req *openapi.SearchTraceTreeOApiRequest) error {
 	if req == nil {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
-	} else if req.GetTraceID() == "" {
+	} else if req.GetTraceID() == "" && req.GetLogid() == "" {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("at least need trace_id or log_id"))
 	} else if req.Limit > MaxTraceTreeLength || req.Limit < 0 {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid limit"))
@@ -801,6 +801,7 @@ func (o *OpenAPIApplication) buildSearchTraceTreeOApiReq(ctx context.Context, re
 		ThirdPartyWorkspaceID: o.workspace.GetThirdPartyQueryWorkSpaceID(ctx, req.GetWorkspaceID()),
 		Tenants:               o.tenant.GetOAPIQueryTenants(ctx, platformType),
 		TraceID:               req.GetTraceID(),
+		LogID:                 req.GetLogid(),
 		StartTime:             req.GetStartTime(),
 		EndTime:               req.GetEndTime(),
 		Limit:                 req.GetLimit(),

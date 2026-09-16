@@ -106,6 +106,7 @@ struct SearchTraceOApiData {
 
 struct SearchTraceTreeOApiRequest {
     1: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
+    2: optional string logid (api.body="logid")
     3: optional string trace_id (go.tag='json:"trace_id"', api.body="trace_id")
     4: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time") // ms
     5: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.body="end_time") // ms
