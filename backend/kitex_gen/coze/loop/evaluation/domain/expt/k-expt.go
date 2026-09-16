@@ -11013,6 +11013,20 @@ func (p *ExptFilterOption) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 10:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField10(buf[offset:])
@@ -11084,6 +11098,20 @@ func (p *ExptFilterOption) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExptFilterOption) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.OnlyResultSetEval = _field
+	return offset, nil
+}
+
 func (p *ExptFilterOption) FastReadField10(buf []byte) (int, error) {
 	offset := 0
 	_field := NewFilters()
@@ -11103,6 +11131,7 @@ func (p *ExptFilterOption) FastWrite(buf []byte) int {
 func (p *ExptFilterOption) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
@@ -11116,6 +11145,7 @@ func (p *ExptFilterOption) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 		l += p.field10Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -11143,6 +11173,15 @@ func (p *ExptFilterOption) fastWriteField2(buf []byte, w thrift.NocopyWriter) in
 			offset += thrift.Binary.WriteI32(buf[offset:], int32(v))
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I32, length)
+	}
+	return offset
+}
+
+func (p *ExptFilterOption) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetOnlyResultSetEval() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 3)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.OnlyResultSetEval)
 	}
 	return offset
 }
@@ -11178,6 +11217,15 @@ func (p *ExptFilterOption) field2Length() int {
 	return l
 }
 
+func (p *ExptFilterOption) field3Length() int {
+	l := 0
+	if p.IsSetOnlyResultSetEval() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *ExptFilterOption) field10Length() int {
 	l := 0
 	if p.IsSetFilters() {
@@ -11208,6 +11256,11 @@ func (p *ExptFilterOption) DeepCopy(s interface{}) error {
 			_elem = elem
 			p.EvalSetSourceTypes = append(p.EvalSetSourceTypes, _elem)
 		}
+	}
+
+	if src.OnlyResultSetEval != nil {
+		tmp := *src.OnlyResultSetEval
+		p.OnlyResultSetEval = &tmp
 	}
 
 	var _filters *Filters
