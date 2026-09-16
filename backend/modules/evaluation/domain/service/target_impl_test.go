@@ -21,6 +21,7 @@ import (
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	looptracermocks "github.com/coze-dev/coze-loop/backend/infra/looptracer/mocks"
+	kitextrajectory "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/trajectory"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
@@ -867,7 +868,8 @@ func TestEvalTargetServiceImpl_ExecuteTarget_TrajectoryExtraction(t *testing.T) 
 			name: "trajectory extracted successfully - field added",
 			trajectories: []*entity.Trajectory{
 				{
-					ID: gptr.Of("traj-id"),
+					ID:       gptr.Of("traj-id"),
+					RootStep: &kitextrajectory.RootStep{},
 				},
 			},
 			expectHasField:    true,
@@ -1207,7 +1209,8 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_Trajectory(t *testing.T) {
 			name: "extract trajectory success - trajectory field added",
 			trajectories: []*entity.Trajectory{
 				{
-					ID: gptr.Of("traj-id"),
+					ID:       gptr.Of("traj-id"),
+					RootStep: &kitextrajectory.RootStep{},
 				},
 			},
 			expectHasField:    true,
@@ -1358,6 +1361,43 @@ func TestEvalTargetServiceImpl_ExtractTrajectory_EmptyTraceID(t *testing.T) {
 	assert.Nil(t, res)
 }
 
+func TestEvalTargetServiceImpl_ExtractTrajectory_RetriesIncompleteTrajectory(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	adapter := trajectorymocks.NewMockITrajectoryAdapter(ctrl)
+	traceID := "trace-x"
+	incomplete := &entity.Trajectory{ID: &traceID}
+	complete := &entity.Trajectory{ID: &traceID, RootStep: &kitextrajectory.RootStep{}}
+
+	gomock.InOrder(
+		adapter.EXPECT().ListTrajectory(gomock.Any(), int64(1), []string{traceID}, nil).
+			Return([]*entity.Trajectory{incomplete}, nil),
+		adapter.EXPECT().ListTrajectory(gomock.Any(), int64(1), []string{traceID}, nil).
+			Return([]*entity.Trajectory{complete}, nil),
+	)
+
+	svc := &EvalTargetServiceImpl{trajectoryAdapter: adapter, trajectoryRetryInterval: time.Millisecond}
+	got, err := svc.ExtractTrajectory(context.Background(), 1, traceID, nil)
+	require.NoError(t, err)
+	assert.Same(t, complete, got)
+}
+
+func TestEvalTargetServiceImpl_ExtractTrajectory_RejectsPersistentlyIncompleteTrajectory(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	adapter := trajectorymocks.NewMockITrajectoryAdapter(ctrl)
+	traceID := "trace-x"
+	incomplete := &entity.Trajectory{ID: &traceID}
+	adapter.EXPECT().ListTrajectory(gomock.Any(), int64(1), []string{traceID}, nil).
+		Return([]*entity.Trajectory{incomplete}, nil).Times(trajectoryExtractAttempts)
+
+	svc := &EvalTargetServiceImpl{trajectoryAdapter: adapter, trajectoryRetryInterval: time.Millisecond}
+	got, err := svc.ExtractTrajectory(context.Background(), 1, traceID, nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "trajectory is incomplete")
+	assert.Nil(t, got)
+}
+
 // TestEvalTargetServiceImpl_ExtractTrajectory_StartTimeBuffer 验证抽取 trajectory 时下界额外向前预留 1 分钟 buffer;
 // startTimeMS 为 nil 时保持 nil 不做偏移。
 func TestEvalTargetServiceImpl_ExtractTrajectory_StartTimeBuffer(t *testing.T) {
@@ -1389,7 +1429,8 @@ func TestEvalTargetServiceImpl_ExtractTrajectory_StartTimeBuffer(t *testing.T) {
 						require.NotNil(t, got)
 						assert.Equal(t, *tt.wantOut, *got)
 					}
-					return nil, nil
+					traceID := "trace-x"
+					return []*entity.Trajectory{{ID: &traceID, RootStep: &kitextrajectory.RootStep{}}}, nil
 				})
 			svc := &EvalTargetServiceImpl{trajectoryAdapter: adapter}
 			_, err := svc.ExtractTrajectory(ctx, spaceID, "trace-x", tt.in)
@@ -1465,7 +1506,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testin
 					case gotStartCh <- v:
 					default:
 					}
-					return []*entity.Trajectory{{ID: gptr.Of("traj")}}, nil
+					return []*entity.Trajectory{{ID: gptr.Of("traj"), RootStep: &kitextrajectory.RootStep{}}}, nil
 				})
 
 			svc := &EvalTargetServiceImpl{

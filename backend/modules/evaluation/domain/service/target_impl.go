@@ -53,6 +53,9 @@ type EvalTargetServiceImpl struct {
 	// 若按线上预算跑就要真等十秒，压到毫秒级才能把"重试到用尽"确定性地断言完。
 	// 生产路径（wire 注入）从不设置它，走默认值。
 	sandboxDestroyRetryBudget time.Duration
+	// trajectoryRetryInterval 仅用于把单测中的最终一致性等待压到毫秒级。
+	// 生产路径不设置，使用 defaultTrajectoryRetryInterval。
+	trajectoryRetryInterval time.Duration
 }
 
 const evalTargetRecordPersistTimeout = 5 * time.Second
@@ -64,6 +67,11 @@ const defaultSandboxDestroyRetryBudget = 10 * time.Second
 // trajectoryStartTimeBufferMS 抽取 trajectory 时，时间下界额外向前预留的 buffer(1 分钟)，
 // 用于吸收请求发起时间与实际 span 上报时间之间可能的时钟/延迟误差，避免漏掉最早的 span。
 const trajectoryStartTimeBufferMS = int64(60 * 1000)
+
+const (
+	trajectoryExtractAttempts      = 3
+	defaultTrajectoryRetryInterval = time.Second
+)
 
 // sandbox mac_vm_plus_sandbox 链路: operator 给 mac_vm 那台的 execution id 加 "-macvm" 后缀
 // (invokeID+"-macvm"), 且其 task 是 <expt_id>+"-macvm" (见 commercial operator macVMTaskID)。
@@ -516,14 +524,29 @@ func (e *EvalTargetServiceImpl) ExtractTrajectory(ctx context.Context, spaceID i
 	if startTimeMS != nil {
 		startTimeMS = gptr.Of(*startTimeMS - trajectoryStartTimeBufferMS)
 	}
-	trajectories, err := e.trajectoryAdapter.ListTrajectory(ctx, spaceID, []string{traceID}, startTimeMS)
-	if err != nil {
-		return nil, err
+	retryInterval := e.trajectoryRetryInterval
+	if retryInterval <= 0 {
+		retryInterval = defaultTrajectoryRetryInterval
 	}
-	if len(trajectories) == 0 {
-		return nil, nil
+	for attempt := 1; attempt <= trajectoryExtractAttempts; attempt++ {
+		trajectories, err := e.trajectoryAdapter.ListTrajectory(ctx, spaceID, []string{traceID}, startTimeMS)
+		if err != nil {
+			return nil, err
+		}
+		if len(trajectories) > 0 && trajectories[0].IsValid() {
+			return trajectories[0], nil
+		}
+		if attempt < trajectoryExtractAttempts {
+			timer := time.NewTimer(retryInterval)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return nil, ctx.Err()
+			case <-timer.C:
+			}
+		}
 	}
-	return trajectories[0], nil
+	return nil, errorx.New("trajectory is incomplete after %d attempts, traceID=%s", trajectoryExtractAttempts, traceID)
 }
 
 func (e *EvalTargetServiceImpl) AsyncExecuteTarget(ctx context.Context, spaceID, targetID, targetVersionID int64,
