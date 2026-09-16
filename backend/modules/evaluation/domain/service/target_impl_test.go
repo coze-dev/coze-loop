@@ -1533,6 +1533,104 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testin
 	}
 }
 
+// TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryBudgetCoversAllAttempts 验证:
+// 后台轨迹抽取的超时预算(extractCtx)必须覆盖"每一次 ListTrajectory RPC + 重试间隔 + 落库",
+// 且不被等待期(extractInterval)蚕食。线上根因是:
+//   - 等待期 extractInterval 与工作期共用一个 extractCtx 预算;
+//   - 工作期预算里只算了 (attempts-1)*retryInterval + persistTimeout, 完全没给 attempts 次 RPC 留时间。
+//
+// 于是当 trace 尚未最终一致、需要多次重试、每次 ListTrajectory RPC 又各耗一定时间时, 最后一次 RPC
+// 拿到的 ctx 剩余会 <= 0, 以 timeout=0s 失败(实测 actual≈1.48s), trajectory 丢失。
+//
+// 本测试模拟前两次抽取到"不完整"轨迹(触发重试)且每次 RPC 各耗 800ms; 断言第三次(最后一次)RPC 被调用时,
+// 其 ctx 剩余预算仍能容纳一次落库(>= persistTimeout)。修复前: 第三次 RPC 要么根本没机会跑(ctx 已 Done),
+// 要么剩余远不足 persistTimeout → 断言失败。
+func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryBudgetCoversAllAttempts(t *testing.T) {
+	// do not run in parallel: involves real time for the async trajectory goroutine
+	spaceID := int64(1)
+	// extractInterval 取一个较大值, 复现"等待期与工作期共用预算";用 3s 保证 UT 快速。
+	const extractIntervalSec = int64(3)
+	const perRPCCost = 800 * time.Millisecond // 模拟单次 ListTrajectory RPC 耗时
+
+	requestCtx, cancelRequest := context.WithCancel(context.Background())
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := repomocks.NewMockIEvalTargetRepo(ctrl)
+	configer := componentmocks.NewMockIConfiger(ctrl)
+	trajectoryAdapter := trajectorymocks.NewMockITrajectoryAdapter(ctrl)
+
+	record := &entity.EvalTargetRecord{
+		ID:                   10,
+		SpaceID:              spaceID,
+		Status:               gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+		EvalTargetOutputData: &entity.EvalTargetOutputData{},
+		TraceID:              "trace-budget",
+		BaseInfo:             &entity.BaseInfo{CreatedAt: gptr.Of(int64(2_000_000))},
+	}
+	param := &entity.ReportTargetRecordParam{
+		SpaceID:    spaceID,
+		RecordID:   record.ID,
+		Status:     entity.EvalTargetRunStatusSuccess,
+		OutputData: &entity.EvalTargetOutputData{},
+	}
+
+	repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(requestCtx, param.SpaceID, param.RecordID).Return(record, nil)
+	repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	repo.EXPECT().UpdateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+	configer.EXPECT().GetErrCtrl(gomock.Any()).Return(&entity.ExptErrCtrl{}).AnyTimes()
+	configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{
+		SpaceExtractIntervalSecond: map[int64]int64{spaceID: extractIntervalSec},
+	})
+
+	traceID := record.TraceID
+	incomplete := &entity.Trajectory{ID: &traceID}                                      // 无 RootStep → IsValid()=false, 触发重试
+	complete := &entity.Trajectory{ID: &traceID, RootStep: &kitextrajectory.RootStep{}} // 第三次抽到完整
+
+	lastRemainingCh := make(chan time.Duration, 1)
+	call := 0
+	trajectoryAdapter.EXPECT().
+		ListTrajectory(gomock.Any(), spaceID, gomock.Any(), gomock.Any()).
+		DoAndReturn(func(extractCtx context.Context, _ int64, _ []string, _ *int64) ([]*entity.Trajectory, error) {
+			call++
+			time.Sleep(perRPCCost) // 模拟 RPC 真实耗时
+			if call >= trajectoryExtractAttempts {
+				var remaining time.Duration
+				if dl, ok := extractCtx.Deadline(); ok {
+					remaining = time.Until(dl)
+				} else {
+					remaining = time.Hour
+				}
+				select {
+				case lastRemainingCh <- remaining:
+				default:
+				}
+				return []*entity.Trajectory{complete}, nil
+			}
+			return []*entity.Trajectory{incomplete}, nil
+		}).Times(trajectoryExtractAttempts)
+
+	svc := &EvalTargetServiceImpl{
+		evalTargetRepo:    repo,
+		trajectoryAdapter: trajectoryAdapter,
+		configer:          configer,
+		// 用默认 retryInterval(1s), 贴近生产: (attempts-1)*retryInterval=2s。
+	}
+
+	err := svc.ReportInvokeRecords(requestCtx, param)
+	require.NoError(t, err)
+	cancelRequest() // 模拟请求返回后 ctx 被取消
+
+	select {
+	case remaining := <-lastRemainingCh:
+		// 最后一次 ListTrajectory 返回后, 还要走 UpdateEvalTargetRecord 落库(persistTimeout)。
+		assert.GreaterOrEqual(t, remaining, evalTargetRecordPersistTimeout,
+			"最后一次抽取时 ctx 剩余预算不足以落库, 会因 timeout=0s 丢 trajectory")
+	case <-time.After(time.Duration(extractIntervalSec+8) * time.Second):
+		t.Fatal("最后一次 ListTrajectory 未被调用(预算被提前耗尽)")
+	}
+}
+
 func TestEvalTargetServiceImpl_ValidateRuntimeParam(t *testing.T) {
 	t.Parallel()
 

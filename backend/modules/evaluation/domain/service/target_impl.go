@@ -71,6 +71,10 @@ const trajectoryStartTimeBufferMS = int64(60 * 1000)
 const (
 	trajectoryExtractAttempts      = 3
 	defaultTrajectoryRetryInterval = time.Second
+	// trajectoryListPerAttemptTimeout 是单次 ListTrajectory RPC 的时间预算。计算后台抽取 ctx 总预算时
+	// 必须按 attempts 次 RPC 预留, 否则 trace 未最终一致触发多次重试时, 最后一次 RPC 会拿到近乎 0 的
+	// 剩余预算, 以 timeout=0s 立即失败并丢掉 trajectory。observability 侧实测单次约 1.5s, 取 3s 留余量。
+	trajectoryListPerAttemptTimeout = 3 * time.Second
 )
 
 // sandbox mac_vm_plus_sandbox 链路: operator 给 mac_vm 那台的 execution id 加 "-macvm" 后缀
@@ -1420,16 +1424,16 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 			if retryInterval <= 0 {
 				retryInterval = defaultTrajectoryRetryInterval
 			}
-			extractCtx, cancel := context.WithTimeout(backgroundCtx,
-				extractInterval+time.Duration(trajectoryExtractAttempts-1)*retryInterval+evalTargetRecordPersistTimeout)
-			defer cancel()
+			// 等待期(extractInterval)在 backgroundCtx 上先睡完, 不占用抽取+落库的工作预算; 否则 extractInterval
+			// 较大时会把 extractCtx 预算耗掉, 使重试的最后一次 ListTrajectory 拿到近乎 0 的剩余而 timeout=0s。
 			timer := time.NewTimer(extractInterval)
-			select {
-			case <-extractCtx.Done():
-				timer.Stop()
-				return
-			case <-timer.C:
-			}
+			<-timer.C
+			// 工作预算独立于等待期, 且必须覆盖每一次 RPC(attempts 次)+ 重试间隔(attempts-1 次)+ 一次落库,
+			// 不能只算重试间隔——那样没给 RPC 本身留时间。
+			workBudget := time.Duration(trajectoryExtractAttempts)*trajectoryListPerAttemptTimeout +
+				time.Duration(trajectoryExtractAttempts-1)*retryInterval + evalTargetRecordPersistTimeout
+			extractCtx, cancel := context.WithTimeout(backgroundCtx, workBudget)
+			defer cancel()
 			if err := recordTrajectory(extractCtx); err != nil {
 				logs.CtxError(backgroundCtx, "extract and record trajectory fail, record_id: %v, err: %v", record.ID, err)
 			}
