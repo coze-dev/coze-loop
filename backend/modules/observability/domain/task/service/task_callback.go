@@ -116,7 +116,7 @@ func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *e
 			// Continue processing without interrupting the flow
 		}
 
-		taskName, evaluatorName := t.resolveAnnotationKeyNames(ctx, turn.GetTaskIDFromExt(), turn.EvaluatorVersionID, workspaceID)
+		annotationKey := t.resolveAnnotationKey(ctx, turn.EvaluatorVersionID, workspaceID)
 
 		_, err = span.AddAutoEvalAnnotation(
 			turn.GetTaskIDFromExt(),
@@ -127,8 +127,7 @@ func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *e
 			turn.GetUserID(),
 			event.ExptID,
 			turn.GetExptTemplateIDFromExt(),
-			taskName,
-			evaluatorName,
+			annotationKey,
 		)
 		if err != nil {
 			return err
@@ -276,29 +275,22 @@ func (t *TaskCallbackServiceImpl) getSpan(ctx context.Context, tenants []string,
 	return spans, nil
 }
 
-func (t *TaskCallbackServiceImpl) resolveAnnotationKeyNames(ctx context.Context, taskID, evaluatorVersionID, workspaceID int64) (string, string) {
-	var taskName, evaluatorName string
-
-	task, err := t.taskRepo.GetTask(ctx, taskID, nil, nil)
+func (t *TaskCallbackServiceImpl) resolveAnnotationKey(ctx context.Context, evaluatorVersionID, workspaceID int64) string {
+	if t.evalSvc == nil {
+		return ""
+	}
+	evaluators, _, err := t.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
+		WorkspaceID:         workspaceID,
+		EvaluatorVersionIds: []int64{evaluatorVersionID},
+	})
 	if err != nil {
-		logs.CtxWarn(ctx, "failed to get task name for annotation key, taskID=%d, err=%v", taskID, err)
-	} else if task != nil {
-		taskName = task.Name
+		logs.CtxWarn(ctx, "failed to get evaluator info for annotation key, evaluatorVersionID=%d, err=%v", evaluatorVersionID, err)
+		return ""
 	}
-
-	if t.evalSvc != nil {
-		evaluators, _, err := t.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
-			WorkspaceID:         workspaceID,
-			EvaluatorVersionIds: []int64{evaluatorVersionID},
-		})
-		if err != nil {
-			logs.CtxWarn(ctx, "failed to get evaluator name for annotation key, evaluatorVersionID=%d, err=%v", evaluatorVersionID, err)
-		} else if len(evaluators) > 0 {
-			evaluatorName = evaluators[0].EvaluatorName
-		}
+	if len(evaluators) > 0 && evaluators[0].EvaluatorName != "" && evaluators[0].EvaluatorVersion != "" {
+		return fmt.Sprintf("%s:%s", evaluators[0].EvaluatorName, evaluators[0].EvaluatorVersion)
 	}
-
-	return taskName, evaluatorName
+	return ""
 }
 
 // updateTaskRunStatusCount updates the Redis count based on Status

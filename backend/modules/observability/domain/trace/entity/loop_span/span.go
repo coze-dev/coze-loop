@@ -672,17 +672,17 @@ func (s *Span) AddManualDatasetAnnotation(datasetID int64, userID string, annota
 	return a, nil
 }
 
-func (s *Span) AddAutoEvalAnnotation(taskID, evaluatorRecordID, evaluatorVersionID int64, score float64, reasoning, userID string, exptID int64, exptTemplateID int64, taskName, evaluatorName string) (*Annotation, error) {
+func (s *Span) AddAutoEvalAnnotation(taskID, evaluatorRecordID, evaluatorVersionID int64, score float64, reasoning, userID string, exptID int64, exptTemplateID int64, annotationKey string) (*Annotation, error) {
 	a := &Annotation{}
 	a.SpanID = s.SpanID
 	a.TraceID = s.TraceID
 	a.StartTime = time.UnixMicro(s.StartTime)
 	a.WorkspaceID = s.WorkspaceID
 	a.AnnotationType = AnnotationTypeAutoEvaluate
-	if taskName != "" && evaluatorName != "" {
-		a.Key = fmt.Sprintf("%s:%s", taskName, evaluatorName)
+	if annotationKey != "" {
+		a.Key = annotationKey
 	} else {
-		a.Key = fmt.Sprintf("%d:%d", taskID, evaluatorVersionID)
+		a.Key = fmt.Sprintf("%d", evaluatorVersionID)
 	}
 	a.Value = NewDoubleValue(score)
 	a.Reasoning = reasoning
