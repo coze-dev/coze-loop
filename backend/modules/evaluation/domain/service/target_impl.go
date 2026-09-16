@@ -1380,7 +1380,7 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 	//		record.TargetID, record.TargetVersionID, record.ID, err)
 	// }
 
-	recordTrajectory := func() error {
+	recordTrajectory := func(extractCtx context.Context) error {
 		var sms *int64
 		// 优先用「请求发起时间」作为抽取 trajectory 的时间下界;它比 record.BaseInfo.CreatedAt(异步返回后才 stamp)
 		// 更早,避免漏掉请求发起到返回之间的 span。为 0(未透传)时回退到 CreatedAt,保持向前兼容。
@@ -1389,7 +1389,7 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		} else if record.BaseInfo != nil {
 			sms = record.BaseInfo.CreatedAt
 		}
-		trajectory, err := e.ExtractTrajectory(ctx, param.SpaceID, record.TraceID, sms)
+		trajectory, err := e.ExtractTrajectory(extractCtx, param.SpaceID, record.TraceID, sms)
 		if err != nil {
 			return errorx.Wrapf(err, "ExtractTrajectory fail, space_id: %v, trace_id: %v", param.SpaceID, record.TraceID)
 		}
@@ -1403,20 +1403,35 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		if od.OutputFields == nil {
 			od.OutputFields = map[string]*entity.Content{}
 		}
-		od.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(ctx)
+		od.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(extractCtx)
 		updateRec := &entity.EvalTargetRecord{
 			ID:                   record.ID,
 			TraceID:              record.TraceID,
 			EvalTargetOutputData: od,
 		}
-		return e.evalTargetRepo.UpdateEvalTargetRecord(ctx, updateRec, nil)
+		return e.evalTargetRepo.UpdateEvalTargetRecord(extractCtx, updateRec, nil)
 	}
 
 	if param.EnableExtractTrajectory == nil || *param.EnableExtractTrajectory {
-		goroutine.Go(ctx, func() {
-			time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(param.SpaceID))
-			if err := recordTrajectory(); err != nil {
-				logs.CtxError(ctx, "extract and record trajectory fail, record_id: %v, err: %v", record.ID, err)
+		backgroundCtx := context.WithoutCancel(ctx)
+		goroutine.Go(backgroundCtx, func() {
+			extractInterval := e.configer.GetTargetTrajectoryConf(backgroundCtx).GetExtractInterval(param.SpaceID)
+			retryInterval := e.trajectoryRetryInterval
+			if retryInterval <= 0 {
+				retryInterval = defaultTrajectoryRetryInterval
+			}
+			extractCtx, cancel := context.WithTimeout(backgroundCtx,
+				extractInterval+time.Duration(trajectoryExtractAttempts-1)*retryInterval+evalTargetRecordPersistTimeout)
+			defer cancel()
+			timer := time.NewTimer(extractInterval)
+			select {
+			case <-extractCtx.Done():
+				timer.Stop()
+				return
+			case <-timer.C:
+			}
+			if err := recordTrajectory(extractCtx); err != nil {
+				logs.CtxError(backgroundCtx, "extract and record trajectory fail, record_id: %v, err: %v", record.ID, err)
 			}
 		})
 	}

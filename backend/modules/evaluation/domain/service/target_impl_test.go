@@ -1462,6 +1462,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testin
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			requestCtx, cancelRequest := context.WithCancel(ctx)
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -1486,7 +1487,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testin
 				AsyncUnixMS: tt.asyncUnixMS,
 			}
 
-			repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(record, nil)
+			repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(requestCtx, param.SpaceID, param.RecordID).Return(record, nil)
 			repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			repo.EXPECT().UpdateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 			configer.EXPECT().GetErrCtrl(gomock.Any()).Return(&entity.ExptErrCtrl{}).AnyTimes()
@@ -1497,7 +1498,8 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testin
 			gotStartCh := make(chan int64, 1)
 			trajectoryAdapter.EXPECT().
 				ListTrajectory(gomock.Any(), spaceID, gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, _ int64, _ []string, startMS *int64) ([]*entity.Trajectory, error) {
+				DoAndReturn(func(extractCtx context.Context, _ int64, _ []string, startMS *int64) ([]*entity.Trajectory, error) {
+					require.NoError(t, extractCtx.Err(), "后台轨迹抽取不应继承已取消的请求 context")
 					var v int64
 					if startMS != nil {
 						v = *startMS
@@ -1515,8 +1517,9 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testin
 				configer:          configer,
 			}
 
-			err := svc.ReportInvokeRecords(ctx, param)
+			err := svc.ReportInvokeRecords(requestCtx, param)
 			require.NoError(t, err)
+			cancelRequest()
 
 			// 等异步抽取 goroutine(sleep 1s interval)完成
 			time.Sleep(1200 * time.Millisecond)
