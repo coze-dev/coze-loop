@@ -5040,6 +5040,7 @@ func (p *SearchTraceOApiData) Field4DeepEqual(src *bool) bool {
 
 type SearchTraceTreeOApiRequest struct {
 	WorkspaceID *int64  `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	Logid       *string `thrift:"logid,2,optional" frugal:"2,optional,string" form:"logid" json:"logid,omitempty"`
 	TraceID     *string `thrift:"trace_id,3,optional" frugal:"3,optional,string" json:"trace_id" form:"trace_id" `
 	// ms
 	StartTime *int64 `thrift:"start_time,4,optional" frugal:"4,optional,i64" json:"start_time" form:"start_time" `
@@ -5072,6 +5073,18 @@ func (p *SearchTraceTreeOApiRequest) GetWorkspaceID() (v int64) {
 		return SearchTraceTreeOApiRequest_WorkspaceID_DEFAULT
 	}
 	return *p.WorkspaceID
+}
+
+var SearchTraceTreeOApiRequest_Logid_DEFAULT string
+
+func (p *SearchTraceTreeOApiRequest) GetLogid() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLogid() {
+		return SearchTraceTreeOApiRequest_Logid_DEFAULT
+	}
+	return *p.Logid
 }
 
 var SearchTraceTreeOApiRequest_TraceID_DEFAULT string
@@ -5191,6 +5204,9 @@ func (p *SearchTraceTreeOApiRequest) GetBase() (v *base.Base) {
 func (p *SearchTraceTreeOApiRequest) SetWorkspaceID(val *int64) {
 	p.WorkspaceID = val
 }
+func (p *SearchTraceTreeOApiRequest) SetLogid(val *string) {
+	p.Logid = val
+}
 func (p *SearchTraceTreeOApiRequest) SetTraceID(val *string) {
 	p.TraceID = val
 }
@@ -5224,6 +5240,7 @@ func (p *SearchTraceTreeOApiRequest) SetBase(val *base.Base) {
 
 var fieldIDToName_SearchTraceTreeOApiRequest = map[int16]string{
 	1:   "workspace_id",
+	2:   "logid",
 	3:   "trace_id",
 	4:   "start_time",
 	5:   "end_time",
@@ -5238,6 +5255,10 @@ var fieldIDToName_SearchTraceTreeOApiRequest = map[int16]string{
 
 func (p *SearchTraceTreeOApiRequest) IsSetWorkspaceID() bool {
 	return p.WorkspaceID != nil
+}
+
+func (p *SearchTraceTreeOApiRequest) IsSetLogid() bool {
+	return p.Logid != nil
 }
 
 func (p *SearchTraceTreeOApiRequest) IsSetTraceID() bool {
@@ -5298,6 +5319,14 @@ func (p *SearchTraceTreeOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5430,6 +5459,17 @@ func (p *SearchTraceTreeOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 	p.WorkspaceID = _field
 	return nil
 }
+func (p *SearchTraceTreeOApiRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Logid = _field
+	return nil
+}
 func (p *SearchTraceTreeOApiRequest) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -5542,6 +5582,10 @@ func (p *SearchTraceTreeOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 1
 			goto WriteFieldError
 		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
 			goto WriteFieldError
@@ -5617,6 +5661,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SearchTraceTreeOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLogid() {
+		if err = oprot.WriteFieldBegin("logid", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Logid); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *SearchTraceTreeOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTraceID() {
@@ -5814,6 +5876,9 @@ func (p *SearchTraceTreeOApiRequest) DeepEqual(ano *SearchTraceTreeOApiRequest) 
 	if !p.Field1DeepEqual(ano.WorkspaceID) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.Logid) {
+		return false
+	}
 	if !p.Field3DeepEqual(ano.TraceID) {
 		return false
 	}
@@ -5855,6 +5920,18 @@ func (p *SearchTraceTreeOApiRequest) Field1DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *SearchTraceTreeOApiRequest) Field2DeepEqual(src *string) bool {
+
+	if p.Logid == src {
+		return true
+	} else if p.Logid == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Logid, *src) != 0 {
 		return false
 	}
 	return true

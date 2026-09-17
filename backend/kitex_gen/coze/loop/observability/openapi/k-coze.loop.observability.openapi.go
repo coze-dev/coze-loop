@@ -3764,6 +3764,20 @@ func (p *SearchTraceTreeOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField3(buf[offset:])
@@ -3943,6 +3957,20 @@ func (p *SearchTraceTreeOApiRequest) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SearchTraceTreeOApiRequest) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Logid = _field
+	return offset, nil
+}
+
 func (p *SearchTraceTreeOApiRequest) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
@@ -4089,6 +4117,7 @@ func (p *SearchTraceTreeOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocopy
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField8(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
@@ -4104,6 +4133,7 @@ func (p *SearchTraceTreeOApiRequest) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
@@ -4124,6 +4154,15 @@ func (p *SearchTraceTreeOApiRequest) fastWriteField1(buf []byte, w thrift.Nocopy
 	if p.IsSetWorkspaceID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.WorkspaceID)
+	}
+	return offset
+}
+
+func (p *SearchTraceTreeOApiRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetLogid() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Logid)
 	}
 	return offset
 }
@@ -4225,6 +4264,15 @@ func (p *SearchTraceTreeOApiRequest) field1Length() int {
 	return l
 }
 
+func (p *SearchTraceTreeOApiRequest) field2Length() int {
+	l := 0
+	if p.IsSetLogid() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Logid)
+	}
+	return l
+}
+
 func (p *SearchTraceTreeOApiRequest) field3Length() int {
 	l := 0
 	if p.IsSetTraceID() {
@@ -4322,6 +4370,14 @@ func (p *SearchTraceTreeOApiRequest) DeepCopy(s interface{}) error {
 	if src.WorkspaceID != nil {
 		tmp := *src.WorkspaceID
 		p.WorkspaceID = &tmp
+	}
+
+	if src.Logid != nil {
+		var tmp string
+		if *src.Logid != "" {
+			tmp = kutils.StringDeepCopy(*src.Logid)
+		}
+		p.Logid = &tmp
 	}
 
 	if src.TraceID != nil {

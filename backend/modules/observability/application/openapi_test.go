@@ -2835,11 +2835,34 @@ func TestOpenAPIApplication_validateSearchTraceTreeOApiReq(t *testing.T) {
 	err := app.validateSearchTraceTreeOApiReq(context.Background(), nil)
 	assert.Error(t, err)
 
-	// 测试空trace_id
+	// 测试trace_id和logid均为空
 	err = app.validateSearchTraceTreeOApiReq(context.Background(), &openapi.SearchTraceTreeOApiRequest{
 		TraceID: ptr.Of(""),
+		Logid:   ptr.Of(""),
 	})
 	assert.Error(t, err)
+
+	startTime := time.Now().Add(-time.Hour).UnixMilli()
+	endTime := time.Now().UnixMilli()
+
+	// 测试仅传logid
+	err = app.validateSearchTraceTreeOApiReq(context.Background(), &openapi.SearchTraceTreeOApiRequest{
+		Logid:     ptr.Of("test-log-id"),
+		StartTime: &startTime,
+		EndTime:   &endTime,
+		Limit:     10,
+	})
+	assert.NoError(t, err)
+
+	// 测试trace_id和logid同时存在
+	err = app.validateSearchTraceTreeOApiReq(context.Background(), &openapi.SearchTraceTreeOApiRequest{
+		TraceID:   ptr.Of("test-trace-id"),
+		Logid:     ptr.Of("test-log-id"),
+		StartTime: &startTime,
+		EndTime:   &endTime,
+		Limit:     10,
+	})
+	assert.NoError(t, err)
 
 	// 测试超过最大限制
 	err = app.validateSearchTraceTreeOApiReq(context.Background(), &openapi.SearchTraceTreeOApiRequest{
@@ -2856,8 +2879,8 @@ func TestOpenAPIApplication_validateSearchTraceTreeOApiReq(t *testing.T) {
 	assert.Error(t, err)
 
 	// 测试正常情况
-	startTime := time.Now().UnixMilli()
-	endTime := time.Now().Add(1 * time.Hour).UnixMilli() // 结束时间晚于开始时间
+	startTime = time.Now().UnixMilli()
+	endTime = time.Now().Add(1 * time.Hour).UnixMilli() // 结束时间晚于开始时间
 	err = app.validateSearchTraceTreeOApiReq(context.Background(), &openapi.SearchTraceTreeOApiRequest{
 		TraceID:   ptr.Of("test-trace-id"),
 		Limit:     10,
@@ -2897,6 +2920,7 @@ func TestOpenAPIApplication_buildSearchTraceTreeOApiReq(t *testing.T) {
 	req := &openapi.SearchTraceTreeOApiRequest{
 		WorkspaceID:  ptr.Of(int64(123)),
 		TraceID:      ptr.Of("test-trace-id"),
+		Logid:        ptr.Of("test-log-id"),
 		StartTime:    ptr.Of(time.Now().Add(-1 * time.Hour).UnixMilli()),
 		EndTime:      ptr.Of(time.Now().UnixMilli()),
 		Limit:        10,
@@ -2919,6 +2943,7 @@ func TestOpenAPIApplication_buildSearchTraceTreeOApiReq(t *testing.T) {
 	assert.Equal(t, int64(123), result.WorkspaceID)
 	assert.Equal(t, "third-party-123", result.ThirdPartyWorkspaceID)
 	assert.Equal(t, "test-trace-id", result.TraceID)
+	assert.Equal(t, "test-log-id", result.LogID)
 	assert.Equal(t, int32(10), result.Limit)
 	assert.False(t, result.WithDetail)
 	assert.Len(t, result.Tenants, 2)
@@ -3086,6 +3111,64 @@ func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
 		})
 		assert.Error(t, err)
 		assert.Nil(t, resp)
+	})
+
+	t.Run("logid only resolves time range and searches trace", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+		authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+		authMock.EXPECT().GetClaim(gomock.Any()).Return(nil).AnyTimes()
+		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+		workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+		rateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
+		timeRangeMock := time_rangemocks.NewMockITimeRangeProvider(ctrl)
+
+		now := time.Now().UnixMilli()
+		start := now - 3600000
+		timeRangeMock.EXPECT().GetTimeRange(gomock.Any(), "123", "log123", "", int64(1000*60*60*24)).Return(&start, &now)
+		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "platform").Return(nil)
+		rateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
+		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), gomock.Any()).Return(10, nil)
+		workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("third-party-123")
+		tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), gomock.Any()).Return([]string{"tenant1"})
+		traceServiceMock.EXPECT().SearchTraceOApi(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *service.SearchTraceOApiReq) (*service.SearchTraceOApiResp, error) {
+			assert.Empty(t, req.TraceID)
+			assert.Equal(t, "log123", req.LogID)
+			assert.Equal(t, start, req.StartTime)
+			assert.Equal(t, now, req.EndTime)
+			return &service.SearchTraceOApiResp{Spans: []*loop_span.Span{{SpanID: "test"}}}, nil
+		})
+		metricsMock.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		collectorMock.EXPECT().CollectTraceOpenAPIEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+		app := &OpenAPIApplication{
+			traceService: traceServiceMock,
+			auth:         authMock,
+			tenant:       tenantMock,
+			workspace:    workspaceMock,
+			rateLimiter:  rateLimiter,
+			traceConfig:  traceConfigMock,
+			metrics:      metricsMock,
+			collector:    collectorMock,
+			timeRange:    timeRangeMock,
+		}
+		req := &openapi.SearchTraceTreeOApiRequest{
+			WorkspaceID:  ptr.Of(int64(123)),
+			Logid:        ptr.Of("log123"),
+			Limit:        10,
+			PlatformType: ptr.Of(common.PlatformType("platform")),
+		}
+
+		resp, err := app.SearchTraceTreeOApi(context.Background(), req)
+		assert.NoError(t, err)
+		if assert.NotNil(t, resp) && assert.NotNil(t, resp.Data) {
+			assert.Len(t, resp.Data.Spans, 1)
+		}
 	})
 
 	t.Run("permission denied", func(t *testing.T) {
