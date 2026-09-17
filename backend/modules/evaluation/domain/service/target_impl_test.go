@@ -21,6 +21,7 @@ import (
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	looptracermocks "github.com/coze-dev/coze-loop/backend/infra/looptracer/mocks"
+	kitextrajectory "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/trajectory"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
@@ -867,7 +868,8 @@ func TestEvalTargetServiceImpl_ExecuteTarget_TrajectoryExtraction(t *testing.T) 
 			name: "trajectory extracted successfully - field added",
 			trajectories: []*entity.Trajectory{
 				{
-					ID: gptr.Of("traj-id"),
+					ID:       gptr.Of("traj-id"),
+					RootStep: &kitextrajectory.RootStep{},
 				},
 			},
 			expectHasField:    true,
@@ -1207,7 +1209,8 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_Trajectory(t *testing.T) {
 			name: "extract trajectory success - trajectory field added",
 			trajectories: []*entity.Trajectory{
 				{
-					ID: gptr.Of("traj-id"),
+					ID:       gptr.Of("traj-id"),
+					RootStep: &kitextrajectory.RootStep{},
 				},
 			},
 			expectHasField:    true,
@@ -1358,6 +1361,73 @@ func TestEvalTargetServiceImpl_ExtractTrajectory_EmptyTraceID(t *testing.T) {
 	assert.Nil(t, res)
 }
 
+func TestEvalTargetServiceImpl_ExtractTrajectory_RetriesIncompleteTrajectory(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	adapter := trajectorymocks.NewMockITrajectoryAdapter(ctrl)
+	traceID := "trace-x"
+	incomplete := &entity.Trajectory{ID: &traceID}
+	complete := &entity.Trajectory{ID: &traceID, RootStep: &kitextrajectory.RootStep{}}
+
+	gomock.InOrder(
+		adapter.EXPECT().ListTrajectory(gomock.Any(), int64(1), []string{traceID}, nil).
+			Return([]*entity.Trajectory{incomplete}, nil),
+		adapter.EXPECT().ListTrajectory(gomock.Any(), int64(1), []string{traceID}, nil).
+			Return([]*entity.Trajectory{complete}, nil),
+	)
+
+	svc := &EvalTargetServiceImpl{trajectoryAdapter: adapter, trajectoryRetryInterval: time.Millisecond}
+	got, err := svc.ExtractTrajectory(context.Background(), 1, traceID, nil)
+	require.NoError(t, err)
+	assert.Same(t, complete, got)
+}
+
+func TestEvalTargetServiceImpl_ExtractTrajectory_RejectsPersistentlyIncompleteTrajectory(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	adapter := trajectorymocks.NewMockITrajectoryAdapter(ctrl)
+	traceID := "trace-x"
+	incomplete := &entity.Trajectory{ID: &traceID}
+	adapter.EXPECT().ListTrajectory(gomock.Any(), int64(1), []string{traceID}, nil).
+		Return([]*entity.Trajectory{incomplete}, nil).Times(trajectoryExtractAttempts)
+
+	svc := &EvalTargetServiceImpl{trajectoryAdapter: adapter, trajectoryRetryInterval: time.Millisecond}
+	got, err := svc.ExtractTrajectory(context.Background(), 1, traceID, nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "trajectory is incomplete")
+	assert.Nil(t, got)
+}
+
+// TestEvalTargetServiceImpl_ExtractTrajectory_RetryWindowCoversRootSpanLanding 复现线上偶发丢轨迹的第二层根因:
+// observability 侧 span 落库最终一致, 抽取发起时顶层 root span 尚未可见, ListTrajectory 只返回 {id, agent_steps}
+// 而 RootStep=nil → IsValid()=false。root span 往往在数十秒后才落库, 因此重试必须坚持到 root_step 出现;
+// 若窗口只有旧的 3 次, root_step 在第 5 次才出现时会被判 incomplete 丢弃。这里让前 4 次 incomplete、第 5 次 complete,
+// 断言仍能抽到——等价要求 trajectoryExtractAttempts >= 5。
+func TestEvalTargetServiceImpl_ExtractTrajectory_RetryWindowCoversRootSpanLanding(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	adapter := trajectorymocks.NewMockITrajectoryAdapter(ctrl)
+	traceID := "trace-late-root"
+	incomplete := &entity.Trajectory{ID: &traceID}                                      // 仅 agent_steps, root span 未落库
+	complete := &entity.Trajectory{ID: &traceID, RootStep: &kitextrajectory.RootStep{}} // root span 落库后
+	const rootSpanLandsOnAttempt = 5
+
+	call := 0
+	adapter.EXPECT().ListTrajectory(gomock.Any(), int64(1), []string{traceID}, nil).
+		DoAndReturn(func(_ context.Context, _ int64, _ []string, _ *int64) ([]*entity.Trajectory, error) {
+			call++
+			if call >= rootSpanLandsOnAttempt {
+				return []*entity.Trajectory{complete}, nil
+			}
+			return []*entity.Trajectory{incomplete}, nil
+		}).MinTimes(rootSpanLandsOnAttempt)
+
+	svc := &EvalTargetServiceImpl{trajectoryAdapter: adapter, trajectoryRetryInterval: time.Millisecond}
+	got, err := svc.ExtractTrajectory(context.Background(), 1, traceID, nil)
+	require.NoError(t, err)
+	assert.Same(t, complete, got)
+}
+
 // TestEvalTargetServiceImpl_ExtractTrajectory_StartTimeBuffer 验证抽取 trajectory 时下界额外向前预留 1 分钟 buffer;
 // startTimeMS 为 nil 时保持 nil 不做偏移。
 func TestEvalTargetServiceImpl_ExtractTrajectory_StartTimeBuffer(t *testing.T) {
@@ -1389,7 +1459,8 @@ func TestEvalTargetServiceImpl_ExtractTrajectory_StartTimeBuffer(t *testing.T) {
 						require.NotNil(t, got)
 						assert.Equal(t, *tt.wantOut, *got)
 					}
-					return nil, nil
+					traceID := "trace-x"
+					return []*entity.Trajectory{{ID: &traceID, RootStep: &kitextrajectory.RootStep{}}}, nil
 				})
 			svc := &EvalTargetServiceImpl{trajectoryAdapter: adapter}
 			_, err := svc.ExtractTrajectory(ctx, spaceID, "trace-x", tt.in)
@@ -1421,6 +1492,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testin
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			requestCtx, cancelRequest := context.WithCancel(ctx)
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -1445,7 +1517,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testin
 				AsyncUnixMS: tt.asyncUnixMS,
 			}
 
-			repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(record, nil)
+			repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(requestCtx, param.SpaceID, param.RecordID).Return(record, nil)
 			repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			repo.EXPECT().UpdateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 			configer.EXPECT().GetErrCtrl(gomock.Any()).Return(&entity.ExptErrCtrl{}).AnyTimes()
@@ -1456,7 +1528,8 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testin
 			gotStartCh := make(chan int64, 1)
 			trajectoryAdapter.EXPECT().
 				ListTrajectory(gomock.Any(), spaceID, gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, _ int64, _ []string, startMS *int64) ([]*entity.Trajectory, error) {
+				DoAndReturn(func(extractCtx context.Context, _ int64, _ []string, startMS *int64) ([]*entity.Trajectory, error) {
+					require.NoError(t, extractCtx.Err(), "后台轨迹抽取不应继承已取消的请求 context")
 					var v int64
 					if startMS != nil {
 						v = *startMS
@@ -1465,7 +1538,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testin
 					case gotStartCh <- v:
 					default:
 					}
-					return []*entity.Trajectory{{ID: gptr.Of("traj")}}, nil
+					return []*entity.Trajectory{{ID: gptr.Of("traj"), RootStep: &kitextrajectory.RootStep{}}}, nil
 				})
 
 			svc := &EvalTargetServiceImpl{
@@ -1474,8 +1547,9 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testin
 				configer:          configer,
 			}
 
-			err := svc.ReportInvokeRecords(ctx, param)
+			err := svc.ReportInvokeRecords(requestCtx, param)
 			require.NoError(t, err)
+			cancelRequest()
 
 			// 等异步抽取 goroutine(sleep 1s interval)完成
 			time.Sleep(1200 * time.Millisecond)
@@ -1486,6 +1560,106 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testin
 				t.Fatal("ListTrajectory was not called")
 			}
 		})
+	}
+}
+
+// TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryBudgetCoversAllAttempts 验证:
+// 后台轨迹抽取的超时预算(extractCtx)必须覆盖"每一次 ListTrajectory RPC + 重试间隔 + 落库",
+// 且不被等待期(extractInterval)蚕食。线上根因是:
+//   - 等待期 extractInterval 与工作期共用一个 extractCtx 预算;
+//   - 工作期预算里只算了 (attempts-1)*retryInterval + persistTimeout, 完全没给 attempts 次 RPC 留时间。
+//
+// 于是当 trace 尚未最终一致、需要多次重试、每次 ListTrajectory RPC 又各耗一定时间时, 最后一次 RPC
+// 拿到的 ctx 剩余会 <= 0, 以 timeout=0s 失败(实测 actual≈1.48s), trajectory 丢失。
+//
+// 本测试模拟前若干次抽取到"不完整"轨迹(触发重试)且每次 RPC 各耗 800ms; 断言最后一次 RPC 被调用时,
+// 其 ctx 剩余预算仍能容纳一次落库(>= persistTimeout)。修复前: 最后一次 RPC 要么根本没机会跑(ctx 已 Done),
+// 要么剩余远不足 persistTimeout → 断言失败。
+func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryBudgetCoversAllAttempts(t *testing.T) {
+	// do not run in parallel: involves real time for the async trajectory goroutine
+	spaceID := int64(1)
+	// extractInterval 取一个较大值, 复现"等待期与工作期共用预算";用 3s 保证 UT 快速。
+	const extractIntervalSec = int64(3)
+	const perRPCCost = 800 * time.Millisecond // 模拟单次 ListTrajectory RPC 耗时
+
+	requestCtx, cancelRequest := context.WithCancel(context.Background())
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := repomocks.NewMockIEvalTargetRepo(ctrl)
+	configer := componentmocks.NewMockIConfiger(ctrl)
+	trajectoryAdapter := trajectorymocks.NewMockITrajectoryAdapter(ctrl)
+
+	record := &entity.EvalTargetRecord{
+		ID:                   10,
+		SpaceID:              spaceID,
+		Status:               gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+		EvalTargetOutputData: &entity.EvalTargetOutputData{},
+		TraceID:              "trace-budget",
+		BaseInfo:             &entity.BaseInfo{CreatedAt: gptr.Of(int64(2_000_000))},
+	}
+	param := &entity.ReportTargetRecordParam{
+		SpaceID:    spaceID,
+		RecordID:   record.ID,
+		Status:     entity.EvalTargetRunStatusSuccess,
+		OutputData: &entity.EvalTargetOutputData{},
+	}
+
+	repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(requestCtx, param.SpaceID, param.RecordID).Return(record, nil)
+	repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	repo.EXPECT().UpdateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+	configer.EXPECT().GetErrCtrl(gomock.Any()).Return(&entity.ExptErrCtrl{}).AnyTimes()
+	configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{
+		SpaceExtractIntervalSecond: map[int64]int64{spaceID: extractIntervalSec},
+	})
+
+	traceID := record.TraceID
+	incomplete := &entity.Trajectory{ID: &traceID}                                      // 无 RootStep → IsValid()=false, 触发重试
+	complete := &entity.Trajectory{ID: &traceID, RootStep: &kitextrajectory.RootStep{}} // 最后一次抽到完整
+
+	lastRemainingCh := make(chan time.Duration, 1)
+	call := 0
+	trajectoryAdapter.EXPECT().
+		ListTrajectory(gomock.Any(), spaceID, gomock.Any(), gomock.Any()).
+		DoAndReturn(func(extractCtx context.Context, _ int64, _ []string, _ *int64) ([]*entity.Trajectory, error) {
+			call++
+			time.Sleep(perRPCCost) // 模拟 RPC 真实耗时
+			if call >= trajectoryExtractAttempts {
+				var remaining time.Duration
+				if dl, ok := extractCtx.Deadline(); ok {
+					remaining = time.Until(dl)
+				} else {
+					remaining = time.Hour
+				}
+				select {
+				case lastRemainingCh <- remaining:
+				default:
+				}
+				return []*entity.Trajectory{complete}, nil
+			}
+			return []*entity.Trajectory{incomplete}, nil
+		}).Times(trajectoryExtractAttempts)
+
+	svc := &EvalTargetServiceImpl{
+		evalTargetRepo:    repo,
+		trajectoryAdapter: trajectoryAdapter,
+		configer:          configer,
+		// 用毫秒级 retryInterval 把重试等待压到可忽略: 本测试只验"工作预算覆盖 attempts 次 RPC",
+		// 与重试间隔长短无关; 用生产默认(10s)会让 UT 空等数十秒。
+		trajectoryRetryInterval: time.Millisecond,
+	}
+
+	err := svc.ReportInvokeRecords(requestCtx, param)
+	require.NoError(t, err)
+	cancelRequest() // 模拟请求返回后 ctx 被取消
+
+	select {
+	case remaining := <-lastRemainingCh:
+		// 最后一次 ListTrajectory 返回后, 还要走 UpdateEvalTargetRecord 落库(persistTimeout)。
+		assert.GreaterOrEqual(t, remaining, evalTargetRecordPersistTimeout,
+			"最后一次抽取时 ctx 剩余预算不足以落库, 会因 timeout=0s 丢 trajectory")
+	case <-time.After(time.Duration(extractIntervalSec)*time.Second + time.Duration(trajectoryExtractAttempts)*perRPCCost + 8*time.Second):
+		t.Fatal("最后一次 ListTrajectory 未被调用(预算被提前耗尽)")
 	}
 }
 
