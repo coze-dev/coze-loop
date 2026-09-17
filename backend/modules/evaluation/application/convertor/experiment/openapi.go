@@ -1634,7 +1634,10 @@ func openAPIEvaluatorOutputDataDO2DTO(data *entity.EvaluatorOutputData) *openapi
 	if data.ExtraOutput != nil {
 		res.ExtraOutput = evaluator_convertor.OpenAPIEvaluatorExtraOutputContentDO2DTO(data.ExtraOutput)
 	}
-	if res.EvaluatorResult_ == nil && res.EvaluatorUsage == nil && res.EvaluatorRunError == nil && res.TimeConsumingMs == nil {
+	if data.EvidenceArchive != nil {
+		res.EvidenceArchive = evaluator_convertor.OpenAPIEvaluatorEvidenceArchiveDO2DTO(data.EvidenceArchive)
+	}
+	if res.EvaluatorResult_ == nil && res.EvaluatorUsage == nil && res.EvaluatorRunError == nil && res.TimeConsumingMs == nil && res.EvidenceArchive == nil {
 		return nil
 	}
 	return res

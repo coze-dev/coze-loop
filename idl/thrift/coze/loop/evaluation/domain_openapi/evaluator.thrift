@@ -157,6 +157,19 @@ struct EvaluatorOutputData {
     4: optional i64 time_consuming_ms (api.js_conv = 'true', go.tag = 'json:"time_consuming_ms"')
     11: optional string stdout
     12: optional EvaluatorExtraOutputContent extra_output
+    13: optional EvaluatorEvidenceArchive evidence_archive
+}
+
+struct EvaluatorEvidenceArchive {
+    1: optional string schema_version
+    2: optional string object_key
+    3: optional string status
+    4: optional string trigger
+    5: optional i64 size_bytes
+    6: optional string sha256
+    7: optional i64 truncated_files
+    14: optional string error
+    15: optional string fornax_evaluator_log_url
 }
 
 struct EvaluatorExtraOutputContent {

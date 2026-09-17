@@ -5782,6 +5782,7 @@ type InvokeEvaluatorOutputData struct {
 	EvaluatorUsage    *InvokeEvaluatorUsage        `thrift:"evaluator_usage,2,optional" frugal:"2,optional,InvokeEvaluatorUsage" form:"evaluator_usage" json:"evaluator_usage,omitempty" query:"evaluator_usage"`
 	EvaluatorRunError *InvokeEvaluatorRunError     `thrift:"evaluator_run_error,3,optional" frugal:"3,optional,InvokeEvaluatorRunError" form:"evaluator_run_error" json:"evaluator_run_error,omitempty" query:"evaluator_run_error"`
 	ExtraOutput       *EvaluatorExtraOutputContent `thrift:"extra_output,12,optional" frugal:"12,optional,EvaluatorExtraOutputContent" form:"extra_output" json:"extra_output,omitempty" query:"extra_output"`
+	EvidenceArchive   *EvaluatorEvidenceArchive    `thrift:"evidence_archive,13,optional" frugal:"13,optional,EvaluatorEvidenceArchive" form:"evidence_archive" json:"evidence_archive,omitempty" query:"evidence_archive"`
 }
 
 func NewInvokeEvaluatorOutputData() *InvokeEvaluatorOutputData {
@@ -5838,6 +5839,18 @@ func (p *InvokeEvaluatorOutputData) GetExtraOutput() (v *EvaluatorExtraOutputCon
 	}
 	return p.ExtraOutput
 }
+
+var InvokeEvaluatorOutputData_EvidenceArchive_DEFAULT *EvaluatorEvidenceArchive
+
+func (p *InvokeEvaluatorOutputData) GetEvidenceArchive() (v *EvaluatorEvidenceArchive) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvidenceArchive() {
+		return InvokeEvaluatorOutputData_EvidenceArchive_DEFAULT
+	}
+	return p.EvidenceArchive
+}
 func (p *InvokeEvaluatorOutputData) SetEvaluatorResult_(val *InvokeEvaluatorResult_) {
 	p.EvaluatorResult_ = val
 }
@@ -5850,12 +5863,16 @@ func (p *InvokeEvaluatorOutputData) SetEvaluatorRunError(val *InvokeEvaluatorRun
 func (p *InvokeEvaluatorOutputData) SetExtraOutput(val *EvaluatorExtraOutputContent) {
 	p.ExtraOutput = val
 }
+func (p *InvokeEvaluatorOutputData) SetEvidenceArchive(val *EvaluatorEvidenceArchive) {
+	p.EvidenceArchive = val
+}
 
 var fieldIDToName_InvokeEvaluatorOutputData = map[int16]string{
 	1:  "evaluator_result",
 	2:  "evaluator_usage",
 	3:  "evaluator_run_error",
 	12: "extra_output",
+	13: "evidence_archive",
 }
 
 func (p *InvokeEvaluatorOutputData) IsSetEvaluatorResult_() bool {
@@ -5872,6 +5889,10 @@ func (p *InvokeEvaluatorOutputData) IsSetEvaluatorRunError() bool {
 
 func (p *InvokeEvaluatorOutputData) IsSetExtraOutput() bool {
 	return p.ExtraOutput != nil
+}
+
+func (p *InvokeEvaluatorOutputData) IsSetEvidenceArchive() bool {
+	return p.EvidenceArchive != nil
 }
 
 func (p *InvokeEvaluatorOutputData) Read(iprot thrift.TProtocol) (err error) {
@@ -5919,6 +5940,14 @@ func (p *InvokeEvaluatorOutputData) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5985,6 +6014,14 @@ func (p *InvokeEvaluatorOutputData) ReadField12(iprot thrift.TProtocol) error {
 	p.ExtraOutput = _field
 	return nil
 }
+func (p *InvokeEvaluatorOutputData) ReadField13(iprot thrift.TProtocol) error {
+	_field := NewEvaluatorEvidenceArchive()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvidenceArchive = _field
+	return nil
+}
 
 func (p *InvokeEvaluatorOutputData) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6006,6 +6043,10 @@ func (p *InvokeEvaluatorOutputData) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 	}
@@ -6098,6 +6139,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
+func (p *InvokeEvaluatorOutputData) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvidenceArchive() {
+		if err = oprot.WriteFieldBegin("evidence_archive", thrift.STRUCT, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvidenceArchive.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
 
 func (p *InvokeEvaluatorOutputData) String() string {
 	if p == nil {
@@ -6123,6 +6182,9 @@ func (p *InvokeEvaluatorOutputData) DeepEqual(ano *InvokeEvaluatorOutputData) bo
 		return false
 	}
 	if !p.Field12DeepEqual(ano.ExtraOutput) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.EvidenceArchive) {
 		return false
 	}
 	return true
@@ -6152,6 +6214,810 @@ func (p *InvokeEvaluatorOutputData) Field3DeepEqual(src *InvokeEvaluatorRunError
 func (p *InvokeEvaluatorOutputData) Field12DeepEqual(src *EvaluatorExtraOutputContent) bool {
 
 	if !p.ExtraOutput.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *InvokeEvaluatorOutputData) Field13DeepEqual(src *EvaluatorEvidenceArchive) bool {
+
+	if !p.EvidenceArchive.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluatorEvidenceArchive struct {
+	SchemaVersion         *string `thrift:"schema_version,1,optional" frugal:"1,optional,string" form:"schema_version" json:"schema_version,omitempty" query:"schema_version"`
+	ObjectKey             *string `thrift:"object_key,2,optional" frugal:"2,optional,string" form:"object_key" json:"object_key,omitempty" query:"object_key"`
+	Status                *string `thrift:"status,3,optional" frugal:"3,optional,string" form:"status" json:"status,omitempty" query:"status"`
+	Trigger               *string `thrift:"trigger,4,optional" frugal:"4,optional,string" form:"trigger" json:"trigger,omitempty" query:"trigger"`
+	SizeBytes             *int64  `thrift:"size_bytes,5,optional" frugal:"5,optional,i64" form:"size_bytes" json:"size_bytes,omitempty" query:"size_bytes"`
+	Sha256                *string `thrift:"sha256,6,optional" frugal:"6,optional,string" form:"sha256" json:"sha256,omitempty" query:"sha256"`
+	TruncatedFiles        *int64  `thrift:"truncated_files,7,optional" frugal:"7,optional,i64" form:"truncated_files" json:"truncated_files,omitempty" query:"truncated_files"`
+	Error                 *string `thrift:"error,14,optional" frugal:"14,optional,string" form:"error" json:"error,omitempty" query:"error"`
+	FornaxEvaluatorLogURL *string `thrift:"fornax_evaluator_log_url,15,optional" frugal:"15,optional,string" form:"fornax_evaluator_log_url" json:"fornax_evaluator_log_url,omitempty" query:"fornax_evaluator_log_url"`
+}
+
+func NewEvaluatorEvidenceArchive() *EvaluatorEvidenceArchive {
+	return &EvaluatorEvidenceArchive{}
+}
+
+func (p *EvaluatorEvidenceArchive) InitDefault() {
+}
+
+var EvaluatorEvidenceArchive_SchemaVersion_DEFAULT string
+
+func (p *EvaluatorEvidenceArchive) GetSchemaVersion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSchemaVersion() {
+		return EvaluatorEvidenceArchive_SchemaVersion_DEFAULT
+	}
+	return *p.SchemaVersion
+}
+
+var EvaluatorEvidenceArchive_ObjectKey_DEFAULT string
+
+func (p *EvaluatorEvidenceArchive) GetObjectKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetObjectKey() {
+		return EvaluatorEvidenceArchive_ObjectKey_DEFAULT
+	}
+	return *p.ObjectKey
+}
+
+var EvaluatorEvidenceArchive_Status_DEFAULT string
+
+func (p *EvaluatorEvidenceArchive) GetStatus() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStatus() {
+		return EvaluatorEvidenceArchive_Status_DEFAULT
+	}
+	return *p.Status
+}
+
+var EvaluatorEvidenceArchive_Trigger_DEFAULT string
+
+func (p *EvaluatorEvidenceArchive) GetTrigger() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTrigger() {
+		return EvaluatorEvidenceArchive_Trigger_DEFAULT
+	}
+	return *p.Trigger
+}
+
+var EvaluatorEvidenceArchive_SizeBytes_DEFAULT int64
+
+func (p *EvaluatorEvidenceArchive) GetSizeBytes() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSizeBytes() {
+		return EvaluatorEvidenceArchive_SizeBytes_DEFAULT
+	}
+	return *p.SizeBytes
+}
+
+var EvaluatorEvidenceArchive_Sha256_DEFAULT string
+
+func (p *EvaluatorEvidenceArchive) GetSha256() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSha256() {
+		return EvaluatorEvidenceArchive_Sha256_DEFAULT
+	}
+	return *p.Sha256
+}
+
+var EvaluatorEvidenceArchive_TruncatedFiles_DEFAULT int64
+
+func (p *EvaluatorEvidenceArchive) GetTruncatedFiles() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTruncatedFiles() {
+		return EvaluatorEvidenceArchive_TruncatedFiles_DEFAULT
+	}
+	return *p.TruncatedFiles
+}
+
+var EvaluatorEvidenceArchive_Error_DEFAULT string
+
+func (p *EvaluatorEvidenceArchive) GetError() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetError() {
+		return EvaluatorEvidenceArchive_Error_DEFAULT
+	}
+	return *p.Error
+}
+
+var EvaluatorEvidenceArchive_FornaxEvaluatorLogURL_DEFAULT string
+
+func (p *EvaluatorEvidenceArchive) GetFornaxEvaluatorLogURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFornaxEvaluatorLogURL() {
+		return EvaluatorEvidenceArchive_FornaxEvaluatorLogURL_DEFAULT
+	}
+	return *p.FornaxEvaluatorLogURL
+}
+func (p *EvaluatorEvidenceArchive) SetSchemaVersion(val *string) {
+	p.SchemaVersion = val
+}
+func (p *EvaluatorEvidenceArchive) SetObjectKey(val *string) {
+	p.ObjectKey = val
+}
+func (p *EvaluatorEvidenceArchive) SetStatus(val *string) {
+	p.Status = val
+}
+func (p *EvaluatorEvidenceArchive) SetTrigger(val *string) {
+	p.Trigger = val
+}
+func (p *EvaluatorEvidenceArchive) SetSizeBytes(val *int64) {
+	p.SizeBytes = val
+}
+func (p *EvaluatorEvidenceArchive) SetSha256(val *string) {
+	p.Sha256 = val
+}
+func (p *EvaluatorEvidenceArchive) SetTruncatedFiles(val *int64) {
+	p.TruncatedFiles = val
+}
+func (p *EvaluatorEvidenceArchive) SetError(val *string) {
+	p.Error = val
+}
+func (p *EvaluatorEvidenceArchive) SetFornaxEvaluatorLogURL(val *string) {
+	p.FornaxEvaluatorLogURL = val
+}
+
+var fieldIDToName_EvaluatorEvidenceArchive = map[int16]string{
+	1:  "schema_version",
+	2:  "object_key",
+	3:  "status",
+	4:  "trigger",
+	5:  "size_bytes",
+	6:  "sha256",
+	7:  "truncated_files",
+	14: "error",
+	15: "fornax_evaluator_log_url",
+}
+
+func (p *EvaluatorEvidenceArchive) IsSetSchemaVersion() bool {
+	return p.SchemaVersion != nil
+}
+
+func (p *EvaluatorEvidenceArchive) IsSetObjectKey() bool {
+	return p.ObjectKey != nil
+}
+
+func (p *EvaluatorEvidenceArchive) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *EvaluatorEvidenceArchive) IsSetTrigger() bool {
+	return p.Trigger != nil
+}
+
+func (p *EvaluatorEvidenceArchive) IsSetSizeBytes() bool {
+	return p.SizeBytes != nil
+}
+
+func (p *EvaluatorEvidenceArchive) IsSetSha256() bool {
+	return p.Sha256 != nil
+}
+
+func (p *EvaluatorEvidenceArchive) IsSetTruncatedFiles() bool {
+	return p.TruncatedFiles != nil
+}
+
+func (p *EvaluatorEvidenceArchive) IsSetError() bool {
+	return p.Error != nil
+}
+
+func (p *EvaluatorEvidenceArchive) IsSetFornaxEvaluatorLogURL() bool {
+	return p.FornaxEvaluatorLogURL != nil
+}
+
+func (p *EvaluatorEvidenceArchive) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField14(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 15:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField15(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluatorEvidenceArchive[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluatorEvidenceArchive) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SchemaVersion = _field
+	return nil
+}
+func (p *EvaluatorEvidenceArchive) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ObjectKey = _field
+	return nil
+}
+func (p *EvaluatorEvidenceArchive) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Status = _field
+	return nil
+}
+func (p *EvaluatorEvidenceArchive) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Trigger = _field
+	return nil
+}
+func (p *EvaluatorEvidenceArchive) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SizeBytes = _field
+	return nil
+}
+func (p *EvaluatorEvidenceArchive) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Sha256 = _field
+	return nil
+}
+func (p *EvaluatorEvidenceArchive) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TruncatedFiles = _field
+	return nil
+}
+func (p *EvaluatorEvidenceArchive) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Error = _field
+	return nil
+}
+func (p *EvaluatorEvidenceArchive) ReadField15(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FornaxEvaluatorLogURL = _field
+	return nil
+}
+
+func (p *EvaluatorEvidenceArchive) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EvaluatorEvidenceArchive"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
+			goto WriteFieldError
+		}
+		if err = p.writeField15(oprot); err != nil {
+			fieldId = 15
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluatorEvidenceArchive) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSchemaVersion() {
+		if err = oprot.WriteFieldBegin("schema_version", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SchemaVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *EvaluatorEvidenceArchive) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetObjectKey() {
+		if err = oprot.WriteFieldBegin("object_key", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ObjectKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *EvaluatorEvidenceArchive) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatus() {
+		if err = oprot.WriteFieldBegin("status", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Status); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *EvaluatorEvidenceArchive) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTrigger() {
+		if err = oprot.WriteFieldBegin("trigger", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Trigger); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *EvaluatorEvidenceArchive) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSizeBytes() {
+		if err = oprot.WriteFieldBegin("size_bytes", thrift.I64, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.SizeBytes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *EvaluatorEvidenceArchive) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSha256() {
+		if err = oprot.WriteFieldBegin("sha256", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Sha256); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *EvaluatorEvidenceArchive) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTruncatedFiles() {
+		if err = oprot.WriteFieldBegin("truncated_files", thrift.I64, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TruncatedFiles); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+func (p *EvaluatorEvidenceArchive) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetError() {
+		if err = oprot.WriteFieldBegin("error", thrift.STRING, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Error); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
+func (p *EvaluatorEvidenceArchive) writeField15(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFornaxEvaluatorLogURL() {
+		if err = oprot.WriteFieldBegin("fornax_evaluator_log_url", thrift.STRING, 15); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.FornaxEvaluatorLogURL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
+
+func (p *EvaluatorEvidenceArchive) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluatorEvidenceArchive(%+v)", *p)
+
+}
+
+func (p *EvaluatorEvidenceArchive) DeepEqual(ano *EvaluatorEvidenceArchive) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.SchemaVersion) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ObjectKey) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Status) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Trigger) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.SizeBytes) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.Sha256) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.TruncatedFiles) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.Error) {
+		return false
+	}
+	if !p.Field15DeepEqual(ano.FornaxEvaluatorLogURL) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluatorEvidenceArchive) Field1DeepEqual(src *string) bool {
+
+	if p.SchemaVersion == src {
+		return true
+	} else if p.SchemaVersion == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SchemaVersion, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorEvidenceArchive) Field2DeepEqual(src *string) bool {
+
+	if p.ObjectKey == src {
+		return true
+	} else if p.ObjectKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ObjectKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorEvidenceArchive) Field3DeepEqual(src *string) bool {
+
+	if p.Status == src {
+		return true
+	} else if p.Status == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Status, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorEvidenceArchive) Field4DeepEqual(src *string) bool {
+
+	if p.Trigger == src {
+		return true
+	} else if p.Trigger == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Trigger, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorEvidenceArchive) Field5DeepEqual(src *int64) bool {
+
+	if p.SizeBytes == src {
+		return true
+	} else if p.SizeBytes == nil || src == nil {
+		return false
+	}
+	if *p.SizeBytes != *src {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorEvidenceArchive) Field6DeepEqual(src *string) bool {
+
+	if p.Sha256 == src {
+		return true
+	} else if p.Sha256 == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Sha256, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorEvidenceArchive) Field7DeepEqual(src *int64) bool {
+
+	if p.TruncatedFiles == src {
+		return true
+	} else if p.TruncatedFiles == nil || src == nil {
+		return false
+	}
+	if *p.TruncatedFiles != *src {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorEvidenceArchive) Field14DeepEqual(src *string) bool {
+
+	if p.Error == src {
+		return true
+	} else if p.Error == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Error, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorEvidenceArchive) Field15DeepEqual(src *string) bool {
+
+	if p.FornaxEvaluatorLogURL == src {
+		return true
+	} else if p.FornaxEvaluatorLogURL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.FornaxEvaluatorLogURL, *src) != 0 {
 		return false
 	}
 	return true
