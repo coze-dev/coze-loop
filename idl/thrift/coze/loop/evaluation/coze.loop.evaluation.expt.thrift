@@ -318,6 +318,7 @@ struct RetryExperimentRequest {
     2: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     3: optional i64 expt_id (api.path = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
     4: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
+    5: optional bool allow_running_retry (api.body = 'allow_running_retry') // 进行中重试灰度开关，与空间 FeatureGate 叠加生效
 
     100: optional map<string, string> ext (api.body = 'ext')
 

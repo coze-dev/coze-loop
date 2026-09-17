@@ -13604,8 +13604,10 @@ type RetryExperimentRequest struct {
 	WorkspaceID *int64              `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
 	ExptID      *int64              `thrift:"expt_id,3,optional" frugal:"3,optional,i64" json:"expt_id" path:"expt_id" `
 	ItemIds     []int64             `thrift:"item_ids,4,optional" frugal:"4,optional,list<i64>" json:"item_ids" form:"item_ids" `
-	Ext         map[string]string   `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	Base        *base.Base          `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 进行中重试灰度开关，与空间 FeatureGate 叠加生效
+	AllowRunningRetry *bool             `thrift:"allow_running_retry,5,optional" frugal:"5,optional,bool" form:"allow_running_retry" json:"allow_running_retry,omitempty"`
+	Ext               map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	Base              *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewRetryExperimentRequest() *RetryExperimentRequest {
@@ -13663,6 +13665,18 @@ func (p *RetryExperimentRequest) GetItemIds() (v []int64) {
 	return p.ItemIds
 }
 
+var RetryExperimentRequest_AllowRunningRetry_DEFAULT bool
+
+func (p *RetryExperimentRequest) GetAllowRunningRetry() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAllowRunningRetry() {
+		return RetryExperimentRequest_AllowRunningRetry_DEFAULT
+	}
+	return *p.AllowRunningRetry
+}
+
 var RetryExperimentRequest_Ext_DEFAULT map[string]string
 
 func (p *RetryExperimentRequest) GetExt() (v map[string]string) {
@@ -13698,6 +13712,9 @@ func (p *RetryExperimentRequest) SetExptID(val *int64) {
 func (p *RetryExperimentRequest) SetItemIds(val []int64) {
 	p.ItemIds = val
 }
+func (p *RetryExperimentRequest) SetAllowRunningRetry(val *bool) {
+	p.AllowRunningRetry = val
+}
 func (p *RetryExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -13710,6 +13727,7 @@ var fieldIDToName_RetryExperimentRequest = map[int16]string{
 	2:   "workspace_id",
 	3:   "expt_id",
 	4:   "item_ids",
+	5:   "allow_running_retry",
 	100: "ext",
 	255: "Base",
 }
@@ -13728,6 +13746,10 @@ func (p *RetryExperimentRequest) IsSetExptID() bool {
 
 func (p *RetryExperimentRequest) IsSetItemIds() bool {
 	return p.ItemIds != nil
+}
+
+func (p *RetryExperimentRequest) IsSetAllowRunningRetry() bool {
+	return p.AllowRunningRetry != nil
 }
 
 func (p *RetryExperimentRequest) IsSetExt() bool {
@@ -13783,6 +13805,14 @@ func (p *RetryExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -13890,6 +13920,17 @@ func (p *RetryExperimentRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.ItemIds = _field
 	return nil
 }
+func (p *RetryExperimentRequest) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AllowRunningRetry = _field
+	return nil
+}
 func (p *RetryExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -13948,6 +13989,10 @@ func (p *RetryExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -14056,6 +14101,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *RetryExperimentRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAllowRunningRetry() {
+		if err = oprot.WriteFieldBegin("allow_running_retry", thrift.BOOL, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.AllowRunningRetry); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 func (p *RetryExperimentRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -14130,6 +14193,9 @@ func (p *RetryExperimentRequest) DeepEqual(ano *RetryExperimentRequest) bool {
 	if !p.Field4DeepEqual(ano.ItemIds) {
 		return false
 	}
+	if !p.Field5DeepEqual(ano.AllowRunningRetry) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.Ext) {
 		return false
 	}
@@ -14185,6 +14251,18 @@ func (p *RetryExperimentRequest) Field4DeepEqual(src []int64) bool {
 		if v != _src {
 			return false
 		}
+	}
+	return true
+}
+func (p *RetryExperimentRequest) Field5DeepEqual(src *bool) bool {
+
+	if p.AllowRunningRetry == src {
+		return true
+	} else if p.AllowRunningRetry == nil || src == nil {
+		return false
+	}
+	if *p.AllowRunningRetry != *src {
+		return false
 	}
 	return true
 }

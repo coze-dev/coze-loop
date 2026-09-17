@@ -10064,6 +10064,20 @@ func (p *RetryExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -10178,6 +10192,20 @@ func (p *RetryExperimentRequest) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *RetryExperimentRequest) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.AllowRunningRetry = _field
+	return offset, nil
+}
+
 func (p *RetryExperimentRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -10231,6 +10259,7 @@ func (p *RetryExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWrit
 	if p != nil {
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
@@ -10247,6 +10276,7 @@ func (p *RetryExperimentRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 		l += p.field100Length()
 		l += p.field255Length()
 	}
@@ -10293,6 +10323,15 @@ func (p *RetryExperimentRequest) fastWriteField4(buf []byte, w thrift.NocopyWrit
 			offset += thrift.Binary.WriteI64(buf[offset:], v)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I64, length)
+	}
+	return offset
+}
+
+func (p *RetryExperimentRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAllowRunningRetry() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 5)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.AllowRunningRetry)
 	}
 	return offset
 }
@@ -10361,6 +10400,15 @@ func (p *RetryExperimentRequest) field4Length() int {
 	return l
 }
 
+func (p *RetryExperimentRequest) field5Length() int {
+	l := 0
+	if p.IsSetAllowRunningRetry() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *RetryExperimentRequest) field100Length() int {
 	l := 0
 	if p.IsSetExt() {
@@ -10413,6 +10461,11 @@ func (p *RetryExperimentRequest) DeepCopy(s interface{}) error {
 			_elem = elem
 			p.ItemIds = append(p.ItemIds, _elem)
 		}
+	}
+
+	if src.AllowRunningRetry != nil {
+		tmp := *src.AllowRunningRetry
+		p.AllowRunningRetry = &tmp
 	}
 
 	if src.Ext != nil {
