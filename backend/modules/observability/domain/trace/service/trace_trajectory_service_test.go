@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -21,6 +22,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
+
+type errorGetTraceProcessorsBuildHelper struct {
+	TraceFilterProcessorBuilder
+	err error
+}
+
+func (e *errorGetTraceProcessorsBuildHelper) BuildGetTraceProcessors(_ context.Context, _ span_processor.Settings) ([]span_processor.Processor, error) {
+	return nil, e.err
+}
 
 func TestTraceServiceImpl_GetTrajectoryConfig(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -194,4 +204,75 @@ func TestTrajectoryMetadataConfig_IsSingleQueryEnabled(t *testing.T) {
 	assert.False(t, (&config.TrajectoryMetadataConfig{}).IsSingleQueryEnabled())
 
 	assert.True(t, (&config.TrajectoryMetadataConfig{EnableSingleQuery: true}).IsSingleQueryEnabled())
+}
+
+func TestTraceServiceImpl_GetTrajectories_SingleQuery_MaxBytesExceeded(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repoMock := repomocks.NewMockITraceRepo(ctrl)
+	filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+	builder := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{
+		entity.SceneGetTrace: {span_processor.NewCheckProcessorFactory()},
+	})
+	tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+	tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil)
+	repoMock.EXPECT().GetTrajectoryConfig(gomock.Any(), gomock.Any()).Return(nil, nil)
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetTrajectoryMetadataConfig(gomock.Any()).Return(&config.TrajectoryMetadataConfig{EnableSingleQuery: true})
+	traceConfigMock.EXPECT().GetBackfillConfig(gomock.Any()).Return(nil)
+
+	svc := &TraceServiceImpl{traceRepo: repoMock, buildHelper: builder, tenantProvider: tenantProviderMock, traceConfig: traceConfigMock}
+
+	repoMock.EXPECT().ListSpansRepeat(gomock.Any(), gomock.Any()).Return(nil, repo.ErrMaxBytesExceeded)
+
+	res, err := svc.GetTrajectories(context.Background(), 1, []string{"tid"}, time.Now().Add(-time.Minute).UnixMilli(), time.Now().UnixMilli(), loop_span.PlatformCozeLoop)
+	assert.NoError(t, err)
+	assert.Empty(t, res)
+}
+
+func TestTraceServiceImpl_GetTrajectories_SingleQuery_ListSpansError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repoMock := repomocks.NewMockITraceRepo(ctrl)
+	filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+	builder := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{
+		entity.SceneGetTrace: {span_processor.NewCheckProcessorFactory()},
+	})
+	tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+	tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil)
+	repoMock.EXPECT().GetTrajectoryConfig(gomock.Any(), gomock.Any()).Return(nil, nil)
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetTrajectoryMetadataConfig(gomock.Any()).Return(&config.TrajectoryMetadataConfig{EnableSingleQuery: true})
+	traceConfigMock.EXPECT().GetBackfillConfig(gomock.Any()).Return(nil)
+
+	svc := &TraceServiceImpl{traceRepo: repoMock, buildHelper: builder, tenantProvider: tenantProviderMock, traceConfig: traceConfigMock}
+
+	repoMock.EXPECT().ListSpansRepeat(gomock.Any(), gomock.Any()).Return(nil, errors.New("ck connection error"))
+
+	res, err := svc.GetTrajectories(context.Background(), 1, []string{"tid"}, time.Now().Add(-time.Minute).UnixMilli(), time.Now().UnixMilli(), loop_span.PlatformCozeLoop)
+	assert.Error(t, err)
+	assert.Nil(t, res)
+}
+
+func TestTraceServiceImpl_GetTrajectories_SingleQuery_BuildProcessorsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repoMock := repomocks.NewMockITraceRepo(ctrl)
+	buildHelper := &errorGetTraceProcessorsBuildHelper{err: errors.New("build processor error")}
+	tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+	tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil)
+	repoMock.EXPECT().GetTrajectoryConfig(gomock.Any(), gomock.Any()).Return(nil, nil)
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetTrajectoryMetadataConfig(gomock.Any()).Return(&config.TrajectoryMetadataConfig{EnableSingleQuery: true})
+	traceConfigMock.EXPECT().GetBackfillConfig(gomock.Any()).Return(nil)
+
+	svc := &TraceServiceImpl{traceRepo: repoMock, buildHelper: buildHelper, tenantProvider: tenantProviderMock, traceConfig: traceConfigMock}
+
+	repoMock.EXPECT().ListSpansRepeat(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{
+		{TraceID: "tid", SpanID: "root", ParentID: "0", WorkspaceID: "1", SpanName: "root", SpanType: "agent"},
+	}}, nil)
+
+	res, err := svc.GetTrajectories(context.Background(), 1, []string{"tid"}, time.Now().Add(-time.Minute).UnixMilli(), time.Now().UnixMilli(), loop_span.PlatformCozeLoop)
+	assert.Error(t, err)
+	assert.Nil(t, res)
 }
