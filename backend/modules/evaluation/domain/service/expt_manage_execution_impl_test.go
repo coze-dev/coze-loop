@@ -1623,15 +1623,31 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					}, nil)
 
 				// Mock stats calculation
+				// 走 Terminated 且有真实终止行 → 收口后按新语义重算一次：
+				// 第一次（终止前）返回带 processing 的旧快照，第二次（重算）返回终止后的正确计数。
+				// 断言写入 stats 表的必须是第二次（重算）的值。
+				calcCall := 0
 				mgr.exptResultService.(*svcMocks.MockExptResultService).
 					EXPECT().
 					CalculateStats(ctx, int64(123), int64(789), session).
-					Return(&entity.ExptCalculateStats{
-						SuccessItemCnt:    3,
-						FailItemCnt:       1,
-						ProcessingItemCnt: 0,
-						TerminatedItemCnt: 0,
-					}, nil)
+					DoAndReturn(func(_ context.Context, _, _ int64, _ *entity.Session) (*entity.ExptCalculateStats, error) {
+						calcCall++
+						if calcCall == 1 {
+							return &entity.ExptCalculateStats{
+								SuccessItemCnt:    3,
+								FailItemCnt:       1,
+								ProcessingItemCnt: 2,
+								TerminatedItemCnt: 0,
+							}, nil
+						}
+						return &entity.ExptCalculateStats{
+							SuccessItemCnt:    3,
+							FailItemCnt:       1,
+							ProcessingItemCnt: 0,
+							TerminatedItemCnt: 2,
+						}, nil
+					}).
+					Times(2)
 
 				// Mock incomplete turns retrieval
 				mgr.exptResultService.(*svcMocks.MockExptResultService).
@@ -1682,11 +1698,20 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 						return nil
 					})
 
-				// Mock stats update
+				// Mock stats update：断言写入的是重算后（第二次 CalculateStats）的计数，
+				// processing 归零、terminated=2，正是 bug#1 的核心不变量。
 				mgr.statsRepo.(*repoMocks.MockIExptStatsRepo).
 					EXPECT().
 					UpdateByExptID(ctx, int64(123), int64(789), gomock.Any()).
-					Return(nil)
+					DoAndReturn(func(_ context.Context, _, _ int64, s *entity.ExptStats) error {
+						if s.ProcessingItemCnt != 0 {
+							return fmt.Errorf("expected recalculated ProcessingItemCnt=0, got %d", s.ProcessingItemCnt)
+						}
+						if s.TerminatedItemCnt != 2 {
+							return fmt.Errorf("expected recalculated TerminatedItemCnt=2, got %d", s.TerminatedItemCnt)
+						}
+						return nil
+					})
 
 				// Mock experiment update
 				mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
