@@ -613,22 +613,15 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		return err
 	}
 
-	if err := e.statsRepo.UpdateByExptID(ctx, exptID, spaceID, &entity.ExptStats{
-		SuccessItemCnt:    int32(stats.SuccessItemCnt),
-		PendingItemCnt:    int32(stats.PendingItemCnt),
-		FailItemCnt:       int32(stats.FailItemCnt),
-		ProcessingItemCnt: int32(stats.ProcessingItemCnt),
-		TerminatedItemCnt: int32(stats.TerminatedItemCnt),
-	}); err != nil {
-		return err
-	}
-
 	status := opt.Status
 	if !entity.IsExptFinished(status) {
-		// ⚠️ 判据中**不含** stats.TerminatedItemCnt（design D5）：terminated 是用户主动放弃的行，不是跑失败。
-		// 保留它会让「用户终止了 2 行、其余全绿」的实验渲染成红色 Failed 并触发失败侧 webhook。
-		// 实验级 Kill 不受影响：它走 opt.Status=Terminated，IsExptFinished 为真、根本不进这个分支。
-		if stats.FailItemCnt > 0 || stats.ProcessingItemCnt > 0 || stats.PendingItemCnt > 0 {
+		// 只要实验里仍存在终止的 item，实验就必须收敛为 Terminated，而不是塌成 Success/Failed。
+		// 场景：实验被终止后手动重试个别 item，重试的 item 跑完再次进入 CompleteExpt，
+		// 此时其余 item 仍处终止态；若忽略 TerminatedItemCnt 会误判成功/失败，
+		// 前端也就只显示成功/失败数、不再展示终止/执行中/待执行。terminated 优先级最高。
+		if stats.TerminatedItemCnt > 0 {
+			status = entity.ExptStatus_Terminated
+		} else if stats.FailItemCnt > 0 || stats.ProcessingItemCnt > 0 || stats.PendingItemCnt > 0 {
 			status = entity.ExptStatus_Failed
 		} else {
 			status = entity.ExptStatus_Success
@@ -663,6 +656,9 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	// 先置终态它就一条都查不到（静默不释放）。理由见 terminateIncompleteItemRunLogs。
 	e.terminateIncompleteItemRunLogs(ctx, got, exptRunID)
 
+	// statsDirty 标记本次是否真的把 in-flight 行改写成了终态；只有为真时才在收口后
+	// 重算并回写 stats 表，避免正常完成/Failed 路径多做一次全量扫描。
+	statsDirty := false
 	if !opt.NoCompleteItemTurn {
 		incompleteTurnIDs, err := e.exptResultService.GetIncompleteTurns(ctx, exptID, spaceID, session)
 		if err != nil {
@@ -685,6 +681,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			}
 			// 在实验行状态更新完成后，更新 ExptTurnResultFilter
 			if len(terminatedItemIDSet) > 0 {
+				statsDirty = true
 				terminatedItemIDs := maps.ToSlice(terminatedItemIDSet, func(k int64, v bool) int64 {
 					return k
 				})
@@ -715,6 +712,27 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 				e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, exptRunID, itemIDs)
 			}
 		}
+	}
+
+	// stats 回写放到终止收口之后：terminateIncompleteItemRunLogs / terminateItemTurns
+	// 已把 in-flight 行由 Processing 改写成 Terminated，此处必须按 item 主表现值重算，
+	// 否则 stats 表会残留虚高的 processing_cnt（≈终止瞬间并发数）、少算 terminated_cnt，
+	// 前端就显示成「执行中 = 并发数 + 1」。只有真正终止了行（statsDirty）才重算，
+	// 正常完成 / Failed 路径直接复用首次快照，不多做一次全量扫描。
+	if statsDirty {
+		stats, err = e.exptResultService.CalculateStats(ctx, exptID, spaceID, session)
+		if err != nil {
+			return err
+		}
+	}
+	if err := e.statsRepo.UpdateByExptID(ctx, exptID, spaceID, &entity.ExptStats{
+		SuccessItemCnt:    int32(stats.SuccessItemCnt),
+		PendingItemCnt:    int32(stats.PendingItemCnt),
+		FailItemCnt:       int32(stats.FailItemCnt),
+		ProcessingItemCnt: int32(stats.ProcessingItemCnt),
+		TerminatedItemCnt: int32(stats.TerminatedItemCnt),
+	}); err != nil {
+		return err
 	}
 
 	exptDo := &entity.Experiment{
