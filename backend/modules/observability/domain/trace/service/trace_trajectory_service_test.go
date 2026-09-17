@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	config "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	configmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
 	tenantmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
@@ -150,4 +151,47 @@ func TestTraceServiceImpl_GetTrajectories_and_ListTrajectory(t *testing.T) {
 	lt, err := svc.ListTrajectory(context.Background(), &ListTrajectoryRequest{PlatformType: loop_span.PlatformCozeLoop, WorkspaceID: 1, TraceIds: traceIDs, StartTime: &start})
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(lt.Trajectories))
+}
+
+func TestTraceServiceImpl_GetTrajectories_SingleQuery(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repoMock := repomocks.NewMockITraceRepo(ctrl)
+	filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+	builder := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{
+		entity.SceneGetTrace: {span_processor.NewCheckProcessorFactory()},
+	})
+	tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+	tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
+	repoMock.EXPECT().GetTrajectoryConfig(gomock.Any(), repo.GetTrajectoryConfigParam{WorkspaceId: 1}).Return(nil, nil).AnyTimes()
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetTrajectoryMetadataConfig(gomock.Any()).Return(&config.TrajectoryMetadataConfig{EnableSingleQuery: true}).AnyTimes()
+	traceConfigMock.EXPECT().GetBackfillConfig(gomock.Any()).Return(nil).AnyTimes()
+
+	svc := &TraceServiceImpl{traceRepo: repoMock, buildHelper: builder, tenantProvider: tenantProviderMock, traceConfig: traceConfigMock}
+	traceIDs := []string{"tid"}
+
+	listSpansCallCount := 0
+	repoMock.EXPECT().ListSpansRepeat(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, p *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+		listSpansCallCount++
+		assert.Empty(t, p.SelectColumns, "single query should not set SelectColumns")
+		return &repo.ListSpansResult{Spans: loop_span.SpanList{
+			{TraceID: "tid", SpanID: "root", ParentID: "0", WorkspaceID: "1", SpanName: "root", SpanType: "agent"},
+			{TraceID: "tid", SpanID: "m", ParentID: "root", WorkspaceID: "1", SpanName: "model", SpanType: "model"},
+		}}, nil
+	}).AnyTimes()
+
+	res, err := svc.GetTrajectories(context.Background(), 1, traceIDs, time.Now().Add(-time.Minute).UnixMilli(), time.Now().UnixMilli(), loop_span.PlatformCozeLoop)
+	assert.NoError(t, err)
+	assert.NotNil(t, res["tid"])
+	assert.Equal(t, 1, listSpansCallCount, "single query mode should call ListSpansRepeat exactly once")
+}
+
+func TestTrajectoryMetadataConfig_IsSingleQueryEnabled(t *testing.T) {
+	var nilCfg *config.TrajectoryMetadataConfig
+	assert.False(t, nilCfg.IsSingleQueryEnabled())
+
+	assert.False(t, (&config.TrajectoryMetadataConfig{}).IsSingleQueryEnabled())
+
+	assert.True(t, (&config.TrajectoryMetadataConfig{EnableSingleQuery: true}).IsSingleQueryEnabled())
 }

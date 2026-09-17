@@ -247,7 +247,15 @@ func (c *ReflowInsertConfig) GetDatasetInvokeBatchSize(workspaceID int64) int {
 // TrajectoryMetadataConfig 轨迹 metadata 写入配置
 type TrajectoryMetadataConfig struct {
 	// Spaces 按 workspace_id 配置允许写入的 metadata key 规则列表
-	Spaces map[int64][]loop_span.MetaKeyRule `mapstructure:"spaces" json:"spaces"`
+	Spaces            map[int64][]loop_span.MetaKeyRule `mapstructure:"spaces" json:"spaces"`
+	EnableSingleQuery bool                              `mapstructure:"enable_single_query" json:"enable_single_query"`
+}
+
+func (c *TrajectoryMetadataConfig) IsSingleQueryEnabled() bool {
+	if c == nil {
+		return false
+	}
+	return c.EnableSingleQuery
 }
 
 //go:generate mockgen -destination=mocks/config.go -package=mocks . ITraceConfig

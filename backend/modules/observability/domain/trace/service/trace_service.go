@@ -2594,6 +2594,66 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		maxBytes = backfillCfg.GetTrajectoryMaxBytes(workspaceID)
 	}
 
+	if metaCfg.IsSingleQueryEnabled() {
+		return r.getTrajectoriesSingleQuery(ctx, workspaceID, tenant, traceIDs, startTime, endTime, platformType, trajectoryConfig, metaRules, maxBytes)
+	}
+
+	return r.getTrajectoriesDoubleQuery(ctx, workspaceID, tenant, traceIDs, startTime, endTime, platformType, trajectoryConfig, metaRules, maxBytes)
+}
+
+func (r *TraceServiceImpl) getTrajectoriesSingleQuery(ctx context.Context, workspaceID int64, tenant []string, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType, trajectoryConfig *GetTrajectoryConfigResponse, metaRules []loop_span.MetaKeyRule, maxBytes int64) (map[string]*loop_span.Trajectory, error) {
+	allSpans, err := r.traceRepo.ListSpansRepeat(ctx, &repo.ListSpansParam{
+		Tenants: tenant,
+		Filters: &loop_span.FilterFields{
+			FilterFields: []*loop_span.FilterField{
+				{
+					FieldName: "trace_id",
+					FieldType: loop_span.FieldTypeString,
+					Values:    traceIDs,
+					QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+				},
+			},
+		},
+		StartAt:            startTime,
+		EndAt:              endTime,
+		Limit:              1000,
+		NotQueryAnnotation: true,
+		MaxBytes:           maxBytes,
+	})
+	if err != nil {
+		if errors.Is(err, repo.ErrMaxBytesExceeded) {
+			logs.CtxWarn(ctx, "getTrajectoriesSingleQuery skipped: allSpans exceeded max bytes, traceIDs:%v, maxBytes:%d", traceIDs, maxBytes)
+			return map[string]*loop_span.Trajectory{}, nil
+		}
+		logs.CtxError(ctx, "Failed to list all spans, err:%+v", err)
+		return nil, err
+	}
+
+	selectFilters := r.getSelectFilters(traceIDs, trajectoryConfig, allSpans)
+
+	processors, err := r.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
+		WorkspaceId:     workspaceID,
+		PlatformType:    platformType,
+		QueryStartTime:  startTime,
+		QueryEndTime:    endTime,
+		SpanDoubleCheck: false,
+	})
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	allSpans.Spans, err = runSpanProcessors(ctx, "GetTrajectories", processors, allSpans.Spans)
+	if err != nil {
+		return nil, err
+	}
+
+	trajectories, err := r.buildTrajectories(ctx, &allSpans.Spans, ptr.Of(r.convertCustomNode(allSpans.Spans)), selectFilters, metaRules)
+	if err != nil {
+		return nil, err
+	}
+	return trajectories, nil
+}
+
+func (r *TraceServiceImpl) getTrajectoriesDoubleQuery(ctx context.Context, workspaceID int64, tenant []string, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType, trajectoryConfig *GetTrajectoryConfigResponse, metaRules []loop_span.MetaKeyRule, maxBytes int64) (map[string]*loop_span.Trajectory, error) {
 	allSpans, err := r.traceRepo.ListSpansRepeat(ctx, &repo.ListSpansParam{
 		Tenants: tenant,
 		Filters: &loop_span.FilterFields{
