@@ -53,6 +53,9 @@ type EvalTargetServiceImpl struct {
 	// 若按线上预算跑就要真等十秒，压到毫秒级才能把"重试到用尽"确定性地断言完。
 	// 生产路径（wire 注入）从不设置它，走默认值。
 	sandboxDestroyRetryBudget time.Duration
+	// trajectoryRetryInterval 仅用于把单测中的最终一致性等待压到毫秒级。
+	// 生产路径不设置，使用 defaultTrajectoryRetryInterval。
+	trajectoryRetryInterval time.Duration
 }
 
 const evalTargetRecordPersistTimeout = 5 * time.Second
@@ -64,6 +67,15 @@ const defaultSandboxDestroyRetryBudget = 10 * time.Second
 // trajectoryStartTimeBufferMS 抽取 trajectory 时，时间下界额外向前预留的 buffer(1 分钟)，
 // 用于吸收请求发起时间与实际 span 上报时间之间可能的时钟/延迟误差，避免漏掉最早的 span。
 const trajectoryStartTimeBufferMS = int64(60 * 1000)
+
+const (
+	trajectoryExtractAttempts      = 3
+	defaultTrajectoryRetryInterval = time.Second
+	// trajectoryListPerAttemptTimeout 是单次 ListTrajectory RPC 的时间预算。计算后台抽取 ctx 总预算时
+	// 必须按 attempts 次 RPC 预留, 否则 trace 未最终一致触发多次重试时, 最后一次 RPC 会拿到近乎 0 的
+	// 剩余预算, 以 timeout=0s 立即失败并丢掉 trajectory。observability 侧实测单次约 1.5s, 取 3s 留余量。
+	trajectoryListPerAttemptTimeout = 3 * time.Second
+)
 
 // sandbox mac_vm_plus_sandbox 链路: operator 给 mac_vm 那台的 execution id 加 "-macvm" 后缀
 // (invokeID+"-macvm"), 且其 task 是 <expt_id>+"-macvm" (见 commercial operator macVMTaskID)。
@@ -516,14 +528,29 @@ func (e *EvalTargetServiceImpl) ExtractTrajectory(ctx context.Context, spaceID i
 	if startTimeMS != nil {
 		startTimeMS = gptr.Of(*startTimeMS - trajectoryStartTimeBufferMS)
 	}
-	trajectories, err := e.trajectoryAdapter.ListTrajectory(ctx, spaceID, []string{traceID}, startTimeMS)
-	if err != nil {
-		return nil, err
+	retryInterval := e.trajectoryRetryInterval
+	if retryInterval <= 0 {
+		retryInterval = defaultTrajectoryRetryInterval
 	}
-	if len(trajectories) == 0 {
-		return nil, nil
+	for attempt := 1; attempt <= trajectoryExtractAttempts; attempt++ {
+		trajectories, err := e.trajectoryAdapter.ListTrajectory(ctx, spaceID, []string{traceID}, startTimeMS)
+		if err != nil {
+			return nil, err
+		}
+		if len(trajectories) > 0 && trajectories[0].IsValid() {
+			return trajectories[0], nil
+		}
+		if attempt < trajectoryExtractAttempts {
+			timer := time.NewTimer(retryInterval)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return nil, ctx.Err()
+			case <-timer.C:
+			}
+		}
 	}
-	return trajectories[0], nil
+	return nil, errorx.New("trajectory is incomplete after %d attempts, traceID=%s", trajectoryExtractAttempts, traceID)
 }
 
 func (e *EvalTargetServiceImpl) AsyncExecuteTarget(ctx context.Context, spaceID, targetID, targetVersionID int64,
@@ -1357,7 +1384,7 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 	//		record.TargetID, record.TargetVersionID, record.ID, err)
 	// }
 
-	recordTrajectory := func() error {
+	recordTrajectory := func(extractCtx context.Context) error {
 		var sms *int64
 		// 优先用「请求发起时间」作为抽取 trajectory 的时间下界;它比 record.BaseInfo.CreatedAt(异步返回后才 stamp)
 		// 更早,避免漏掉请求发起到返回之间的 span。为 0(未透传)时回退到 CreatedAt,保持向前兼容。
@@ -1366,7 +1393,7 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		} else if record.BaseInfo != nil {
 			sms = record.BaseInfo.CreatedAt
 		}
-		trajectory, err := e.ExtractTrajectory(ctx, param.SpaceID, record.TraceID, sms)
+		trajectory, err := e.ExtractTrajectory(extractCtx, param.SpaceID, record.TraceID, sms)
 		if err != nil {
 			return errorx.Wrapf(err, "ExtractTrajectory fail, space_id: %v, trace_id: %v", param.SpaceID, record.TraceID)
 		}
@@ -1380,20 +1407,35 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		if od.OutputFields == nil {
 			od.OutputFields = map[string]*entity.Content{}
 		}
-		od.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(ctx)
+		od.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(extractCtx)
 		updateRec := &entity.EvalTargetRecord{
 			ID:                   record.ID,
 			TraceID:              record.TraceID,
 			EvalTargetOutputData: od,
 		}
-		return e.evalTargetRepo.UpdateEvalTargetRecord(ctx, updateRec, nil)
+		return e.evalTargetRepo.UpdateEvalTargetRecord(extractCtx, updateRec, nil)
 	}
 
 	if param.EnableExtractTrajectory == nil || *param.EnableExtractTrajectory {
-		goroutine.Go(ctx, func() {
-			time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(param.SpaceID))
-			if err := recordTrajectory(); err != nil {
-				logs.CtxError(ctx, "extract and record trajectory fail, record_id: %v, err: %v", record.ID, err)
+		backgroundCtx := context.WithoutCancel(ctx)
+		goroutine.Go(backgroundCtx, func() {
+			extractInterval := e.configer.GetTargetTrajectoryConf(backgroundCtx).GetExtractInterval(param.SpaceID)
+			retryInterval := e.trajectoryRetryInterval
+			if retryInterval <= 0 {
+				retryInterval = defaultTrajectoryRetryInterval
+			}
+			// 等待期(extractInterval)在 backgroundCtx 上先睡完, 不占用抽取+落库的工作预算; 否则 extractInterval
+			// 较大时会把 extractCtx 预算耗掉, 使重试的最后一次 ListTrajectory 拿到近乎 0 的剩余而 timeout=0s。
+			timer := time.NewTimer(extractInterval)
+			<-timer.C
+			// 工作预算独立于等待期, 且必须覆盖每一次 RPC(attempts 次)+ 重试间隔(attempts-1 次)+ 一次落库,
+			// 不能只算重试间隔——那样没给 RPC 本身留时间。
+			workBudget := time.Duration(trajectoryExtractAttempts)*trajectoryListPerAttemptTimeout +
+				time.Duration(trajectoryExtractAttempts-1)*retryInterval + evalTargetRecordPersistTimeout
+			extractCtx, cancel := context.WithTimeout(backgroundCtx, workBudget)
+			defer cancel()
+			if err := recordTrajectory(extractCtx); err != nil {
+				logs.CtxError(backgroundCtx, "extract and record trajectory fail, record_id: %v, err: %v", record.ID, err)
 			}
 		})
 	}
