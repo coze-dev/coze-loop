@@ -59,6 +59,7 @@ const (
 	PlatformVeAgentKit   PlatformType = "ve_agentkit"
 	PlatformVeADK        PlatformType = "veadk"
 	PlatformCallbackAll  PlatformType = "callback_all"
+	PlatformInnerDoubaoEp PlatformType = "inner_doubao_ep"
 
 	SpanListTypeRootSpan SpanListType = "root_span"
 	SpanListTypeAllSpan  SpanListType = "all_span"
