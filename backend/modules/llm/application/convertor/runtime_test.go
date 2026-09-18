@@ -128,21 +128,44 @@ func TestToolCallConvert(t *testing.T) {
 }
 
 func TestChatMessagePartConvert(t *testing.T) {
-	dto := &druntime.ChatMessagePart{
-		Type: gptr.Of(druntime.ChatMessagePartTypeImageURL),
-		ImageURL: &druntime.ChatMessageImageURL{
-			URL:      gptr.Of("http://img.com"),
-			Detail:   gptr.Of(druntime.ImageURLDetailHigh),
-			MimeType: gptr.Of("image/png"),
-		},
-	}
-	do := ChatMessagePartDTO2DO(dto)
-	assert.Equal(t, entity.ChatMessagePartTypeImageURL, do.Type)
-	assert.Equal(t, "http://img.com", do.ImageURL.URL)
-	assert.Equal(t, entity.ImageURLDetailHigh, do.ImageURL.Detail)
+	t.Run("image", func(t *testing.T) {
+		dto := &druntime.ChatMessagePart{
+			Type: gptr.Of(druntime.ChatMessagePartTypeImageURL),
+			ImageURL: &druntime.ChatMessageImageURL{
+				URL:      gptr.Of("http://img.com"),
+				Detail:   gptr.Of(druntime.ImageURLDetailHigh),
+				MimeType: gptr.Of("image/png"),
+			},
+		}
+		do := ChatMessagePartDTO2DO(dto)
+		assert.Equal(t, entity.ChatMessagePartTypeImageURL, do.Type)
+		assert.Equal(t, "http://img.com", do.ImageURL.URL)
+		assert.Equal(t, entity.ImageURLDetailHigh, do.ImageURL.Detail)
 
-	dto2 := ChatMessagePartDO2DTO(do)
-	assert.Equal(t, druntime.ChatMessagePartTypeImageURL, *dto2.Type)
-	assert.Equal(t, "http://img.com", *dto2.ImageURL.URL)
-	assert.Equal(t, druntime.ImageURLDetailHigh, *dto2.ImageURL.Detail)
+		dto2 := ChatMessagePartDO2DTO(do)
+		assert.Equal(t, druntime.ChatMessagePartTypeImageURL, *dto2.Type)
+		assert.Equal(t, "http://img.com", *dto2.ImageURL.URL)
+		assert.Equal(t, druntime.ImageURLDetailHigh, *dto2.ImageURL.Detail)
+	})
+
+	t.Run("video", func(t *testing.T) {
+		dto := &druntime.ChatMessagePart{
+			Type: gptr.Of(druntime.ChatMessagePartTypeVideoURL),
+			VideoURL: &druntime.ChatMessageVideoURL{
+				URL:      gptr.Of("https://example.com/video.mp4"),
+				Detail:   &druntime.VideoURLDetail{Fps: gptr.Of(2.5)},
+				MimeType: gptr.Of("video/mp4"),
+			},
+		}
+		do := ChatMessagePartDTO2DO(dto)
+		assert.Equal(t, entity.ChatMessagePartTypeVideoURL, do.Type)
+		assert.Equal(t, "https://example.com/video.mp4", do.VideoURL.URL)
+		assert.Equal(t, 2.5, do.VideoURL.Detail.FPS)
+
+		dto2 := ChatMessagePartDO2DTO(do)
+		assert.Equal(t, druntime.ChatMessagePartTypeVideoURL, *dto2.Type)
+		assert.Equal(t, "https://example.com/video.mp4", *dto2.VideoURL.URL)
+		assert.Equal(t, 2.5, *dto2.VideoURL.Detail.Fps)
+		assert.Equal(t, "video/mp4", *dto2.VideoURL.MimeType)
+	})
 }

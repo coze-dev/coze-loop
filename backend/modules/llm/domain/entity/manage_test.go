@@ -175,6 +175,22 @@ func TestModel_Valid(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "model video ability is invalid",
+			fields: fields{
+				model: &Model{
+					ID: 1, Name: "name",
+					Ability: &Ability{
+						MultiModal: true,
+						AbilityMultiModal: &AbilityMultiModal{
+							Video:        true,
+							AbilityVideo: nil,
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
 			name: "model ability is invalid",
 			fields: fields{
 				model: &Model{
@@ -318,6 +334,18 @@ func TestSupportImageURL(t *testing.T) {
 			assert.Equal(t, tt.wantImageCnt, actualCnt)
 		})
 	}
+}
+
+func TestSupportVideoInput(t *testing.T) {
+	assert.False(t, (*Model)(nil).SupportVideoInput())
+	assert.False(t, (&Model{Ability: &Ability{MultiModal: true, AbilityMultiModal: &AbilityMultiModal{}}}).SupportVideoInput())
+	assert.True(t, (&Model{Ability: &Ability{
+		MultiModal: true,
+		AbilityMultiModal: &AbilityMultiModal{
+			Video:        true,
+			AbilityVideo: &AbilityVideo{},
+		},
+	}}).SupportVideoInput())
 }
 
 func TestParamConfig_GetCommonParamDefaultVal(t *testing.T) {
