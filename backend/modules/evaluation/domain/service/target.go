@@ -25,6 +25,7 @@ type IEvalTargetService interface {
 	DebugTarget(ctx context.Context, param *entity.DebugTargetParam) (record *entity.EvalTargetRecord, err error)
 	AsyncDebugTarget(ctx context.Context, param *entity.DebugTargetParam) (record *entity.EvalTargetRecord, callee string, err error)
 	GetRecordByID(ctx context.Context, spaceID, recordID int64) (*entity.EvalTargetRecord, error)
+	GetExecutionContext(ctx context.Context, spaceID, recordID int64) (*entity.EvalTargetExecutionContext, error)
 	GetRecordByRunItemTurn(ctx context.Context, spaceID, runID, itemID, turnID int64) (*entity.EvalTargetRecord, error)
 	CreateRecord(ctx context.Context, record *entity.EvalTargetRecord) error
 	BatchGetRecordByIDs(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error)

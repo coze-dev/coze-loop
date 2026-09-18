@@ -384,3 +384,9 @@ func GetExperimentIDsByGroupOApi(ctx context.Context, c *app.RequestContext) {
 func TerminateExperimentItemsOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.TerminateExperimentItemsOApi)
 }
+
+// GetEvalTargetExecutionContextOApi .
+// @router /v1/loop/evaluation/eval_target_records/:eval_target_record_id/execution_context [GET]
+func GetEvalTargetExecutionContextOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetEvalTargetExecutionContextOApi)
+}

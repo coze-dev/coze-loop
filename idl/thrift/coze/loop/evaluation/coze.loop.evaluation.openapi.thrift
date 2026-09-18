@@ -523,6 +523,32 @@ struct GetEvalTargetRecordOApiRequest {
     255: optional base.Base Base
 }
 
+// 当前调用所属实验 run 的发起人，由平台持久化记录解析。
+struct GetEvalTargetExecutionContextOApiRequest {
+    1: required i64 workspace_id (api.query = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: required i64 eval_target_record_id (api.path = "eval_target_record_id", api.js_conv = "true", go.tag = 'json:"eval_target_record_id"')
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct GetEvalTargetExecutionContextOpenAPIData {
+    1: optional i64 workspace_id (api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: optional i64 eval_target_record_id (api.js_conv = "true", go.tag = 'json:"eval_target_record_id"')
+    3: optional i64 experiment_id (api.js_conv = "true", go.tag = 'json:"experiment_id"')
+    4: optional i64 experiment_run_id (api.js_conv = "true", go.tag = 'json:"experiment_run_id"')
+    5: optional i64 experiment_workspace_id (api.js_conv = "true", go.tag = 'json:"experiment_workspace_id"')
+    6: optional string initiator_user_id (go.tag = 'json:"initiator_user_id"')
+}
+
+struct GetEvalTargetExecutionContextOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional GetEvalTargetExecutionContextOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
 struct GetEvalTargetRecordOApiResponse {
     1: optional i32 code
     2: optional string msg
@@ -1578,6 +1604,7 @@ service EvaluationOpenAPIService {
     AsyncDebugEvalTargetOApiResponse AsyncDebugEvalTargetOApi(1: AsyncDebugEvalTargetOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/async_debug")
     // 获取评测对象记录
     GetEvalTargetRecordOApiResponse GetEvalTargetRecordOApi(1: GetEvalTargetRecordOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/eval_target_records/:eval_target_record_id")
+    GetEvalTargetExecutionContextOApiResponse GetEvalTargetExecutionContextOApi(1: GetEvalTargetExecutionContextOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/eval_target_records/:eval_target_record_id/execution_context")
     // 查询可用的来源评测对象
     ListEvalTargetsOApiResponse ListEvalTargetsOApi(1: ListEvalTargetsOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/list")
 

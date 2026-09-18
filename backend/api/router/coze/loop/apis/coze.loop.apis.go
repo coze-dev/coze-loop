@@ -595,7 +595,9 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				}
 				{
 					_eval_target_records0 := _evaluation0.Group("/eval_target_records", _eval_target_records0Mw(handler)...)
-					_eval_target_records0.GET("/:eval_target_record_id", append(_getevaltargetrecordoapiMw(handler), apis.GetEvalTargetRecordOApi)...)
+					_eval_target_records0.GET("/:eval_target_record_id", append(_eval_target_record_idMw(handler), apis.GetEvalTargetRecordOApi)...)
+					_eval_target_record_id := _eval_target_records0.Group("/:eval_target_record_id", _eval_target_record_idMw(handler)...)
+					_eval_target_record_id.GET("/execution_context", append(_getevaltargetexecutioncontextoapiMw(handler), apis.GetEvalTargetExecutionContextOApi)...)
 					_eval_target_records0.POST("/output_fields", append(_getevaltargetoutputfieldcontentoapiMw(handler), apis.GetEvalTargetOutputFieldContentOApi)...)
 				}
 				{

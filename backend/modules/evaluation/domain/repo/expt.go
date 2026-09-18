@@ -118,6 +118,7 @@ type IExptRunLogRepo interface {
 	Save(ctx context.Context, exptRunLog *entity.ExptRunLog) error
 	Update(ctx context.Context, exptID, exptRunID int64, ufields map[string]any) error
 	Get(ctx context.Context, exptID, exptRunID int64) (*entity.ExptRunLog, error)
+	GetByRunID(ctx context.Context, exptRunID int64) (*entity.ExptRunLog, error)
 }
 
 type IExptAggrResultRepo interface {

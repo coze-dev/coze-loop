@@ -5,7 +5,10 @@ package experiment
 
 import (
 	"context"
+	"errors"
 	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -21,6 +24,18 @@ func NewExptRunLogRepo(exptRunLogDAO mysql.IExptRunLogDAO) repo.IExptRunLogRepo 
 
 type ExptRunLogImpl struct {
 	exptRunLogDAO mysql.IExptRunLogDAO
+}
+
+func (e *ExptRunLogImpl) GetByRunID(ctx context.Context, exptRunID int64) (*entity.ExptRunLog, error) {
+	// The existing run lifecycle persists the run ID as both ID and ExptRunID.
+	po, err := e.exptRunLogDAO.Get(ctx, 0, exptRunID)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return convert.NewExptRunLogConvertor().PO2DO(po)
 }
 
 func (e *ExptRunLogImpl) Get(ctx context.Context, exptID, exptRunID int64) (*entity.ExptRunLog, error) {

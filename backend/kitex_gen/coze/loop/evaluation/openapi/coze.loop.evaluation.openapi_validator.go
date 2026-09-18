@@ -755,6 +755,35 @@ func (p *GetEvalTargetRecordOApiRequest) IsValid() error {
 	}
 	return nil
 }
+func (p *GetEvalTargetExecutionContextOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetEvalTargetExecutionContextOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *GetEvalTargetExecutionContextOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *GetEvalTargetRecordOApiResponse) IsValid() error {
 	if p.Data != nil {
 		if err := p.Data.IsValid(); err != nil {

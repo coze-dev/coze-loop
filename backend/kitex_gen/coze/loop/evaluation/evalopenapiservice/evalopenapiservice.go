@@ -175,6 +175,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetEvalTargetExecutionContextOApi": kitex.NewMethodInfo(
+		getEvalTargetExecutionContextOApiHandler,
+		newEvaluationOpenAPIServiceGetEvalTargetExecutionContextOApiArgs,
+		newEvaluationOpenAPIServiceGetEvalTargetExecutionContextOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ListEvalTargetsOApi": kitex.NewMethodInfo(
 		listEvalTargetsOApiHandler,
 		newEvaluationOpenAPIServiceListEvalTargetsOApiArgs,
@@ -888,6 +895,25 @@ func newEvaluationOpenAPIServiceGetEvalTargetRecordOApiArgs() interface{} {
 
 func newEvaluationOpenAPIServiceGetEvalTargetRecordOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceGetEvalTargetRecordOApiResult()
+}
+
+func getEvalTargetExecutionContextOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceGetEvalTargetExecutionContextOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceGetEvalTargetExecutionContextOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).GetEvalTargetExecutionContextOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceGetEvalTargetExecutionContextOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetEvalTargetExecutionContextOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceGetEvalTargetExecutionContextOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetEvalTargetExecutionContextOApiResult()
 }
 
 func listEvalTargetsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1792,6 +1818,16 @@ func (p *kClient) GetEvalTargetRecordOApi(ctx context.Context, req *openapi.GetE
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceGetEvalTargetRecordOApiResult
 	if err = p.c.Call(ctx, "GetEvalTargetRecordOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetEvalTargetExecutionContextOApi(ctx context.Context, req *openapi.GetEvalTargetExecutionContextOApiRequest) (r *openapi.GetEvalTargetExecutionContextOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceGetEvalTargetExecutionContextOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceGetEvalTargetExecutionContextOApiResult
+	if err = p.c.Call(ctx, "GetEvalTargetExecutionContextOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

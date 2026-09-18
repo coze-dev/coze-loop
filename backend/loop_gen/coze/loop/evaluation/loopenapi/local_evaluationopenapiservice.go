@@ -552,6 +552,27 @@ func (l *LocalEvaluationOpenAPIService) GetEvalTargetRecordOApi(ctx context.Cont
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvaluationOpenAPIService) GetEvalTargetExecutionContextOApi(ctx context.Context, req *openapi.GetEvalTargetExecutionContextOApiRequest, callOptions ...callopt.Option) (*openapi.GetEvalTargetExecutionContextOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceGetEvalTargetExecutionContextOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceGetEvalTargetExecutionContextOApiResult)
+		resp, err := l.impl.GetEvalTargetExecutionContextOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceGetEvalTargetExecutionContextOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceGetEvalTargetExecutionContextOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "GetEvalTargetExecutionContextOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // ListEvalTargetsOApi
 // 查询可用的来源评测对象
 func (l *LocalEvaluationOpenAPIService) ListEvalTargetsOApi(ctx context.Context, req *openapi.ListEvalTargetsOApiRequest, callOptions ...callopt.Option) (*openapi.ListEvalTargetsOApiResponse, error) {
