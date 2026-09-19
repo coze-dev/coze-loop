@@ -83,6 +83,7 @@ func FromDOToolCall(t *ToolCall) schema.ToolCall {
 		ID:       t.ID,
 		Type:     t.Type,
 		Function: FromDOFunctionCall(t.Function),
+		Extra:    t.Extra,
 	}
 }
 
