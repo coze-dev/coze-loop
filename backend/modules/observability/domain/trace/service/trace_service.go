@@ -586,32 +586,39 @@ func NewTraceServiceImpl(
 	evalSvc rpc.IEvaluatorRPCAdapter,
 	taskRepo taskrepo.ITaskRepo,
 	persistentRedis redis.PersistentCmdable,
+	observers ...IngestTraceObserver,
 ) (ITraceService, error) {
+	ingestTraceObserver := IngestTraceObserver(noopIngestTraceObserver{})
+	if len(observers) > 0 && observers[0] != nil {
+		ingestTraceObserver = observers[0]
+	}
 	return &TraceServiceImpl{
-		traceRepo:          tRepo,
-		traceConfig:        traceConfig,
-		traceProducer:      traceProducer,
-		annotationProducer: annotationProducer,
-		buildHelper:        buildHelper,
-		tenantProvider:     tenantProvider,
-		metrics:            metrics,
-		evalSvc:            evalSvc,
-		taskRepo:           taskRepo,
-		persistentRedis:    persistentRedis,
+		traceRepo:           tRepo,
+		traceConfig:         traceConfig,
+		traceProducer:       traceProducer,
+		annotationProducer:  annotationProducer,
+		buildHelper:         buildHelper,
+		tenantProvider:      tenantProvider,
+		metrics:             metrics,
+		evalSvc:             evalSvc,
+		taskRepo:            taskRepo,
+		persistentRedis:     persistentRedis,
+		ingestTraceObserver: ingestTraceObserver,
 	}, nil
 }
 
 type TraceServiceImpl struct {
-	traceRepo          repo.ITraceRepo
-	traceConfig        config.ITraceConfig
-	traceProducer      mq.ITraceProducer
-	annotationProducer mq.IAnnotationProducer
-	metrics            metrics.ITraceMetrics
-	buildHelper        TraceFilterProcessorBuilder
-	tenantProvider     tenant.ITenantProvider
-	evalSvc            rpc.IEvaluatorRPCAdapter
-	taskRepo           taskrepo.ITaskRepo
-	persistentRedis    redis.PersistentCmdable
+	traceRepo           repo.ITraceRepo
+	traceConfig         config.ITraceConfig
+	traceProducer       mq.ITraceProducer
+	annotationProducer  mq.IAnnotationProducer
+	metrics             metrics.ITraceMetrics
+	buildHelper         TraceFilterProcessorBuilder
+	tenantProvider      tenant.ITenantProvider
+	evalSvc             rpc.IEvaluatorRPCAdapter
+	taskRepo            taskrepo.ITaskRepo
+	persistentRedis     redis.PersistentCmdable
+	ingestTraceObserver IngestTraceObserver
 }
 
 const (
@@ -1625,6 +1632,8 @@ func (r *TraceServiceImpl) ListPreSpanOApi(ctx context.Context, req *ListPreSpan
 }
 
 func (r *TraceServiceImpl) IngestTraces(ctx context.Context, req *IngestTracesReq) error {
+	r.ingestTraceObserver.BeforeIngest(ctx, req.Tenant, req.Spans)
+
 	processors, err := r.buildHelper.BuildIngestTraceProcessors(ctx, span_processor.Settings{})
 	if err != nil {
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
