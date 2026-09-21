@@ -27,6 +27,7 @@ const (
 type UpsertExptTurnResultFilterType = string
 
 type CreateExperimentRequest struct {
+	LifecycleHookConf *expt.LifecycleHookConf `thrift:"lifecycle_hook_conf,111,optional" frugal:"111,optional,expt.LifecycleHookConf" form:"lifecycle_hook_conf" json:"lifecycle_hook_conf,omitempty"`
 	// 数据集验证配置，保存到 experiment.eval_conf，不依赖应用名称。
 	VerificationConfig  *expt.VerificationConfig `thrift:"verification_config,52,optional" frugal:"52,optional,expt.VerificationConfig" form:"verification_config" json:"verification_config,omitempty"`
 	WorkspaceID         int64                    `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
@@ -97,6 +98,18 @@ func NewCreateExperimentRequest() *CreateExperimentRequest {
 }
 
 func (p *CreateExperimentRequest) InitDefault() {
+}
+
+var CreateExperimentRequest_LifecycleHookConf_DEFAULT *expt.LifecycleHookConf
+
+func (p *CreateExperimentRequest) GetLifecycleHookConf() (v *expt.LifecycleHookConf) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLifecycleHookConf() {
+		return CreateExperimentRequest_LifecycleHookConf_DEFAULT
+	}
+	return p.LifecycleHookConf
 }
 
 var CreateExperimentRequest_VerificationConfig_DEFAULT *expt.VerificationConfig
@@ -597,6 +610,9 @@ func (p *CreateExperimentRequest) GetBase() (v *base.Base) {
 	}
 	return p.Base
 }
+func (p *CreateExperimentRequest) SetLifecycleHookConf(val *expt.LifecycleHookConf) {
+	p.LifecycleHookConf = val
+}
 func (p *CreateExperimentRequest) SetVerificationConfig(val *expt.VerificationConfig) {
 	p.VerificationConfig = val
 }
@@ -725,6 +741,7 @@ func (p *CreateExperimentRequest) SetBase(val *base.Base) {
 }
 
 var fieldIDToName_CreateExperimentRequest = map[int16]string{
+	111: "lifecycle_hook_conf",
 	52:  "verification_config",
 	1:   "workspace_id",
 	2:   "eval_set_version_id",
@@ -767,6 +784,10 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	100: "ext",
 	200: "session",
 	255: "Base",
+}
+
+func (p *CreateExperimentRequest) IsSetLifecycleHookConf() bool {
+	return p.LifecycleHookConf != nil
 }
 
 func (p *CreateExperimentRequest) IsSetVerificationConfig() bool {
@@ -952,6 +973,14 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		}
 
 		switch fieldId {
+		case 111:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField111(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 52:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField52(iprot); err != nil {
@@ -1324,6 +1353,14 @@ RequiredFieldNotSetError:
 	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_CreateExperimentRequest[fieldId]))
 }
 
+func (p *CreateExperimentRequest) ReadField111(iprot thrift.TProtocol) error {
+	_field := expt.NewLifecycleHookConf()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.LifecycleHookConf = _field
+	return nil
+}
 func (p *CreateExperimentRequest) ReadField52(iprot thrift.TProtocol) error {
 	_field := expt.NewVerificationConfig()
 	if err := _field.Read(iprot); err != nil {
@@ -1847,6 +1884,10 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		goto WriteStructBeginError
 	}
 	if p != nil {
+		if err = p.writeField111(oprot); err != nil {
+			fieldId = 111
+			goto WriteFieldError
+		}
 		if err = p.writeField52(oprot); err != nil {
 			fieldId = 52
 			goto WriteFieldError
@@ -2033,6 +2074,24 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
+func (p *CreateExperimentRequest) writeField111(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLifecycleHookConf() {
+		if err = oprot.WriteFieldBegin("lifecycle_hook_conf", thrift.STRUCT, 111); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.LifecycleHookConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 111 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 111 end error: ", p), err)
+}
 func (p *CreateExperimentRequest) writeField52(oprot thrift.TProtocol) (err error) {
 	if p.IsSetVerificationConfig() {
 		if err = oprot.WriteFieldBegin("verification_config", thrift.STRUCT, 52); err != nil {
@@ -2856,6 +2915,9 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
+	if !p.Field111DeepEqual(ano.LifecycleHookConf) {
+		return false
+	}
 	if !p.Field52DeepEqual(ano.VerificationConfig) {
 		return false
 	}
@@ -2985,6 +3047,13 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 	return true
 }
 
+func (p *CreateExperimentRequest) Field111DeepEqual(src *expt.LifecycleHookConf) bool {
+
+	if !p.LifecycleHookConf.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *CreateExperimentRequest) Field52DeepEqual(src *expt.VerificationConfig) bool {
 
 	if !p.VerificationConfig.DeepEqual(src) {
@@ -3677,6 +3746,7 @@ func (p *CreateExperimentResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type SubmitExperimentRequest struct {
+	LifecycleHookConf   *expt.LifecycleHookConf  `thrift:"lifecycle_hook_conf,111,optional" frugal:"111,optional,expt.LifecycleHookConf" form:"lifecycle_hook_conf" json:"lifecycle_hook_conf,omitempty"`
 	VerificationConfig  *expt.VerificationConfig `thrift:"verification_config,52,optional" frugal:"52,optional,expt.VerificationConfig" form:"verification_config" json:"verification_config,omitempty"`
 	WorkspaceID         int64                    `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	EvalSetVersionID    *int64                   `thrift:"eval_set_version_id,2,optional" frugal:"2,optional,i64" json:"eval_set_version_id" form:"eval_set_version_id" `
@@ -3751,6 +3821,18 @@ func NewSubmitExperimentRequest() *SubmitExperimentRequest {
 }
 
 func (p *SubmitExperimentRequest) InitDefault() {
+}
+
+var SubmitExperimentRequest_LifecycleHookConf_DEFAULT *expt.LifecycleHookConf
+
+func (p *SubmitExperimentRequest) GetLifecycleHookConf() (v *expt.LifecycleHookConf) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLifecycleHookConf() {
+		return SubmitExperimentRequest_LifecycleHookConf_DEFAULT
+	}
+	return p.LifecycleHookConf
 }
 
 var SubmitExperimentRequest_VerificationConfig_DEFAULT *expt.VerificationConfig
@@ -4275,6 +4357,9 @@ func (p *SubmitExperimentRequest) GetBase() (v *base.Base) {
 	}
 	return p.Base
 }
+func (p *SubmitExperimentRequest) SetLifecycleHookConf(val *expt.LifecycleHookConf) {
+	p.LifecycleHookConf = val
+}
 func (p *SubmitExperimentRequest) SetVerificationConfig(val *expt.VerificationConfig) {
 	p.VerificationConfig = val
 }
@@ -4409,6 +4494,7 @@ func (p *SubmitExperimentRequest) SetBase(val *base.Base) {
 }
 
 var fieldIDToName_SubmitExperimentRequest = map[int16]string{
+	111: "lifecycle_hook_conf",
 	52:  "verification_config",
 	1:   "workspace_id",
 	2:   "eval_set_version_id",
@@ -4453,6 +4539,10 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	110: "notification_conf",
 	200: "session",
 	255: "Base",
+}
+
+func (p *SubmitExperimentRequest) IsSetLifecycleHookConf() bool {
+	return p.LifecycleHookConf != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetVerificationConfig() bool {
@@ -4646,6 +4736,14 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		}
 
 		switch fieldId {
+		case 111:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField111(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 52:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField52(iprot); err != nil {
@@ -5034,6 +5132,14 @@ RequiredFieldNotSetError:
 	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_SubmitExperimentRequest[fieldId]))
 }
 
+func (p *SubmitExperimentRequest) ReadField111(iprot thrift.TProtocol) error {
+	_field := expt.NewLifecycleHookConf()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.LifecycleHookConf = _field
+	return nil
+}
 func (p *SubmitExperimentRequest) ReadField52(iprot thrift.TProtocol) error {
 	_field := expt.NewVerificationConfig()
 	if err := _field.Read(iprot); err != nil {
@@ -5570,6 +5676,10 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		goto WriteStructBeginError
 	}
 	if p != nil {
+		if err = p.writeField111(oprot); err != nil {
+			fieldId = 111
+			goto WriteFieldError
+		}
 		if err = p.writeField52(oprot); err != nil {
 			fieldId = 52
 			goto WriteFieldError
@@ -5764,6 +5874,24 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
+func (p *SubmitExperimentRequest) writeField111(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLifecycleHookConf() {
+		if err = oprot.WriteFieldBegin("lifecycle_hook_conf", thrift.STRUCT, 111); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.LifecycleHookConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 111 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 111 end error: ", p), err)
+}
 func (p *SubmitExperimentRequest) writeField52(oprot thrift.TProtocol) (err error) {
 	if p.IsSetVerificationConfig() {
 		if err = oprot.WriteFieldBegin("verification_config", thrift.STRUCT, 52); err != nil {
@@ -6620,6 +6748,9 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
+	if !p.Field111DeepEqual(ano.LifecycleHookConf) {
+		return false
+	}
 	if !p.Field52DeepEqual(ano.VerificationConfig) {
 		return false
 	}
@@ -6755,6 +6886,13 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 	return true
 }
 
+func (p *SubmitExperimentRequest) Field111DeepEqual(src *expt.LifecycleHookConf) bool {
+
+	if !p.LifecycleHookConf.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *SubmitExperimentRequest) Field52DeepEqual(src *expt.VerificationConfig) bool {
 
 	if !p.VerificationConfig.DeepEqual(src) {
@@ -9967,10 +10105,11 @@ func (p *GetExperimentIDsByGroupResponse) Field255DeepEqual(src *base.BaseResp) 
 }
 
 type UpdateExperimentRequest struct {
-	WorkspaceID int64   `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	ExptID      int64   `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
-	Name        *string `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty"`
-	Desc        *string `thrift:"desc,4,optional" frugal:"4,optional,string" form:"desc" json:"desc,omitempty"`
+	LifecycleHookConf *expt.LifecycleHookConf `thrift:"lifecycle_hook_conf,111,optional" frugal:"111,optional,expt.LifecycleHookConf" form:"lifecycle_hook_conf" json:"lifecycle_hook_conf,omitempty"`
+	WorkspaceID       int64                   `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	ExptID            int64                   `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
+	Name              *string                 `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty"`
+	Desc              *string                 `thrift:"desc,4,optional" frugal:"4,optional,string" form:"desc" json:"desc,omitempty"`
 	// 通知配置（可选更新）
 	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,110,optional" frugal:"110,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
 	Base             *base.Base                 `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
@@ -9981,6 +10120,18 @@ func NewUpdateExperimentRequest() *UpdateExperimentRequest {
 }
 
 func (p *UpdateExperimentRequest) InitDefault() {
+}
+
+var UpdateExperimentRequest_LifecycleHookConf_DEFAULT *expt.LifecycleHookConf
+
+func (p *UpdateExperimentRequest) GetLifecycleHookConf() (v *expt.LifecycleHookConf) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLifecycleHookConf() {
+		return UpdateExperimentRequest_LifecycleHookConf_DEFAULT
+	}
+	return p.LifecycleHookConf
 }
 
 func (p *UpdateExperimentRequest) GetWorkspaceID() (v int64) {
@@ -10044,6 +10195,9 @@ func (p *UpdateExperimentRequest) GetBase() (v *base.Base) {
 	}
 	return p.Base
 }
+func (p *UpdateExperimentRequest) SetLifecycleHookConf(val *expt.LifecycleHookConf) {
+	p.LifecycleHookConf = val
+}
 func (p *UpdateExperimentRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
@@ -10064,12 +10218,17 @@ func (p *UpdateExperimentRequest) SetBase(val *base.Base) {
 }
 
 var fieldIDToName_UpdateExperimentRequest = map[int16]string{
+	111: "lifecycle_hook_conf",
 	1:   "workspace_id",
 	2:   "expt_id",
 	3:   "name",
 	4:   "desc",
 	110: "notification_conf",
 	255: "Base",
+}
+
+func (p *UpdateExperimentRequest) IsSetLifecycleHookConf() bool {
+	return p.LifecycleHookConf != nil
 }
 
 func (p *UpdateExperimentRequest) IsSetName() bool {
@@ -10108,6 +10267,14 @@ func (p *UpdateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		}
 
 		switch fieldId {
+		case 111:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField111(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
@@ -10198,6 +10365,14 @@ RequiredFieldNotSetError:
 	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_UpdateExperimentRequest[fieldId]))
 }
 
+func (p *UpdateExperimentRequest) ReadField111(iprot thrift.TProtocol) error {
+	_field := expt.NewLifecycleHookConf()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.LifecycleHookConf = _field
+	return nil
+}
 func (p *UpdateExperimentRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
@@ -10265,6 +10440,10 @@ func (p *UpdateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		goto WriteStructBeginError
 	}
 	if p != nil {
+		if err = p.writeField111(oprot); err != nil {
+			fieldId = 111
+			goto WriteFieldError
+		}
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
 			goto WriteFieldError
@@ -10307,6 +10486,24 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
+func (p *UpdateExperimentRequest) writeField111(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLifecycleHookConf() {
+		if err = oprot.WriteFieldBegin("lifecycle_hook_conf", thrift.STRUCT, 111); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.LifecycleHookConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 111 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 111 end error: ", p), err)
+}
 func (p *UpdateExperimentRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
@@ -10426,6 +10623,9 @@ func (p *UpdateExperimentRequest) DeepEqual(ano *UpdateExperimentRequest) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
+	if !p.Field111DeepEqual(ano.LifecycleHookConf) {
+		return false
+	}
 	if !p.Field1DeepEqual(ano.WorkspaceID) {
 		return false
 	}
@@ -10447,6 +10647,13 @@ func (p *UpdateExperimentRequest) DeepEqual(ano *UpdateExperimentRequest) bool {
 	return true
 }
 
+func (p *UpdateExperimentRequest) Field111DeepEqual(src *expt.LifecycleHookConf) bool {
+
+	if !p.LifecycleHookConf.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *UpdateExperimentRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
@@ -26859,6 +27066,7 @@ func (p *ListExperimentStatsResponse) Field255DeepEqual(src *base.BaseResp) bool
 // 实验模板相关接口
 // =========================
 type CreateExperimentTemplateRequest struct {
+	LifecycleHookConf  *expt.LifecycleHookConf  `thrift:"lifecycle_hook_conf,41,optional" frugal:"41,optional,expt.LifecycleHookConf" form:"lifecycle_hook_conf" json:"lifecycle_hook_conf,omitempty"`
 	VerificationConfig *expt.VerificationConfig `thrift:"verification_config,25,optional" frugal:"25,optional,expt.VerificationConfig" form:"verification_config" json:"verification_config,omitempty"`
 	WorkspaceID        int64                    `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	// 模板结构，与 ExptTemplate 保持一致
@@ -26886,6 +27094,18 @@ func NewCreateExperimentTemplateRequest() *CreateExperimentTemplateRequest {
 }
 
 func (p *CreateExperimentTemplateRequest) InitDefault() {
+}
+
+var CreateExperimentTemplateRequest_LifecycleHookConf_DEFAULT *expt.LifecycleHookConf
+
+func (p *CreateExperimentTemplateRequest) GetLifecycleHookConf() (v *expt.LifecycleHookConf) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLifecycleHookConf() {
+		return CreateExperimentTemplateRequest_LifecycleHookConf_DEFAULT
+	}
+	return p.LifecycleHookConf
 }
 
 var CreateExperimentTemplateRequest_VerificationConfig_DEFAULT *expt.VerificationConfig
@@ -27050,6 +27270,9 @@ func (p *CreateExperimentTemplateRequest) GetBase() (v *base.Base) {
 	}
 	return p.Base
 }
+func (p *CreateExperimentTemplateRequest) SetLifecycleHookConf(val *expt.LifecycleHookConf) {
+	p.LifecycleHookConf = val
+}
 func (p *CreateExperimentTemplateRequest) SetVerificationConfig(val *expt.VerificationConfig) {
 	p.VerificationConfig = val
 }
@@ -27094,6 +27317,7 @@ func (p *CreateExperimentTemplateRequest) SetBase(val *base.Base) {
 }
 
 var fieldIDToName_CreateExperimentTemplateRequest = map[int16]string{
+	41:  "lifecycle_hook_conf",
 	25:  "verification_config",
 	1:   "workspace_id",
 	10:  "meta",
@@ -27108,6 +27332,10 @@ var fieldIDToName_CreateExperimentTemplateRequest = map[int16]string{
 	40:  "notification_conf",
 	200: "session",
 	255: "Base",
+}
+
+func (p *CreateExperimentTemplateRequest) IsSetLifecycleHookConf() bool {
+	return p.LifecycleHookConf != nil
 }
 
 func (p *CreateExperimentTemplateRequest) IsSetVerificationConfig() bool {
@@ -27181,6 +27409,14 @@ func (p *CreateExperimentTemplateRequest) Read(iprot thrift.TProtocol) (err erro
 		}
 
 		switch fieldId {
+		case 41:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField41(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 25:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField25(iprot); err != nil {
@@ -27329,6 +27565,14 @@ RequiredFieldNotSetError:
 	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_CreateExperimentTemplateRequest[fieldId]))
 }
 
+func (p *CreateExperimentTemplateRequest) ReadField41(iprot thrift.TProtocol) error {
+	_field := expt.NewLifecycleHookConf()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.LifecycleHookConf = _field
+	return nil
+}
 func (p *CreateExperimentTemplateRequest) ReadField25(iprot thrift.TProtocol) error {
 	_field := expt.NewVerificationConfig()
 	if err := _field.Read(iprot); err != nil {
@@ -27460,6 +27704,10 @@ func (p *CreateExperimentTemplateRequest) Write(oprot thrift.TProtocol) (err err
 		goto WriteStructBeginError
 	}
 	if p != nil {
+		if err = p.writeField41(oprot); err != nil {
+			fieldId = 41
+			goto WriteFieldError
+		}
 		if err = p.writeField25(oprot); err != nil {
 			fieldId = 25
 			goto WriteFieldError
@@ -27534,6 +27782,24 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
+func (p *CreateExperimentTemplateRequest) writeField41(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLifecycleHookConf() {
+		if err = oprot.WriteFieldBegin("lifecycle_hook_conf", thrift.STRUCT, 41); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.LifecycleHookConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 41 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 41 end error: ", p), err)
+}
 func (p *CreateExperimentTemplateRequest) writeField25(oprot thrift.TProtocol) (err error) {
 	if p.IsSetVerificationConfig() {
 		if err = oprot.WriteFieldBegin("verification_config", thrift.STRUCT, 25); err != nil {
@@ -27799,6 +28065,9 @@ func (p *CreateExperimentTemplateRequest) DeepEqual(ano *CreateExperimentTemplat
 	} else if p == nil || ano == nil {
 		return false
 	}
+	if !p.Field41DeepEqual(ano.LifecycleHookConf) {
+		return false
+	}
 	if !p.Field25DeepEqual(ano.VerificationConfig) {
 		return false
 	}
@@ -27844,6 +28113,13 @@ func (p *CreateExperimentTemplateRequest) DeepEqual(ano *CreateExperimentTemplat
 	return true
 }
 
+func (p *CreateExperimentTemplateRequest) Field41DeepEqual(src *expt.LifecycleHookConf) bool {
+
+	if !p.LifecycleHookConf.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *CreateExperimentTemplateRequest) Field25DeepEqual(src *expt.VerificationConfig) bool {
 
 	if !p.VerificationConfig.DeepEqual(src) {
@@ -29423,6 +29699,7 @@ func (p *UpdateExperimentTemplateMetaResponse) Field255DeepEqual(src *base.BaseR
 }
 
 type UpdateExperimentTemplateRequest struct {
+	LifecycleHookConf  *expt.LifecycleHookConf  `thrift:"lifecycle_hook_conf,41,optional" frugal:"41,optional,expt.LifecycleHookConf" form:"lifecycle_hook_conf" json:"lifecycle_hook_conf,omitempty"`
 	VerificationConfig *expt.VerificationConfig `thrift:"verification_config,25,optional" frugal:"25,optional,expt.VerificationConfig" form:"verification_config" json:"verification_config,omitempty"`
 	WorkspaceID        int64                    `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	TemplateID         int64                    `thrift:"template_id,2,required" frugal:"2,required,i64" json:"template_id" path:"template_id,required" `
@@ -29451,6 +29728,18 @@ func NewUpdateExperimentTemplateRequest() *UpdateExperimentTemplateRequest {
 }
 
 func (p *UpdateExperimentTemplateRequest) InitDefault() {
+}
+
+var UpdateExperimentTemplateRequest_LifecycleHookConf_DEFAULT *expt.LifecycleHookConf
+
+func (p *UpdateExperimentTemplateRequest) GetLifecycleHookConf() (v *expt.LifecycleHookConf) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLifecycleHookConf() {
+		return UpdateExperimentTemplateRequest_LifecycleHookConf_DEFAULT
+	}
+	return p.LifecycleHookConf
 }
 
 var UpdateExperimentTemplateRequest_VerificationConfig_DEFAULT *expt.VerificationConfig
@@ -29610,6 +29899,9 @@ func (p *UpdateExperimentTemplateRequest) GetBase() (v *base.Base) {
 	}
 	return p.Base
 }
+func (p *UpdateExperimentTemplateRequest) SetLifecycleHookConf(val *expt.LifecycleHookConf) {
+	p.LifecycleHookConf = val
+}
 func (p *UpdateExperimentTemplateRequest) SetVerificationConfig(val *expt.VerificationConfig) {
 	p.VerificationConfig = val
 }
@@ -29654,6 +29946,7 @@ func (p *UpdateExperimentTemplateRequest) SetBase(val *base.Base) {
 }
 
 var fieldIDToName_UpdateExperimentTemplateRequest = map[int16]string{
+	41:  "lifecycle_hook_conf",
 	25:  "verification_config",
 	1:   "workspace_id",
 	2:   "template_id",
@@ -29668,6 +29961,10 @@ var fieldIDToName_UpdateExperimentTemplateRequest = map[int16]string{
 	30:  "expt_source",
 	40:  "notification_conf",
 	255: "Base",
+}
+
+func (p *UpdateExperimentTemplateRequest) IsSetLifecycleHookConf() bool {
+	return p.LifecycleHookConf != nil
 }
 
 func (p *UpdateExperimentTemplateRequest) IsSetVerificationConfig() bool {
@@ -29738,6 +30035,14 @@ func (p *UpdateExperimentTemplateRequest) Read(iprot thrift.TProtocol) (err erro
 		}
 
 		switch fieldId {
+		case 41:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField41(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 25:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField25(iprot); err != nil {
@@ -29892,6 +30197,14 @@ RequiredFieldNotSetError:
 	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_UpdateExperimentTemplateRequest[fieldId]))
 }
 
+func (p *UpdateExperimentTemplateRequest) ReadField41(iprot thrift.TProtocol) error {
+	_field := expt.NewLifecycleHookConf()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.LifecycleHookConf = _field
+	return nil
+}
 func (p *UpdateExperimentTemplateRequest) ReadField25(iprot thrift.TProtocol) error {
 	_field := expt.NewVerificationConfig()
 	if err := _field.Read(iprot); err != nil {
@@ -30026,6 +30339,10 @@ func (p *UpdateExperimentTemplateRequest) Write(oprot thrift.TProtocol) (err err
 		goto WriteStructBeginError
 	}
 	if p != nil {
+		if err = p.writeField41(oprot); err != nil {
+			fieldId = 41
+			goto WriteFieldError
+		}
 		if err = p.writeField25(oprot); err != nil {
 			fieldId = 25
 			goto WriteFieldError
@@ -30100,6 +30417,24 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
+func (p *UpdateExperimentTemplateRequest) writeField41(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLifecycleHookConf() {
+		if err = oprot.WriteFieldBegin("lifecycle_hook_conf", thrift.STRUCT, 41); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.LifecycleHookConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 41 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 41 end error: ", p), err)
+}
 func (p *UpdateExperimentTemplateRequest) writeField25(oprot thrift.TProtocol) (err error) {
 	if p.IsSetVerificationConfig() {
 		if err = oprot.WriteFieldBegin("verification_config", thrift.STRUCT, 25); err != nil {
@@ -30363,6 +30698,9 @@ func (p *UpdateExperimentTemplateRequest) DeepEqual(ano *UpdateExperimentTemplat
 	} else if p == nil || ano == nil {
 		return false
 	}
+	if !p.Field41DeepEqual(ano.LifecycleHookConf) {
+		return false
+	}
 	if !p.Field25DeepEqual(ano.VerificationConfig) {
 		return false
 	}
@@ -30408,6 +30746,13 @@ func (p *UpdateExperimentTemplateRequest) DeepEqual(ano *UpdateExperimentTemplat
 	return true
 }
 
+func (p *UpdateExperimentTemplateRequest) Field41DeepEqual(src *expt.LifecycleHookConf) bool {
+
+	if !p.LifecycleHookConf.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *UpdateExperimentTemplateRequest) Field25DeepEqual(src *expt.VerificationConfig) bool {
 
 	if !p.VerificationConfig.DeepEqual(src) {
@@ -32869,9 +33214,10 @@ func (p *CheckExperimentTemplateNameResponse) Field255DeepEqual(src *base.BaseRe
 
 // 根据 workspace_id 与实验模板 ID 提交实验（控制台/会话鉴权，逻辑对齐 SubmitExptFromTemplateOApi）
 type SubmitExptFromTemplateRequest struct {
-	WorkspaceID int64   `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	TemplateID  int64   `thrift:"template_id,2,required" frugal:"2,required,i64" json:"template_id" form:"template_id,required" `
-	Name        *string `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty"`
+	LifecycleHookConf *expt.LifecycleHookConf `thrift:"lifecycle_hook_conf,11,optional" frugal:"11,optional,expt.LifecycleHookConf" form:"lifecycle_hook_conf" json:"lifecycle_hook_conf,omitempty"`
+	WorkspaceID       int64                   `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	TemplateID        int64                   `thrift:"template_id,2,required" frugal:"2,required,i64" json:"template_id" form:"template_id,required" `
+	Name              *string                 `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty"`
 	// 通知配置（可选覆盖模板配置）
 	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,10,optional" frugal:"10,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
 	Session          *common.Session            `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
@@ -32883,6 +33229,18 @@ func NewSubmitExptFromTemplateRequest() *SubmitExptFromTemplateRequest {
 }
 
 func (p *SubmitExptFromTemplateRequest) InitDefault() {
+}
+
+var SubmitExptFromTemplateRequest_LifecycleHookConf_DEFAULT *expt.LifecycleHookConf
+
+func (p *SubmitExptFromTemplateRequest) GetLifecycleHookConf() (v *expt.LifecycleHookConf) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLifecycleHookConf() {
+		return SubmitExptFromTemplateRequest_LifecycleHookConf_DEFAULT
+	}
+	return p.LifecycleHookConf
 }
 
 func (p *SubmitExptFromTemplateRequest) GetWorkspaceID() (v int64) {
@@ -32946,6 +33304,9 @@ func (p *SubmitExptFromTemplateRequest) GetBase() (v *base.Base) {
 	}
 	return p.Base
 }
+func (p *SubmitExptFromTemplateRequest) SetLifecycleHookConf(val *expt.LifecycleHookConf) {
+	p.LifecycleHookConf = val
+}
 func (p *SubmitExptFromTemplateRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
@@ -32966,12 +33327,17 @@ func (p *SubmitExptFromTemplateRequest) SetBase(val *base.Base) {
 }
 
 var fieldIDToName_SubmitExptFromTemplateRequest = map[int16]string{
+	11:  "lifecycle_hook_conf",
 	1:   "workspace_id",
 	2:   "template_id",
 	3:   "name",
 	10:  "notification_conf",
 	200: "session",
 	255: "Base",
+}
+
+func (p *SubmitExptFromTemplateRequest) IsSetLifecycleHookConf() bool {
+	return p.LifecycleHookConf != nil
 }
 
 func (p *SubmitExptFromTemplateRequest) IsSetName() bool {
@@ -33010,6 +33376,14 @@ func (p *SubmitExptFromTemplateRequest) Read(iprot thrift.TProtocol) (err error)
 		}
 
 		switch fieldId {
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
@@ -33100,6 +33474,14 @@ RequiredFieldNotSetError:
 	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_SubmitExptFromTemplateRequest[fieldId]))
 }
 
+func (p *SubmitExptFromTemplateRequest) ReadField11(iprot thrift.TProtocol) error {
+	_field := expt.NewLifecycleHookConf()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.LifecycleHookConf = _field
+	return nil
+}
 func (p *SubmitExptFromTemplateRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
@@ -33164,6 +33546,10 @@ func (p *SubmitExptFromTemplateRequest) Write(oprot thrift.TProtocol) (err error
 		goto WriteStructBeginError
 	}
 	if p != nil {
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
+			goto WriteFieldError
+		}
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
 			goto WriteFieldError
@@ -33206,6 +33592,24 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
+func (p *SubmitExptFromTemplateRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLifecycleHookConf() {
+		if err = oprot.WriteFieldBegin("lifecycle_hook_conf", thrift.STRUCT, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.LifecycleHookConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 func (p *SubmitExptFromTemplateRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
@@ -33325,6 +33729,9 @@ func (p *SubmitExptFromTemplateRequest) DeepEqual(ano *SubmitExptFromTemplateReq
 	} else if p == nil || ano == nil {
 		return false
 	}
+	if !p.Field11DeepEqual(ano.LifecycleHookConf) {
+		return false
+	}
 	if !p.Field1DeepEqual(ano.WorkspaceID) {
 		return false
 	}
@@ -33346,6 +33753,13 @@ func (p *SubmitExptFromTemplateRequest) DeepEqual(ano *SubmitExptFromTemplateReq
 	return true
 }
 
+func (p *SubmitExptFromTemplateRequest) Field11DeepEqual(src *expt.LifecycleHookConf) bool {
+
+	if !p.LifecycleHookConf.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *SubmitExptFromTemplateRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
@@ -45607,6 +46021,855 @@ func (p *GetAnalysisRecordFeedbackVoteResponse) Field255DeepEqual(src *base.Base
 	return true
 }
 
+// Service-only callback. The application resolves and authorizes the stored binding.
+type SubmitScheduledExptFromTemplateRequest struct {
+	WorkspaceID    *int64     `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" form:"workspace_id" json:"workspace_id,omitempty" query:"workspace_id"`
+	TemplateID     *int64     `thrift:"template_id,2,optional" frugal:"2,optional,i64" form:"template_id" json:"template_id,omitempty" query:"template_id"`
+	BindingID      *string    `thrift:"binding_id,3,optional" frugal:"3,optional,string" form:"binding_id" json:"binding_id,omitempty" query:"binding_id"`
+	BindingVersion *int64     `thrift:"binding_version,4,optional" frugal:"4,optional,i64" form:"binding_version" json:"binding_version,omitempty" query:"binding_version"`
+	Base           *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewSubmitScheduledExptFromTemplateRequest() *SubmitScheduledExptFromTemplateRequest {
+	return &SubmitScheduledExptFromTemplateRequest{}
+}
+
+func (p *SubmitScheduledExptFromTemplateRequest) InitDefault() {
+}
+
+var SubmitScheduledExptFromTemplateRequest_WorkspaceID_DEFAULT int64
+
+func (p *SubmitScheduledExptFromTemplateRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return SubmitScheduledExptFromTemplateRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var SubmitScheduledExptFromTemplateRequest_TemplateID_DEFAULT int64
+
+func (p *SubmitScheduledExptFromTemplateRequest) GetTemplateID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTemplateID() {
+		return SubmitScheduledExptFromTemplateRequest_TemplateID_DEFAULT
+	}
+	return *p.TemplateID
+}
+
+var SubmitScheduledExptFromTemplateRequest_BindingID_DEFAULT string
+
+func (p *SubmitScheduledExptFromTemplateRequest) GetBindingID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBindingID() {
+		return SubmitScheduledExptFromTemplateRequest_BindingID_DEFAULT
+	}
+	return *p.BindingID
+}
+
+var SubmitScheduledExptFromTemplateRequest_BindingVersion_DEFAULT int64
+
+func (p *SubmitScheduledExptFromTemplateRequest) GetBindingVersion() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBindingVersion() {
+		return SubmitScheduledExptFromTemplateRequest_BindingVersion_DEFAULT
+	}
+	return *p.BindingVersion
+}
+
+var SubmitScheduledExptFromTemplateRequest_Base_DEFAULT *base.Base
+
+func (p *SubmitScheduledExptFromTemplateRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return SubmitScheduledExptFromTemplateRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *SubmitScheduledExptFromTemplateRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *SubmitScheduledExptFromTemplateRequest) SetTemplateID(val *int64) {
+	p.TemplateID = val
+}
+func (p *SubmitScheduledExptFromTemplateRequest) SetBindingID(val *string) {
+	p.BindingID = val
+}
+func (p *SubmitScheduledExptFromTemplateRequest) SetBindingVersion(val *int64) {
+	p.BindingVersion = val
+}
+func (p *SubmitScheduledExptFromTemplateRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_SubmitScheduledExptFromTemplateRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "template_id",
+	3:   "binding_id",
+	4:   "binding_version",
+	255: "Base",
+}
+
+func (p *SubmitScheduledExptFromTemplateRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *SubmitScheduledExptFromTemplateRequest) IsSetTemplateID() bool {
+	return p.TemplateID != nil
+}
+
+func (p *SubmitScheduledExptFromTemplateRequest) IsSetBindingID() bool {
+	return p.BindingID != nil
+}
+
+func (p *SubmitScheduledExptFromTemplateRequest) IsSetBindingVersion() bool {
+	return p.BindingVersion != nil
+}
+
+func (p *SubmitScheduledExptFromTemplateRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *SubmitScheduledExptFromTemplateRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SubmitScheduledExptFromTemplateRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SubmitScheduledExptFromTemplateRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *SubmitScheduledExptFromTemplateRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TemplateID = _field
+	return nil
+}
+func (p *SubmitScheduledExptFromTemplateRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.BindingID = _field
+	return nil
+}
+func (p *SubmitScheduledExptFromTemplateRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.BindingVersion = _field
+	return nil
+}
+func (p *SubmitScheduledExptFromTemplateRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *SubmitScheduledExptFromTemplateRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SubmitScheduledExptFromTemplateRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SubmitScheduledExptFromTemplateRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SubmitScheduledExptFromTemplateRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTemplateID() {
+		if err = oprot.WriteFieldBegin("template_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TemplateID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *SubmitScheduledExptFromTemplateRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBindingID() {
+		if err = oprot.WriteFieldBegin("binding_id", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.BindingID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *SubmitScheduledExptFromTemplateRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBindingVersion() {
+		if err = oprot.WriteFieldBegin("binding_version", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.BindingVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *SubmitScheduledExptFromTemplateRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *SubmitScheduledExptFromTemplateRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SubmitScheduledExptFromTemplateRequest(%+v)", *p)
+
+}
+
+func (p *SubmitScheduledExptFromTemplateRequest) DeepEqual(ano *SubmitScheduledExptFromTemplateRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.TemplateID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.BindingID) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.BindingVersion) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *SubmitScheduledExptFromTemplateRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitScheduledExptFromTemplateRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.TemplateID == src {
+		return true
+	} else if p.TemplateID == nil || src == nil {
+		return false
+	}
+	if *p.TemplateID != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitScheduledExptFromTemplateRequest) Field3DeepEqual(src *string) bool {
+
+	if p.BindingID == src {
+		return true
+	} else if p.BindingID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.BindingID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SubmitScheduledExptFromTemplateRequest) Field4DeepEqual(src *int64) bool {
+
+	if p.BindingVersion == src {
+		return true
+	} else if p.BindingVersion == nil || src == nil {
+		return false
+	}
+	if *p.BindingVersion != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitScheduledExptFromTemplateRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type SubmitScheduledExptFromTemplateResponse struct {
+	ExperimentID *int64         `thrift:"experiment_id,1,optional" frugal:"1,optional,i64" form:"experiment_id" json:"experiment_id,omitempty" query:"experiment_id"`
+	RunID        *int64         `thrift:"run_id,2,optional" frugal:"2,optional,i64" form:"run_id" json:"run_id,omitempty" query:"run_id"`
+	BaseResp     *base.BaseResp `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+}
+
+func NewSubmitScheduledExptFromTemplateResponse() *SubmitScheduledExptFromTemplateResponse {
+	return &SubmitScheduledExptFromTemplateResponse{}
+}
+
+func (p *SubmitScheduledExptFromTemplateResponse) InitDefault() {
+}
+
+var SubmitScheduledExptFromTemplateResponse_ExperimentID_DEFAULT int64
+
+func (p *SubmitScheduledExptFromTemplateResponse) GetExperimentID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExperimentID() {
+		return SubmitScheduledExptFromTemplateResponse_ExperimentID_DEFAULT
+	}
+	return *p.ExperimentID
+}
+
+var SubmitScheduledExptFromTemplateResponse_RunID_DEFAULT int64
+
+func (p *SubmitScheduledExptFromTemplateResponse) GetRunID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRunID() {
+		return SubmitScheduledExptFromTemplateResponse_RunID_DEFAULT
+	}
+	return *p.RunID
+}
+
+var SubmitScheduledExptFromTemplateResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *SubmitScheduledExptFromTemplateResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return SubmitScheduledExptFromTemplateResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *SubmitScheduledExptFromTemplateResponse) SetExperimentID(val *int64) {
+	p.ExperimentID = val
+}
+func (p *SubmitScheduledExptFromTemplateResponse) SetRunID(val *int64) {
+	p.RunID = val
+}
+func (p *SubmitScheduledExptFromTemplateResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_SubmitScheduledExptFromTemplateResponse = map[int16]string{
+	1:   "experiment_id",
+	2:   "run_id",
+	255: "BaseResp",
+}
+
+func (p *SubmitScheduledExptFromTemplateResponse) IsSetExperimentID() bool {
+	return p.ExperimentID != nil
+}
+
+func (p *SubmitScheduledExptFromTemplateResponse) IsSetRunID() bool {
+	return p.RunID != nil
+}
+
+func (p *SubmitScheduledExptFromTemplateResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *SubmitScheduledExptFromTemplateResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SubmitScheduledExptFromTemplateResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SubmitScheduledExptFromTemplateResponse) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExperimentID = _field
+	return nil
+}
+func (p *SubmitScheduledExptFromTemplateResponse) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RunID = _field
+	return nil
+}
+func (p *SubmitScheduledExptFromTemplateResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *SubmitScheduledExptFromTemplateResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SubmitScheduledExptFromTemplateResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SubmitScheduledExptFromTemplateResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExperimentID() {
+		if err = oprot.WriteFieldBegin("experiment_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ExperimentID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SubmitScheduledExptFromTemplateResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRunID() {
+		if err = oprot.WriteFieldBegin("run_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.RunID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *SubmitScheduledExptFromTemplateResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseResp() {
+		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseResp.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *SubmitScheduledExptFromTemplateResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SubmitScheduledExptFromTemplateResponse(%+v)", *p)
+
+}
+
+func (p *SubmitScheduledExptFromTemplateResponse) DeepEqual(ano *SubmitScheduledExptFromTemplateResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ExperimentID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.RunID) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *SubmitScheduledExptFromTemplateResponse) Field1DeepEqual(src *int64) bool {
+
+	if p.ExperimentID == src {
+		return true
+	} else if p.ExperimentID == nil || src == nil {
+		return false
+	}
+	if *p.ExperimentID != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitScheduledExptFromTemplateResponse) Field2DeepEqual(src *int64) bool {
+
+	if p.RunID == src {
+		return true
+	} else if p.RunID == nil || src == nil {
+		return false
+	}
+	if *p.RunID != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitScheduledExptFromTemplateResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentScheduleService interface {
+	SubmitScheduledExptFromTemplate(ctx context.Context, req *SubmitScheduledExptFromTemplateRequest) (r *SubmitScheduledExptFromTemplateResponse, err error)
+}
+
+type ExperimentScheduleServiceClient struct {
+	c thrift.TClient
+}
+
+func NewExperimentScheduleServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ExperimentScheduleServiceClient {
+	return &ExperimentScheduleServiceClient{
+		c: thrift.NewTStandardClient(f.GetProtocol(t), f.GetProtocol(t)),
+	}
+}
+
+func NewExperimentScheduleServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ExperimentScheduleServiceClient {
+	return &ExperimentScheduleServiceClient{
+		c: thrift.NewTStandardClient(iprot, oprot),
+	}
+}
+
+func NewExperimentScheduleServiceClient(c thrift.TClient) *ExperimentScheduleServiceClient {
+	return &ExperimentScheduleServiceClient{
+		c: c,
+	}
+}
+
+func (p *ExperimentScheduleServiceClient) Client_() thrift.TClient {
+	return p.c
+}
+
+func (p *ExperimentScheduleServiceClient) SubmitScheduledExptFromTemplate(ctx context.Context, req *SubmitScheduledExptFromTemplateRequest) (r *SubmitScheduledExptFromTemplateResponse, err error) {
+	var _args ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs
+	_args.Req = req
+	var _result ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult
+	if err = p.Client_().Call(ctx, "SubmitScheduledExptFromTemplate", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
 type ExperimentService interface {
 	CheckExperimentName(ctx context.Context, req *CheckExperimentNameRequest) (r *CheckExperimentNameResponse, err error)
 	// CreateExperiment 只创建，不提交运行
@@ -46140,6 +47403,439 @@ func (p *ExperimentServiceClient) SubmitExptFromTemplate(ctx context.Context, re
 		return
 	}
 	return _result.GetSuccess(), nil
+}
+
+type ExperimentScheduleServiceProcessor struct {
+	processorMap map[string]thrift.TProcessorFunction
+	handler      ExperimentScheduleService
+}
+
+func (p *ExperimentScheduleServiceProcessor) AddToProcessorMap(key string, processor thrift.TProcessorFunction) {
+	p.processorMap[key] = processor
+}
+
+func (p *ExperimentScheduleServiceProcessor) GetProcessorFunction(key string) (processor thrift.TProcessorFunction, ok bool) {
+	processor, ok = p.processorMap[key]
+	return processor, ok
+}
+
+func (p *ExperimentScheduleServiceProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
+	return p.processorMap
+}
+
+func NewExperimentScheduleServiceProcessor(handler ExperimentScheduleService) *ExperimentScheduleServiceProcessor {
+	self := &ExperimentScheduleServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self.AddToProcessorMap("SubmitScheduledExptFromTemplate", &experimentScheduleServiceProcessorSubmitScheduledExptFromTemplate{handler: handler})
+	return self
+}
+func (p *ExperimentScheduleServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	name, _, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return false, err
+	}
+	if processor, ok := p.GetProcessorFunction(name); ok {
+		return processor.Process(ctx, seqId, iprot, oprot)
+	}
+	iprot.Skip(thrift.STRUCT)
+	iprot.ReadMessageEnd()
+	x := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
+	x.Write(oprot)
+	oprot.WriteMessageEnd()
+	oprot.Flush(ctx)
+	return false, x
+}
+
+type experimentScheduleServiceProcessorSubmitScheduledExptFromTemplate struct {
+	handler ExperimentScheduleService
+}
+
+func (p *experimentScheduleServiceProcessorSubmitScheduledExptFromTemplate) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("SubmitScheduledExptFromTemplate", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult{}
+	var retval *SubmitScheduledExptFromTemplateResponse
+	if retval, err2 = p.handler.SubmitScheduledExptFromTemplate(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing SubmitScheduledExptFromTemplate: "+err2.Error())
+		oprot.WriteMessageBegin("SubmitScheduledExptFromTemplate", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("SubmitScheduledExptFromTemplate", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs struct {
+	Req *SubmitScheduledExptFromTemplateRequest `thrift:"req,1" frugal:"1,default,SubmitScheduledExptFromTemplateRequest"`
+}
+
+func NewExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs() *ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs {
+	return &ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs{}
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs) InitDefault() {
+}
+
+var ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs_Req_DEFAULT *SubmitScheduledExptFromTemplateRequest
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs) GetReq() (v *SubmitScheduledExptFromTemplateRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs) SetReq(val *SubmitScheduledExptFromTemplateRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewSubmitScheduledExptFromTemplateRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SubmitScheduledExptFromTemplate_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs(%+v)", *p)
+
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs) DeepEqual(ano *ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateArgs) Field1DeepEqual(src *SubmitScheduledExptFromTemplateRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult struct {
+	Success *SubmitScheduledExptFromTemplateResponse `thrift:"success,0,optional" frugal:"0,optional,SubmitScheduledExptFromTemplateResponse"`
+}
+
+func NewExperimentScheduleServiceSubmitScheduledExptFromTemplateResult() *ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult {
+	return &ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult{}
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult) InitDefault() {
+}
+
+var ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult_Success_DEFAULT *SubmitScheduledExptFromTemplateResponse
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult) GetSuccess() (v *SubmitScheduledExptFromTemplateResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult) SetSuccess(x interface{}) {
+	p.Success = x.(*SubmitScheduledExptFromTemplateResponse)
+}
+
+var fieldIDToName_ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewSubmitScheduledExptFromTemplateResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SubmitScheduledExptFromTemplate_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult(%+v)", *p)
+
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult) DeepEqual(ano *ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentScheduleServiceSubmitScheduledExptFromTemplateResult) Field0DeepEqual(src *SubmitScheduledExptFromTemplateResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
 }
 
 type ExperimentServiceProcessor struct {

@@ -22,6 +22,27 @@ func NewLocalEvaluationSPIService(impl spi.EvaluationSPIService, mds ...endpoint
 	}
 }
 
+func (l *LocalEvaluationSPIService) InvokeExperimentHook(ctx context.Context, req *spi.InvokeExperimentHookRequest, callOptions ...callopt.Option) (*spi.InvokeExperimentHookResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*spi.EvaluationSPIServiceInvokeExperimentHookArgs)
+		result := out.(*spi.EvaluationSPIServiceInvokeExperimentHookResult)
+		resp, err := l.impl.InvokeExperimentHook(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &spi.EvaluationSPIServiceInvokeExperimentHookArgs{Req: req}
+	result := &spi.EvaluationSPIServiceInvokeExperimentHookResult{}
+	ctx = l.injectRPCInfo(ctx, "InvokeExperimentHook")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvaluationSPIService) SearchEvalTarget(ctx context.Context, req *spi.SearchEvalTargetRequest, callOptions ...callopt.Option) (*spi.SearchEvalTargetResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*spi.EvaluationSPIServiceSearchEvalTargetArgs)

@@ -11,6 +11,7 @@ import (
 
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
 type Client interface {
+	InvokeExperimentHook(ctx context.Context, req *spi.InvokeExperimentHookRequest, callOptions ...callopt.Option) (r *spi.InvokeExperimentHookResponse, err error)
 	SearchEvalTarget(ctx context.Context, req *spi.SearchEvalTargetRequest, callOptions ...callopt.Option) (r *spi.SearchEvalTargetResponse, err error)
 	InvokeEvalTarget(ctx context.Context, req *spi.InvokeEvalTargetRequest, callOptions ...callopt.Option) (r *spi.InvokeEvalTargetResponse, err error)
 	AsyncInvokeEvalTarget(ctx context.Context, req *spi.AsyncInvokeEvalTargetRequest, callOptions ...callopt.Option) (r *spi.AsyncInvokeEvalTargetResponse, err error)
@@ -45,6 +46,11 @@ func MustNewClient(destService string, opts ...client.Option) Client {
 
 type kEvaluationSPIServiceClient struct {
 	*kClient
+}
+
+func (p *kEvaluationSPIServiceClient) InvokeExperimentHook(ctx context.Context, req *spi.InvokeExperimentHookRequest, callOptions ...callopt.Option) (r *spi.InvokeExperimentHookResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.InvokeExperimentHook(ctx, req)
 }
 
 func (p *kEvaluationSPIServiceClient) SearchEvalTarget(ctx context.Context, req *spi.SearchEvalTargetRequest, callOptions ...callopt.Option) (r *spi.SearchEvalTargetResponse, err error) {

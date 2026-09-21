@@ -1,6 +1,7 @@
 namespace go coze.loop.evaluation.domain_openapi.experiment
 
 include "common.thrift"
+include "../coze.loop.evaluation.spi.thrift"
 include "eval_set.thrift"
 include "evaluator.thrift"
 include "eval_target.thrift"
@@ -298,6 +299,8 @@ struct ExperimentStatistics {
 // 会符号冲突。两套枚举的整数编号刻意不同 (见 domain/expt.thrift 的 ExptRunMode 注释),
 // 所以跨模型搬字段时必须过一次显式转换, 不能直接赋值。
 struct Experiment {
+    120: optional LifecycleHookConf lifecycle_hook_conf
+    121: optional LifecycleHookRunSummary lifecycle_hook_summary
     // 基本信息
     1: optional i64 id (api.js_conv = 'true', go.tag = 'json:"id"')
     2: optional string name
@@ -519,6 +522,7 @@ struct ExptScoreWeight {
 
 // 实验模板
 struct ExptTemplate {
+    12: optional LifecycleHookConf lifecycle_hook_conf
     11: optional VerificationConfig verification_config
     1: optional ExptTemplateMeta meta
     2: optional ExptTuple triple_config
@@ -724,4 +728,68 @@ struct WebhookNotificationConf {
 struct FeishuNotificationConf {
     1: optional bool enable
     2: optional string user_id          // 通知目标用户 ID（为空时默认用实验创建者）
+}
+
+typedef string HookAccessProtocol (ts.enum="true")
+const HookAccessProtocol HookAccessProtocolHTTP = "http"
+const HookAccessProtocol HookAccessProtocolRPC = "rpc"
+
+typedef string HookEnvironment (ts.enum="true")
+const HookEnvironment HookEnvironmentProd = "Prod"
+const HookEnvironment HookEnvironmentPPE = "PPE"
+const HookEnvironment HookEnvironmentBOE = "BOE"
+
+typedef string HookFailurePolicy (ts.enum="true")
+const HookFailurePolicy HookFailurePolicyBlock = "block"
+const HookFailurePolicy HookFailurePolicyContinue = "continue"
+
+typedef string HookOperationStatus (ts.enum="true")
+const HookOperationStatus HookOperationStatusDisabled = "disabled"
+const HookOperationStatus HookOperationStatusPending = "pending"
+const HookOperationStatus HookOperationStatusRunning = "running"
+const HookOperationStatus HookOperationStatusRetryWait = "retry_wait"
+const HookOperationStatus HookOperationStatusSucceeded = "succeeded"
+const HookOperationStatus HookOperationStatusFailed = "failed"
+
+struct HookHTTPInfo {
+    1: optional string method
+    2: optional string url
+}
+
+struct HookRetryConf {
+    1: optional bool enabled
+    2: optional i32 max_retries
+}
+
+struct HookConfig {
+    1: optional bool enabled
+    2: optional HookAccessProtocol access_protocol
+    3: optional HookHTTPInfo invoke_http_info
+    4: optional HookEnvironment environment
+    5: optional string lane
+    // UTF-8 JSON object text; only the hook transport encodes it as an HTTP object.
+    6: optional string parameters_json
+    7: optional i32 timeout_seconds
+    8: optional HookRetryConf retry
+    9: optional HookFailurePolicy on_failure
+}
+
+struct LifecycleHookConf {
+    1: optional HookConfig before
+    2: optional HookConfig after
+}
+
+struct HookRunSummary {
+    1: optional HookOperationStatus status
+    2: optional string operation_id
+    3: optional i32 attempt
+    4: optional string updated_at
+    5: optional coze.loop.evaluation.spi.InvokeExperimentHookResponse response
+    6: optional coze.loop.evaluation.spi.HookError error
+}
+
+struct LifecycleHookRunSummary {
+    1: optional string run_id
+    2: optional HookRunSummary before
+    3: optional HookRunSummary after
 }

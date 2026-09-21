@@ -22,6 +22,11 @@ var (
 )
 
 func (p *CreateExperimentRequest) IsValid() error {
+	if p.LifecycleHookConf != nil {
+		if err := p.LifecycleHookConf.IsValid(); err != nil {
+			return fmt.Errorf("field LifecycleHookConf not valid, %w", err)
+		}
+	}
 	if p.VerificationConfig != nil {
 		if err := p.VerificationConfig.IsValid(); err != nil {
 			return fmt.Errorf("field VerificationConfig not valid, %w", err)
@@ -93,6 +98,11 @@ func (p *CreateExperimentResponse) IsValid() error {
 	return nil
 }
 func (p *SubmitExperimentRequest) IsValid() error {
+	if p.LifecycleHookConf != nil {
+		if err := p.LifecycleHookConf.IsValid(); err != nil {
+			return fmt.Errorf("field LifecycleHookConf not valid, %w", err)
+		}
+	}
 	if p.VerificationConfig != nil {
 		if err := p.VerificationConfig.IsValid(); err != nil {
 			return fmt.Errorf("field VerificationConfig not valid, %w", err)
@@ -222,6 +232,11 @@ func (p *GetExperimentIDsByGroupResponse) IsValid() error {
 	return nil
 }
 func (p *UpdateExperimentRequest) IsValid() error {
+	if p.LifecycleHookConf != nil {
+		if err := p.LifecycleHookConf.IsValid(); err != nil {
+			return fmt.Errorf("field LifecycleHookConf not valid, %w", err)
+		}
+	}
 	if p.NotificationConf != nil {
 		if err := p.NotificationConf.IsValid(); err != nil {
 			return fmt.Errorf("field NotificationConf not valid, %w", err)
@@ -617,6 +632,11 @@ func (p *ListExperimentStatsResponse) IsValid() error {
 	return nil
 }
 func (p *CreateExperimentTemplateRequest) IsValid() error {
+	if p.LifecycleHookConf != nil {
+		if err := p.LifecycleHookConf.IsValid(); err != nil {
+			return fmt.Errorf("field LifecycleHookConf not valid, %w", err)
+		}
+	}
 	if p.VerificationConfig != nil {
 		if err := p.VerificationConfig.IsValid(); err != nil {
 			return fmt.Errorf("field VerificationConfig not valid, %w", err)
@@ -725,6 +745,11 @@ func (p *UpdateExperimentTemplateMetaResponse) IsValid() error {
 	return nil
 }
 func (p *UpdateExperimentTemplateRequest) IsValid() error {
+	if p.LifecycleHookConf != nil {
+		if err := p.LifecycleHookConf.IsValid(); err != nil {
+			return fmt.Errorf("field LifecycleHookConf not valid, %w", err)
+		}
+	}
 	if p.VerificationConfig != nil {
 		if err := p.VerificationConfig.IsValid(); err != nil {
 			return fmt.Errorf("field VerificationConfig not valid, %w", err)
@@ -839,6 +864,11 @@ func (p *CheckExperimentTemplateNameResponse) IsValid() error {
 	return nil
 }
 func (p *SubmitExptFromTemplateRequest) IsValid() error {
+	if p.LifecycleHookConf != nil {
+		if err := p.LifecycleHookConf.IsValid(); err != nil {
+			return fmt.Errorf("field LifecycleHookConf not valid, %w", err)
+		}
+	}
 	if p.NotificationConf != nil {
 		if err := p.NotificationConf.IsValid(); err != nil {
 			return fmt.Errorf("field NotificationConf not valid, %w", err)
@@ -1200,6 +1230,22 @@ func (p *GetAnalysisRecordFeedbackVoteResponse) IsValid() error {
 			return fmt.Errorf("field Vote not valid, %w", err)
 		}
 	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SubmitScheduledExptFromTemplateRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SubmitScheduledExptFromTemplateResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)

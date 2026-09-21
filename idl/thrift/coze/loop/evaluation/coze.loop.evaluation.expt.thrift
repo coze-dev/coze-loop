@@ -9,6 +9,7 @@ include "./domain/expt.thrift"
 include "./domain/evaluator.thrift"
 
 struct CreateExperimentRequest {
+    111: optional expt.LifecycleHookConf lifecycle_hook_conf (api.body = 'lifecycle_hook_conf')
     // 数据集验证配置，保存到 experiment.eval_conf，不依赖应用名称。
     52: optional expt.VerificationConfig verification_config (api.body = 'verification_config')
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
@@ -91,6 +92,7 @@ struct CreateExperimentResponse {
 }
 
 struct SubmitExperimentRequest {
+    111: optional expt.LifecycleHookConf lifecycle_hook_conf (api.body = 'lifecycle_hook_conf')
     52: optional expt.VerificationConfig verification_config (api.body = 'verification_config')
     1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
     2: optional i64 eval_set_version_id (api.body='eval_set_version_id',api.js_conv='true', go.tag='json:"eval_set_version_id"')
@@ -228,6 +230,7 @@ struct GetExperimentIDsByGroupResponse {
 }
 
 struct UpdateExperimentRequest {
+    111: optional expt.LifecycleHookConf lifecycle_hook_conf (api.body = 'lifecycle_hook_conf')
     1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
     2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
     3: optional string name (api.body='name')
@@ -592,6 +595,7 @@ struct ListExperimentStatsResponse {
 // =========================
 
 struct CreateExperimentTemplateRequest {
+    41: optional expt.LifecycleHookConf lifecycle_hook_conf (api.body = 'lifecycle_hook_conf')
     25: optional expt.VerificationConfig verification_config (api.body = 'verification_config')
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
 
@@ -656,6 +660,7 @@ struct UpdateExperimentTemplateMetaResponse {
 
 
 struct UpdateExperimentTemplateRequest {
+    41: optional expt.LifecycleHookConf lifecycle_hook_conf (api.body = 'lifecycle_hook_conf')
     25: optional expt.VerificationConfig verification_config (api.body = 'verification_config')
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
     2: required i64 template_id (api.path='template_id', api.js_conv='true', go.tag='json:"template_id"')
@@ -739,6 +744,7 @@ struct CheckExperimentTemplateNameResponse {
 
 // 根据 workspace_id 与实验模板 ID 提交实验（控制台/会话鉴权，逻辑对齐 SubmitExptFromTemplateOApi）
 struct SubmitExptFromTemplateRequest {
+    11: optional expt.LifecycleHookConf lifecycle_hook_conf (api.body = 'lifecycle_hook_conf')
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
     2: required i64 template_id (api.body='template_id', api.js_conv='true', go.tag='json:"template_id"')
     3: optional string name (api.body='name')
@@ -1010,6 +1016,25 @@ struct GetAnalysisRecordFeedbackVoteRequest {
 struct GetAnalysisRecordFeedbackVoteResponse {
     1: optional expt.ExptInsightAnalysisFeedbackVote vote
     255: base.BaseResp BaseResp
+}
+
+// Service-only callback. The application resolves and authorizes the stored binding.
+struct SubmitScheduledExptFromTemplateRequest {
+    1: optional i64 workspace_id
+    2: optional i64 template_id
+    3: optional string binding_id
+    4: optional i64 binding_version
+    255: optional base.Base Base
+}
+
+struct SubmitScheduledExptFromTemplateResponse {
+    1: optional i64 experiment_id
+    2: optional i64 run_id
+    255: optional base.BaseResp BaseResp
+}
+
+service ExperimentScheduleService {
+    SubmitScheduledExptFromTemplateResponse SubmitScheduledExptFromTemplate(1: SubmitScheduledExptFromTemplateRequest req)
 }
 
 service ExperimentService {

@@ -241,3 +241,52 @@ func (p *AsyncInvokeEvaluatorResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *HookInitiator) IsValid() error {
+	return nil
+}
+func (p *HookExperimentRef) IsValid() error {
+	return nil
+}
+func (p *HookEvalSetRef) IsValid() error {
+	return nil
+}
+func (p *HookTargetRef) IsValid() error {
+	return nil
+}
+func (p *HookRunContext) IsValid() error {
+	if p.Initiator != nil {
+		if err := p.Initiator.IsValid(); err != nil {
+			return fmt.Errorf("field Initiator not valid, %w", err)
+		}
+	}
+	if p.Experiment != nil {
+		if err := p.Experiment.IsValid(); err != nil {
+			return fmt.Errorf("field Experiment not valid, %w", err)
+		}
+	}
+	if p.Target != nil {
+		if err := p.Target.IsValid(); err != nil {
+			return fmt.Errorf("field Target not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *HookError) IsValid() error {
+	return nil
+}
+func (p *InvokeExperimentHookRequest) IsValid() error {
+	if p.Context != nil {
+		if err := p.Context.IsValid(); err != nil {
+			return fmt.Errorf("field Context not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *InvokeExperimentHookResponse) IsValid() error {
+	if p.Error != nil {
+		if err := p.Error.IsValid(); err != nil {
+			return fmt.Errorf("field Error not valid, %w", err)
+		}
+	}
+	return nil
+}

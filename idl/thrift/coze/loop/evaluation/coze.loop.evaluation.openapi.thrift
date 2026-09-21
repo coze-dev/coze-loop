@@ -611,6 +611,7 @@ struct GetEvaluationSetIOJobOApiResponse {
 
 // 3.1 创建评测实验
 struct SubmitExperimentOApiRequest {
+    53: optional experiment.LifecycleHookConf lifecycle_hook_conf (api.body = 'lifecycle_hook_conf')
     52: optional experiment.VerificationConfig verification_config (api.body = 'verification_config')
     // 基础信息
     1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = "true", go.tag = 'json:"workspace_id"')
@@ -1335,6 +1336,7 @@ struct ValidateEvaluatorOpenAPIData {
 
 // 4.1 创建实验模板
 struct CreateExptTemplateOApiRequest {
+    31: optional experiment.LifecycleHookConf lifecycle_hook_conf (api.body = 'lifecycle_hook_conf')
     25: optional experiment.VerificationConfig verification_config (api.body = 'verification_config')
     1: optional i64 workspace_id (api.body = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
     2: optional experiment.ExptTemplateMeta meta (api.body = "meta")
@@ -1408,6 +1410,7 @@ struct UpdateExptTemplateMetaOpenAPIData {
 
 // 4.4 更新实验模板
 struct UpdateExptTemplateOApiRequest {
+    31: optional experiment.LifecycleHookConf lifecycle_hook_conf (api.body = 'lifecycle_hook_conf')
     25: optional experiment.VerificationConfig verification_config (api.body = 'verification_config')
     1: optional i64 template_id (api.path = "template_id", api.js_conv = "true", go.tag = 'json:"template_id"')
     2: optional i64 workspace_id (api.body = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
@@ -1484,6 +1487,7 @@ struct ListExptTemplatesOpenAPIData {
 
 // 4.7 根据实验模板提交新实验
 struct SubmitExptFromTemplateOApiRequest {
+    11: optional experiment.LifecycleHookConf lifecycle_hook_conf (api.body = 'lifecycle_hook_conf')
     1: optional i64 workspace_id (api.body = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
     2: optional i64 template_id (api.body = "template_id", api.js_conv = "true", go.tag = 'json:"template_id"')
     3: optional string name (api.body = "name")

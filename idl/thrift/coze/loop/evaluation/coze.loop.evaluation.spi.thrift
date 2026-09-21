@@ -203,7 +203,96 @@ struct AsyncInvokeEvaluatorResponse {
     255: base.BaseResp BaseResp
 }
 
+
+// JSON object text in Thrift; the HTTP transport emits a JSON object.
+typedef string HookJSONObject
+
+typedef string HookEventType (ts.enum="true")
+const HookEventType HookEventTypeBefore = "experiment.run.before"
+const HookEventType HookEventTypeAfter = "experiment.run.after"
+
+typedef string HookRunMode (ts.enum="true")
+const HookRunMode HookRunModeSubmit = "submit"
+const HookRunMode HookRunModeFailRetry = "fail_retry"
+const HookRunMode HookRunModeAppend = "append"
+const HookRunMode HookRunModeRetryAll = "retry_all"
+const HookRunMode HookRunModeRetryItems = "retry_items"
+const HookRunMode HookRunModeTrialRun = "trial_run"
+
+typedef string HookTerminalStatus (ts.enum="true")
+const HookTerminalStatus HookTerminalStatusSuccess = "success"
+const HookTerminalStatus HookTerminalStatusFailed = "failed"
+const HookTerminalStatus HookTerminalStatusTerminated = "terminated"
+const HookTerminalStatus HookTerminalStatusSystemTerminated = "system_terminated"
+
+typedef string HookResultStatus (ts.enum="true")
+const HookResultStatus HookResultStatusSucceeded = "succeeded"
+const HookResultStatus HookResultStatusFailed = "failed"
+
+struct HookInitiator {
+    1: optional string user_id
+    2: optional string identity_type
+    3: optional string email
+    4: optional string name
+}
+
+struct HookExperimentRef {
+    1: optional string name
+    2: optional string type
+}
+
+struct HookEvalSetRef {
+    1: optional string workspace_id
+    2: optional string id
+    3: optional string version_id
+    4: optional string version
+}
+
+struct HookTargetRef {
+    1: optional string id
+    2: optional string version_id
+    3: optional string type
+}
+
+struct HookRunContext {
+    1: optional string workspace_id
+    2: optional string experiment_id
+    3: optional string run_id
+    4: optional HookRunMode run_mode
+    5: optional HookInitiator initiator
+    6: optional HookExperimentRef experiment
+    7: optional list<HookEvalSetRef> eval_sets
+    8: optional HookTargetRef target
+    9: optional HookTerminalStatus terminal_status
+    10: optional string terminal_reason
+}
+
+struct HookError {
+    1: optional string code
+    2: optional string message
+    3: optional bool retryable
+}
+
+struct InvokeExperimentHookRequest {
+    1: optional string schema_version
+    2: optional HookEventType event_type
+    3: optional string operation_id
+    4: optional string idempotency_key
+    5: optional string delivery_id
+    6: optional i32 attempt
+    7: optional string occurred_at
+    8: optional HookRunContext context
+    9: optional HookJSONObject parameters
+}
+
+struct InvokeExperimentHookResponse {
+    1: optional HookResultStatus status
+    2: optional map<string,string> result
+    3: optional HookError error
+}
+
 service EvaluationSPIService {
+    InvokeExperimentHookResponse InvokeExperimentHook(1: InvokeExperimentHookRequest req)
     SearchEvalTargetResponse SearchEvalTarget(1: SearchEvalTargetRequest req)   // 搜索评测对象
     InvokeEvalTargetResponse InvokeEvalTarget(1: InvokeEvalTargetRequest req)   // 执行
     AsyncInvokeEvalTargetResponse AsyncInvokeEvalTarget(1: AsyncInvokeEvalTargetRequest req)    // 异步执行

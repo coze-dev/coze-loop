@@ -45,6 +45,16 @@ func (p *ExpectedQuotaConsumption) IsValid() error {
 	return nil
 }
 func (p *Experiment) IsValid() error {
+	if p.LifecycleHookConf != nil {
+		if err := p.LifecycleHookConf.IsValid(); err != nil {
+			return fmt.Errorf("field LifecycleHookConf not valid, %w", err)
+		}
+	}
+	if p.LifecycleHookSummary != nil {
+		if err := p.LifecycleHookSummary.IsValid(); err != nil {
+			return fmt.Errorf("field LifecycleHookSummary not valid, %w", err)
+		}
+	}
 	if p.EvalSet != nil {
 		if err := p.EvalSet.IsValid(); err != nil {
 			return fmt.Errorf("field EvalSet not valid, %w", err)
@@ -145,6 +155,11 @@ func (p *ExptScoreWeight) IsValid() error {
 	return nil
 }
 func (p *ExptTemplate) IsValid() error {
+	if p.LifecycleHookConf != nil {
+		if err := p.LifecycleHookConf.IsValid(); err != nil {
+			return fmt.Errorf("field LifecycleHookConf not valid, %w", err)
+		}
+	}
 	if p.VerificationConfig != nil {
 		if err := p.VerificationConfig.IsValid(); err != nil {
 			return fmt.Errorf("field VerificationConfig not valid, %w", err)
@@ -612,6 +627,64 @@ func (p *ExptEvalSetDetail) IsValid() error {
 	if p.EvalSet != nil {
 		if err := p.EvalSet.IsValid(); err != nil {
 			return fmt.Errorf("field EvalSet not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *HookHTTPInfo) IsValid() error {
+	return nil
+}
+func (p *HookRetryConf) IsValid() error {
+	return nil
+}
+func (p *HookConfig) IsValid() error {
+	if p.InvokeHTTPInfo != nil {
+		if err := p.InvokeHTTPInfo.IsValid(); err != nil {
+			return fmt.Errorf("field InvokeHTTPInfo not valid, %w", err)
+		}
+	}
+	if p.Retry != nil {
+		if err := p.Retry.IsValid(); err != nil {
+			return fmt.Errorf("field Retry not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *LifecycleHookConf) IsValid() error {
+	if p.Before != nil {
+		if err := p.Before.IsValid(); err != nil {
+			return fmt.Errorf("field Before not valid, %w", err)
+		}
+	}
+	if p.After != nil {
+		if err := p.After.IsValid(); err != nil {
+			return fmt.Errorf("field After not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *HookRunSummary) IsValid() error {
+	if p.Response != nil {
+		if err := p.Response.IsValid(); err != nil {
+			return fmt.Errorf("field Response not valid, %w", err)
+		}
+	}
+	if p.Error != nil {
+		if err := p.Error.IsValid(); err != nil {
+			return fmt.Errorf("field Error not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *LifecycleHookRunSummary) IsValid() error {
+	if p.Before != nil {
+		if err := p.Before.IsValid(); err != nil {
+			return fmt.Errorf("field Before not valid, %w", err)
+		}
+	}
+	if p.After != nil {
+		if err := p.After.IsValid(); err != nil {
+			return fmt.Errorf("field After not valid, %w", err)
 		}
 	}
 	return nil
