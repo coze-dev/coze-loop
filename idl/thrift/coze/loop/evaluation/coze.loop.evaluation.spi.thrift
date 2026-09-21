@@ -291,8 +291,11 @@ struct InvokeExperimentHookResponse {
     3: optional HookError error
 }
 
-service EvaluationSPIService {
+service ExperimentHookSPIService {
     InvokeExperimentHookResponse InvokeExperimentHook(1: InvokeExperimentHookRequest req)
+}
+
+service EvaluationSPIService {
     SearchEvalTargetResponse SearchEvalTarget(1: SearchEvalTargetRequest req)   // 搜索评测对象
     InvokeEvalTargetResponse InvokeEvalTarget(1: InvokeEvalTargetRequest req)   // 执行
     AsyncInvokeEvalTargetResponse AsyncInvokeEvalTarget(1: AsyncInvokeEvalTargetRequest req)    // 异步执行

@@ -12423,9 +12423,47 @@ func (p *InvokeExperimentHookResponse) Field3DeepEqual(src *HookError) bool {
 	return true
 }
 
-type EvaluationSPIService interface {
+type ExperimentHookSPIService interface {
 	InvokeExperimentHook(ctx context.Context, req *InvokeExperimentHookRequest) (r *InvokeExperimentHookResponse, err error)
+}
 
+type ExperimentHookSPIServiceClient struct {
+	c thrift.TClient
+}
+
+func NewExperimentHookSPIServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ExperimentHookSPIServiceClient {
+	return &ExperimentHookSPIServiceClient{
+		c: thrift.NewTStandardClient(f.GetProtocol(t), f.GetProtocol(t)),
+	}
+}
+
+func NewExperimentHookSPIServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ExperimentHookSPIServiceClient {
+	return &ExperimentHookSPIServiceClient{
+		c: thrift.NewTStandardClient(iprot, oprot),
+	}
+}
+
+func NewExperimentHookSPIServiceClient(c thrift.TClient) *ExperimentHookSPIServiceClient {
+	return &ExperimentHookSPIServiceClient{
+		c: c,
+	}
+}
+
+func (p *ExperimentHookSPIServiceClient) Client_() thrift.TClient {
+	return p.c
+}
+
+func (p *ExperimentHookSPIServiceClient) InvokeExperimentHook(ctx context.Context, req *InvokeExperimentHookRequest) (r *InvokeExperimentHookResponse, err error) {
+	var _args ExperimentHookSPIServiceInvokeExperimentHookArgs
+	_args.Req = req
+	var _result ExperimentHookSPIServiceInvokeExperimentHookResult
+	if err = p.Client_().Call(ctx, "InvokeExperimentHook", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+type EvaluationSPIService interface {
 	SearchEvalTarget(ctx context.Context, req *SearchEvalTargetRequest) (r *SearchEvalTargetResponse, err error)
 
 	InvokeEvalTarget(ctx context.Context, req *InvokeEvalTargetRequest) (r *InvokeEvalTargetResponse, err error)
@@ -12463,15 +12501,6 @@ func (p *EvaluationSPIServiceClient) Client_() thrift.TClient {
 	return p.c
 }
 
-func (p *EvaluationSPIServiceClient) InvokeExperimentHook(ctx context.Context, req *InvokeExperimentHookRequest) (r *InvokeExperimentHookResponse, err error) {
-	var _args EvaluationSPIServiceInvokeExperimentHookArgs
-	_args.Req = req
-	var _result EvaluationSPIServiceInvokeExperimentHookResult
-	if err = p.Client_().Call(ctx, "InvokeExperimentHook", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
 func (p *EvaluationSPIServiceClient) SearchEvalTarget(ctx context.Context, req *SearchEvalTargetRequest) (r *SearchEvalTargetResponse, err error) {
 	var _args EvaluationSPIServiceSearchEvalTargetArgs
 	_args.Req = req
@@ -12518,35 +12547,30 @@ func (p *EvaluationSPIServiceClient) AsyncInvokeEvaluator(ctx context.Context, r
 	return _result.GetSuccess(), nil
 }
 
-type EvaluationSPIServiceProcessor struct {
+type ExperimentHookSPIServiceProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
-	handler      EvaluationSPIService
+	handler      ExperimentHookSPIService
 }
 
-func (p *EvaluationSPIServiceProcessor) AddToProcessorMap(key string, processor thrift.TProcessorFunction) {
+func (p *ExperimentHookSPIServiceProcessor) AddToProcessorMap(key string, processor thrift.TProcessorFunction) {
 	p.processorMap[key] = processor
 }
 
-func (p *EvaluationSPIServiceProcessor) GetProcessorFunction(key string) (processor thrift.TProcessorFunction, ok bool) {
+func (p *ExperimentHookSPIServiceProcessor) GetProcessorFunction(key string) (processor thrift.TProcessorFunction, ok bool) {
 	processor, ok = p.processorMap[key]
 	return processor, ok
 }
 
-func (p *EvaluationSPIServiceProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
+func (p *ExperimentHookSPIServiceProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
 	return p.processorMap
 }
 
-func NewEvaluationSPIServiceProcessor(handler EvaluationSPIService) *EvaluationSPIServiceProcessor {
-	self := &EvaluationSPIServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self.AddToProcessorMap("InvokeExperimentHook", &evaluationSPIServiceProcessorInvokeExperimentHook{handler: handler})
-	self.AddToProcessorMap("SearchEvalTarget", &evaluationSPIServiceProcessorSearchEvalTarget{handler: handler})
-	self.AddToProcessorMap("InvokeEvalTarget", &evaluationSPIServiceProcessorInvokeEvalTarget{handler: handler})
-	self.AddToProcessorMap("AsyncInvokeEvalTarget", &evaluationSPIServiceProcessorAsyncInvokeEvalTarget{handler: handler})
-	self.AddToProcessorMap("InvokeEvaluator", &evaluationSPIServiceProcessorInvokeEvaluator{handler: handler})
-	self.AddToProcessorMap("AsyncInvokeEvaluator", &evaluationSPIServiceProcessorAsyncInvokeEvaluator{handler: handler})
+func NewExperimentHookSPIServiceProcessor(handler ExperimentHookSPIService) *ExperimentHookSPIServiceProcessor {
+	self := &ExperimentHookSPIServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self.AddToProcessorMap("InvokeExperimentHook", &experimentHookSPIServiceProcessorInvokeExperimentHook{handler: handler})
 	return self
 }
-func (p *EvaluationSPIServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+func (p *ExperimentHookSPIServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
 	name, _, seqId, err := iprot.ReadMessageBegin()
 	if err != nil {
 		return false, err
@@ -12564,12 +12588,12 @@ func (p *EvaluationSPIServiceProcessor) Process(ctx context.Context, iprot, opro
 	return false, x
 }
 
-type evaluationSPIServiceProcessorInvokeExperimentHook struct {
-	handler EvaluationSPIService
+type experimentHookSPIServiceProcessorInvokeExperimentHook struct {
+	handler ExperimentHookSPIService
 }
 
-func (p *evaluationSPIServiceProcessorInvokeExperimentHook) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationSPIServiceInvokeExperimentHookArgs{}
+func (p *experimentHookSPIServiceProcessorInvokeExperimentHook) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ExperimentHookSPIServiceInvokeExperimentHookArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
@@ -12582,7 +12606,7 @@ func (p *evaluationSPIServiceProcessorInvokeExperimentHook) Process(ctx context.
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationSPIServiceInvokeExperimentHookResult{}
+	result := ExperimentHookSPIServiceInvokeExperimentHookResult{}
 	var retval *InvokeExperimentHookResponse
 	if retval, err2 = p.handler.InvokeExperimentHook(ctx, args.Req); err2 != nil {
 		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing InvokeExperimentHook: "+err2.Error())
@@ -12610,6 +12634,395 @@ func (p *evaluationSPIServiceProcessorInvokeExperimentHook) Process(ctx context.
 		return
 	}
 	return true, err
+}
+
+type ExperimentHookSPIServiceInvokeExperimentHookArgs struct {
+	Req *InvokeExperimentHookRequest `thrift:"req,1" frugal:"1,default,InvokeExperimentHookRequest"`
+}
+
+func NewExperimentHookSPIServiceInvokeExperimentHookArgs() *ExperimentHookSPIServiceInvokeExperimentHookArgs {
+	return &ExperimentHookSPIServiceInvokeExperimentHookArgs{}
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) InitDefault() {
+}
+
+var ExperimentHookSPIServiceInvokeExperimentHookArgs_Req_DEFAULT *InvokeExperimentHookRequest
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) GetReq() (v *InvokeExperimentHookRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return ExperimentHookSPIServiceInvokeExperimentHookArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) SetReq(val *InvokeExperimentHookRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_ExperimentHookSPIServiceInvokeExperimentHookArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentHookSPIServiceInvokeExperimentHookArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewInvokeExperimentHookRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("InvokeExperimentHook_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentHookSPIServiceInvokeExperimentHookArgs(%+v)", *p)
+
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) DeepEqual(ano *ExperimentHookSPIServiceInvokeExperimentHookArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) Field1DeepEqual(src *InvokeExperimentHookRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentHookSPIServiceInvokeExperimentHookResult struct {
+	Success *InvokeExperimentHookResponse `thrift:"success,0,optional" frugal:"0,optional,InvokeExperimentHookResponse"`
+}
+
+func NewExperimentHookSPIServiceInvokeExperimentHookResult() *ExperimentHookSPIServiceInvokeExperimentHookResult {
+	return &ExperimentHookSPIServiceInvokeExperimentHookResult{}
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) InitDefault() {
+}
+
+var ExperimentHookSPIServiceInvokeExperimentHookResult_Success_DEFAULT *InvokeExperimentHookResponse
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) GetSuccess() (v *InvokeExperimentHookResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return ExperimentHookSPIServiceInvokeExperimentHookResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) SetSuccess(x interface{}) {
+	p.Success = x.(*InvokeExperimentHookResponse)
+}
+
+var fieldIDToName_ExperimentHookSPIServiceInvokeExperimentHookResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentHookSPIServiceInvokeExperimentHookResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewInvokeExperimentHookResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("InvokeExperimentHook_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentHookSPIServiceInvokeExperimentHookResult(%+v)", *p)
+
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) DeepEqual(ano *ExperimentHookSPIServiceInvokeExperimentHookResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) Field0DeepEqual(src *InvokeExperimentHookResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationSPIServiceProcessor struct {
+	processorMap map[string]thrift.TProcessorFunction
+	handler      EvaluationSPIService
+}
+
+func (p *EvaluationSPIServiceProcessor) AddToProcessorMap(key string, processor thrift.TProcessorFunction) {
+	p.processorMap[key] = processor
+}
+
+func (p *EvaluationSPIServiceProcessor) GetProcessorFunction(key string) (processor thrift.TProcessorFunction, ok bool) {
+	processor, ok = p.processorMap[key]
+	return processor, ok
+}
+
+func (p *EvaluationSPIServiceProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
+	return p.processorMap
+}
+
+func NewEvaluationSPIServiceProcessor(handler EvaluationSPIService) *EvaluationSPIServiceProcessor {
+	self := &EvaluationSPIServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self.AddToProcessorMap("SearchEvalTarget", &evaluationSPIServiceProcessorSearchEvalTarget{handler: handler})
+	self.AddToProcessorMap("InvokeEvalTarget", &evaluationSPIServiceProcessorInvokeEvalTarget{handler: handler})
+	self.AddToProcessorMap("AsyncInvokeEvalTarget", &evaluationSPIServiceProcessorAsyncInvokeEvalTarget{handler: handler})
+	self.AddToProcessorMap("InvokeEvaluator", &evaluationSPIServiceProcessorInvokeEvaluator{handler: handler})
+	self.AddToProcessorMap("AsyncInvokeEvaluator", &evaluationSPIServiceProcessorAsyncInvokeEvaluator{handler: handler})
+	return self
+}
+func (p *EvaluationSPIServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	name, _, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return false, err
+	}
+	if processor, ok := p.GetProcessorFunction(name); ok {
+		return processor.Process(ctx, seqId, iprot, oprot)
+	}
+	iprot.Skip(thrift.STRUCT)
+	iprot.ReadMessageEnd()
+	x := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
+	x.Write(oprot)
+	oprot.WriteMessageEnd()
+	oprot.Flush(ctx)
+	return false, x
 }
 
 type evaluationSPIServiceProcessorSearchEvalTarget struct {
@@ -12850,350 +13263,6 @@ func (p *evaluationSPIServiceProcessorAsyncInvokeEvaluator) Process(ctx context.
 		return
 	}
 	return true, err
-}
-
-type EvaluationSPIServiceInvokeExperimentHookArgs struct {
-	Req *InvokeExperimentHookRequest `thrift:"req,1" frugal:"1,default,InvokeExperimentHookRequest"`
-}
-
-func NewEvaluationSPIServiceInvokeExperimentHookArgs() *EvaluationSPIServiceInvokeExperimentHookArgs {
-	return &EvaluationSPIServiceInvokeExperimentHookArgs{}
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) InitDefault() {
-}
-
-var EvaluationSPIServiceInvokeExperimentHookArgs_Req_DEFAULT *InvokeExperimentHookRequest
-
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) GetReq() (v *InvokeExperimentHookRequest) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetReq() {
-		return EvaluationSPIServiceInvokeExperimentHookArgs_Req_DEFAULT
-	}
-	return p.Req
-}
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) SetReq(val *InvokeExperimentHookRequest) {
-	p.Req = val
-}
-
-var fieldIDToName_EvaluationSPIServiceInvokeExperimentHookArgs = map[int16]string{
-	1: "req",
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) IsSetReq() bool {
-	return p.Req != nil
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) Read(iprot thrift.TProtocol) (err error) {
-	var fieldTypeId thrift.TType
-	var fieldId int16
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSPIServiceInvokeExperimentHookArgs[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewInvokeExperimentHookRequest()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Req = _field
-	return nil
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("InvokeExperimentHook_args"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := p.Req.Write(oprot); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("EvaluationSPIServiceInvokeExperimentHookArgs(%+v)", *p)
-
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) DeepEqual(ano *EvaluationSPIServiceInvokeExperimentHookArgs) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field1DeepEqual(ano.Req) {
-		return false
-	}
-	return true
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) Field1DeepEqual(src *InvokeExperimentHookRequest) bool {
-
-	if !p.Req.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-
-type EvaluationSPIServiceInvokeExperimentHookResult struct {
-	Success *InvokeExperimentHookResponse `thrift:"success,0,optional" frugal:"0,optional,InvokeExperimentHookResponse"`
-}
-
-func NewEvaluationSPIServiceInvokeExperimentHookResult() *EvaluationSPIServiceInvokeExperimentHookResult {
-	return &EvaluationSPIServiceInvokeExperimentHookResult{}
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) InitDefault() {
-}
-
-var EvaluationSPIServiceInvokeExperimentHookResult_Success_DEFAULT *InvokeExperimentHookResponse
-
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) GetSuccess() (v *InvokeExperimentHookResponse) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetSuccess() {
-		return EvaluationSPIServiceInvokeExperimentHookResult_Success_DEFAULT
-	}
-	return p.Success
-}
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) SetSuccess(x interface{}) {
-	p.Success = x.(*InvokeExperimentHookResponse)
-}
-
-var fieldIDToName_EvaluationSPIServiceInvokeExperimentHookResult = map[int16]string{
-	0: "success",
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) IsSetSuccess() bool {
-	return p.Success != nil
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) Read(iprot thrift.TProtocol) (err error) {
-	var fieldTypeId thrift.TType
-	var fieldId int16
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 0:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField0(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSPIServiceInvokeExperimentHookResult[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewInvokeExperimentHookResponse()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Success = _field
-	return nil
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("InvokeExperimentHook_result"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField0(oprot); err != nil {
-			fieldId = 0
-			goto WriteFieldError
-		}
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) writeField0(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSuccess() {
-		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.Success.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("EvaluationSPIServiceInvokeExperimentHookResult(%+v)", *p)
-
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) DeepEqual(ano *EvaluationSPIServiceInvokeExperimentHookResult) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field0DeepEqual(ano.Success) {
-		return false
-	}
-	return true
-}
-
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) Field0DeepEqual(src *InvokeExperimentHookResponse) bool {
-
-	if !p.Success.DeepEqual(src) {
-		return false
-	}
-	return true
 }
 
 type EvaluationSPIServiceSearchEvalTargetArgs struct {

@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 
@@ -220,4 +222,36 @@ func TestScheduledCallbackDoesNotExtendLegacyService(t *testing.T) {
 	if !found {
 		t.Fatal("missing internal scheduled callback")
 	}
+}
+
+func TestLegacySPIServiceMethodSet(t *testing.T) {
+	want := []string{"AsyncInvokeEvalTarget", "AsyncInvokeEvaluator", "InvokeEvalTarget", "InvokeEvaluator", "SearchEvalTarget"}
+	for _, service := range readIDL(t, files[4]).Services {
+		if service.Name != "EvaluationSPIService" {
+			continue
+		}
+		var got []string
+		for _, method := range service.Functions {
+			got = append(got, method.Name)
+		}
+		sort.Strings(got)
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("legacy implementer contract changed: got %v, want %v", got, want)
+		}
+		return
+	}
+	t.Fatal("missing legacy EvaluationSPIService")
+}
+
+func TestHookSPIHasIndependentService(t *testing.T) {
+	for _, service := range readIDL(t, files[4]).Services {
+		if service.Name != "ExperimentHookSPIService" {
+			continue
+		}
+		if len(service.Functions) != 1 || service.Functions[0].Name != "InvokeExperimentHook" || len(service.Functions[0].Annotations) != 0 {
+			t.Fatal("Hook SPI must be a separate logical interface without HTTP routes")
+		}
+		return
+	}
+	t.Fatal("missing independent ExperimentHookSPIService")
 }

@@ -13,13 +13,6 @@ import (
 var errInvalidMessageType = errors.New("invalid message type for service method handler")
 
 var serviceMethods = map[string]kitex.MethodInfo{
-	"InvokeExperimentHook": kitex.NewMethodInfo(
-		invokeExperimentHookHandler,
-		newEvaluationSPIServiceInvokeExperimentHookArgs,
-		newEvaluationSPIServiceInvokeExperimentHookResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
 	"SearchEvalTarget": kitex.NewMethodInfo(
 		searchEvalTargetHandler,
 		newEvaluationSPIServiceSearchEvalTargetArgs,
@@ -86,25 +79,6 @@ func newServiceInfo() *kitex.ServiceInfo {
 		Extra:           extra,
 	}
 	return svcInfo
-}
-
-func invokeExperimentHookHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*spi.EvaluationSPIServiceInvokeExperimentHookArgs)
-	realResult := result.(*spi.EvaluationSPIServiceInvokeExperimentHookResult)
-	success, err := handler.(spi.EvaluationSPIService).InvokeExperimentHook(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newEvaluationSPIServiceInvokeExperimentHookArgs() interface{} {
-	return spi.NewEvaluationSPIServiceInvokeExperimentHookArgs()
-}
-
-func newEvaluationSPIServiceInvokeExperimentHookResult() interface{} {
-	return spi.NewEvaluationSPIServiceInvokeExperimentHookResult()
 }
 
 func searchEvalTargetHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -212,16 +186,6 @@ func newServiceClient(c client.Client) *kClient {
 		c:  c,
 		sc: c.(client.Streaming),
 	}
-}
-
-func (p *kClient) InvokeExperimentHook(ctx context.Context, req *spi.InvokeExperimentHookRequest) (r *spi.InvokeExperimentHookResponse, err error) {
-	var _args spi.EvaluationSPIServiceInvokeExperimentHookArgs
-	_args.Req = req
-	var _result spi.EvaluationSPIServiceInvokeExperimentHookResult
-	if err = p.c.Call(ctx, "InvokeExperimentHook", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
 }
 
 func (p *kClient) SearchEvalTarget(ctx context.Context, req *spi.SearchEvalTargetRequest) (r *spi.SearchEvalTargetResponse, err error) {

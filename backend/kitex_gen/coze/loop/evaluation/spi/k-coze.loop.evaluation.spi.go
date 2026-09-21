@@ -8856,7 +8856,7 @@ func (p *InvokeExperimentHookResponse) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) FastRead(buf []byte) (int, error) {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -8900,12 +8900,12 @@ func (p *EvaluationSPIServiceInvokeExperimentHookArgs) FastRead(buf []byte) (int
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSPIServiceInvokeExperimentHookArgs[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentHookSPIServiceInvokeExperimentHookArgs[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) FastReadField1(buf []byte) (int, error) {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 	_field := NewInvokeExperimentHookRequest()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -8917,11 +8917,11 @@ func (p *EvaluationSPIServiceInvokeExperimentHookArgs) FastReadField1(buf []byte
 	return offset, nil
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) FastWrite(buf []byte) int {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -8930,7 +8930,7 @@ func (p *EvaluationSPIServiceInvokeExperimentHookArgs) FastWriteNocopy(buf []byt
 	return offset
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) BLength() int {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -8939,22 +8939,22 @@ func (p *EvaluationSPIServiceInvokeExperimentHookArgs) BLength() int {
 	return l
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
 	offset += p.Req.FastWriteNocopy(buf[offset:], w)
 	return offset
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) field1Length() int {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += p.Req.BLength()
 	return l
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) DeepCopy(s interface{}) error {
-	src, ok := s.(*EvaluationSPIServiceInvokeExperimentHookArgs)
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) DeepCopy(s interface{}) error {
+	src, ok := s.(*ExperimentHookSPIServiceInvokeExperimentHookArgs)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
@@ -8971,7 +8971,7 @@ func (p *EvaluationSPIServiceInvokeExperimentHookArgs) DeepCopy(s interface{}) e
 	return nil
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) FastRead(buf []byte) (int, error) {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -9015,12 +9015,12 @@ func (p *EvaluationSPIServiceInvokeExperimentHookResult) FastRead(buf []byte) (i
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSPIServiceInvokeExperimentHookResult[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentHookSPIServiceInvokeExperimentHookResult[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) FastReadField0(buf []byte) (int, error) {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) FastReadField0(buf []byte) (int, error) {
 	offset := 0
 	_field := NewInvokeExperimentHookResponse()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -9032,11 +9032,11 @@ func (p *EvaluationSPIServiceInvokeExperimentHookResult) FastReadField0(buf []by
 	return offset, nil
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) FastWrite(buf []byte) int {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField0(buf[offset:], w)
@@ -9045,7 +9045,7 @@ func (p *EvaluationSPIServiceInvokeExperimentHookResult) FastWriteNocopy(buf []b
 	return offset
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) BLength() int {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field0Length()
@@ -9054,7 +9054,7 @@ func (p *EvaluationSPIServiceInvokeExperimentHookResult) BLength() int {
 	return l
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetSuccess() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 0)
@@ -9063,7 +9063,7 @@ func (p *EvaluationSPIServiceInvokeExperimentHookResult) fastWriteField0(buf []b
 	return offset
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) field0Length() int {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) field0Length() int {
 	l := 0
 	if p.IsSetSuccess() {
 		l += thrift.Binary.FieldBeginLength()
@@ -9072,8 +9072,8 @@ func (p *EvaluationSPIServiceInvokeExperimentHookResult) field0Length() int {
 	return l
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) DeepCopy(s interface{}) error {
-	src, ok := s.(*EvaluationSPIServiceInvokeExperimentHookResult)
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) DeepCopy(s interface{}) error {
+	src, ok := s.(*ExperimentHookSPIServiceInvokeExperimentHookResult)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
@@ -10260,11 +10260,11 @@ func (p *EvaluationSPIServiceAsyncInvokeEvaluatorResult) DeepCopy(s interface{})
 	return nil
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookArgs) GetFirstArgument() interface{} {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookArgs) GetFirstArgument() interface{} {
 	return p.Req
 }
 
-func (p *EvaluationSPIServiceInvokeExperimentHookResult) GetResult() interface{} {
+func (p *ExperimentHookSPIServiceInvokeExperimentHookResult) GetResult() interface{} {
 	return p.Success
 }
 
