@@ -2602,6 +2602,7 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 }
 
 func (r *TraceServiceImpl) getTrajectoriesSingleQuery(ctx context.Context, workspaceID int64, tenant []string, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType, trajectoryConfig *GetTrajectoryConfigResponse, metaRules []loop_span.MetaKeyRule, maxBytes int64) (map[string]*loop_span.Trajectory, error) {
+	// 不在 CK 拉取阶段限制 all spans 大小（MaxBytes 传 0），改为拉全量后按符合轨迹节点的 spans 校验大小
 	allSpans, err := r.traceRepo.ListSpansRepeat(ctx, &repo.ListSpansParam{
 		Tenants: tenant,
 		Filters: &loop_span.FilterFields{
@@ -2618,13 +2619,9 @@ func (r *TraceServiceImpl) getTrajectoriesSingleQuery(ctx context.Context, works
 		EndAt:              endTime,
 		Limit:              1000,
 		NotQueryAnnotation: true,
-		MaxBytes:           maxBytes,
+		MaxBytes:           0,
 	})
 	if err != nil {
-		if errors.Is(err, repo.ErrMaxBytesExceeded) {
-			logs.CtxWarn(ctx, "getTrajectoriesSingleQuery skipped: allSpans exceeded max bytes, traceIDs:%v, maxBytes:%d", traceIDs, maxBytes)
-			return map[string]*loop_span.Trajectory{}, nil
-		}
 		logs.CtxError(ctx, "Failed to list all spans, err:%+v", err)
 		return nil, err
 	}
@@ -2644,6 +2641,17 @@ func (r *TraceServiceImpl) getTrajectoriesSingleQuery(ctx context.Context, works
 	allSpans.Spans, err = runSpanProcessors(ctx, "GetTrajectories", processors, allSpans.Spans)
 	if err != nil {
 		return nil, err
+	}
+
+	// 仅校验符合轨迹节点的 spans 大小：即 allSpans 中命中 selectFilters 的子集，
+	// 等价于 getTrajectoriesDoubleQuery 里用 selectFilters 二次查询得到的 selectedSpans。
+	// 超过 maxBytes 则跳过。FilterSpans 只做 Satisfied 判定、无副作用，不污染 allSpans。
+	if maxBytes > 0 {
+		selectedSpans := allSpans.Spans.FilterSpans(selectFilters)
+		if int64(loop_span.SizeofSpans(selectedSpans)) > maxBytes {
+			logs.CtxWarn(ctx, "getTrajectoriesSingleQuery skipped: selected spans exceeded max bytes, traceIDs:%v, maxBytes:%d", traceIDs, maxBytes)
+			return map[string]*loop_span.Trajectory{}, nil
+		}
 	}
 
 	trajectories, err := r.buildTrajectories(ctx, &allSpans.Spans, ptr.Of(r.convertCustomNode(allSpans.Spans)), selectFilters, metaRules)
