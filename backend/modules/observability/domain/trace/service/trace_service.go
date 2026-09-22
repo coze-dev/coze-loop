@@ -1645,6 +1645,7 @@ func (r *TraceServiceImpl) IngestTraces(ctx context.Context, req *IngestTracesRe
 		}
 	}
 	if len(req.Spans) == 0 {
+		logs.CtxInfo(ctx, "Skip ingest after span processors dropped all spans")
 		return nil
 	}
 
