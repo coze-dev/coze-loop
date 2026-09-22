@@ -1644,6 +1644,9 @@ func (r *TraceServiceImpl) IngestTraces(ctx context.Context, req *IngestTracesRe
 			return err
 		}
 	}
+	if len(req.Spans) == 0 {
+		return nil
+	}
 
 	traceData := &entity.TraceData{
 		Tenant: req.Tenant,
