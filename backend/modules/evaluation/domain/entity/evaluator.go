@@ -55,6 +55,7 @@ const (
 	EvaluatorTypeCode      EvaluatorType = 2
 	EvaluatorTypeCustomRPC EvaluatorType = 3
 	EvaluatorTypeAgent     EvaluatorType = 4
+	EvaluatorTypeJev       EvaluatorType = 5
 )
 
 var EvaluatorTypeSet = map[EvaluatorType]struct{}{
@@ -62,6 +63,7 @@ var EvaluatorTypeSet = map[EvaluatorType]struct{}{
 	EvaluatorTypeCode:      {},
 	EvaluatorTypeCustomRPC: {},
 	EvaluatorTypeAgent:     {},
+	EvaluatorTypeJev:       {},
 }
 
 func (e *Evaluator) IsAsync() bool {

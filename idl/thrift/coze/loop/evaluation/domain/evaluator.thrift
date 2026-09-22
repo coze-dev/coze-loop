@@ -8,6 +8,13 @@ enum EvaluatorType {
     Code = 2
     CustomRPC = 3
     Agent = 4
+    Jev = 5
+}
+
+enum JevQuestionType {
+    Noul = 1         // 是非题，返回 yes 概率
+    Choice = 2       // 单选（≤255 项）
+    Score = 3        // 有序档位打分（2-10 档）
 }
 
 typedef string LanguageType(ts.enum="true")
@@ -117,6 +124,21 @@ struct CodeEvaluator {
     5: optional map<LanguageType, string> lang_2_code_content
 }
 
+struct JevQuestion {
+    1: optional string key                            // 适配层自动生成，页面不暴露
+    2: optional JevQuestionType type
+    3: optional string instructions                   // 问题描述
+    4: optional map<string, string> choice_criteria   // 仅 Choice
+    5: optional list<string> score_levels             // 仅 Score
+}
+
+struct JevEvaluator {
+    1: optional string model                     // jev 模型版本，默认 jev-latest
+    2: optional list<JevQuestion> questions      // MVP 限定长度 1
+    3: optional string api_key                   // 敏感字段：加密存储、不明文回显
+    // state 复用 EvaluatorContent.input_schemas（field 2），此处不重复定义
+}
+
 struct CustomRPCEvaluator {
     1: optional string provider_evaluator_code     // 自定义评估器编码，例如：EvalBot的给“代码生成-代码正确”赋予CN:480的评估器ID
     2: required EvaluatorAccessProtocol access_protocol    // 本期是RPC，后续还可拓展HTTP
@@ -149,6 +171,7 @@ struct EvaluatorContent {
     102: optional CodeEvaluator code_evaluator
     103: optional CustomRPCEvaluator custom_rpc_evaluator
     104: optional AgentEvaluator agent_evaluator
+    105: optional JevEvaluator jev_evaluator
 }
 
 // 明确有顺序的 evaluator 与版本映射元素
