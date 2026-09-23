@@ -87,6 +87,12 @@ func (p *AgentEvaluatorPromptConfigOutputRules) IsValid() error {
 func (p *CodeEvaluator) IsValid() error {
 	return nil
 }
+func (p *JevQuestion) IsValid() error {
+	return nil
+}
+func (p *JevEvaluator) IsValid() error {
+	return nil
+}
 func (p *CustomRPCEvaluator) IsValid() error {
 	if p.InvokeHTTPInfo != nil {
 		if err := p.InvokeHTTPInfo.IsValid(); err != nil {
@@ -137,6 +143,11 @@ func (p *EvaluatorContent) IsValid() error {
 	if p.AgentEvaluator != nil {
 		if err := p.AgentEvaluator.IsValid(); err != nil {
 			return fmt.Errorf("field AgentEvaluator not valid, %w", err)
+		}
+	}
+	if p.JevEvaluator != nil {
+		if err := p.JevEvaluator.IsValid(); err != nil {
+			return fmt.Errorf("field JevEvaluator not valid, %w", err)
 		}
 	}
 	return nil

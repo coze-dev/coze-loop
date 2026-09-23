@@ -469,6 +469,14 @@ func (e *EvaluatorServiceImpl) CreateEvaluator(ctx context.Context, evaluator *e
 		return 0, validateErr
 	}
 	e.injectUserInfo(ctx, evaluator)
+	// Jev 评估器 api_key 为敏感字段，落库前经 source service PreHandle 加密（加密能力由商业版注入）
+	if evaluator.EvaluatorType == entity.EvaluatorTypeJev {
+		if sourceService, ok := e.evaluatorSourceServices[entity.EvaluatorTypeJev]; ok {
+			if err := sourceService.PreHandle(ctx, evaluator); err != nil {
+				return 0, err
+			}
+		}
+	}
 	evaluatorID, err := e.evaluatorRepo.CreateEvaluator(ctx, evaluator)
 	if err != nil {
 		return 0, err
@@ -526,6 +534,10 @@ func (e *EvaluatorServiceImpl) validateCreateEvaluatorRequest(ctx context.Contex
 		if evaluator.AgentEvaluatorVersion == nil {
 			return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("agent evaluator version is required"))
 		}
+	case entity.EvaluatorTypeJev:
+		if evaluator.JevEvaluatorVersion == nil {
+			return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("jev evaluator version is required"))
+		}
 	}
 	return nil
 }
@@ -572,6 +584,14 @@ func (e *EvaluatorServiceImpl) UpdateEvaluatorDraft(ctx context.Context, version
 	versionDO.BaseInfo.SetUpdatedBy(&entity.UserInfo{
 		UserID: gptr.Of(userIDInContext),
 	})
+	// Jev 评估器 api_key 落库前加密（幂等：已加密的保留值不会二次加密）
+	if versionDO.EvaluatorType == entity.EvaluatorTypeJev {
+		if sourceService, ok := e.evaluatorSourceServices[entity.EvaluatorTypeJev]; ok {
+			if err := sourceService.PreHandle(ctx, versionDO); err != nil {
+				return err
+			}
+		}
+	}
 	return e.evaluatorRepo.UpdateEvaluatorDraft(ctx, versionDO)
 }
 

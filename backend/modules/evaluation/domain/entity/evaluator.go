@@ -24,6 +24,7 @@ type Evaluator struct {
 	CodeEvaluatorVersion      *CodeEvaluatorVersion
 	CustomRPCEvaluatorVersion *CustomRPCEvaluatorVersion
 	AgentEvaluatorVersion     *AgentEvaluatorVersion
+	JevEvaluatorVersion       *JevEvaluatorVersion
 }
 
 type EvaluatorInfo struct {
@@ -112,6 +113,10 @@ func (e *Evaluator) GetEvaluatorVersionID() int64 {
 		if e.AgentEvaluatorVersion != nil {
 			return e.AgentEvaluatorVersion.GetID()
 		}
+	case EvaluatorTypeJev:
+		if e.JevEvaluatorVersion != nil {
+			return e.JevEvaluatorVersion.GetID()
+		}
 	default:
 		return 0
 	}
@@ -136,6 +141,10 @@ func (e *Evaluator) GetVersion() string {
 	case EvaluatorTypeAgent:
 		if e.AgentEvaluatorVersion != nil {
 			return e.AgentEvaluatorVersion.GetVersion()
+		}
+	case EvaluatorTypeJev:
+		if e.JevEvaluatorVersion != nil {
+			return e.JevEvaluatorVersion.GetVersion()
 		}
 	default:
 		return ""
@@ -162,6 +171,10 @@ func (e *Evaluator) GetEvaluatorID() int64 {
 		if e.AgentEvaluatorVersion != nil {
 			return e.AgentEvaluatorVersion.GetEvaluatorID()
 		}
+	case EvaluatorTypeJev:
+		if e.JevEvaluatorVersion != nil {
+			return e.JevEvaluatorVersion.GetEvaluatorID()
+		}
 	default:
 		return 0
 	}
@@ -186,6 +199,10 @@ func (e *Evaluator) GetSpaceID() int64 {
 	case EvaluatorTypeAgent:
 		if e.AgentEvaluatorVersion != nil {
 			return e.AgentEvaluatorVersion.GetSpaceID()
+		}
+	case EvaluatorTypeJev:
+		if e.JevEvaluatorVersion != nil {
+			return e.JevEvaluatorVersion.GetSpaceID()
 		}
 	default:
 		return 0
@@ -217,6 +234,10 @@ func (e *Evaluator) GetEvaluatorVersionDescription() string {
 		if e.AgentEvaluatorVersion != nil {
 			return e.AgentEvaluatorVersion.GetDescription()
 		}
+	case EvaluatorTypeJev:
+		if e.JevEvaluatorVersion != nil {
+			return e.JevEvaluatorVersion.GetDescription()
+		}
 	default:
 		return ""
 	}
@@ -241,6 +262,10 @@ func (e *Evaluator) GetBaseInfo() *BaseInfo {
 	case EvaluatorTypeAgent:
 		if e.AgentEvaluatorVersion != nil {
 			return e.AgentEvaluatorVersion.GetBaseInfo()
+		}
+	case EvaluatorTypeJev:
+		if e.JevEvaluatorVersion != nil {
+			return e.JevEvaluatorVersion.GetBaseInfo()
 		}
 	default:
 		return nil
@@ -293,6 +318,10 @@ func (e *Evaluator) ValidateInput(input *EvaluatorInputData) error {
 		if e.AgentEvaluatorVersion != nil {
 			return e.AgentEvaluatorVersion.ValidateInput(input)
 		}
+	case EvaluatorTypeJev:
+		if e.JevEvaluatorVersion != nil {
+			return e.JevEvaluatorVersion.ValidateInput(input)
+		}
 	default:
 		return nil
 	}
@@ -317,6 +346,10 @@ func (e *Evaluator) ValidateBaseInfo() error {
 	case EvaluatorTypeAgent:
 		if e.AgentEvaluatorVersion != nil {
 			return e.AgentEvaluatorVersion.ValidateBaseInfo()
+		}
+	case EvaluatorTypeJev:
+		if e.JevEvaluatorVersion != nil {
+			return e.JevEvaluatorVersion.ValidateBaseInfo()
 		}
 	default:
 		return nil
@@ -343,6 +376,10 @@ func (e *Evaluator) SetEvaluatorVersionID(id int64) {
 		if e.AgentEvaluatorVersion != nil {
 			e.AgentEvaluatorVersion.SetID(id)
 		}
+	case EvaluatorTypeJev:
+		if e.JevEvaluatorVersion != nil {
+			e.JevEvaluatorVersion.SetID(id)
+		}
 	default:
 		return
 	}
@@ -366,6 +403,10 @@ func (e *Evaluator) SetVersion(version string) {
 	case EvaluatorTypeAgent:
 		if e.AgentEvaluatorVersion != nil {
 			e.AgentEvaluatorVersion.SetVersion(version)
+		}
+	case EvaluatorTypeJev:
+		if e.JevEvaluatorVersion != nil {
+			e.JevEvaluatorVersion.SetVersion(version)
 		}
 	default:
 		return
@@ -396,6 +437,10 @@ func (e *Evaluator) SetEvaluatorVersionDescription(description string) {
 		if e.AgentEvaluatorVersion != nil {
 			e.AgentEvaluatorVersion.SetDescription(description)
 		}
+	case EvaluatorTypeJev:
+		if e.JevEvaluatorVersion != nil {
+			e.JevEvaluatorVersion.SetDescription(description)
+		}
 	default:
 		return
 	}
@@ -419,6 +464,10 @@ func (e *Evaluator) SetBaseInfo(baseInfo *BaseInfo) {
 	case EvaluatorTypeAgent:
 		if e.AgentEvaluatorVersion != nil {
 			e.AgentEvaluatorVersion.SetBaseInfo(baseInfo)
+		}
+	case EvaluatorTypeJev:
+		if e.JevEvaluatorVersion != nil {
+			e.JevEvaluatorVersion.SetBaseInfo(baseInfo)
 		}
 	default:
 		return
@@ -480,6 +529,10 @@ func (e *Evaluator) SetEvaluatorID(evaluatorID int64) {
 		if e.AgentEvaluatorVersion != nil {
 			e.AgentEvaluatorVersion.SetEvaluatorID(evaluatorID)
 		}
+	case EvaluatorTypeJev:
+		if e.JevEvaluatorVersion != nil {
+			e.JevEvaluatorVersion.SetEvaluatorID(evaluatorID)
+		}
 	default:
 		return
 	}
@@ -504,6 +557,10 @@ func (e *Evaluator) SetSpaceID(spaceID int64) {
 		if e.AgentEvaluatorVersion != nil {
 			e.AgentEvaluatorVersion.SetSpaceID(spaceID)
 		}
+	case EvaluatorTypeJev:
+		if e.JevEvaluatorVersion != nil {
+			e.JevEvaluatorVersion.SetSpaceID(spaceID)
+		}
 	default:
 		return
 	}
@@ -522,6 +579,8 @@ func (e *Evaluator) SetEvaluatorVersion(version *Evaluator) {
 		e.CustomRPCEvaluatorVersion = version.CustomRPCEvaluatorVersion
 	case EvaluatorTypeAgent:
 		e.AgentEvaluatorVersion = version.AgentEvaluatorVersion
+	case EvaluatorTypeJev:
+		e.JevEvaluatorVersion = version.JevEvaluatorVersion
 	default:
 		return
 	}
@@ -552,6 +611,10 @@ func (e *Evaluator) GetInputSchemas() []*ArgsSchema {
 	case EvaluatorTypeAgent:
 		if e.AgentEvaluatorVersion != nil {
 			return e.AgentEvaluatorVersion.InputSchemas
+		}
+	case EvaluatorTypeJev:
+		if e.JevEvaluatorVersion != nil {
+			return e.JevEvaluatorVersion.InputSchemas
 		}
 	}
 	return nil

@@ -90,6 +90,7 @@ const (
 	EvaluatorType_Code      EvaluatorType = 2
 	EvaluatorType_CustomRPC EvaluatorType = 3
 	EvaluatorType_Agent     EvaluatorType = 4
+	EvaluatorType_Jev       EvaluatorType = 5
 )
 
 func (p EvaluatorType) String() string {
@@ -102,6 +103,8 @@ func (p EvaluatorType) String() string {
 		return "CustomRPC"
 	case EvaluatorType_Agent:
 		return "Agent"
+	case EvaluatorType_Jev:
+		return "Jev"
 	}
 	return "<UNSET>"
 }
@@ -116,6 +119,8 @@ func EvaluatorTypeFromString(s string) (EvaluatorType, error) {
 		return EvaluatorType_CustomRPC, nil
 	case "Agent":
 		return EvaluatorType_Agent, nil
+	case "Jev":
+		return EvaluatorType_Jev, nil
 	}
 	return EvaluatorType(0), fmt.Errorf("not a valid EvaluatorType string")
 }
@@ -129,6 +134,56 @@ func (p *EvaluatorType) Scan(value interface{}) (err error) {
 }
 
 func (p *EvaluatorType) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
+type JevQuestionType int64
+
+const (
+	// 是非题，返回 yes 概率
+	JevQuestionType_Noul JevQuestionType = 1
+	// 单选（≤255 项）
+	JevQuestionType_Choice JevQuestionType = 2
+	// 有序档位打分（2-10 档）
+	JevQuestionType_Score JevQuestionType = 3
+)
+
+func (p JevQuestionType) String() string {
+	switch p {
+	case JevQuestionType_Noul:
+		return "Noul"
+	case JevQuestionType_Choice:
+		return "Choice"
+	case JevQuestionType_Score:
+		return "Score"
+	}
+	return "<UNSET>"
+}
+
+func JevQuestionTypeFromString(s string) (JevQuestionType, error) {
+	switch s {
+	case "Noul":
+		return JevQuestionType_Noul, nil
+	case "Choice":
+		return JevQuestionType_Choice, nil
+	case "Score":
+		return JevQuestionType_Score, nil
+	}
+	return JevQuestionType(0), fmt.Errorf("not a valid JevQuestionType string")
+}
+
+func JevQuestionTypePtr(v JevQuestionType) *JevQuestionType { return &v }
+func (p *JevQuestionType) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = JevQuestionType(result.Int64)
+	return
+}
+
+func (p *JevQuestionType) Value() (driver.Value, error) {
 	if p == nil {
 		return nil, nil
 	}
@@ -3010,6 +3065,910 @@ func (p *CodeEvaluator) Field5DeepEqual(src map[LanguageType]string) bool {
 	return true
 }
 
+type JevQuestion struct {
+	// 适配层自动生成，页面不暴露
+	Key  *string          `thrift:"key,1,optional" frugal:"1,optional,string" form:"key" json:"key,omitempty" query:"key"`
+	Type *JevQuestionType `thrift:"type,2,optional" frugal:"2,optional,JevQuestionType" form:"type" json:"type,omitempty" query:"type"`
+	// 问题描述
+	Instructions *string `thrift:"instructions,3,optional" frugal:"3,optional,string" form:"instructions" json:"instructions,omitempty" query:"instructions"`
+	// 仅 Choice
+	ChoiceCriteria map[string]string `thrift:"choice_criteria,4,optional" frugal:"4,optional,map<string:string>" form:"choice_criteria" json:"choice_criteria,omitempty" query:"choice_criteria"`
+	// 仅 Score
+	ScoreLevels []string `thrift:"score_levels,5,optional" frugal:"5,optional,list<string>" form:"score_levels" json:"score_levels,omitempty" query:"score_levels"`
+}
+
+func NewJevQuestion() *JevQuestion {
+	return &JevQuestion{}
+}
+
+func (p *JevQuestion) InitDefault() {
+}
+
+var JevQuestion_Key_DEFAULT string
+
+func (p *JevQuestion) GetKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetKey() {
+		return JevQuestion_Key_DEFAULT
+	}
+	return *p.Key
+}
+
+var JevQuestion_Type_DEFAULT JevQuestionType
+
+func (p *JevQuestion) GetType() (v JevQuestionType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetType() {
+		return JevQuestion_Type_DEFAULT
+	}
+	return *p.Type
+}
+
+var JevQuestion_Instructions_DEFAULT string
+
+func (p *JevQuestion) GetInstructions() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInstructions() {
+		return JevQuestion_Instructions_DEFAULT
+	}
+	return *p.Instructions
+}
+
+var JevQuestion_ChoiceCriteria_DEFAULT map[string]string
+
+func (p *JevQuestion) GetChoiceCriteria() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetChoiceCriteria() {
+		return JevQuestion_ChoiceCriteria_DEFAULT
+	}
+	return p.ChoiceCriteria
+}
+
+var JevQuestion_ScoreLevels_DEFAULT []string
+
+func (p *JevQuestion) GetScoreLevels() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetScoreLevels() {
+		return JevQuestion_ScoreLevels_DEFAULT
+	}
+	return p.ScoreLevels
+}
+func (p *JevQuestion) SetKey(val *string) {
+	p.Key = val
+}
+func (p *JevQuestion) SetType(val *JevQuestionType) {
+	p.Type = val
+}
+func (p *JevQuestion) SetInstructions(val *string) {
+	p.Instructions = val
+}
+func (p *JevQuestion) SetChoiceCriteria(val map[string]string) {
+	p.ChoiceCriteria = val
+}
+func (p *JevQuestion) SetScoreLevels(val []string) {
+	p.ScoreLevels = val
+}
+
+var fieldIDToName_JevQuestion = map[int16]string{
+	1: "key",
+	2: "type",
+	3: "instructions",
+	4: "choice_criteria",
+	5: "score_levels",
+}
+
+func (p *JevQuestion) IsSetKey() bool {
+	return p.Key != nil
+}
+
+func (p *JevQuestion) IsSetType() bool {
+	return p.Type != nil
+}
+
+func (p *JevQuestion) IsSetInstructions() bool {
+	return p.Instructions != nil
+}
+
+func (p *JevQuestion) IsSetChoiceCriteria() bool {
+	return p.ChoiceCriteria != nil
+}
+
+func (p *JevQuestion) IsSetScoreLevels() bool {
+	return p.ScoreLevels != nil
+}
+
+func (p *JevQuestion) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_JevQuestion[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *JevQuestion) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Key = _field
+	return nil
+}
+func (p *JevQuestion) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *JevQuestionType
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := JevQuestionType(v)
+		_field = &tmp
+	}
+	p.Type = _field
+	return nil
+}
+func (p *JevQuestion) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Instructions = _field
+	return nil
+}
+func (p *JevQuestion) ReadField4(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.ChoiceCriteria = _field
+	return nil
+}
+func (p *JevQuestion) ReadField5(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ScoreLevels = _field
+	return nil
+}
+
+func (p *JevQuestion) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("JevQuestion"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *JevQuestion) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetKey() {
+		if err = oprot.WriteFieldBegin("key", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Key); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *JevQuestion) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetType() {
+		if err = oprot.WriteFieldBegin("type", thrift.I32, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.Type)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *JevQuestion) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInstructions() {
+		if err = oprot.WriteFieldBegin("instructions", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Instructions); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *JevQuestion) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetChoiceCriteria() {
+		if err = oprot.WriteFieldBegin("choice_criteria", thrift.MAP, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.ChoiceCriteria)); err != nil {
+			return err
+		}
+		for k, v := range p.ChoiceCriteria {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *JevQuestion) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetScoreLevels() {
+		if err = oprot.WriteFieldBegin("score_levels", thrift.LIST, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.ScoreLevels)); err != nil {
+			return err
+		}
+		for _, v := range p.ScoreLevels {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *JevQuestion) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("JevQuestion(%+v)", *p)
+
+}
+
+func (p *JevQuestion) DeepEqual(ano *JevQuestion) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Key) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Type) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Instructions) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.ChoiceCriteria) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.ScoreLevels) {
+		return false
+	}
+	return true
+}
+
+func (p *JevQuestion) Field1DeepEqual(src *string) bool {
+
+	if p.Key == src {
+		return true
+	} else if p.Key == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Key, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *JevQuestion) Field2DeepEqual(src *JevQuestionType) bool {
+
+	if p.Type == src {
+		return true
+	} else if p.Type == nil || src == nil {
+		return false
+	}
+	if *p.Type != *src {
+		return false
+	}
+	return true
+}
+func (p *JevQuestion) Field3DeepEqual(src *string) bool {
+
+	if p.Instructions == src {
+		return true
+	} else if p.Instructions == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Instructions, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *JevQuestion) Field4DeepEqual(src map[string]string) bool {
+
+	if len(p.ChoiceCriteria) != len(src) {
+		return false
+	}
+	for k, v := range p.ChoiceCriteria {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *JevQuestion) Field5DeepEqual(src []string) bool {
+
+	if len(p.ScoreLevels) != len(src) {
+		return false
+	}
+	for i, v := range p.ScoreLevels {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+type JevEvaluator struct {
+	// jev 模型版本，默认 jev-latest
+	Model *string `thrift:"model,1,optional" frugal:"1,optional,string" form:"model" json:"model,omitempty" query:"model"`
+	// MVP 限定长度 1
+	Questions []*JevQuestion `thrift:"questions,2,optional" frugal:"2,optional,list<JevQuestion>" form:"questions" json:"questions,omitempty" query:"questions"`
+	// 敏感字段：加密存储、不明文回显
+	APIKey *string `thrift:"api_key,3,optional" frugal:"3,optional,string" form:"api_key" json:"api_key,omitempty" query:"api_key"`
+}
+
+func NewJevEvaluator() *JevEvaluator {
+	return &JevEvaluator{}
+}
+
+func (p *JevEvaluator) InitDefault() {
+}
+
+var JevEvaluator_Model_DEFAULT string
+
+func (p *JevEvaluator) GetModel() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModel() {
+		return JevEvaluator_Model_DEFAULT
+	}
+	return *p.Model
+}
+
+var JevEvaluator_Questions_DEFAULT []*JevQuestion
+
+func (p *JevEvaluator) GetQuestions() (v []*JevQuestion) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetQuestions() {
+		return JevEvaluator_Questions_DEFAULT
+	}
+	return p.Questions
+}
+
+var JevEvaluator_APIKey_DEFAULT string
+
+func (p *JevEvaluator) GetAPIKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAPIKey() {
+		return JevEvaluator_APIKey_DEFAULT
+	}
+	return *p.APIKey
+}
+func (p *JevEvaluator) SetModel(val *string) {
+	p.Model = val
+}
+func (p *JevEvaluator) SetQuestions(val []*JevQuestion) {
+	p.Questions = val
+}
+func (p *JevEvaluator) SetAPIKey(val *string) {
+	p.APIKey = val
+}
+
+var fieldIDToName_JevEvaluator = map[int16]string{
+	1: "model",
+	2: "questions",
+	3: "api_key",
+}
+
+func (p *JevEvaluator) IsSetModel() bool {
+	return p.Model != nil
+}
+
+func (p *JevEvaluator) IsSetQuestions() bool {
+	return p.Questions != nil
+}
+
+func (p *JevEvaluator) IsSetAPIKey() bool {
+	return p.APIKey != nil
+}
+
+func (p *JevEvaluator) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_JevEvaluator[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *JevEvaluator) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Model = _field
+	return nil
+}
+func (p *JevEvaluator) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*JevQuestion, 0, size)
+	values := make([]JevQuestion, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Questions = _field
+	return nil
+}
+func (p *JevEvaluator) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.APIKey = _field
+	return nil
+}
+
+func (p *JevEvaluator) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("JevEvaluator"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *JevEvaluator) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetModel() {
+		if err = oprot.WriteFieldBegin("model", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Model); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *JevEvaluator) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetQuestions() {
+		if err = oprot.WriteFieldBegin("questions", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Questions)); err != nil {
+			return err
+		}
+		for _, v := range p.Questions {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *JevEvaluator) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAPIKey() {
+		if err = oprot.WriteFieldBegin("api_key", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.APIKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *JevEvaluator) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("JevEvaluator(%+v)", *p)
+
+}
+
+func (p *JevEvaluator) DeepEqual(ano *JevEvaluator) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Model) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Questions) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.APIKey) {
+		return false
+	}
+	return true
+}
+
+func (p *JevEvaluator) Field1DeepEqual(src *string) bool {
+
+	if p.Model == src {
+		return true
+	} else if p.Model == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Model, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *JevEvaluator) Field2DeepEqual(src []*JevQuestion) bool {
+
+	if len(p.Questions) != len(src) {
+		return false
+	}
+	for i, v := range p.Questions {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *JevEvaluator) Field3DeepEqual(src *string) bool {
+
+	if p.APIKey == src {
+		return true
+	} else if p.APIKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.APIKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 type CustomRPCEvaluator struct {
 	// 自定义评估器编码，例如：EvalBot的给“代码生成-代码正确”赋予CN:480的评估器ID
 	ProviderEvaluatorCode *string `thrift:"provider_evaluator_code,1,optional" frugal:"1,optional,string" form:"provider_evaluator_code" json:"provider_evaluator_code,omitempty" query:"provider_evaluator_code"`
@@ -4373,6 +5332,7 @@ type EvaluatorContent struct {
 	CodeEvaluator      *CodeEvaluator      `thrift:"code_evaluator,102,optional" frugal:"102,optional,CodeEvaluator" form:"code_evaluator" json:"code_evaluator,omitempty" query:"code_evaluator"`
 	CustomRPCEvaluator *CustomRPCEvaluator `thrift:"custom_rpc_evaluator,103,optional" frugal:"103,optional,CustomRPCEvaluator" form:"custom_rpc_evaluator" json:"custom_rpc_evaluator,omitempty" query:"custom_rpc_evaluator"`
 	AgentEvaluator     *AgentEvaluator     `thrift:"agent_evaluator,104,optional" frugal:"104,optional,AgentEvaluator" form:"agent_evaluator" json:"agent_evaluator,omitempty" query:"agent_evaluator"`
+	JevEvaluator       *JevEvaluator       `thrift:"jev_evaluator,105,optional" frugal:"105,optional,JevEvaluator" form:"jev_evaluator" json:"jev_evaluator,omitempty" query:"jev_evaluator"`
 }
 
 func NewEvaluatorContent() *EvaluatorContent {
@@ -4465,6 +5425,18 @@ func (p *EvaluatorContent) GetAgentEvaluator() (v *AgentEvaluator) {
 	}
 	return p.AgentEvaluator
 }
+
+var EvaluatorContent_JevEvaluator_DEFAULT *JevEvaluator
+
+func (p *EvaluatorContent) GetJevEvaluator() (v *JevEvaluator) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetJevEvaluator() {
+		return EvaluatorContent_JevEvaluator_DEFAULT
+	}
+	return p.JevEvaluator
+}
 func (p *EvaluatorContent) SetReceiveChatHistory(val *bool) {
 	p.ReceiveChatHistory = val
 }
@@ -4486,6 +5458,9 @@ func (p *EvaluatorContent) SetCustomRPCEvaluator(val *CustomRPCEvaluator) {
 func (p *EvaluatorContent) SetAgentEvaluator(val *AgentEvaluator) {
 	p.AgentEvaluator = val
 }
+func (p *EvaluatorContent) SetJevEvaluator(val *JevEvaluator) {
+	p.JevEvaluator = val
+}
 
 var fieldIDToName_EvaluatorContent = map[int16]string{
 	1:   "receive_chat_history",
@@ -4495,6 +5470,7 @@ var fieldIDToName_EvaluatorContent = map[int16]string{
 	102: "code_evaluator",
 	103: "custom_rpc_evaluator",
 	104: "agent_evaluator",
+	105: "jev_evaluator",
 }
 
 func (p *EvaluatorContent) IsSetReceiveChatHistory() bool {
@@ -4523,6 +5499,10 @@ func (p *EvaluatorContent) IsSetCustomRPCEvaluator() bool {
 
 func (p *EvaluatorContent) IsSetAgentEvaluator() bool {
 	return p.AgentEvaluator != nil
+}
+
+func (p *EvaluatorContent) IsSetJevEvaluator() bool {
+	return p.JevEvaluator != nil
 }
 
 func (p *EvaluatorContent) Read(iprot thrift.TProtocol) (err error) {
@@ -4594,6 +5574,14 @@ func (p *EvaluatorContent) Read(iprot thrift.TProtocol) (err error) {
 		case 104:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField104(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 105:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField105(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4717,6 +5705,14 @@ func (p *EvaluatorContent) ReadField104(iprot thrift.TProtocol) error {
 	p.AgentEvaluator = _field
 	return nil
 }
+func (p *EvaluatorContent) ReadField105(iprot thrift.TProtocol) error {
+	_field := NewJevEvaluator()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.JevEvaluator = _field
+	return nil
+}
 
 func (p *EvaluatorContent) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4750,6 +5746,10 @@ func (p *EvaluatorContent) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField104(oprot); err != nil {
 			fieldId = 104
+			goto WriteFieldError
+		}
+		if err = p.writeField105(oprot); err != nil {
+			fieldId = 105
 			goto WriteFieldError
 		}
 	}
@@ -4912,6 +5912,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 104 end error: ", p), err)
 }
+func (p *EvaluatorContent) writeField105(oprot thrift.TProtocol) (err error) {
+	if p.IsSetJevEvaluator() {
+		if err = oprot.WriteFieldBegin("jev_evaluator", thrift.STRUCT, 105); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.JevEvaluator.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 105 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 105 end error: ", p), err)
+}
 
 func (p *EvaluatorContent) String() string {
 	if p == nil {
@@ -4946,6 +5964,9 @@ func (p *EvaluatorContent) DeepEqual(ano *EvaluatorContent) bool {
 		return false
 	}
 	if !p.Field104DeepEqual(ano.AgentEvaluator) {
+		return false
+	}
+	if !p.Field105DeepEqual(ano.JevEvaluator) {
 		return false
 	}
 	return true
@@ -5013,6 +6034,13 @@ func (p *EvaluatorContent) Field103DeepEqual(src *CustomRPCEvaluator) bool {
 func (p *EvaluatorContent) Field104DeepEqual(src *AgentEvaluator) bool {
 
 	if !p.AgentEvaluator.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorContent) Field105DeepEqual(src *JevEvaluator) bool {
+
+	if !p.JevEvaluator.DeepEqual(src) {
 		return false
 	}
 	return true

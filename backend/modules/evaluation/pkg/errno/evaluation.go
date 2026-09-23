@@ -471,6 +471,10 @@ const (
 	itemManuallyTerminatedMessage           = "该行被用户主动终止"
 	itemManuallyTerminatedNoAffectStability = true
 
+	JevEvaluatorRunFailedCode              = 601205089 // the jev evaluator run failed, check if the configuration is correct
+	jevEvaluatorRunFailedMessage           = "jev evaluator run failed"
+	jevEvaluatorRunFailedNoAffectStability = true
+
 	// SandboxAgent 评测对象阶段性错误码 (601206xxx)：按沙箱内执行阶段划分，便于按阶段做 metrics 分类与用户前端展示。
 	SandboxAgentSetupErrorCode              = 601206001 // sandbox agent target setup phase error: agent 初始化 / 环境依赖装载失败
 	sandboxAgentSetupErrorMessage           = "sandbox agent: agent setup failed"
@@ -1065,6 +1069,12 @@ func init() {
 		AgentEvaluatorRunFailedCode,
 		agentEvaluatorRunFailedMessage,
 		code.WithAffectStability(!agentEvaluatorRunFailedNoAffectStability),
+	)
+
+	code.Register(
+		JevEvaluatorRunFailedCode,
+		jevEvaluatorRunFailedMessage,
+		code.WithAffectStability(!jevEvaluatorRunFailedNoAffectStability),
 	)
 
 	code.Register(

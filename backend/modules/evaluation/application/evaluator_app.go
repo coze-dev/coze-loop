@@ -530,11 +530,22 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorDraft(ctx context.Context, request
 		}
 	}
 	evaluatorDTO := evaluatorconvertor.ConvertEvaluatorDO2DTO(evaluatorDO)
+	oldJevAPIKey := ""
+	if evaluatorDO.JevEvaluatorVersion != nil {
+		oldJevAPIKey = evaluatorDO.JevEvaluatorVersion.APIKey
+	}
 	evaluatorDTO.CurrentVersion.EvaluatorContent = request.EvaluatorContent
 	evaluatorDTO.DraftSubmitted = ptr.Of(false)
 	evaluatorDO, err = evaluatorconvertor.ConvertEvaluatorDTO2DO(evaluatorDTO)
 	if err != nil {
 		return nil, err
+	}
+	// Jev api_key 编辑保留：前端未改动时回传的是脱敏值（或空），此时保留原加密值，不被掩码覆盖
+	if evaluatorDO.JevEvaluatorVersion != nil {
+		newKey := evaluatorDO.JevEvaluatorVersion.APIKey
+		if newKey == "" || strings.Contains(newKey, "****") {
+			evaluatorDO.JevEvaluatorVersion.APIKey = oldJevAPIKey
+		}
 	}
 	err = e.evaluatorService.UpdateEvaluatorDraft(ctx, evaluatorDO)
 	if err != nil {

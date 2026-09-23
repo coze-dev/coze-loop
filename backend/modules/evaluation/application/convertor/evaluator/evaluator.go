@@ -58,6 +58,8 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) (*evaluatordo.
 			evaluatorDO.CustomRPCEvaluatorVersion = customRPCEvaluatorVersion
 		case evaluatordto.EvaluatorType_Agent:
 			evaluatorDO.AgentEvaluatorVersion = ConvertAgentEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
+		case evaluatordto.EvaluatorType_Jev:
+			evaluatorDO.JevEvaluatorVersion = ConvertJevEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
 		}
 	}
 	return evaluatorDO, nil
@@ -126,6 +128,11 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 	case evaluatordo.EvaluatorTypeAgent:
 		if do.AgentEvaluatorVersion != nil {
 			versionDTO := ConvertAgentEvaluatorVersionDO2DTO(do.AgentEvaluatorVersion)
+			dto.CurrentVersion = versionDTO
+		}
+	case evaluatordo.EvaluatorTypeJev:
+		if do.JevEvaluatorVersion != nil {
+			versionDTO := ConvertJevEvaluatorVersionDO2DTO(do.JevEvaluatorVersion)
 			dto.CurrentVersion = versionDTO
 		}
 	}
@@ -386,6 +393,34 @@ func ConvertEvaluatorContent2DO(content *evaluatordto.EvaluatorContent, evaluato
 		}
 
 		evaluator.AgentEvaluatorVersion = agentVersion
+
+	case evaluatordto.EvaluatorType_Jev:
+		if content.JevEvaluator == nil {
+			return nil, errorx.NewByCode(errno.InvalidInputDataCode, errorx.WithExtraMsg("jev evaluator content is nil"))
+		}
+
+		jevVersion := &evaluatordo.JevEvaluatorVersion{
+			EvaluatorType: evaluatordo.EvaluatorTypeJev,
+			Model:         content.JevEvaluator.Model,
+			Questions:     ConvertJevQuestionsDTO2DO(content.JevEvaluator.Questions),
+			APIKey:        content.JevEvaluator.GetAPIKey(),
+		}
+
+		if len(content.InputSchemas) > 0 {
+			jevVersion.InputSchemas = make([]*evaluatordo.ArgsSchema, 0, len(content.InputSchemas))
+			for _, schema := range content.InputSchemas {
+				jevVersion.InputSchemas = append(jevVersion.InputSchemas, commonconvertor.ConvertArgsSchemaDTO2DO(schema))
+			}
+		}
+
+		if len(content.OutputSchemas) > 0 {
+			jevVersion.OutputSchemas = make([]*evaluatordo.ArgsSchema, 0, len(content.OutputSchemas))
+			for _, schema := range content.OutputSchemas {
+				jevVersion.OutputSchemas = append(jevVersion.OutputSchemas, commonconvertor.ConvertArgsSchemaDTO2DO(schema))
+			}
+		}
+
+		evaluator.JevEvaluatorVersion = jevVersion
 
 	default:
 		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("unsupported evaluator type"))
@@ -687,10 +722,93 @@ func ConvertAgentEvaluatorVersionDO2DTO(do *evaluatordo.AgentEvaluatorVersion) *
 	}
 }
 
-func ConvertAgentConfigDTO2DO(dto *commondto.AgentConfig) *evaluatordo.AgentConfig {
-	if dto == nil {
+func ConvertJevEvaluatorVersionDTO2DO(evaluatorID, spaceID int64, dto *evaluatordto.EvaluatorVersion) *evaluatordo.JevEvaluatorVersion {
+	if dto == nil || dto.EvaluatorContent == nil || dto.EvaluatorContent.JevEvaluator == nil {
 		return nil
 	}
+	jevEvaluator := dto.EvaluatorContent.JevEvaluator
+	jevEvaluatorVersion := &evaluatordo.JevEvaluatorVersion{
+		ID:            dto.GetID(),
+		SpaceID:       spaceID,
+		EvaluatorType: evaluatordo.EvaluatorTypeJev,
+		EvaluatorID:   evaluatorID,
+		Description:   dto.GetDescription(),
+		Version:       dto.GetVersion(),
+		BaseInfo:      commonconvertor.ConvertBaseInfoDTO2DO(dto.GetBaseInfo()),
+		Model:         jevEvaluator.Model,
+		Questions:     ConvertJevQuestionsDTO2DO(jevEvaluator.Questions),
+		APIKey:        jevEvaluator.GetAPIKey(),
+	}
+	jevEvaluatorVersion.InputSchemas = commonconvertor.ConvertArgsSchemaListDTO2DO(dto.EvaluatorContent.InputSchemas)
+	jevEvaluatorVersion.OutputSchemas = commonconvertor.ConvertArgsSchemaListDTO2DO(dto.EvaluatorContent.OutputSchemas)
+	return jevEvaluatorVersion
+}
+
+func ConvertJevEvaluatorVersionDO2DTO(do *evaluatordo.JevEvaluatorVersion) *evaluatordto.EvaluatorVersion {
+	if do == nil {
+		return nil
+	}
+	return &evaluatordto.EvaluatorVersion{
+		ID:          gptr.Of(do.ID),
+		Version:     gptr.Of(do.Version),
+		Description: gptr.Of(do.Description),
+		BaseInfo:    commonconvertor.ConvertBaseInfoDO2DTO(do.BaseInfo),
+		EvaluatorContent: &evaluatordto.EvaluatorContent{
+			InputSchemas:  commonconvertor.ConvertArgsSchemaListDO2DTO(do.InputSchemas),
+			OutputSchemas: commonconvertor.ConvertArgsSchemaListDO2DTO(do.OutputSchemas),
+			JevEvaluator: &evaluatordto.JevEvaluator{
+				Model:     do.Model,
+				Questions: ConvertJevQuestionsDO2DTO(do.Questions),
+				// api_key 为敏感字段，出参统一脱敏，不回显明文
+				APIKey: gptr.Of(evaluatordo.MaskJevAPIKey(do.APIKey)),
+			},
+		},
+	}
+}
+
+func ConvertJevQuestionsDTO2DO(dtos []*evaluatordto.JevQuestion) []*evaluatordo.JevQuestion {
+	if len(dtos) == 0 {
+		return nil
+	}
+	dos := make([]*evaluatordo.JevQuestion, 0, len(dtos))
+	for _, dto := range dtos {
+		if dto == nil {
+			continue
+		}
+		dos = append(dos, &evaluatordo.JevQuestion{
+			Key:            dto.Key,
+			Type:           evaluatordo.JevQuestionType(dto.GetType()),
+			Instructions:   dto.Instructions,
+			ChoiceCriteria: dto.ChoiceCriteria,
+			ScoreLevels:    dto.ScoreLevels,
+		})
+	}
+	return dos
+}
+
+func ConvertJevQuestionsDO2DTO(dos []*evaluatordo.JevQuestion) []*evaluatordto.JevQuestion {
+	if len(dos) == 0 {
+		return nil
+	}
+	dtos := make([]*evaluatordto.JevQuestion, 0, len(dos))
+	for _, do := range dos {
+		if do == nil {
+			continue
+		}
+		dtos = append(dtos, &evaluatordto.JevQuestion{
+			Key:            do.Key,
+			Type:           evaluatordto.JevQuestionTypePtr(evaluatordto.JevQuestionType(do.Type)),
+			Instructions:   do.Instructions,
+			ChoiceCriteria: do.ChoiceCriteria,
+			ScoreLevels:    do.ScoreLevels,
+		})
+	}
+	return dtos
+}
+
+func ConvertAgentConfigDTO2DO(dto *commondto.AgentConfig) *evaluatordo.AgentConfig {
+	if dto == nil {
+		return nil	}
 	return &evaluatordo.AgentConfig{
 		AgentType: evaluatordo.AgentType(dto.GetAgentType()),
 	}
