@@ -182,6 +182,8 @@ type SandboxRunResponse struct {
 	ExecuteID string
 	// SessionID 仅在 SandboxRunRequest.Sync=true 时返回；异步模式下 session 未创建，值为空。
 	SessionID string
+	// SandboxDomainSuffix 本次 session 实际落区的沙箱域名后缀
+	SandboxDomainSuffix string
 }
 
 // SandboxGetRequest 查询执行请求。
