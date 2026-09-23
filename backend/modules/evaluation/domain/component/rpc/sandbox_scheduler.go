@@ -182,6 +182,12 @@ type SandboxRunResponse struct {
 	ExecuteID string
 	// SessionID 仅在 SandboxRunRequest.Sync=true 时返回；异步模式下 session 未创建，值为空。
 	SessionID string
+	// SandboxDomainSuffix 本次 session 实际落区的沙箱域名后缀（如 cn-north.ai-sandbox.byted.org），
+	// 由调度侧按它建 client 时实际使用的 region 派生。调用方用它拼该 session 的可达 URL
+	// （port-<port>-<sid>.<suffix> / debugport-<port>-<sid>.<suffix>）；**不得按调用方所在环境硬编码**
+	// —— 沙箱落区由调度侧的租户策略决定，两者不是一回事，写死会被沙箱平台以区域不符拒绝。
+	// 仅在 Sync=true（session 已创建）时返回；未升级的调度侧给空串，调用方须回落原有行为。
+	SandboxDomainSuffix string
 }
 
 // SandboxGetRequest 查询执行请求。
