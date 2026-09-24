@@ -50,7 +50,23 @@ type EvaluatorOutputData struct {
 	TimeConsumingMS   int64                        `json:"time_consuming_ms,omitempty"`
 	Stdout            string                       `json:"stdout,omitempty"`
 	ExtraOutput       *EvaluatorExtraOutputContent `json:"extra_output,omitempty"`
+	EvidenceArchive   *EvaluatorEvidenceArchive    `json:"evidence_archive,omitempty"`
 	Ext               map[string]string            `json:"ext,omitempty"`
+}
+
+// EvaluatorEvidenceArchive is immutable evidence metadata reported by an async
+// evaluator runtime. ObjectKey is persisted; download URLs are minted on read.
+type EvaluatorEvidenceArchive struct {
+	SchemaVersion  string `json:"schema_version,omitempty"`
+	ObjectKey      string `json:"object_key,omitempty"`
+	Status         string `json:"status,omitempty"`
+	Trigger        string `json:"trigger,omitempty"`
+	SizeBytes      int64  `json:"size_bytes,omitempty"`
+	SHA256         string `json:"sha256,omitempty"`
+	TruncatedFiles int64  `json:"truncated_files,omitempty"`
+	Error          string `json:"error,omitempty"`
+	// FornaxEvaluatorLogURL is minted only on authorized reads and must never be persisted.
+	FornaxEvaluatorLogURL string `json:"-"`
 }
 
 type EvaluatorExtraOutputType string
