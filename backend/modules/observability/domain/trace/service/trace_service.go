@@ -2594,7 +2594,7 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		maxBytes = backfillCfg.GetTrajectoryMaxBytes(workspaceID)
 	}
 
-	if metaCfg.IsSingleQueryEnabled() {
+	if metaCfg.IsSingleQueryEnabled() && !metaCfg.IsDoubleQueryEnabled(workspaceID) {
 		return r.getTrajectoriesSingleQuery(ctx, workspaceID, tenant, traceIDs, startTime, endTime, platformType, trajectoryConfig, metaRules, maxBytes)
 	}
 
