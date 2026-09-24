@@ -551,6 +551,8 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorDraft(ctx context.Context, request
 	if err != nil {
 		return nil, err
 	}
+	// 用持久化后的 evaluatorDO 重新转换响应 DTO，确保 Jev api_key 经 MaskJevAPIKey 脱敏，避免明文回显
+	evaluatorDTO = evaluatorconvertor.ConvertEvaluatorDO2DTO(evaluatorDO)
 	e.userInfoService.PackUserInfo(ctx, userinfo.BatchConvertDTO2UserInfoCarrier([]*evaluatordto.Evaluator{evaluatorDTO}))
 	return &evaluatorservice.UpdateEvaluatorDraftResponse{
 		Evaluator: evaluatorDTO,
@@ -1404,7 +1406,9 @@ func (e *EvaluatorHandlerImpl) checkURIs(ctx context.Context, inputFields map[st
 	for _, field := range inputFields {
 		switch gptr.Indirect(field.ContentType) {
 		case evaluatorcommon.ContentTypeMultiPart:
-			return e.checkURIEmpty(ctx, field.MultiPart)
+			if err := e.checkURIEmpty(ctx, field.MultiPart); err != nil {
+				return err
+			}
 		default:
 			continue
 		}
@@ -1420,11 +1424,11 @@ func (e *EvaluatorHandlerImpl) checkURIEmpty(ctx context.Context, inputFields []
 				return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("image URI is empty"))
 			}
 		case evaluatorcommon.ContentTypeAudio:
-			if field.GetAudio() != nil && field.GetAudio().GetURI() == "" && field.GetImage().GetStorageProvider() != dataset.StorageProvider_ExternalUrl {
+			if field.GetAudio() != nil && field.GetAudio().GetURI() == "" && field.GetAudio().GetStorageProvider() != dataset.StorageProvider_ExternalUrl {
 				return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("audio URI is empty"))
 			}
 		case evaluatorcommon.ContentTypeVideo:
-			if field.GetVideo() != nil && field.GetVideo().GetURI() == "" && field.GetImage().GetStorageProvider() != dataset.StorageProvider_ExternalUrl {
+			if field.GetVideo() != nil && field.GetVideo().GetURI() == "" && field.GetVideo().GetStorageProvider() != dataset.StorageProvider_ExternalUrl {
 				return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("video URI is empty"))
 			}
 		default:
