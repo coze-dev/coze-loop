@@ -231,15 +231,54 @@ func TestTraceServiceImpl_GetTrajectories_SingleQuery_MaxBytesExceeded(t *testin
 	repoMock.EXPECT().GetTrajectoryConfig(gomock.Any(), gomock.Any()).Return(nil, nil)
 	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 	traceConfigMock.EXPECT().GetTrajectoryMetadataConfig(gomock.Any()).Return(&config.TrajectoryMetadataConfig{EnableSingleQuery: true})
-	traceConfigMock.EXPECT().GetBackfillConfig(gomock.Any()).Return(nil)
+	// maxBytes 设为 1，任何命中轨迹节点的 span 都会超限
+	traceConfigMock.EXPECT().GetBackfillConfig(gomock.Any()).Return(&config.BackfillConfig{TrajectoryMaxBytes: config.SpaceAwareParam[int64]{Default: 1}})
 
 	svc := &TraceServiceImpl{traceRepo: repoMock, buildHelper: builder, tenantProvider: tenantProviderMock, traceConfig: traceConfigMock}
 
-	repoMock.EXPECT().ListSpansRepeat(gomock.Any(), gomock.Any()).Return(nil, repo.ErrMaxBytesExceeded)
+	// all spans 不再在 CK 拉取阶段限制大小：ListSpansRepeat 的 MaxBytes 恒为 0
+	repoMock.EXPECT().ListSpansRepeat(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, p *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+		assert.Equal(t, int64(0), p.MaxBytes, "single query should not cap all spans size at CK stage")
+		return &repo.ListSpansResult{Spans: loop_span.SpanList{
+			{TraceID: "tid", SpanID: "root", ParentID: "0", WorkspaceID: "1", SpanName: "root", SpanType: "agent"},
+			{TraceID: "tid", SpanID: "m", ParentID: "root", WorkspaceID: "1", SpanName: "model", SpanType: "model"},
+		}}, nil
+	})
 
 	res, err := svc.GetTrajectories(context.Background(), 1, []string{"tid"}, time.Now().Add(-time.Minute).UnixMilli(), time.Now().UnixMilli(), loop_span.PlatformCozeLoop)
 	assert.NoError(t, err)
 	assert.Empty(t, res)
+}
+
+func TestTraceServiceImpl_GetTrajectories_SingleQuery_MaxBytesNotExceeded(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repoMock := repomocks.NewMockITraceRepo(ctrl)
+	filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+	builder := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{
+		entity.SceneGetTrace: {span_processor.NewCheckProcessorFactory()},
+	})
+	tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+	tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil)
+	repoMock.EXPECT().GetTrajectoryConfig(gomock.Any(), gomock.Any()).Return(nil, nil)
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetTrajectoryMetadataConfig(gomock.Any()).Return(&config.TrajectoryMetadataConfig{EnableSingleQuery: true})
+	// maxBytes 足够大，命中轨迹节点的 spans 不超限，正常返回
+	traceConfigMock.EXPECT().GetBackfillConfig(gomock.Any()).Return(&config.BackfillConfig{TrajectoryMaxBytes: config.SpaceAwareParam[int64]{Default: 1 << 30}})
+
+	svc := &TraceServiceImpl{traceRepo: repoMock, buildHelper: builder, tenantProvider: tenantProviderMock, traceConfig: traceConfigMock}
+
+	repoMock.EXPECT().ListSpansRepeat(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, p *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+		assert.Equal(t, int64(0), p.MaxBytes, "single query should not cap all spans size at CK stage")
+		return &repo.ListSpansResult{Spans: loop_span.SpanList{
+			{TraceID: "tid", SpanID: "root", ParentID: "0", WorkspaceID: "1", SpanName: "root", SpanType: "agent"},
+			{TraceID: "tid", SpanID: "m", ParentID: "root", WorkspaceID: "1", SpanName: "model", SpanType: "model"},
+		}}, nil
+	})
+
+	res, err := svc.GetTrajectories(context.Background(), 1, []string{"tid"}, time.Now().Add(-time.Minute).UnixMilli(), time.Now().UnixMilli(), loop_span.PlatformCozeLoop)
+	assert.NoError(t, err)
+	assert.NotNil(t, res["tid"])
 }
 
 func TestTraceServiceImpl_GetTrajectories_SingleQuery_ListSpansError(t *testing.T) {
