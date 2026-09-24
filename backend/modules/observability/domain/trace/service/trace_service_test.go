@@ -499,6 +499,94 @@ func TestTraceServiceImpl_IngestTraces(t *testing.T) {
 	}
 }
 
+type emptyIngestTraceProcessor struct{}
+
+func (p *emptyIngestTraceProcessor) GetName() string {
+	return "emptyIngestTraceProcessor"
+}
+
+func (p *emptyIngestTraceProcessor) Transform(context.Context, loop_span.SpanList) (loop_span.SpanList, error) {
+	return loop_span.SpanList{}, nil
+}
+
+type emptyIngestTraceProcessorFactory struct{}
+
+func (f *emptyIngestTraceProcessorFactory) CreateProcessor(context.Context, span_processor.Settings) (span_processor.Processor, error) {
+	return &emptyIngestTraceProcessor{}, nil
+}
+
+func TestTraceServiceImpl_IngestTracesSkipsEmptyProcessedSpans(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	producer := mqmocks.NewMockITraceProducer(ctrl)
+	filterFactory := filtermocks.NewMockPlatformFilterFactory(ctrl)
+	buildHelper := NewTraceFilterProcessorBuilder(filterFactory, map[entity.ProcessorScene][]span_processor.Factory{
+		entity.SceneIngestTrace: {&emptyIngestTraceProcessorFactory{}},
+	})
+	serviceImpl, err := NewTraceServiceImpl(
+		nil, nil, producer, nil, nil, buildHelper, nil, nil, nil, nil,
+	)
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+
+	err = serviceImpl.IngestTraces(context.Background(), &IngestTracesReq{
+		Tenant: "test",
+		Spans: loop_span.SpanList{{
+			TraceID:     "trace",
+			SpanID:      "span",
+			WorkspaceID: "workspace",
+		}},
+	})
+	assert.NoError(t, err)
+}
+
+type ingestTraceObserverSpy struct {
+	tenant string
+	spans  loop_span.SpanList
+}
+
+func (s *ingestTraceObserverSpy) BeforeIngest(_ context.Context, tenant string, spans loop_span.SpanList) {
+	s.tenant = tenant
+	s.spans = spans
+}
+
+func TestTraceServiceImpl_IngestTracesObserverReceivesRawSpans(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	producer := mqmocks.NewMockITraceProducer(ctrl)
+	producer.EXPECT().IngestSpans(gomock.Any(), gomock.Any()).Return(nil)
+	filterFactory := filtermocks.NewMockPlatformFilterFactory(ctrl)
+	buildHelper := NewTraceFilterProcessorBuilder(filterFactory, map[entity.ProcessorScene][]span_processor.Factory{
+		entity.SceneIngestTrace: {},
+	})
+	observer := &ingestTraceObserverSpy{}
+	serviceImpl, err := NewTraceServiceImpl(
+		nil, nil, producer, nil, nil, buildHelper, nil, nil, nil, nil, observer,
+	)
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+
+	rawSpans := loop_span.SpanList{{
+		SpanName: "creation_agent_async",
+		Input:    "raw input",
+		Output:   "raw output",
+	}}
+	err = serviceImpl.IngestTraces(context.Background(), &IngestTracesReq{
+		Tenant: "test",
+		Spans:  rawSpans,
+	})
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+	assert.Equal(t, "test", observer.tenant)
+	assert.Same(t, rawSpans[0], observer.spans[0])
+	assert.Equal(t, "raw input", observer.spans[0].Input)
+	assert.Equal(t, "raw output", observer.spans[0].Output)
+}
+
 func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 	type fields struct {
 		traceRepo          repo.ITraceRepo
