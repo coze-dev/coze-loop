@@ -303,12 +303,48 @@ func withRetryYieldExt(ext map[string]string, enabled bool) map[string]string {
 	return ext
 }
 
-func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error {
-	if err := NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session); err != nil {
-		return err
+func (e *ExptMangerImpl) prepareRun(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session) (expt *entity.Experiment, err error) {
+	defer func() {
+		if err != nil {
+			e.cleanupUnscheduledRun(ctx, exptID, runID, err)
+		}
+	}()
+
+	// Read dependencies before reserving quota so read failures cannot leak a quota slot.
+	expt, err = e.GetDetail(ctx, exptID, spaceID, session)
+	if err != nil {
+		return nil, err
+	}
+	err = NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session)
+	return expt, err
+}
+
+func (e *ExptMangerImpl) cleanupUnscheduledRun(ctx context.Context, exptID, runID int64, cause error) {
+	if runID <= 0 {
+		logs.CtxError(ctx, "[ExptEval][RunLock] invalid cleanup run [expt_id=%v run_id=%v]", exptID, runID)
+		return
 	}
 
-	expt, err := e.GetDetail(ctx, exptID, spaceID, session)
+	// Only the owned run before MQ publication may be unlocked here.
+	// Attempt this bare DEL synchronously once; a delayed retry could delete a new run's lock.
+	ctx = context.WithoutCancel(ctx)
+	stateCtx, cancelState := context.WithTimeout(ctx, exptRunLogPersistTimeout)
+	stateErr := e.runLogRepo.Update(stateCtx, exptID, runID, map[string]any{
+		"status": int64(entity.ExptStatus_Failed), "status_message": []byte(cause.Error()),
+	})
+	cancelState()
+
+	unlockCtx, cancelUnlock := context.WithTimeout(ctx, 2*time.Second)
+	released, unlockErr := e.mutex.UnlockForce(unlockCtx, e.makeExptMutexLockKey(exptID))
+	cancelUnlock()
+	if stateErr != nil || unlockErr != nil {
+		logs.CtxError(ctx, "[ExptEval][RunLock] cleanup failed [expt_id=%v run_id=%v state_err=%v unlock_err=%v]", exptID, runID, stateErr, unlockErr)
+	}
+	logs.CtxInfo(ctx, "[ExptEval][RunLock] cleanup result [expt_id=%v run_id=%v released=%v]", exptID, runID, released)
+}
+
+func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error {
+	expt, err := e.prepareRun(ctx, exptID, runID, spaceID, session)
 	if err != nil {
 		return err
 	}
@@ -414,11 +450,7 @@ func buildExptNotifyParam(expt *entity.Experiment, toStatus entity.ExptStatus) (
 }
 
 func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, itemIDs []int64, session *entity.Session, ext map[string]string) error {
-	if err := NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session); err != nil {
-		return err
-	}
-
-	expt, err := e.GetDetail(ctx, exptID, spaceID, session)
+	expt, err := e.prepareRun(ctx, exptID, runID, spaceID, session)
 	if err != nil {
 		return err
 	}
@@ -1679,15 +1711,22 @@ func (e *ExptMangerImpl) unlockCompletingRun(ctx context.Context, exptID, exptRu
 	return err
 }
 
-func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) error {
+func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) (err error) {
 	duration := time.Duration(e.configer.GetExptExecConf(ctx, spaceID).GetZombieIntervalSecond()) * time.Second
 	locked, err := e.mutex.LockBackoff(ctx, e.makeExptMutexLockKey(exptID), duration, time.Second)
 	if err != nil {
 		return err
 	}
 	if !locked {
+		logs.CtxInfo(ctx, "[ExptEval][RunLock] lock occupied [expt_id=%v run_id=%v]", exptID, exptRunID)
 		return errorx.NewByCode(errno.ExperimentRunningExistedCode)
 	}
+	ownedRunID := exptRunID
+	defer func(runID int64) {
+		if err != nil {
+			e.cleanupUnscheduledRun(ctx, exptID, runID, err)
+		}
+	}(ownedRunID)
 
 	defer e.mtr.EmitExptExecRun(spaceID, int64(mode))
 
@@ -1733,6 +1772,14 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 	if err != nil {
 		return 0, false, err
 	}
+	if locked {
+		ownedRunID := runID
+		defer func(runID int64) {
+			if err != nil {
+				e.cleanupUnscheduledRun(ctx, exptID, runID, err)
+			}
+		}(ownedRunID)
+	}
 
 	var rl *entity.ExptRunLog
 	retried = !locked
@@ -1740,9 +1787,10 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 	if retried {
 		runID, err = strconv.ParseInt(existedRunID, 10, 64)
 		if err != nil {
-			logs.CtxError(ctx, "parsing expt run lock value to runid failed, raw: %v", existedRunID)
+			logs.CtxInfo(ctx, "[ExptEval][RunLock] lock occupied [expt_id=%v holder=%s]", exptID, existedRunID)
 			return 0, false, errorx.NewByCode(errno.ExperimentRunningExistedCode)
 		}
+		logs.CtxDebug(ctx, "[ExptEval][RunLock] joining existing run [expt_id=%v run_id=%v]", exptID, runID)
 
 		completing, err := e.ExistCompletingRunLock(ctx, exptID, runID, spaceID)
 		if err != nil {
