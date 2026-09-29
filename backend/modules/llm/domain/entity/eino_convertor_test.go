@@ -92,11 +92,48 @@ func TestFromDOToolCalls(t *testing.T) {
 				},
 			},
 		},
+		{
+			// Regression test: FromDOToolCall previously dropped Extra when
+			// converting a stored ToolCall back into an eino schema.ToolCall
+			// for an outbound model request, silently losing any
+			// provider-specific metadata attached to a prior tool call
+			// (e.g. on a follow-up turn in a multi-turn tool-calling
+			// conversation), even though ToDOToolCall correctly preserves it
+			// in the reverse direction.
+			name: "test from do tool calls preserves extra",
+			args: args{
+				ts: []*ToolCall{
+					{
+						Index: ptr.Of(int64(0)),
+						ID:    "id2",
+						Type:  "function",
+						Function: &FunctionCall{
+							Name:      "name2",
+							Arguments: "args2",
+						},
+						Extra: map[string]any{"signature": "abc123"},
+					},
+				},
+			},
+			want: []schema.ToolCall{
+				{
+					Index: ptr.Of(0),
+					ID:    "id2",
+					Type:  "function",
+					Function: schema.FunctionCall{
+						Name:      "name2",
+						Arguments: "args2",
+					},
+					Extra: map[string]any{"signature": "abc123"},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, len(tt.want), len(FromDOToolCalls(tt.args.ts)))
 			assert.Equal(t, tt.want[0].Function.Arguments, FromDOToolCalls(tt.args.ts)[0].Function.Arguments)
+			assert.Equal(t, tt.want[0].Extra, FromDOToolCalls(tt.args.ts)[0].Extra)
 		})
 	}
 }
