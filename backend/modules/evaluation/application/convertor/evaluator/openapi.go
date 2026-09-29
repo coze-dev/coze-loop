@@ -312,6 +312,27 @@ func OpenAPIEvaluatorOutputDataDO2DTO(do *entity.EvaluatorOutputData) *openapiEv
 		TimeConsumingMs:   gptr.Of(do.TimeConsumingMS),
 		Stdout:            gptr.Of(do.Stdout),
 		ExtraOutput:       OpenAPIEvaluatorExtraOutputContentDO2DTO(do.ExtraOutput),
+		EvidenceArchive:   OpenAPIEvaluatorEvidenceArchiveDO2DTO(do.EvidenceArchive),
+	}
+	return dto
+}
+
+func OpenAPIEvaluatorEvidenceArchiveDO2DTO(do *entity.EvaluatorEvidenceArchive) *openapiEvaluator.EvaluatorEvidenceArchive {
+	if do == nil {
+		return nil
+	}
+	dto := &openapiEvaluator.EvaluatorEvidenceArchive{
+		SchemaVersion:  gptr.Of(do.SchemaVersion),
+		ObjectKey:      gptr.Of(do.ObjectKey),
+		Status:         gptr.Of(do.Status),
+		Trigger:        gptr.Of(do.Trigger),
+		SizeBytes:      gptr.Of(do.SizeBytes),
+		Sha256:         gptr.Of(do.SHA256),
+		TruncatedFiles: gptr.Of(do.TruncatedFiles),
+		Error:          gptr.Of(do.Error),
+	}
+	if do.FornaxEvaluatorLogURL != "" {
+		dto.FornaxEvaluatorLogURL = gptr.Of(do.FornaxEvaluatorLogURL)
 	}
 	return dto
 }

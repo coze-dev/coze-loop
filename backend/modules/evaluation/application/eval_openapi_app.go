@@ -2251,6 +2251,9 @@ func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, r
 	if err := e.fillExtraOutputURLs(ctx, result.ItemResults); err != nil {
 		logs.CtxError(ctx, "[ListExperimentResultOApi] fillExtraOutputURLs fail, err: %v", err)
 	}
+	if err := fillItemEvidenceArchiveURLs(ctx, e.fileProvider, result.ItemResults, req.GetWorkspaceID()); err != nil {
+		logs.CtxError(ctx, "[ListExperimentResultOApi] fillEvidenceArchiveURLs fail, err: %v", err)
+	}
 
 	res := &openapi.ListExperimentResultOApiResponse{
 		Data: &openapi.ListExperimentResultOpenAPIData{
@@ -3315,6 +3318,9 @@ func (e *EvalOpenAPIApplication) BatchGetEvaluatorRecordsOApi(ctx context.Contex
 	if err = e.checkCrossSpaceRecordRead(ctx, req.GetWorkspaceID(), dos); err != nil {
 		return nil, err
 	}
+	if err := fillEvaluatorEvidenceArchiveURLs(ctx, e.fileProvider, dos, gptr.Of(req.GetWorkspaceID())); err != nil {
+		logs.CtxError(ctx, "[BatchGetEvaluatorRecordsOApi] fillEvaluatorEvidenceArchiveURLs fail, err: %v", err)
+	}
 
 	return &openapi.BatchGetEvaluatorRecordsOApiResponse{
 		Data: &openapi.BatchGetEvaluatorRecordsOpenAPIData{
@@ -4257,6 +4263,23 @@ func (e *EvalOpenAPIApplication) fillExtraOutputURLs(ctx context.Context, itemRe
 		}
 	}
 	return nil
+}
+
+func fillItemEvidenceArchiveURLs(ctx context.Context, fileProvider rpc.IFileProvider, itemResults []*entity.ItemResult, callerSpaceID int64) error {
+	records := make([]*entity.EvaluatorRecord, 0)
+	for _, item := range itemResults {
+		for _, turn := range item.TurnResults {
+			for _, exptResult := range turn.ExperimentResults {
+				if exptResult.Payload == nil || exptResult.Payload.EvaluatorOutput == nil {
+					continue
+				}
+				for _, record := range exptResult.Payload.EvaluatorOutput.EvaluatorRecords {
+					records = append(records, record)
+				}
+			}
+		}
+	}
+	return fillEvaluatorEvidenceArchiveURLs(ctx, fileProvider, records, &callerSpaceID)
 }
 
 func evaluatorCallbackStatusString(status entity.EvaluatorRunStatus) string {
