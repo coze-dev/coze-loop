@@ -1208,7 +1208,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
 					Spans: []*loop_span.Span{testSpan},
 				}, nil)
-				confMock.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(7 * 24 * 3600 * 1000))
+				confMock.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(7))
 				datasetProviderMock.EXPECT().ValidateDatasetItems(gomock.Any(), gomock.Any(), gomock.Any(), (*bool)(nil)).Return(
 					[]*entity.DatasetItem{}, []entity.ItemErrorGroup{}, nil)
 
@@ -2085,7 +2085,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				}, nil)
 
 				// Trajectory logic mocks
-				confMock.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(7 * 24 * 3600 * 1000))
+				confMock.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(7))
 				traceServiceStub.getTrajectoriesFunc = func(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error) {
 					return map[string]*loop_span.Trajectory{
 						"trace-1": {
@@ -2333,6 +2333,38 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 				assert.NoError(t, err)
 				assert.Equal(t, tt.want, got)
 			}
+		})
+	}
+}
+
+func TestTraceExportServiceImpl_trajectoryStartTime(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		days int64
+	}{
+		{name: "default 7 days", days: 7},
+		{name: "inner_cozeloop 90 days", days: 90},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			confMock := confmocks.NewMockITraceConfig(ctrl)
+			confMock.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(tt.days)
+
+			r := &TraceExportServiceImpl{traceConfig: confMock}
+			got := r.trajectoryStartTime(context.Background(), loop_span.PlatformCozeLoop)
+
+			now := time.Now()
+			startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+			assert.Equal(t, startOfToday.Add(-time.Duration(tt.days*24)*time.Hour).UnixMilli(), got)
+			// 回归保护：配置返回的是天数，不能直接当毫秒时间戳用，否则 CK 时间条件退化成「1970 至今」。
+			assert.NotEqual(t, tt.days, got)
+			assert.Greater(t, got, time.Date(2020, 1, 1, 0, 0, 0, 0, time.Local).UnixMilli())
 		})
 	}
 }

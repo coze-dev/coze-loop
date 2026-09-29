@@ -155,7 +155,7 @@ func (r *TraceExportServiceImpl) ExportTracesToDataset(ctx context.Context, req 
 		})
 
 		// 前端传入的是当前span时间，不能直接使用。改为和ListTrajectory逻辑一致。
-		finalStartTime := r.traceConfig.GetTraceDataMaxDurationDay(ctx, lo.ToPtr(string(req.PlatformType)))
+		finalStartTime := r.trajectoryStartTime(ctx, req.PlatformType)
 		trajectoryMap, err = r.traceService.GetTrajectories(ctx, req.WorkspaceID, traceIDs, finalStartTime,
 			time.Now().UnixMilli(), req.PlatformType)
 		if err != nil {
@@ -220,7 +220,7 @@ func (r *TraceExportServiceImpl) PreviewExportTracesToDataset(ctx context.Contex
 		})
 
 		// 前端传入的是当前span时间，不能直接使用。改为和ListTrajectory逻辑一致。
-		finalStartTime := r.traceConfig.GetTraceDataMaxDurationDay(ctx, lo.ToPtr(string(req.PlatformType)))
+		finalStartTime := r.trajectoryStartTime(ctx, req.PlatformType)
 		trajectoryMap, err = r.traceService.GetTrajectories(ctx, req.WorkspaceID, traceIDs, finalStartTime,
 			time.Now().UnixMilli(), req.PlatformType)
 		if err != nil {
@@ -552,6 +552,17 @@ func (r *TraceExportServiceImpl) hasTrajectory(fieldMappings []entity.FieldMappi
 		}
 	}
 	return false
+}
+
+// trajectoryStartTime 返回拉取 trajectory 的时间下界（ms）。
+// GetTraceDataMaxDurationDay 返回的是保留天数，必须换算成毫秒时间戳后再传给 GetTrajectories：
+// 直接把天数当时间戳会让 CK 的时间/分区条件退化成「1970 至今」，丢掉分区裁剪后整表扫直至超时。
+// 口径与 application 层 DateValidator 一致：今天零点往前推 N 天。
+func (r *TraceExportServiceImpl) trajectoryStartTime(ctx context.Context, platformType loop_span.PlatformType) int64 {
+	days := r.traceConfig.GetTraceDataMaxDurationDay(ctx, lo.ToPtr(string(platformType)))
+	now := time.Now()
+	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+	return startOfToday.Add(-time.Duration(days*24) * time.Hour).UnixMilli()
 }
 
 func (r *TraceExportServiceImpl) buildItem(ctx context.Context, span *loop_span.Span, i int, fieldMappings []entity.FieldMapping, workspaceID int64, dataset *entity.Dataset, trajectory *loop_span.Trajectory) *entity.DatasetItem {
