@@ -151,6 +151,24 @@ func TestAnyValue_UnmarshalJSON(t *testing.T) {
 			wantErr:  false,
 		},
 		{
+			name:     "int value - string encoded (OTLP/JSON spec)",
+			jsonData: `{"intValue": "123"}`,
+			expected: &AnyValue{Value: &AnyValue_IntValue{IntValue: 123}},
+			wantErr:  false,
+		},
+		{
+			name:     "int value - string encoded negative",
+			jsonData: `{"intValue": "-42"}`,
+			expected: &AnyValue{Value: &AnyValue_IntValue{IntValue: -42}},
+			wantErr:  false,
+		},
+		{
+			name:     "int value - string encoded non-numeric",
+			jsonData: `{"intValue": "not-a-number"}`,
+			expected: nil,
+			wantErr:  true,
+		},
+		{
 			name:     "double value",
 			jsonData: `{"doubleValue": 123.45}`,
 			expected: &AnyValue{Value: &AnyValue_DoubleValue{DoubleValue: 123.45}},
