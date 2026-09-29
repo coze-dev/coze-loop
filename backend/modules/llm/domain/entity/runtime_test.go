@@ -60,6 +60,19 @@ func TestMessage_MultiModal(t *testing.T) {
 		assert.True(t, m.HasMultiModalContent())
 	})
 
+	t.Run("has_video_content", func(t *testing.T) {
+		assert.False(t, (*Message)(nil).HasVideoContent())
+		assert.False(t, (&Message{}).HasVideoContent())
+
+		m := &Message{MultiModalContent: []*ChatMessagePart{
+			{Type: ChatMessagePartTypeVideoURL},
+		}}
+		assert.False(t, m.HasVideoContent())
+
+		m.MultiModalContent[0].VideoURL = &ChatMessageVideoURL{URL: "https://example.com/video.mp4"}
+		assert.True(t, m.HasVideoContent())
+	})
+
 	t.Run("get_image_count_and_max_size", func(t *testing.T) {
 		m := &Message{
 			MultiModalContent: []*ChatMessagePart{
