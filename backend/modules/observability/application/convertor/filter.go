@@ -43,6 +43,9 @@ func FilterFieldsDTO2DO(f *filter.FilterFields) *loop_span.FilterFields {
 		if field.IsCustom != nil {
 			fField.IsCustom = *field.IsCustom
 		}
+		if field.IsSystem != nil {
+			fField.IsSystem = *field.IsSystem
+		}
 		if field.ExtraInfo != nil {
 			fField.ExtraInfo = field.ExtraInfo
 		}
@@ -84,6 +87,12 @@ func FilterFieldsDO2DTO(f *loop_span.FilterFields) *filter.FilterFields {
 		}
 		if field.SubFilter != nil {
 			fField.SubFilter = FilterFieldsDO2DTO(field.SubFilter)
+		}
+		if field.IsCustom {
+			fField.IsCustom = ptr.Of(field.IsCustom)
+		}
+		if field.IsSystem {
+			fField.IsSystem = ptr.Of(field.IsSystem)
 		}
 		if field.ExtraInfo != nil {
 			fField.ExtraInfo = field.ExtraInfo
