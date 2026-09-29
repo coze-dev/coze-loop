@@ -153,6 +153,8 @@ func TestExptMangerImpl_Run(t *testing.T) {
 					EXPECT().
 					CreateOrUpdate(ctx, int64(789), gomock.Any(), session).
 					Return(errors.New("quota exceeded"))
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), int64(123), int64(456), gomock.Any()).Return(nil)
+				mgr.mutex.(*lockMocks.MockILocker).EXPECT().UnlockForce(gomock.Any(), mgr.makeExptMutexLockKey(123)).Return(true, nil)
 			},
 			wantErr: true,
 		},
@@ -622,6 +624,8 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 					EXPECT().
 					Create(ctx, gomock.Any()).
 					Return(errors.New("create failed"))
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), int64(123), int64(456), gomock.Any()).Return(nil)
+				mgr.mutex.(*lockMocks.MockILocker).EXPECT().UnlockForce(gomock.Any(), mgr.makeExptMutexLockKey(123)).Return(true, nil)
 			},
 			wantErr: true,
 		},
@@ -802,6 +806,8 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					Return(true, "1006", nil)
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().Save(ctx, gomock.Any()).Return(errors.New("save failed"))
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), exptID, int64(1006), gomock.Any()).Return(nil)
+				mgr.mutex.(*lockMocks.MockILocker).EXPECT().UnlockForce(gomock.Any(), mgr.makeExptMutexLockKey(exptID)).Return(true, nil)
 			},
 			wantErr: true,
 		},
@@ -898,6 +904,8 @@ func TestExptMangerImpl_RetryItems(t *testing.T) {
 			setup: func() {
 				mgr.quotaRepo.(*repoMocks.MockQuotaRepo).
 					EXPECT().CreateOrUpdate(ctx, spaceID, gomock.Any(), session).Return(errors.New("quota exceeded"))
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), exptID, runID, gomock.Any()).Return(nil)
+				mgr.mutex.(*lockMocks.MockILocker).EXPECT().UnlockForce(gomock.Any(), mgr.makeExptMutexLockKey(exptID)).Return(true, nil)
 				mgr.configer.(*componentMocks.MockIConfiger).
 					EXPECT().GetExptExecConf(ctx, spaceID).AnyTimes().
 					Return(&entity.ExptExecConf{SpaceExptConcurLimit: 10})
