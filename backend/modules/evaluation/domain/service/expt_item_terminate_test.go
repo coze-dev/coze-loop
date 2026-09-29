@@ -517,16 +517,16 @@ func TestRecordEvalItemRunLogs_RejectsNonTerminalState(t *testing.T) {
 	assert.ErrorContains(t, err, "invalid item run state")
 }
 
-// TestExptMangerImpl_CompleteExpt_TerminatedNotFailed 终态推导双向覆盖（tasks 6.6，design D5）：
-//   - 有 terminated 行、无 fail 行 → Success（不能因为用户主动终止就把实验判失败）
-//   - 有 fail 行 → 仍 Failed（不误伤既有失败判定）
+// TestExptMangerImpl_CompleteExpt_TerminatedNotFailed 终态推导覆盖：
+// 只要实验仍存在 terminated 行（用户终止后重试个别 item 的收尾场景），
+// 实验一律收敛为 Terminated，terminated 优先级最高、盖过 fail/success 推导。
 func TestExptMangerImpl_CompleteExpt_TerminatedNotFailed(t *testing.T) {
 	ctx := context.Background()
 	session := &entity.Session{UserID: "test_user"}
 	const exptID, spaceID = int64(123), int64(789)
 	runID := int64(456)
 
-	t.Run("terminated_without_fail_is_success", func(t *testing.T) {
+	t.Run("terminated_without_fail_is_terminated", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		mgr := newTestExptManager(ctrl)
@@ -552,11 +552,11 @@ func TestExptMangerImpl_CompleteExpt_TerminatedNotFailed(t *testing.T) {
 
 		require.NoError(t, mgr.CompleteExpt(ctx, exptID, &runID, spaceID, session))
 		require.NotNil(t, captured)
-		assert.Equal(t, entity.ExptStatus_Success, captured.Status,
-			"D5: terminated 是用户主动放弃，不参与 Failed 推导")
+		assert.Equal(t, entity.ExptStatus_Terminated, captured.Status,
+			"仍有 terminated 行时实验一律收敛为 Terminated")
 	})
 
-	t.Run("fail_still_failed", func(t *testing.T) {
+	t.Run("terminated_with_fail_is_terminated", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		mgr := newTestExptManager(ctrl)
@@ -582,7 +582,8 @@ func TestExptMangerImpl_CompleteExpt_TerminatedNotFailed(t *testing.T) {
 
 		require.NoError(t, mgr.CompleteExpt(ctx, exptID, &runID, spaceID, session))
 		require.NotNil(t, captured)
-		assert.Equal(t, entity.ExptStatus_Failed, captured.Status, "有 fail 行仍必须判 Failed")
+		assert.Equal(t, entity.ExptStatus_Terminated, captured.Status,
+			"terminated 优先级最高，即便同时有 fail 行也判 Terminated")
 	})
 }
 
