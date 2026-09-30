@@ -190,6 +190,10 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	// 校验合法集必须与 entity.IsValidRunMode / isValidExptRunModeDTO 同步: IDL 新增
 	// ExptRunMode / SuaMode 枚举值时, 三处一起加, 否则新跑法会在入口被误拒。
 	if rmc := req.GetRunModeConfig(); rmc != nil {
+		if !entity.IsValidSuaAgentType(rmc.GetSuaAgentType()) {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
+				"invalid sua_agent_type %q (supported: claude_code, codex)", rmc.GetSuaAgentType())))
+		}
 		if rmc.IsSetRunMode() && !isValidExptRunModeDTO(rmc) {
 			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
 				"invalid run_mode %d (supported: %d=single_turn, %d=fixed_script_multi_turn, %d=sua_multi_turn, %d=goal)",

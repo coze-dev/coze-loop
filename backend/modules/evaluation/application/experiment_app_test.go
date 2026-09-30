@@ -797,9 +797,10 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 		{
 			name: "successfully submit experiment",
 			req: &exptpb.SubmitExperimentRequest{
-				WorkspaceID: validWorkspaceID,
-				Name:        gptr.Of("test_experiment"),
-				Desc:        gptr.Of("test description"),
+				WorkspaceID:   validWorkspaceID,
+				RunModeConfig: &expt.RunModeConfig{SuaAgentType: gptr.Of("codex")},
+				Name:          gptr.Of("test_experiment"),
+				Desc:          gptr.Of("test description"),
 				CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
 					EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_CozeBot),
 				},
@@ -821,6 +822,9 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 						AppID:  0,
 					}).
 					DoAndReturn(func(ctx context.Context, param *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error) {
+						if assert.NotNil(t, param.ExptConf.RunModeConfig) {
+							assert.Equal(t, "codex", param.ExptConf.RunModeConfig.SuaAgentType)
+						}
 						if param.WorkspaceID != validWorkspaceID ||
 							param.Name != "test_experiment" {
 							t.Errorf("unexpected param: %+v", param)

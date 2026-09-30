@@ -363,11 +363,28 @@ func TestCreateExperimentRunModeConfigEntryGate(t *testing.T) {
 		assert.Contains(t, err.Error(), "invalid sua_mode")
 	})
 
+	for _, value := range []string{"bogus", "claude-code", " codex"} {
+		t.Run("invalid sua_agent_type "+value, func(t *testing.T) {
+			app := &experimentApplication{}
+			_, err := app.CreateExperiment(context.Background(),
+				newReq(&domain_expt.RunModeConfig{SuaAgentType: gptr.Of(value)}))
+			assert.Error(t, err)
+			statusErr, ok := errorx.FromStatusError(err)
+			if assert.True(t, ok) {
+				assert.Equal(t, int32(errno.CommonInvalidParamCode), statusErr.Code())
+			}
+			assert.Contains(t, err.Error(), "invalid sua_agent_type")
+		})
+	}
+
 	// 合法值不能被这道闸拦住。它们会因为缺 evaluator/target 等在**更靠后**的地方失败,
 	// 所以这里不断言 NoError, 只断言"失败原因不是 invalid run_mode/sua_mode"
 	// —— 否则一个过度收紧的 gate (例如把 Fixed 或某个新枚举值也拒了) 就会溜过去。
 	t.Run("valid enums must pass this gate", func(t *testing.T) {
 		valid := []*domain_expt.RunModeConfig{
+			{SuaAgentType: gptr.Of("")},
+			{SuaAgentType: gptr.Of("claude_code")},
+			{SuaAgentType: gptr.Of("codex")},
 			{RunMode: domain_expt.ExptRunModePtr(domain_expt.ExptRunMode_SingleTurn)},
 			{RunMode: domain_expt.ExptRunModePtr(domain_expt.ExptRunMode_FixedScriptMultiTurn)},
 			{RunMode: domain_expt.ExptRunModePtr(domain_expt.ExptRunMode_SuaMultiTurn)},
@@ -415,5 +432,6 @@ func assertPassesEntryGate(t *testing.T, req *exptpb.CreateExperimentRequest) {
 	if err != nil {
 		assert.NotContains(t, err.Error(), "invalid run_mode", "合法值被入口误拒: %+v", req.GetRunModeConfig())
 		assert.NotContains(t, err.Error(), "invalid sua_mode", "合法值被入口误拒: %+v", req.GetRunModeConfig())
+		assert.NotContains(t, err.Error(), "invalid sua_agent_type", "合法值被入口误拒: %+v", req.GetRunModeConfig())
 	}
 }

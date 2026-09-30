@@ -84,10 +84,11 @@ func TestCallTarget_PassesRunConfAndRunModeConfigToExt(t *testing.T) {
 		},
 	}}
 	runModeConfig := &entity.RunModeConfig{
-		RunMode:    entity.RunModeFixedScriptMultiTurn,
-		SuaMode:    entity.SuaModeLoop,
-		MaxTurns:   16,
-		SuaPersona: "资深工程师",
+		RunMode:      entity.RunModeFixedScriptMultiTurn,
+		SuaMode:      entity.SuaModeLoop,
+		MaxTurns:     16,
+		SuaPersona:   "资深工程师",
+		SuaAgentType: "codex",
 	}
 
 	mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), false)
@@ -116,10 +117,12 @@ func TestCallTarget_PassesRunConfAndRunModeConfigToExt(t *testing.T) {
 			assert.Equal(t, entity.SuaModeLoop, gotExpt.SuaMode)
 			assert.Equal(t, 16, gotExpt.MaxTurns)
 			assert.Equal(t, "资深工程师", gotExpt.SuaPersona)
+			assert.Equal(t, "codex", gotExpt.SuaAgentType)
 
 			// 两个 key 不能写串: 题目级那份不该出现实验级独有的字段, 反之亦然。
 			assert.NotEqual(t, rawItem, rawExpt, "两份配置写成了同一个内容 —— 说明序列化对象取错了")
 			assert.NotContains(t, rawItem, `"run_mode"`, "题目级 ext 里不该有 run_mode (那是实验级字段)")
+			assert.NotContains(t, rawItem, `"sua_agent_type"`)
 			return &entity.EvalTargetRecord{ID: 1}, nil
 		})
 

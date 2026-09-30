@@ -154,6 +154,7 @@ func TestRunModeConfig_WireTagsAreTheCrossRepoContract(t *testing.T) {
 		SuaMode:                  SuaModeLoop,
 		SuaModelID:               123,
 		SuaModelName:             "m",
+		SuaAgentType:             "codex",
 		SuaGoal:                  "g",
 		SuaPersona:               "p",
 		SuaBehavioralConstraints: "c",
@@ -162,7 +163,7 @@ func TestRunModeConfig_WireTagsAreTheCrossRepoContract(t *testing.T) {
 	}
 	assert.ElementsMatch(t,
 		[]string{
-			"run_mode", "max_run_minutes", "sua_mode", "sua_model_id", "sua_model_name",
+			"run_mode", "max_run_minutes", "sua_mode", "sua_model_id", "sua_model_name", "sua_agent_type",
 			"sua_goal", "sua_persona", "sua_behavioral_constraints", "sua_pe_template", "max_turns",
 		},
 		wireKeys(t, cfg),

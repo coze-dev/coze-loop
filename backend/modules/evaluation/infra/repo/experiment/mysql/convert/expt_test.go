@@ -57,10 +57,12 @@ func TestExptConverter_DO2PO_FullFields(t *testing.T) {
 
 	notif := &entity.ExptNotificationConf{}
 	exp := &entity.Experiment{
-		ID:                100,
-		SpaceID:           1,
-		MaxAliveTime:      3600,
-		EvalConf:          &entity.EvaluationConfiguration{},
+		ID:           100,
+		SpaceID:      1,
+		MaxAliveTime: 3600,
+		EvalConf: &entity.EvaluationConfiguration{
+			RunModeConfig: &entity.RunModeConfig{SuaAgentType: "codex"},
+		},
 		TrialRunItemCount: 5,
 		NotificationConf:  notif,
 		ExptTemplateMeta:  &entity.ExptTemplateMeta{ID: 42},
@@ -80,12 +82,16 @@ func TestExptConverter_DO2PO_FullFields(t *testing.T) {
 	if assert.NotNil(t, po.EvalConf) {
 		var got entity.EvaluationConfiguration
 		assert.NoError(t, json.Unmarshal(*po.EvalConf, &got))
+		assert.Equal(t, "codex", got.RunModeConfig.SuaAgentType)
 	}
 	if assert.NotNil(t, po.NotificationConf) {
 		var got entity.ExptNotificationConf
 		assert.NoError(t, json.Unmarshal(*po.NotificationConf, &got))
 	}
 	assert.Equal(t, int64(42), po.ExptTemplateID)
+	restored, err := NewExptConverter().PO2DO(po, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "codex", restored.EvalConf.RunModeConfig.SuaAgentType)
 }
 
 func TestExptConverter_PO2DO_FillsGroupKeyFromID(t *testing.T) {

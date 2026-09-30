@@ -4377,6 +4377,8 @@ type RunModeConfig struct {
 	// 与 skills_mode 同容器同链路; 结构对齐 runtime testcase.Skill, 由 runtime 按
 	// skills_mode 与题目级 dataset_item.skills 合并安装。
 	Skills []*AgentSkillDeclare `thrift:"skills,12,optional" frugal:"12,optional,list<AgentSkillDeclare>" json:"skills" form:"skills" query:"skills"`
+	// SUA 回复生成 harness: claude_code / codex; 空值沿用默认 claude_code。
+	SuaAgentType *string `thrift:"sua_agent_type,13,optional" frugal:"13,optional,string" json:"sua_agent_type" form:"sua_agent_type" query:"sua_agent_type"`
 }
 
 func NewRunModeConfig() *RunModeConfig {
@@ -4517,6 +4519,18 @@ func (p *RunModeConfig) GetSkills() (v []*AgentSkillDeclare) {
 	}
 	return p.Skills
 }
+
+var RunModeConfig_SuaAgentType_DEFAULT string
+
+func (p *RunModeConfig) GetSuaAgentType() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuaAgentType() {
+		return RunModeConfig_SuaAgentType_DEFAULT
+	}
+	return *p.SuaAgentType
+}
 func (p *RunModeConfig) SetRunMode(val *ExptRunMode) {
 	p.RunMode = val
 }
@@ -4550,6 +4564,9 @@ func (p *RunModeConfig) SetSkillsMode(val *string) {
 func (p *RunModeConfig) SetSkills(val []*AgentSkillDeclare) {
 	p.Skills = val
 }
+func (p *RunModeConfig) SetSuaAgentType(val *string) {
+	p.SuaAgentType = val
+}
 
 var fieldIDToName_RunModeConfig = map[int16]string{
 	1:  "run_mode",
@@ -4563,6 +4580,7 @@ var fieldIDToName_RunModeConfig = map[int16]string{
 	10: "max_turns",
 	11: "skills_mode",
 	12: "skills",
+	13: "sua_agent_type",
 }
 
 func (p *RunModeConfig) IsSetRunMode() bool {
@@ -4607,6 +4625,10 @@ func (p *RunModeConfig) IsSetSkillsMode() bool {
 
 func (p *RunModeConfig) IsSetSkills() bool {
 	return p.Skills != nil
+}
+
+func (p *RunModeConfig) IsSetSuaAgentType() bool {
+	return p.SuaAgentType != nil
 }
 
 func (p *RunModeConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -4710,6 +4732,14 @@ func (p *RunModeConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4877,6 +4907,17 @@ func (p *RunModeConfig) ReadField12(iprot thrift.TProtocol) error {
 	p.Skills = _field
 	return nil
 }
+func (p *RunModeConfig) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SuaAgentType = _field
+	return nil
+}
 
 func (p *RunModeConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4926,6 +4967,10 @@ func (p *RunModeConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 	}
@@ -5152,6 +5197,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
+func (p *RunModeConfig) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuaAgentType() {
+		if err = oprot.WriteFieldBegin("sua_agent_type", thrift.STRING, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SuaAgentType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
 
 func (p *RunModeConfig) String() string {
 	if p == nil {
@@ -5198,6 +5261,9 @@ func (p *RunModeConfig) DeepEqual(ano *RunModeConfig) bool {
 		return false
 	}
 	if !p.Field12DeepEqual(ano.Skills) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.SuaAgentType) {
 		return false
 	}
 	return true
@@ -5333,6 +5399,18 @@ func (p *RunModeConfig) Field12DeepEqual(src []*AgentSkillDeclare) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *RunModeConfig) Field13DeepEqual(src *string) bool {
+
+	if p.SuaAgentType == src {
+		return true
+	} else if p.SuaAgentType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SuaAgentType, *src) != 0 {
+		return false
 	}
 	return true
 }

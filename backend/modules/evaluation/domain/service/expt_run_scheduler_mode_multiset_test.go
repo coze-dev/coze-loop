@@ -146,6 +146,7 @@ func TestItemRunConfFromRunModeConfig(t *testing.T) {
 			SuaMode:                  entity.SuaModeLoop,
 			SuaModelID:               123,
 			SuaModelName:             "doubao",
+			SuaAgentType:             "codex",
 			SuaGoal:                  "goal",
 			SuaPersona:               "persona",
 			SuaBehavioralConstraints: "constraints",

@@ -1431,6 +1431,7 @@ func runModeConfigDTO2DO(dto *domain_expt.RunModeConfig) *entity.RunModeConfig {
 		// 配置 (TCC sandbox_sua_model_replace + orch_env), 不该是实验入参。entity 上该字段
 		// 保留, 只服务 TCC 劫持规则那条路 (规则自带 model_id → modelCredByID 解析密钥)。
 		SuaModelName:  dto.GetSuaModelName(),
+		SuaAgentType:  dto.GetSuaAgentType(),
 		MaxRunMinutes: int(dto.GetMaxRunMinutes()),
 		// SUA 行为四项 + max_turns: 两级配置的实验级一半, 原样透传 (题目级优先的合并在
 		// runtime 侧做, 平台不在这里裁决)。空值即"实验级没配", 由题目级或默认值接管。
@@ -1511,6 +1512,9 @@ func runModeConfigDO2DTO(do *entity.RunModeConfig) *domain_expt.RunModeConfig {
 	}
 	if do.SuaModelName != "" {
 		dto.SuaModelName = gptr.Of(do.SuaModelName)
+	}
+	if do.SuaAgentType != "" {
+		dto.SuaAgentType = gptr.Of(do.SuaAgentType)
 	}
 	if do.MaxRunMinutes != 0 {
 		dto.MaxRunMinutes = gptr.Of(int32(do.MaxRunMinutes))

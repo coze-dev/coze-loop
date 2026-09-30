@@ -584,6 +584,21 @@ const (
 	SuaModeFixed     SuaMode = "fixed"
 )
 
+const (
+	SuaAgentTypeClaudeCode = "claude_code"
+	SuaAgentTypeCodex      = "codex"
+)
+
+// IsValidSuaAgentType accepts an omitted harness so existing experiments keep their default.
+func IsValidSuaAgentType(agentType string) bool {
+	switch agentType {
+	case "", SuaAgentTypeClaudeCode, SuaAgentTypeCodex:
+		return true
+	default:
+		return false
+	}
+}
+
 // SuaMode 只作为**平台对外契约的子字段**存在 (run_mode=sua_multi_turn 时它才有意义):
 // 下发 case-file 前由 commercial 的 runtimeRunModeInt 折叠进 run_mode, 不再单独下发, 故不再
 // 需要 SuaModeToInt (已删)。
@@ -603,6 +618,7 @@ type RunModeConfig struct {
 	RunMode       RunMode `json:"run_mode,omitempty"`
 	MaxRunMinutes int     `json:"max_run_minutes,omitempty"`
 	SuaMode       SuaMode `json:"sua_mode,omitempty"`
+	SuaAgentType  string  `json:"sua_agent_type,omitempty"`
 	// SuaModelID **不再来自调用方**: 对外的 sua_model_id 入口已从 IDL 移除 (SUA 用哪个模型
 	// 是运维配置, 归 TCC)。字段保留是因为 TCC 劫持规则 sandbox_sua_model_replace 自带
 	// model_id, commercial 侧仍要经 modelCredByID 解析密钥。**不要在 convertor 里重新接上**。

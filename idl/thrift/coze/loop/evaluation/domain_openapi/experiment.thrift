@@ -206,6 +206,8 @@ struct RunModeConfig {
     // 与 skills_mode 同容器同链路; 结构对齐 runtime testcase.Skill, 由 runtime 按
     // skills_mode 与题目级 dataset_item.skills 合并安装。
     12: optional list<AgentSkillDeclare> skills (go.tag = 'json:"skills"')
+    // SUA 回复生成 harness: claude_code / codex; 空值沿用默认 claude_code。
+    13: optional string sua_agent_type (go.tag = 'json:"sua_agent_type"')
 }
 
 // Kept structurally aligned with domain/expt.thrift without cross-domain includes.
