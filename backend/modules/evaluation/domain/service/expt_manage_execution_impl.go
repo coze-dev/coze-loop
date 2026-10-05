@@ -314,7 +314,11 @@ func withRetryYieldExt(ext map[string]string, enabled bool) map[string]string {
 func (e *ExptMangerImpl) prepareRun(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session) (expt *entity.Experiment, err error) {
 	defer func() {
 		if err != nil {
-			e.cleanupUnscheduledRun(ctx, exptID, runID, err)
+			if e.hooks != nil {
+				e.cleanupUnscheduledLegacyHookRun(ctx, entity.HookRunKey{WorkspaceID: spaceID, ExperimentID: exptID, RunID: runID}, err)
+			} else {
+				e.cleanupUnscheduledRun(ctx, exptID, runID, err)
+			}
 		}
 	}()
 
@@ -325,6 +329,49 @@ func (e *ExptMangerImpl) prepareRun(ctx context.Context, exptID, runID, spaceID 
 	}
 	err = NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session)
 	return expt, err
+}
+
+// An installed Hook runtime also creates ordinary Runs; classify the persisted Run, not the Manager.
+func (e *ExptMangerImpl) cleanupUnscheduledLegacyHookRun(ctx context.Context, key entity.HookRunKey, cause error) {
+	if e.finalization == nil || missingManagerHookDependency(e.finalization.Owners) || missingManagerHookDependency(e.hooks.Initialization) {
+		return
+	}
+	ctx = context.WithoutCancel(ctx)
+	stateCtx, cancelState := context.WithTimeout(ctx, exptRunLogPersistTimeout)
+	defer cancelState()
+	initial, err := e.readHookRunInitialization(stateCtx, key)
+	if err != nil || initial == nil || initial.Managed || initial.RunLog == nil || initial.LatestRunID != key.RunID {
+		return
+	}
+	log := initial.RunLog
+	if log.ID != key.RunID || log.ExptRunID != key.RunID || log.ExptID != key.ExperimentID || log.SpaceID != key.WorkspaceID || entity.ExptStatus(log.Status) != entity.ExptStatus_Pending {
+		return
+	}
+	lockKey := e.makeExptMutexLockKey(key.ExperimentID)
+	owner, err := e.finalization.Owners.ReadFinalizationOwner(stateCtx, lockKey)
+	if err != nil {
+		return
+	}
+	if owner != "" {
+		ownerRun, err := managerHookLockRunID(owner)
+		if err != nil || ownerRun != key.RunID {
+			return
+		}
+	}
+	stateErr := e.runLogRepo.Update(stateCtx, key.ExperimentID, key.RunID, map[string]any{
+		"status": int64(entity.ExptStatus_Failed), "status_message": []byte(cause.Error()),
+	})
+	cancelState()
+	if stateErr != nil {
+		logs.CtxWarn(ctx, "Unscheduled legacy Run state update failed; releasing only the observed owner")
+	}
+	if owner != "" {
+		unlockCtx, cancelUnlock := context.WithTimeout(ctx, 2*time.Second)
+		defer cancelUnlock()
+		if _, err := e.mutex.UnlockWithValue(unlockCtx, lockKey, owner); err != nil {
+			logs.CtxWarn(ctx, "Unscheduled legacy Run owner compare-release failed")
+		}
+	}
 }
 
 func (e *ExptMangerImpl) cleanupUnscheduledRun(ctx context.Context, exptID, runID int64, cause error) {
