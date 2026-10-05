@@ -866,6 +866,9 @@ func ExptType2EvalMode(exptType domain_expt.ExptType, trialRunItemCount *int64) 
 }
 
 func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig) (param *entity.CreateExptParam, err error) {
+	if _, err := entity.ResolveLifecycleHookConf(nil, LifecycleHookConfDTO2DO(cer.GetLifecycleHookConf())); err != nil {
+		return nil, err
+	}
 	param = &entity.CreateExptParam{
 		WorkspaceID:           cer.WorkspaceID,
 		EvalSetVersionID:      cer.GetEvalSetVersionID(),

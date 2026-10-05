@@ -20,6 +20,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -258,6 +259,10 @@ func (e *ExptMangerImpl) checkEvaluatorsConnector(ctx context.Context, expt *ent
 }
 
 func (e *ExptMangerImpl) CheckBenefit(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
+	return e.checkBenefit(ctx, expt, session, true)
+}
+
+func (e *ExptMangerImpl) checkBenefit(ctx context.Context, expt *entity.Experiment, session *entity.Session, persist bool) error {
 	if expt.CreditCost == entity.CreditCostFree {
 		logs.CtxInfo(ctx, "CheckBenefit with credit cost already freed, expt_id: %v", expt.ID)
 		return nil
@@ -281,6 +286,9 @@ func (e *ExptMangerImpl) CheckBenefit(ctx context.Context, expt *entity.Experime
 
 	if result.IsFreeEvaluate != nil && *result.IsFreeEvaluate {
 		expt.CreditCost = entity.CreditCostFree
+		if !persist {
+			return nil
+		}
 		if err := e.exptRepo.Update(ctx, &entity.Experiment{
 			ID:         expt.ID,
 			SpaceID:    expt.SpaceID,
@@ -445,6 +453,12 @@ func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID 
 }
 
 func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
+	if e.finalization != nil && exptRunID <= 0 {
+		return entity.ErrHookStoreCorrupt
+	}
+	if handled, err := e.prepareHookNormalRun(ctx, entity.HookRunKey{WorkspaceID: spaceID, ExperimentID: exptID, RunID: exptRunID}, opts...); handled {
+		return err
+	}
 	const idemKeyPrefix = "CompleteRun:"
 
 	opt := &entity.CompleteExptOption{}
@@ -571,6 +585,12 @@ func (e *ExptMangerImpl) calculateRunLogStats(ctx context.Context, exptID, exptR
 }
 
 func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRunID *int64, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
+	if e.finalization != nil && exptRunID != nil && *exptRunID <= 0 {
+		return entity.ErrHookStoreCorrupt
+	}
+	if handled, err := e.completeHookNormalRun(ctx, entity.HookRunKey{WorkspaceID: spaceID, ExperimentID: exptID, RunID: gptr.Indirect(exptRunID)}, opts...); handled {
+		return err
+	}
 	const idemKeyPrefix = "CompleteExpt:"
 
 	opt := &entity.CompleteExptOption{}
@@ -1389,6 +1409,21 @@ func (e *ExptMangerImpl) Kill(ctx context.Context, exptID int64, exptRunID *int6
 }
 
 func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.InvokeExptReq) error {
+	if e.hooks != nil {
+		if invokeExptReq == nil {
+			return entity.ErrHookStoreCorrupt
+		}
+		initial, err := e.readHookRunInitialization(ctx, entity.HookRunKey{WorkspaceID: invokeExptReq.SpaceID, ExperimentID: invokeExptReq.ExptID, RunID: invokeExptReq.RunID})
+		if err != nil {
+			return err
+		}
+		if err := e.checkOnlineRequestedRun(ctx, entity.HookRunKey{WorkspaceID: invokeExptReq.SpaceID, ExperimentID: invokeExptReq.ExptID, RunID: invokeExptReq.RunID}, initial); err != nil {
+			return err
+		}
+		if initial.Managed {
+			return e.invokeOnline(ctx, invokeExptReq)
+		}
+	}
 	if len(invokeExptReq.Items) == 0 {
 		return nil
 	}
@@ -1578,6 +1613,22 @@ func (e *ExptMangerImpl) createItemTurnResults(ctx context.Context, eirs []*enti
 }
 
 func (e *ExptMangerImpl) Finish(ctx context.Context, expt *entity.Experiment, exptRunID int64, session *entity.Session) error {
+	if e.hooks != nil {
+		if expt == nil {
+			return entity.ErrHookStoreCorrupt
+		}
+		key := entity.HookRunKey{WorkspaceID: expt.SpaceID, ExperimentID: expt.ID, RunID: exptRunID}
+		initial, err := e.readHookRunInitialization(ctx, key)
+		if err != nil {
+			return err
+		}
+		if err := e.checkOnlineRequestedRun(ctx, key, initial); err != nil {
+			return err
+		}
+		if initial.Managed {
+			return e.finishOnline(ctx, key)
+		}
+	}
 	const idemKeyPrefix = "FinishExpt:"
 	if exist, err := e.idem.Exist(ctx, idemKeyPrefix+strconv.FormatInt(expt.ID, 10)); err != nil {
 		logs.CtxInfo(ctx, "Exist fail, key: %v", strconv.FormatInt(expt.ID, 10))
@@ -1680,6 +1731,9 @@ func (e *ExptMangerImpl) unlockCompletingRun(ctx context.Context, exptID, exptRu
 }
 
 func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) error {
+	if e.hooks != nil {
+		return e.logHookRun(ctx, exptID, exptRunID, mode, spaceID, itemIDs, session, nil)
+	}
 	duration := time.Duration(e.configer.GetExptExecConf(ctx, spaceID).GetZombieIntervalSecond()) * time.Second
 	locked, err := e.mutex.LockBackoff(ctx, e.makeExptMutexLockKey(exptID), duration, time.Second)
 	if err != nil {
@@ -1722,6 +1776,16 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 }
 
 func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) (runID int64, retried bool, err error) {
+	return e.logRetryItemsRun(ctx, exptID, mode, spaceID, itemIDs, session, nil)
+}
+
+func (e *ExptMangerImpl) logRetryItemsRun(ctx context.Context, exptID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session, schedule func(int64) *entity.HookScheduleSeed) (runID int64, retried bool, err error) {
+	if e.hooks != nil {
+		if ctx == nil || session == nil {
+			return 0, false, errorx.New("HOOK_IDENTITY_INVALID")
+		}
+		ctx = contexts.WithCtxWriteDB(ctx)
+	}
 	expireAt := time.Duration(e.configer.GetExptExecConf(ctx, spaceID).GetZombieIntervalSecond()) * time.Second
 	retryTime := time.Second
 	runID, err = e.idgenerator.GenID(ctx)
@@ -1729,7 +1793,24 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 		return 0, false, err
 	}
 
-	locked, existedRunID, err := e.mutex.BackoffLockWithValue(ctx, e.makeExptMutexLockKey(exptID), strconv.FormatInt(runID, 10), expireAt, retryTime)
+	owner := strconv.FormatInt(runID, 10)
+	var initial *entity.HookRunInitialization
+	if e.hooks != nil {
+		initial, err = e.readHookRunInitialization(ctx, entity.HookRunKey{WorkspaceID: spaceID, ExperimentID: exptID, RunID: runID})
+		if err != nil {
+			return 0, false, err
+		}
+		if initial.HooksEnabled {
+			if schedule != nil && initial.LatestRunID <= 0 {
+				return 0, false, ErrHookScheduleRetrySourceMissing
+			}
+			owner, err = newManagerHookLockOwner(runID)
+			if err != nil {
+				return 0, false, err
+			}
+		}
+	}
+	locked, existedRunID, err := e.mutex.BackoffLockWithValue(ctx, e.makeExptMutexLockKey(exptID), owner, expireAt, retryTime)
 	if err != nil {
 		return 0, false, err
 	}
@@ -1738,7 +1819,11 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 	retried = !locked
 
 	if retried {
-		runID, err = strconv.ParseInt(existedRunID, 10, 64)
+		if e.hooks != nil {
+			runID, err = managerHookLockRunID(existedRunID)
+		} else {
+			runID, err = strconv.ParseInt(existedRunID, 10, 64)
+		}
 		if err != nil {
 			logs.CtxError(ctx, "parsing expt run lock value to runid failed, raw: %v", existedRunID)
 			return 0, false, errorx.NewByCode(errno.ExperimentRunningExistedCode)
@@ -1750,6 +1835,34 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 		}
 		if completing {
 			return 0, false, errorx.NewByCode(errno.ExperimentIsCompletingCode)
+		}
+
+		if e.hooks != nil {
+			key := entity.HookRunKey{WorkspaceID: spaceID, ExperimentID: exptID, RunID: runID}
+			initial, err := e.hooks.Initialization.ReadRunInitialization(ctx, key)
+			if err != nil {
+				return 0, false, managerHookError(err)
+			}
+			if initial == nil || initial.RunLog == nil {
+				return 0, false, entity.ErrHookStoreMissing
+			}
+			if entity.ExptRunMode(initial.RunLog.Mode) != entity.EvaluationModeRetryItems {
+				return 0, false, errorx.NewByCode(errno.ExperimentRunningExistedCode)
+			}
+			if initial.Managed {
+				stored, err := e.hooks.Runs.GetRun(ctx, key)
+				if err != nil {
+					return 0, false, managerHookError(err)
+				}
+				if stored == nil {
+					return 0, false, entity.ErrHookStoreCorrupt
+				}
+				err = e.hooks.Initialization.AppendHookRunItems(ctx, entity.HookAppendRunItemsInput{HookStoreGuard: entity.HookStoreGuard{Key: key, ExpectedVersion: stored.Version}, ExecutionScope: e.hooks.ExecutionScope, ItemIDs: itemIDs})
+				if err != nil {
+					return 0, false, managerHookError(err)
+				}
+				return runID, true, nil
+			}
 		}
 
 		rl, err = e.runLogRepo.Get(ctx, exptID, runID)
@@ -1777,6 +1890,17 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 		if len(itemIDs) > 0 {
 			rl.ItemIds = []entity.ExptRunLogItems{{ItemIDs: itemIDs, CreateAt: gptr.Of(time.Now().Unix())}}
 		}
+		if e.hooks != nil {
+			var seeds []*entity.HookScheduleSeed
+			if schedule != nil && initial.HooksEnabled {
+				seeds = []*entity.HookScheduleSeed{schedule(runID)}
+			}
+			if err := e.initializeOwnedHookRun(ctx, rl, initial, owner, nil, seeds...); err != nil {
+				return 0, false, err
+			}
+			e.mtr.EmitExptExecRun(spaceID, int64(mode))
+			return runID, false, nil
+		}
 	}
 
 	if err := e.runLogRepo.Save(ctx, rl); err != nil {
@@ -1802,6 +1926,9 @@ func (e *ExptMangerImpl) GetRunLog(ctx context.Context, exptID, exptRunID, space
 }
 
 func (e *ExptMangerImpl) SetExptTerminating(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
+	if handled, err := e.setHookTerminating(ctx, entity.HookRunKey{WorkspaceID: spaceID, ExperimentID: exptID, RunID: exptRunID}); handled {
+		return err
+	}
 	if err := e.runLogRepo.Update(ctx, exptID, exptRunID, map[string]any{"status": int64(entity.ExptStatus_Terminating)}); err != nil {
 		return err
 	}

@@ -62,6 +62,11 @@ func newExperiment(db *gorm.DB, opts ...gen.DOOption) experiment {
 	_experiment.NotificationConf = field.NewBytes(tableName, "notification_conf")
 	_experiment.PriorityLevel = field.NewInt32(tableName, "priority_level")
 	_experiment.SchedulerMode = field.NewString(tableName, "scheduler_mode")
+	_experiment.SchedulerScope = field.NewString(tableName, "scheduler_scope")
+	_experiment.EvalSetSpaceID = field.NewInt64(tableName, "eval_set_space_id")
+	_experiment.TargetSpaceID = field.NewInt64(tableName, "target_space_id")
+	_experiment.EvalSetAccessLevel = field.NewString(tableName, "eval_set_access_level")
+	_experiment.LifecycleHookConf = field.NewBytes(tableName, "lifecycle_hook_conf")
 
 	_experiment.fillFieldMap()
 
@@ -108,6 +113,11 @@ type experiment struct {
 	NotificationConf          field.Bytes  // 通知配置，json格式存储webhook/飞书通知配置
 	PriorityLevel             field.Int32  // 实验调度优先级，1-99，数值越大越优先
 	SchedulerMode             field.String // 调度模式：legacy(旧per-experiment链路)/enforce(中心调度)
+	SchedulerScope            field.String // 中心调度所有权与Priority排序边界; legacy为空
+	EvalSetSpaceID            field.Int64  // 评测集来源空间(跨空间共享,0=同空间)
+	TargetSpaceID             field.Int64  // 评测对象来源空间(跨空间共享,0=同空间)
+	EvalSetAccessLevel        field.String // 发起冻结的评测集访问级别(execute/readable/空=同空间)
+	LifecycleHookConf         field.Bytes  // 受保护的生命周期Hook配置封套
 
 	fieldMap map[string]field.Expr
 }
@@ -157,6 +167,13 @@ func (e *experiment) updateTableName(table string) *experiment {
 	e.TrialRunItemCount = field.NewInt64(table, "trial_run_item_count")
 	e.OfflineExptAnalysisStatus = field.NewInt32(table, "offline_expt_analysis_status")
 	e.NotificationConf = field.NewBytes(table, "notification_conf")
+	e.PriorityLevel = field.NewInt32(table, "priority_level")
+	e.SchedulerMode = field.NewString(table, "scheduler_mode")
+	e.SchedulerScope = field.NewString(table, "scheduler_scope")
+	e.EvalSetSpaceID = field.NewInt64(table, "eval_set_space_id")
+	e.TargetSpaceID = field.NewInt64(table, "target_space_id")
+	e.EvalSetAccessLevel = field.NewString(table, "eval_set_access_level")
+	e.LifecycleHookConf = field.NewBytes(table, "lifecycle_hook_conf")
 
 	e.fillFieldMap()
 
@@ -183,7 +200,7 @@ func (e *experiment) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (e *experiment) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 35)
+	e.fieldMap = make(map[string]field.Expr, 40)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["created_by"] = e.CreatedBy
@@ -219,6 +236,11 @@ func (e *experiment) fillFieldMap() {
 	e.fieldMap["notification_conf"] = e.NotificationConf
 	e.fieldMap["priority_level"] = e.PriorityLevel
 	e.fieldMap["scheduler_mode"] = e.SchedulerMode
+	e.fieldMap["scheduler_scope"] = e.SchedulerScope
+	e.fieldMap["eval_set_space_id"] = e.EvalSetSpaceID
+	e.fieldMap["target_space_id"] = e.TargetSpaceID
+	e.fieldMap["eval_set_access_level"] = e.EvalSetAccessLevel
+	e.fieldMap["lifecycle_hook_conf"] = e.LifecycleHookConf
 }
 
 func (e experiment) clone(db *gorm.DB) experiment {

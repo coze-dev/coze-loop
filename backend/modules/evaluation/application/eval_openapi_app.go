@@ -1922,6 +1922,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 	}
 	createReq.CreateEvalTargetParam = createEvalTargetParam
 	createReq.NotificationConf = notificationConf
+	createReq.LifecycleHookConf = experiment_convertor.OpenAPILifecycleHookConfDTO2Domain(req.LifecycleHookConf)
 	// ★ 跨空间共享 (单评测集): 评测对象来源空间选项 (SubmitExperimentEvalTargetParam.shared_option)
 	if req.EvalTargetParam != nil {
 		createReq.TargetSharedOption = openapiSharedOptionDTO2Domain(req.EvalTargetParam.GetSharedOption())
@@ -3393,16 +3394,22 @@ func (e *EvalOpenAPIApplication) CreateExptTemplateOApi(ctx context.Context, req
 	if err != nil {
 		return nil, err
 	}
-
-	session := entity.NewSession(ctx)
-	do, err := e.exptTemplateManager.Create(ctx, param, session)
+	manager, hookConf, err := e.hookApplication().hookTemplateCreateManager(ctx, e.exptTemplateManager, param, experiment_convertor.OpenAPILifecycleHookConfDTO2Domain(req.LifecycleHookConf))
 	if err != nil {
 		return nil, err
 	}
 
+	session := entity.NewSession(ctx)
+	do, err := manager.Create(ctx, param, session)
+	if err != nil {
+		return nil, err
+	}
+
+	dto := experiment_convertor.OpenAPIExptTemplateDO2DTO(do)
+	dto.LifecycleHookConf = experiment_convertor.LifecycleHookConfDomain2OpenAPI(experiment_convertor.LifecycleHookConfDO2DTO(hookConf))
 	return &openapi.CreateExptTemplateOApiResponse{
 		Data: &openapi.CreateExptTemplateOpenAPIData{
-			ExperimentTemplate: experiment_convertor.OpenAPIExptTemplateDO2DTO(do),
+			ExperimentTemplate: dto,
 		},
 	}, nil
 }
@@ -3432,9 +3439,13 @@ func (e *EvalOpenAPIApplication) BatchGetExptTemplatesOApi(ctx context.Context, 
 		return nil, err
 	}
 
+	dtos, err := e.templateDTOsWithHooks(ctx, dos, req.GetWorkspaceID())
+	if err != nil {
+		return nil, err
+	}
 	return &openapi.BatchGetExptTemplatesOApiResponse{
 		Data: &openapi.BatchGetExptTemplatesOpenAPIData{
-			ExperimentTemplates: experiment_convertor.OpenAPIExptTemplateDO2DTOs(dos),
+			ExperimentTemplates: dtos,
 		},
 	}, nil
 }
@@ -3509,6 +3520,10 @@ func (e *EvalOpenAPIApplication) SubmitExptFromTemplateOApi(ctx context.Context,
 	}
 
 	// 通知配置覆盖：如果请求中带了 notification_conf，覆盖从模板继承的配置
+	submitReq.LifecycleHookConf, err = e.templateSubmitHooks(ctx, template, req.LifecycleHookConf, req.GetWorkspaceID())
+	if err != nil {
+		return nil, err
+	}
 	if req.NotificationConf != nil {
 		domainConf, convertErr := experiment_convertor.OpenAPINotificationConfDTO2Domain(req.NotificationConf)
 		if convertErr != nil {
@@ -3638,14 +3653,20 @@ func (e *EvalOpenAPIApplication) UpdateExptTemplateOApi(ctx context.Context, req
 	logs.CtxInfo(ctx, "[UpdateExptTemplateOApi] req.NotificationConf=%+v, param.NotificationConf=%+v",
 		req.NotificationConf, param.NotificationConf)
 
-	do, err := e.exptTemplateManager.Update(ctx, param, session)
+	manager, hookConf, err := e.hookApplication().hookTemplateUpdateManager(ctx, e.exptTemplateManager, template, param, experiment_convertor.OpenAPILifecycleHookConfDTO2Domain(req.LifecycleHookConf))
+	if err != nil {
+		return nil, err
+	}
+	do, err := manager.Update(ctx, param, session)
 	if err != nil {
 		return nil, err
 	}
 
+	dto := experiment_convertor.OpenAPIExptTemplateDO2DTO(do)
+	dto.LifecycleHookConf = experiment_convertor.LifecycleHookConfDomain2OpenAPI(experiment_convertor.LifecycleHookConfDO2DTO(hookConf))
 	return &openapi.UpdateExptTemplateOApiResponse{
 		Data: &openapi.UpdateExptTemplateOpenAPIData{
-			ExperimentTemplate: experiment_convertor.OpenAPIExptTemplateDO2DTO(do),
+			ExperimentTemplate: dto,
 		},
 	}, nil
 }
@@ -3724,9 +3745,13 @@ func (e *EvalOpenAPIApplication) ListExptTemplatesOApi(ctx context.Context, req 
 		return nil, err
 	}
 
+	dtos, err := e.templateDTOsWithHooks(ctx, dos, req.GetWorkspaceID())
+	if err != nil {
+		return nil, err
+	}
 	return &openapi.ListExptTemplatesOApiResponse{
 		Data: &openapi.ListExptTemplatesOpenAPIData{
-			ExperimentTemplates: experiment_convertor.OpenAPIExptTemplateDO2DTOs(dos),
+			ExperimentTemplates: dtos,
 			Total:               gptr.Of(int32(total)),
 		},
 	}, nil

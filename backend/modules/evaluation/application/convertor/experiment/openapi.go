@@ -406,6 +406,8 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	result.ExptTemplateMeta = DomainExptTemplateMetaDTO2OpenAPI(dto.ExptTemplateMeta)
 	result.OfflineExptAnalysisStatus = mapOfflineExptAnalysisStatusDTO2OpenAPI(dto.OfflineExptAnalysisStatus)
 	result.NotificationConf = domainNotificationConfToOpenAPI(dto.NotificationConf)
+	result.LifecycleHookConf = LifecycleHookConfDomain2OpenAPI(dto.LifecycleHookConf)
+	result.LifecycleHookSummary = lifecycleHookSummaryDomain2OpenAPI(dto.LifecycleHookSummary)
 
 	// ★ 多评测集读视图 (与 domain 110~114 对应)。
 	// 注: eval_set_details[].EvalSet 详情与 version-string 风格的 eval_set_configs 全量回显本期不在 OpenAPI 侧映射
@@ -2548,6 +2550,9 @@ func entityRunConfToDomainEvaluator(rc *entity.EvaluatorRunConfig) *domainEvalua
 }
 
 func OpenAPICreateExptTemplateReq2Domain(req *openapi.CreateExptTemplateOApiRequest) (*entity.CreateExptTemplateParam, error) {
+	if _, err := entity.ResolveLifecycleHookConf(nil, LifecycleHookConfDTO2DO(OpenAPILifecycleHookConfDTO2Domain(req.GetLifecycleHookConf()))); err != nil {
+		return nil, err
+	}
 	if req == nil {
 		return nil, nil
 	}
@@ -2671,6 +2676,9 @@ func OpenAPICreateExptTemplateReq2Domain(req *openapi.CreateExptTemplateOApiRequ
 }
 
 func OpenAPIUpdateExptTemplateReq2Domain(req *openapi.UpdateExptTemplateOApiRequest) (*entity.UpdateExptTemplateParam, error) {
+	if _, err := entity.ResolveLifecycleHookConf(nil, LifecycleHookConfDTO2DO(OpenAPILifecycleHookConfDTO2Domain(req.GetLifecycleHookConf()))); err != nil {
+		return nil, err
+	}
 	if req == nil {
 		return nil, nil
 	}

@@ -76,9 +76,10 @@ func (d *exptDAOImpl) UpdateFields(ctx context.Context, id int64, ufields map[st
 	q := query.Use(d.db.NewSession(ctx)).Experiment
 	_, err := q.WithContext(ctx).
 		Where(q.ID.Eq(id)).
+		Omit(q.LifecycleHookConf).
 		UpdateColumns(ufields)
 	if err != nil {
-		return errorx.Wrapf(err, "update expt fail, expt_id: %v, ufields: %v", id, ufields)
+		return errorx.Wrapf(err, "update expt fail, expt_id: %v", id)
 	}
 	return nil
 }
@@ -110,7 +111,7 @@ var schedulingFrozenColumns = []string{"priority_level", "scheduler_mode", "sche
 
 func (d *exptDAOImpl) Update(ctx context.Context, expt *model.Experiment) error {
 	if err := d.db.NewSession(ctx).Model(&model.Experiment{}).Where("id = ?", expt.ID).
-		Omit(schedulingFrozenColumns...).
+		Omit(append([]string{"lifecycle_hook_conf"}, schedulingFrozenColumns...)...).
 		Updates(expt).Error; err != nil {
 		return errorx.Wrapf(err, "update expt fail, expt_id: %v, updated: %v", expt.ID, json.Jsonify(expt))
 	}

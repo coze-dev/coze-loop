@@ -44,6 +44,8 @@ type ExptItemEvalEvent struct {
 	EvalSetItemID               int64
 	AsyncReportTrigger          bool
 	AsyncEvaluatorReportTrigger bool
+	// Internal MQ continuation hint; admission and persisted record ownership remain mandatory.
+	HookControlContinuation bool `json:"hook_control_continuation,omitempty"`
 
 	CreateAt      int64
 	RetryTimes    int

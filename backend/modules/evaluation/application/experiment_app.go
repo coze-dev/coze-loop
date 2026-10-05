@@ -28,6 +28,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/experiment"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
+	hookcomponent "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/hook"
 	metricscomp "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
@@ -56,6 +57,7 @@ type IExperimentApplication interface {
 }
 
 type experimentApplication struct {
+	hooks         *ExperimentHookApplicationDependencies
 	idgen         idgen.IIDGenerator
 	manager       service.IExptManager
 	resultSvc     service.ExptResultService
@@ -155,8 +157,27 @@ func NewExperimentApplication(
 }
 
 func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.CreateExperimentRequest) (r *expt.CreateExperimentResponse, err error) {
+	manager := e.manager
+	if req.GetLifecycleHookConf() != nil {
+		if err := e.auth.Authorization(ctx, &rpc.AuthorizationParam{ObjectID: strconv.FormatInt(req.GetWorkspaceID(), 10), SpaceID: req.GetWorkspaceID(), ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}}}); err != nil {
+			return nil, err
+		}
+	}
+	hookInput, err := e.hookConfigCreateInput(ctx, req.GetWorkspaceID(), req.GetLifecycleHookConf())
+	if err != nil {
+		return nil, err
+	}
+	if hookInput.Config != nil {
+		if strings.TrimSpace(req.GetTriggerType()) == domain_expt.Schedule {
+			return nil, hookScheduleUnavailable()
+		}
+		manager, err = service.WithExptHookConfigCreate(manager, e.hooks.Configs, hookInput)
+		if err != nil {
+			return nil, err
+		}
+	}
 	session := entity.NewSession(ctx)
-	if req.Session != nil && req.Session.UserID != nil {
+	if hookInput.Config == nil && req.Session != nil && req.Session.UserID != nil {
 		session = &entity.Session{
 			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
 		}
@@ -249,13 +270,15 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	if err != nil {
 		return nil, err
 	}
-	createExpt, err := e.manager.CreateExpt(ctx, param, session)
+	createExpt, err := manager.CreateExpt(ctx, param, session)
 	if err != nil {
 		return nil, err
 	}
 
+	dto := experiment.ToExptDTO(createExpt)
+	dto.LifecycleHookConf = experiment.LifecycleHookConfDO2DTO(hookInput.Config)
 	return &expt.CreateExperimentResponse{
-		Experiment: experiment.ToExptDTO(createExpt),
+		Experiment: dto,
 		BaseResp:   base.NewBaseResp(),
 	}, nil
 }
@@ -414,14 +437,22 @@ func (e *experimentApplication) CreateExperimentTemplate(ctx context.Context, re
 	if err != nil {
 		return nil, err
 	}
+	manager, hookConf, err := e.hookTemplateCreateManager(ctx, e.templateManager, param, req.LifecycleHookConf)
+	if err != nil {
+		return nil, err
+	}
+	if hookConf != nil {
+		session = entity.NewSession(ctx)
+	}
 
 	// 业务逻辑已下沉到 service 层，在 Create 方法中会自动解析并回填 evaluator_version_id
-	createTemplate, err := e.templateManager.Create(ctx, param, session)
+	createTemplate, err := manager.Create(ctx, param, session)
 	if err != nil {
 		return nil, err
 	}
 
 	dto := experiment.ToExptTemplateDTO(createTemplate)
+	dto.LifecycleHookConf = experiment.LifecycleHookConfDO2DTO(hookConf)
 	// 填充完整的用户信息
 	e.mPackExptTemplateUserInfo(ctx, []*domain_expt.ExptTemplate{dto})
 
@@ -459,6 +490,9 @@ func (e *experimentApplication) BatchGetExperimentTemplate(ctx context.Context, 
 	}
 
 	dtos := experiment.ToExptTemplateDTOs(templates)
+	if err := e.readTemplateHooks(ctx, templates, dtos, req.GetWorkspaceID()); err != nil {
+		return nil, err
+	}
 	// 填充完整的用户信息
 	e.mPackExptTemplateUserInfo(ctx, dtos)
 
@@ -506,13 +540,18 @@ func (e *experimentApplication) UpdateExperimentTemplate(ctx context.Context, re
 		return nil, err
 	}
 
+	manager, hookConf, err := e.hookTemplateUpdateManager(ctx, e.templateManager, got, param, req.LifecycleHookConf)
+	if err != nil {
+		return nil, err
+	}
 	// 更新模板
-	updatedTemplate, err := e.templateManager.Update(ctx, param, session)
+	updatedTemplate, err := manager.Update(ctx, param, session)
 	if err != nil {
 		return nil, err
 	}
 
 	dto := experiment.ToExptTemplateDTO(updatedTemplate)
+	dto.LifecycleHookConf = experiment.LifecycleHookConfDO2DTO(hookConf)
 	// 填充完整的用户信息
 	e.mPackExptTemplateUserInfo(ctx, []*domain_expt.ExptTemplate{dto})
 
@@ -676,6 +715,9 @@ func (e *experimentApplication) ListExperimentTemplates(ctx context.Context, req
 	}
 
 	dtos := experiment.ToExptTemplateDTOs(templates)
+	if err := e.readTemplateHooks(ctx, templates, dtos, req.GetWorkspaceID()); err != nil {
+		return nil, err
+	}
 	// 填充完整的用户信息
 	e.mPackExptTemplateUserInfo(ctx, dtos)
 
@@ -687,7 +729,14 @@ func (e *experimentApplication) ListExperimentTemplates(ctx context.Context, req
 }
 
 func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.SubmitExperimentRequest) (r *expt.SubmitExperimentResponse, err error) {
-	logs.CtxInfo(ctx, "SubmitExperiment req: %v", json.Jsonify(req))
+	if c := req.GetLifecycleHookConf(); c != nil && (c.Before != nil || c.After != nil) {
+		local := *req
+		local.Session = nil
+		req = &local
+	}
+	logReq := *req
+	logReq.LifecycleHookConf = nil
+	logs.CtxInfo(ctx, "SubmitExperiment req: %v", json.Jsonify(&logReq))
 	// [sandbox-mt-debug] 单独打 run_mode_config 到手内容, 定位 BFFv2/thrift 解码 vs convertor 谁丢字段。
 	if rmc := req.GetRunModeConfig(); rmc != nil {
 		logs.CtxInfo(ctx, "[sandbox-mt-debug] SubmitExperiment run_mode_config received: isSetRunMode=%v run_mode=%d isSetSuaMode=%v sua_mode=%d max_run_minutes=%d raw=%s",
@@ -751,6 +800,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		EvalSetSourceType:    req.EvalSetSourceType,
 		RefGroupExperimentID: req.RefGroupExperimentID,
 		NotificationConf:     req.NotificationConf,
+		LifecycleHookConf:    req.LifecycleHookConf,
 		// ★ wiring fix: 透传 run_mode_config 到 CreateExperimentRequest，否则落不进 eval_conf，
 		// operator 读不到 → 走默认 sua_multi_turn 兜底，用户选的 single_turn 被静默忽略。nil 安全。
 		RunModeConfig:      req.RunModeConfig,
@@ -1260,8 +1310,16 @@ func (e *experimentApplication) SubmitExptFromTemplate(ctx context.Context, req 
 	if submitReq == nil {
 		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("failed to build submit request from template"))
 	}
+	submitReq.LifecycleHookConf, err = e.templateSubmitHooks(ctx, template, req.LifecycleHookConf, req.GetWorkspaceID())
+	if err != nil {
+		return nil, err
+	}
 	// ByteScheduler 模板周期回调经本接口提交，与 trigger_type=schedule 对齐
 	submitReq.TriggerType = gptr.Of(domain_expt.Schedule)
+	if submitReq.LifecycleHookConf != nil && (submitReq.LifecycleHookConf.Before != nil || submitReq.LifecycleHookConf.After != nil) {
+		submitReq.TriggerType = gptr.Of(domain_expt.Manual)
+		session = entity.NewSession(ctx)
+	}
 	submitReq.Session = &common.Session{}
 	if session.UserID != "" {
 		if userID, parseErr := strconv.ParseInt(session.UserID, 10, 64); parseErr == nil {
@@ -1297,6 +1355,11 @@ func (e *experimentApplication) BatchGetExperiments(ctx context.Context, req *ex
 	}
 
 	dtos := experiment.ToExptDTOs(dos)
+	if e.hooks != nil {
+		if err := e.readExperimentHooks(ctx, dos, dtos, req.GetWorkspaceID()); err != nil {
+			return nil, err
+		}
+	}
 
 	vos, err := e.mPackUserInfo(ctx, dtos)
 	if err != nil {
@@ -1376,6 +1439,9 @@ func (e *experimentApplication) ListExperiments(ctx context.Context, req *expt.L
 	}
 
 	dtos := experiment.ToExptDTOs(expts)
+	if err := e.readExperimentHooks(ctx, expts, dtos, req.GetWorkspaceID()); err != nil {
+		return nil, err
+	}
 	vos, err := e.mPackUserInfo(ctx, dtos)
 	if err != nil {
 		return nil, err
@@ -1438,7 +1504,8 @@ func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.
 		return nil, errorx.NewByCode(errno.CommonBadRequestCode, errorx.WithExtraMsg(fmt.Sprintf("expt %d not found in space %d", req.GetExptID(), req.GetWorkspaceID())))
 	}
 
-	if got.Name != req.GetName() {
+	hookChange := hasHookConfigChange(req.LifecycleHookConf)
+	if got.Name != req.GetName() && (!hookChange || req.Name != nil) {
 		pass, err := e.manager.CheckName(ctx, req.GetName(), req.GetWorkspaceID(), session)
 		if err != nil {
 			return nil, err
@@ -1466,6 +1533,32 @@ func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.
 		Name:        req.GetName(),
 		Description: req.GetDesc(),
 	}
+	manager := e.manager
+	var hookConf *entity.LifecycleHookConf
+	if hookChange {
+		if e.hooks == nil || got.ID != req.GetExptID() {
+			return nil, entity.ErrHookConfigStorage
+		}
+		if got.LatestRunID != 0 {
+			return nil, entity.ErrHookConfigImmutable
+		}
+		owner := hookcomponent.ConfigOwner{WorkspaceID: got.SpaceID, ObjectID: got.ID, Kind: hookcomponent.ConfigOwnerExperiment, ExecutionScope: e.hooks.ExecutionScope}
+		in, resolved, err := e.hookConfigUpdateInput(ctx, owner, req.LifecycleHookConf)
+		if err != nil {
+			return nil, err
+		}
+		manager, err = service.WithExptHookConfigUpdate(manager, e.hooks.Configs, owner, in)
+		if err != nil {
+			return nil, err
+		}
+		hookConf = resolved
+		if req.Name == nil {
+			updateExpt.Name = got.Name
+		}
+		if req.Desc == nil {
+			updateExpt.Description = got.Description
+		}
+	}
 
 	if req.NotificationConf != nil {
 		notifConf, convErr := experiment.NotificationConfDTO2DO(req.NotificationConf)
@@ -1475,7 +1568,7 @@ func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.
 		updateExpt.NotificationConf = notifConf
 	}
 
-	if err := e.manager.Update(ctx, updateExpt, session); err != nil {
+	if err := manager.Update(ctx, updateExpt, session); err != nil {
 		return nil, err
 	}
 
@@ -1484,8 +1577,10 @@ func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
+	dto := experiment.ToExptDTO(resp)
+	dto.LifecycleHookConf = experiment.LifecycleHookConfDO2DTO(hookConf)
 	return &expt.UpdateExperimentResponse{
-		Experiment: experiment.ToExptDTO(resp),
+		Experiment: dto,
 		BaseResp:   base.NewBaseResp(),
 	}, nil
 }
@@ -1671,6 +1766,8 @@ func (e *experimentApplication) BatchDeleteExperiments(ctx context.Context, req 
 
 func (e *experimentApplication) CloneExperiment(ctx context.Context, req *expt.CloneExperimentRequest) (r *expt.CloneExperimentResponse, err error) {
 	session := entity.NewSession(ctx)
+	manager := e.manager
+	var hookConf *entity.LifecycleHookConf
 
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetExptID(), 10),
@@ -1681,7 +1778,35 @@ func (e *experimentApplication) CloneExperiment(ctx context.Context, req *expt.C
 		return nil, err
 	}
 
-	exptDO, err := e.manager.Clone(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if e.hooks != nil {
+		source, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+		if err != nil {
+			return nil, err
+		}
+		if source == nil || source.ID != req.GetExptID() || source.SpaceID != req.GetWorkspaceID() {
+			return nil, entity.ErrHookConfigStorage
+		}
+		if err := e.AuthReadExperiments(ctx, []*entity.Experiment{source}, req.GetWorkspaceID()); err != nil {
+			return nil, err
+		}
+		record, err := e.hooks.Configs.GetConfig(ctx, hookcomponent.ConfigOwner{WorkspaceID: source.SpaceID, ObjectID: source.ID, Kind: hookcomponent.ConfigOwnerExperiment, ExecutionScope: e.hooks.ExecutionScope})
+		if err != nil {
+			return nil, err
+		}
+		if record == nil {
+			return nil, entity.ErrHookConfigStorage
+		}
+		in, err := e.hookConfigCreateInput(ctx, req.GetWorkspaceID(), experiment.LifecycleHookConfDO2DTO(record.Config))
+		if err != nil {
+			return nil, err
+		}
+		hookConf = in.Config
+		manager, err = service.WithExptHookConfigCreate(manager, e.hooks.Configs, in)
+		if err != nil {
+			return nil, err
+		}
+	}
+	exptDO, err := manager.Clone(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {
 		return nil, err
 	}
@@ -1699,16 +1824,19 @@ func (e *experimentApplication) CloneExperiment(ctx context.Context, req *expt.C
 		return nil, err
 	}
 
+	dto := experiment.ToExptDTO(exptDO)
+	dto.LifecycleHookConf = experiment.LifecycleHookConfDO2DTO(hookConf)
 	return &expt.CloneExperimentResponse{
-		Experiment: experiment.ToExptDTO(exptDO),
+		Experiment: dto,
 		BaseResp:   base.NewBaseResp(),
 	}, nil
 }
 
 func (e *experimentApplication) RunExperiment(ctx context.Context, req *expt.RunExperimentRequest) (r *expt.RunExperimentResponse, err error) {
-	session := entity.NewSession(ctx)
+	trustedSession := entity.NewSession(ctx)
+	legacySession := entity.NewSession(ctx)
 	if req.Session != nil && req.Session.UserID != nil {
-		session = &entity.Session{
+		legacySession = &entity.Session{
 			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
 		}
 	}
@@ -1719,12 +1847,71 @@ func (e *experimentApplication) RunExperiment(ctx context.Context, req *expt.Run
 	}
 
 	evalMode := experiment.ExptType2EvalMode(req.GetExptType(), req.TrialRunItemCount)
-
-	if err := e.manager.LogRun(ctx, req.GetExptID(), runID, evalMode, req.GetWorkspaceID(), nil, session); err != nil {
-		return nil, err
+	hookRequired := false
+	if e.hooks != nil {
+		if nilHookApplicationDependency(e.hooks.Configs) || nilHookApplicationDependency(e.manager) || nilHookApplicationDependency(e.auth) {
+			return nil, entity.ErrHookConfigStorage
+		}
+		got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), trustedSession)
+		if err != nil {
+			return nil, err
+		}
+		if got == nil || got.ID != req.GetExptID() || got.SpaceID != req.GetWorkspaceID() {
+			return nil, entity.ErrHookConfigStorage
+		}
+		if err := e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+			ObjectID: strconv.FormatInt(got.ID, 10), SpaceID: req.GetWorkspaceID(),
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+			OwnerID:       gptr.Of(got.CreatedBy), ResourceSpaceID: got.SpaceID,
+		}); err != nil {
+			return nil, err
+		}
+		record, err := e.hooks.Configs.GetConfig(ctx, hookcomponent.ConfigOwner{WorkspaceID: got.SpaceID, ObjectID: got.ID, Kind: hookcomponent.ConfigOwnerExperiment, ExecutionScope: e.hooks.ExecutionScope})
+		if err != nil {
+			return nil, err
+		}
+		if record == nil {
+			return nil, entity.ErrHookConfigStorage
+		}
+		hookRequired = hookApplicationEnabled(record.Config)
+	}
+	if evalMode == entity.EvaluationModeAppend {
+		if starter, ok := e.manager.(service.IHookOnlineScheduleStarter); ok {
+			handled, err := starter.StartOnlineWithHookSchedule(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), int(req.GetItemRetryNum()), trustedSession, req.GetExt())
+			if err != nil {
+				return nil, err
+			}
+			if handled {
+				return &expt.RunExperimentResponse{RunID: gptr.Of(runID), BaseResp: base.NewBaseResp()}, nil
+			}
+		}
+	}
+	if starter, ok := e.manager.(service.IHookRunScheduleStarter); ok {
+		handled, err := starter.StartRunWithHookSchedule(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), int(req.GetItemRetryNum()), trustedSession, evalMode, req.GetExt())
+		if err != nil {
+			return nil, err
+		}
+		if handled {
+			return &expt.RunExperimentResponse{RunID: gptr.Of(runID), BaseResp: base.NewBaseResp()}, nil
+		}
+	}
+	// The interface exists even on a Manager whose Hook runtime is not installed.
+	if hookRequired {
+		return nil, errorx.New("HOOK_SCHEDULE_RUNTIME_UNAVAILABLE")
 	}
 
-	if err := e.manager.Run(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), int(req.GetItemRetryNum()), session, evalMode, req.GetExt()); err != nil {
+	legacyInitCtx := service.WithLegacyOnlyHookInitialization(ctx, entity.HookRunKey{WorkspaceID: req.GetWorkspaceID(), ExperimentID: req.GetExptID(), RunID: runID})
+	var logErr error
+	if starter, ok := e.manager.(service.IHookRunPlanStarter); ok {
+		logErr = starter.LogRunWithPlanSeed(legacyInitCtx, req.GetExptID(), runID, evalMode, req.GetWorkspaceID(), req.GetExt()["__item_ids"], legacySession)
+	} else {
+		logErr = e.manager.LogRun(legacyInitCtx, req.GetExptID(), runID, evalMode, req.GetWorkspaceID(), nil, legacySession)
+	}
+	if logErr != nil {
+		return nil, logErr
+	}
+
+	if err := e.manager.Run(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), int(req.GetItemRetryNum()), legacySession, evalMode, req.GetExt()); err != nil {
 		return nil, err
 	}
 
@@ -1760,6 +1947,22 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return nil, err
 	}
 
+	scheduleRetry := runMode == entity.EvaluationModeFailRetry || runMode == entity.EvaluationModeRetryAll
+	hookRequired := false
+	if (scheduleRetry || runMode == entity.EvaluationModeRetryItems) && e.hooks != nil {
+		if nilHookApplicationDependency(e.hooks.Configs) || got.ID != req.GetExptID() || got.SpaceID != req.GetWorkspaceID() {
+			return nil, entity.ErrHookConfigStorage
+		}
+		record, err := e.hooks.Configs.GetConfig(ctx, hookcomponent.ConfigOwner{WorkspaceID: got.SpaceID, ObjectID: got.ID, Kind: hookcomponent.ConfigOwnerExperiment, ExecutionScope: e.hooks.ExecutionScope})
+		if err != nil {
+			return nil, err
+		}
+		if record == nil {
+			return nil, entity.ErrHookConfigStorage
+		}
+		hookRequired = hookApplicationEnabled(record.Config)
+	}
+
 	// SandboxAgent 评测对象：重试前重新初始化沙箱任务。
 	// 首次运行结束后每条 execute 已被 destroy，沙箱侧任务不再持有可用 execute，Retry 必须重跑一次 Init 才能继续 SandboxRun。
 	// 与 Submit 保持一致：并发度先归一化，再按实际 task 的 execution 数分别计算。
@@ -1776,6 +1979,23 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 
 	switch runMode {
 	case entity.EvaluationModeRetryItems:
+		if starter, ok := e.manager.(service.IHookRetryItemsScheduleStarter); ok {
+			retries := 0
+			if got.EvalConf != nil {
+				retries = gptr.Indirect(got.EvalConf.ItemRetryNum)
+			}
+			handled, rid, _, err := starter.StartRetryItemsWithHookSchedule(ctx, req.GetExptID(), req.GetWorkspaceID(), retries, req.GetItemIds(), session, req.GetExt())
+			if err != nil {
+				return nil, err
+			}
+			if handled {
+				runID = rid
+				break
+			}
+		}
+		if hookRequired {
+			return nil, errorx.New("HOOK_SCHEDULE_RUNTIME_UNAVAILABLE")
+		}
 		rid, retried, err := e.manager.LogRetryItemsRun(ctx, req.GetExptID(), runMode, req.GetWorkspaceID(), req.GetItemIds(), session)
 		if err != nil {
 			return nil, err
@@ -1790,6 +2010,24 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 	default:
 		if runID, err = e.idgen.GenID(ctx); err != nil {
 			return nil, err
+		}
+		if scheduleRetry {
+			if starter, ok := e.manager.(service.IHookRunScheduleStarter); ok {
+				itemRetryNum := 0
+				if got.EvalConf != nil {
+					itemRetryNum = gptr.Indirect(got.EvalConf.ItemRetryNum)
+				}
+				handled, err := starter.StartRunWithHookSchedule(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), itemRetryNum, session, runMode, req.GetExt())
+				if err != nil {
+					return nil, err
+				}
+				if handled {
+					break
+				}
+			}
+			if hookRequired {
+				return nil, errorx.New("HOOK_SCHEDULE_RUNTIME_UNAVAILABLE")
+			}
 		}
 		if err := e.manager.LogRun(ctx, req.GetExptID(), runID, runMode, req.GetWorkspaceID(), nil, session); err != nil {
 			return nil, err
@@ -2106,7 +2344,17 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 		return nil, err
 	}
 
-	if got.Status != entity.ExptStatus_Processing {
+	managedPending := false
+	if got.Status == entity.ExptStatus_Pending && got.ExptType == entity.ExptType_Online &&
+		got.ID == req.GetExptID() && got.SpaceID == req.GetWorkspaceID() && got.LatestRunID > 0 {
+		if access, ok := e.manager.(service.IHookOnlineRunAccess); ok {
+			managedPending, err = access.ValidateOnlineRun(ctx, entity.HookRunKey{WorkspaceID: got.SpaceID, ExperimentID: got.ID, RunID: got.LatestRunID})
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	if got.Status != entity.ExptStatus_Processing && !managedPending {
 		return nil, errorx.NewByCode(errno.TerminateNonRunningExperimentErrorCode)
 	}
 
@@ -2122,6 +2370,13 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 		}
 	}
 
+	if managedPending {
+		// Pending cancellation must enter the bound runtime before any legacy state write.
+		if err := e.manager.CompleteExpt(ctx, got.ID, &got.LatestRunID, got.SpaceID, session, entity.WithStatus(entity.ExptStatus_Terminated), entity.NoAggrCalculate()); err != nil {
+			return nil, err
+		}
+		return &expt.KillExperimentResponse{BaseResp: base.NewBaseResp()}, nil
+	}
 	if err := e.manager.SetExptTerminating(ctx, req.GetExptID(), got.LatestRunID, req.GetWorkspaceID(), session); err != nil {
 		return nil, err
 	}
@@ -2392,6 +2647,16 @@ func (e *experimentApplication) InvokeExperiment(ctx context.Context, req *expt.
 	}
 
 	logs.CtxInfo(ctx, "InvokeExperiment expt: %v", json.Jsonify(got))
+	managed := false
+	if access, ok := e.manager.(service.IHookOnlineRunAccess); ok {
+		managed, err = access.CheckOnlineRun(ctx, entity.HookRunKey{WorkspaceID: req.GetWorkspaceID(), ExperimentID: req.GetExperimentID(), RunID: req.GetExperimentRunID()})
+		if err != nil {
+			return nil, err
+		}
+		if managed {
+			session = entity.NewSession(ctx)
+		}
+	}
 	if got.Status != entity.ExptStatus_Processing && got.Status != entity.ExptStatus_Pending {
 		logs.CtxInfo(ctx, "expt status not allow to invoke, expt_id: %v, status: %v", req.GetExperimentID(), got.Status)
 		return nil, errorx.NewByCode(errno.ExperimentStatusNotAllowedToInvokeCode, errorx.WithExtraMsg(fmt.Sprintf("expt status not allow to invoke, expt_id: %v, status: %v", req.GetExperimentID(), got.Status)))
@@ -2410,6 +2675,10 @@ func (e *experimentApplication) InvokeExperiment(ctx context.Context, req *expt.
 	validItemDOS := make([]*entity.EvaluationSetItem, 0, len(itemDOS))
 	for idx, itemID := range idMap {
 		itemDOS[idx].ItemID = itemID
+		if managed {
+			itemDOS[idx].SpaceID = req.GetWorkspaceID()
+			itemDOS[idx].EvaluationSetID = req.GetEvaluationSetID()
+		}
 		validItemDOS = append(validItemDOS, itemDOS[idx])
 	}
 	err = e.manager.Invoke(ctx, &entity.InvokeExptReq{
@@ -2454,6 +2723,15 @@ func (e *experimentApplication) FinishExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
+	if access, ok := e.manager.(service.IHookOnlineRunAccess); ok {
+		managed, err := access.ValidateOnlineRun(ctx, entity.HookRunKey{WorkspaceID: req.GetWorkspaceID(), ExperimentID: req.GetExperimentID(), RunID: req.GetExperimentRunID()})
+		if err != nil {
+			return nil, err
+		}
+		if managed {
+			session = entity.NewSession(ctx)
+		}
+	}
 	if entity.IsExptFinished(got.Status) {
 		return &expt.FinishExperimentResponse{BaseResp: base.NewBaseResp()}, nil
 	}

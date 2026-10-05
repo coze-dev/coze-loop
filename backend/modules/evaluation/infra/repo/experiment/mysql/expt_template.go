@@ -103,7 +103,8 @@ func (d *exptTemplateDAOImpl) MGetByID(ctx context.Context, ids []int64, opts ..
 }
 
 func (d *exptTemplateDAOImpl) Update(ctx context.Context, template *model.ExptTemplate) error {
-	if err := d.db.NewSession(ctx).Model(&model.ExptTemplate{}).Where("id = ?", template.ID).Updates(template).Error; err != nil {
+	if err := d.db.NewSession(ctx).Model(&model.ExptTemplate{}).Where("id = ?", template.ID).
+		Omit("lifecycle_hook_conf", "schedule_run_binding").Updates(template).Error; err != nil {
 		return errorx.Wrapf(err, "update expt_template fail, template_id: %v", template.ID)
 	}
 	return nil
@@ -113,9 +114,10 @@ func (d *exptTemplateDAOImpl) UpdateFields(ctx context.Context, id int64, ufield
 	q := query.Use(d.db.NewSession(ctx)).ExptTemplate
 	_, err := q.WithContext(ctx).
 		Where(q.ID.Eq(id)).
+		Omit(q.LifecycleHookConf, q.ScheduleRunBinding).
 		UpdateColumns(ufields)
 	if err != nil {
-		return errorx.Wrapf(err, "update expt_template fields fail, template_id: %v, ufields: %v", id, ufields)
+		return errorx.Wrapf(err, "update expt_template fields fail, template_id: %v", id)
 	}
 	return nil
 }

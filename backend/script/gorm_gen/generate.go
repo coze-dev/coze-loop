@@ -208,6 +208,11 @@ func generateForEvaluationExpt(db *gorm.DB) {
 		"expt_insight_analysis_feedback_vote",
 		"expt_template",
 		"expt_template_evaluator_ref",
+		"expt_lifecycle_run",
+		"expt_lifecycle_hook_run",
+		"expt_lifecycle_hook_attempt",
+		"expt_lifecycle_run_item",
+		"expt_template_trigger",
 	}
 
 	var models []any
@@ -223,6 +228,18 @@ func generateForEvaluationExpt(db *gorm.DB) {
 		var opts []gen.ModelOpt
 		if tn == "expt_turn_result_run_log" {
 			opts = append(opts, gen.FieldType("ext", "datatypes.JSON"))
+		}
+		switch tn {
+		case "experiment":
+			opts = append(opts, gen.FieldJSONTag("lifecycle_hook_conf", "-"))
+		case "expt_template":
+			opts = append(opts, gen.FieldJSONTag("lifecycle_hook_conf", "-"), gen.FieldJSONTag("schedule_run_binding", "-"))
+		case "expt_run_log":
+			opts = append(opts, gen.FieldJSONTag("lifecycle_hook_version", "-"))
+		case "expt_lifecycle_run":
+			opts = append(opts, gen.FieldJSONTag("snapshot_cipher", "-"))
+		case "expt_lifecycle_run_item":
+			opts = append(opts, gen.FieldJSONTag("execution_manifest", "-"))
 		}
 		models = append(models, g.GenerateModelAs(tn, name, opts...))
 	}

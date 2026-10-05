@@ -70,14 +70,24 @@ func (e *DefaultExptTurnEvaluationImpl) Eval(ctx context.Context, etec *entity.E
 	trr = &entity.ExptTurnRunResult{}
 
 	defer func() {
+		if itemHookControlOnly(trr.EvalErr) {
+			return
+		}
 		code, stable, _ := errno.ParseStatusError(trr.EvalErr)
 		e.metric.EmitTurnExecResult(etec.Event.SpaceID, int64(etec.Event.ExptRunMode), trr.EvalErr == nil, stable, int64(code), startTime)
 	}()
 	defer goroutine.Recover(ctx, &trr.EvalErr)
+	boundCtx, bindErr := bindItemHookTurnIdentity(ctx, etec)
+	if bindErr != nil {
+		return trr.SetEvalErr(bindErr)
+	}
+	ctx = boundCtx
 
 	targetResult, err := e.CallTarget(ctx, etec)
 	if err != nil {
-		logs.CtxError(ctx, "[ExptTurnEval] call target fail, err: %v", err)
+		if !itemHookControlOnly(err) {
+			logs.CtxError(ctx, "[ExptTurnEval] call target fail, err: %v", err)
+		}
 		return trr.SetEvalErr(err)
 	}
 
@@ -89,7 +99,9 @@ func (e *DefaultExptTurnEvaluationImpl) Eval(ctx context.Context, etec *entity.E
 
 	evaluatorResults, err := e.CallEvaluators(ctx, etec, targetResult)
 	if err != nil {
-		logs.CtxError(ctx, "[ExptTurnEval] call evaluators fail, err: %v", err)
+		if !itemHookControlOnly(err) {
+			logs.CtxError(ctx, "[ExptTurnEval] call evaluators fail, err: %v", err)
+		}
 		return trr.SetEvaluatorResults(evaluatorResults).SetEvalErr(err)
 	}
 
@@ -117,9 +129,23 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 		etec.Event.WithCtxTargetCalled(ctx)
 		return tr, nil
 	}
-	if tr != nil && gptr.Indirect(tr.Status) == entity.EvalTargetRunStatusSuccess && !etec.Event.IgnoreExistedTargetResult() {
+	current, err := readItemHookContinuation(ctx, etec)
+	if err != nil {
+		return nil, err
+	}
+	reuse := tr != nil && gptr.Indirect(tr.Status) == entity.EvalTargetRunStatusSuccess && !etec.Event.IgnoreExistedTargetResult()
+	if current != nil {
+		reuse, err = reuseHookTarget(etec, current, tr, reuse)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if reuse {
 		logs.CtxInfo(ctx, "CallTarget return with existed target record, record_id: %v", tr.ID)
 		return tr, nil
+	}
+	if err := checkItemHookExecution(ctx); err != nil {
+		return nil, err
 	}
 
 	if err := e.CheckBenefit(ctx, etec.Event.ExptID, etec.Event.SpaceID, etec.Expt.CreditCost == entity.CreditCostFree, etec.Event.Session); err != nil {
@@ -131,6 +157,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 	if err != nil {
 		return nil, err
 	}
+	rememberItemHookTarget(ctx, etec, record)
 
 	etec.Event.WithCtxTargetCalled(ctx)
 	return record, nil
@@ -348,6 +375,9 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		InputFields:     inputFields,
 		Ext:             ext,
 	}
+	if err := checkItemHookExecution(ctx); err != nil {
+		return nil, err
+	}
 
 	if !etec.Expt.AsyncCallTarget() {
 		return e.evalTargetService.ExecuteTarget(ctx, spaceID, etec.Expt.Target.ID, etec.Expt.Target.EvalTargetVersion.ID, etc, etid)
@@ -458,6 +488,12 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 		logs.CtxInfo(ctx, "CallEvaluators skip re-run due to async report trigger, return existing evaluator results: %d", len(etec.ExptTurnRunResult.EvaluatorResults))
 		return etec.ExptTurnRunResult.EvaluatorResults, nil
 	}
+	if err := checkItemHookExecution(ctx); err != nil {
+		if log := etec.GetExistTurnResultRunLog(etec.Turn.ID); targetResult != nil && targetResult.ID > 0 && log != nil && targetResult.ID != log.TargetResultID {
+			return nil, err
+		}
+		return etec.ExptTurnRunResult.EvaluatorResults, err
+	}
 
 	// ★ 新实验类型 (MultiSetConfig): 一律按本评测集自己绑定的 ItemConfig.EvaluatorConfs 执行。
 	//   - 按 conf 跑 alias 多实例 (即使 (versionID) 相同, alias 不同也跑两次); filter 不命中 → 写 Skipped 占位 record。
@@ -473,6 +509,10 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 	}
 
 	expt := etec.Expt
+	current, err := readItemHookContinuation(ctx, etec)
+	if err != nil {
+		return nil, err
+	}
 	evaluatorResults := make([]*entity.EvaluatorRecord, 0, len(expt.Evaluators))
 	pendingEvaluatorVersionIDs := make([]int64, 0, len(expt.Evaluators))
 
@@ -481,7 +521,14 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 
 		existResult := etec.ExptTurnRunResult.GetEvaluatorRecord(versionID)
 
-		if !etec.Event.IgnoreExistedEvaluatorResult(ctx) && existResult != nil && (existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking) {
+		reuse := !etec.Event.IgnoreExistedEvaluatorResult(ctx) && existResult != nil && (existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking)
+		if current != nil {
+			reuse, err = reuseHookEvaluator(ctx, etec, current, targetResult, existResult, versionID, "", reuse)
+			if err != nil {
+				return evaluatorResults, err
+			}
+		}
+		if reuse {
 			evaluatorResults = append(evaluatorResults, existResult)
 			continue
 		} else {
@@ -625,6 +672,9 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		// 若共享同一 inputData 的 *Content 指针，先完成的 evaluator 会污染未执行 evaluator 的输入，导致 content_omitted。
 		inputDataForCapture := deepCopyEvaluatorInputData(inputData)
 		ecForCapture := ec
+		if err := checkItemHookExecution(ctx); err != nil {
+			return collector.records, err
+		}
 
 		// 评估器劫持逻辑：根据输入数据前置判断是否需要劫持本次评估
 		if evaluatorRecord, intercepted, interceptErr := e.evaluatorService.ShouldInterceptEvaluator(ctx, &entity.RunEvaluatorRequest{
@@ -662,6 +712,9 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			})
 		} else {
 			pool.Add(func() error {
+				if err := checkItemHookExecution(ctx); err != nil {
+					return err
+				}
 				var err error
 				defer e.metric.EmitTurnExecEvaluatorResult(evaluatorSpaceID, err != nil)
 				evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, baseRunReq)
@@ -681,7 +734,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	}
 
 	err = pool.ExecAll(ctx)
-	return collector.records, err
+	return collector.records, itemHookPoolError(ctx, err)
 }
 
 // buildAliasRunConf 由 per-alias DynamicParam 合成运行时配置 (动态参数执行):
@@ -716,6 +769,10 @@ func buildAliasRunConf(dynamicParam map[string]string, staticRunConf *entity.Eva
 func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 	ctx context.Context, etec *entity.ExptTurnEvalCtx, targetResult *entity.EvalTargetRecord,
 ) ([]*entity.EvaluatorRecord, error) {
+	current, resumeErr := readItemHookContinuation(ctx, etec)
+	if resumeErr != nil {
+		return nil, resumeErr
+	}
 	var (
 		collector evalRecordCollector
 		item      = etec.EvalSetItem
@@ -809,6 +866,9 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 		if icConf == nil {
 			continue
 		}
+		if err := checkItemHookExecution(ctx); err != nil {
+			return collector.records, err
+		}
 		versionID := icConf.EvaluatorVersionID
 		alias := icConf.Alias
 
@@ -846,8 +906,15 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 
 		// 2) 已有成功 record 复用 (按 (versionID, alias) 双键)
 		existResult := etec.ExptTurnRunResult.GetEvaluatorRecordByVerAlias(versionID, alias)
-		if !etec.Event.IgnoreExistedEvaluatorResult(ctx) && existResult != nil &&
-			(existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking) {
+		reuse := !etec.Event.IgnoreExistedEvaluatorResult(ctx) && existResult != nil &&
+			(existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking)
+		if current != nil {
+			reuse, resumeErr = reuseHookEvaluator(ctx, etec, current, targetResult, existResult, versionID, alias, reuse)
+			if resumeErr != nil {
+				return collector.records, resumeErr
+			}
+		}
+		if reuse {
 			collector.store(existResult)
 			continue
 		} else if existResult != nil {
@@ -899,6 +966,8 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 	if err != nil {
 		return collector.records, err
 	}
+	defer pool.Release()
+	var taskErrors itemHookTaskErrors
 
 	for idx := range pending {
 		t := pending[idx]
@@ -908,6 +977,9 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 		versionIDForCapture := t.versionID
 		// 深拷贝 inputData: 避免多实例并发执行时大字段裁剪互相污染
 		inputDataForCapture := deepCopyEvaluatorInputData(t.inputData)
+		if err := checkItemHookExecution(ctx); err != nil {
+			return collector.records, err
+		}
 
 		// 评估器劫持: 跟老路径保持一致, 拦截就 collector.store 跳过实际调用
 		if evaluatorRecord, intercepted, interceptErr := e.evaluatorService.ShouldInterceptEvaluator(ctx, &entity.RunEvaluatorRequest{
@@ -933,13 +1005,16 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 		}
 
 		if evForCapture.IsAsync() {
-			pool.Add(func() error {
+			pool.Add(taskErrors.capture(ctx, func() error {
 				return e.asyncCallEvaluatorWithAlias(ctx, evForCapture, runConfForCapture, aliasForCapture, etec, inputDataForCapture, &collector)
-			})
+			}))
 			continue
 		}
 
-		pool.Add(func() error {
+		pool.Add(taskErrors.capture(ctx, func() error {
+			if err := checkItemHookExecution(ctx); err != nil {
+				return err
+			}
 			var err error
 			defer e.metric.EmitTurnExecEvaluatorResult(evaluatorSpaceID, err != nil)
 			evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
@@ -961,10 +1036,10 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 			}
 			collector.store(evaluatorRecord)
 			return nil
-		})
+		}))
 	}
 
-	if err := pool.Exec(ctx); err != nil {
+	if err := itemHookPoolError(ctx, taskErrors.result(pool.Exec(ctx))); err != nil {
 		return collector.records, err
 	}
 	return e.refreshAsyncEvaluatorRecords(ctx, collector.records)
@@ -982,6 +1057,9 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluatorWithAlias(
 	inputData *entity.EvaluatorInputData,
 	collector *evalRecordCollector,
 ) error {
+	if err := checkItemHookExecution(ctx); err != nil {
+		return err
+	}
 	var err error
 	defer func() { e.metric.EmitTurnExecEvaluatorResult(etec.Event.SpaceID, err != nil) }()
 
@@ -1021,6 +1099,9 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 	inputData *entity.EvaluatorInputData,
 	collector *evalRecordCollector,
 ) error {
+	if err := checkItemHookExecution(ctx); err != nil {
+		return err
+	}
 	var err error
 	defer func() { e.metric.EmitTurnExecEvaluatorResult(etec.Event.SpaceID, err != nil) }()
 

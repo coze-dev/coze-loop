@@ -93,6 +93,8 @@ func NewExptResultService(
 }
 
 type ExptResultServiceImpl struct {
+	hookArchive              repo.IHookItemArchiveRepo
+	hookArchiveScope         string
 	ExptItemResultRepo       repo.IExptItemResultRepo
 	ExptTurnResultRepo       repo.IExptTurnResultRepo
 	ExptStatsRepo            repo.IExptStatsRepo
@@ -156,6 +158,19 @@ func (e ExptResultServiceImpl) GetExptItemTurnResults(ctx context.Context, exptI
 }
 
 func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expt *entity.Experiment) ([]*entity.ExptTurnEvaluatorResultRef, error) {
+	if e.hookArchive != nil {
+		key := entity.HookRunKey{WorkspaceID: spaceID, ExperimentID: exptID, RunID: exptRunID}
+		source, err := e.hookArchive.ReadFinalizationSource(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		if source == nil || source.Key != key {
+			return nil, entity.ErrHookStoreCorrupt
+		}
+		if source.Managed {
+			return e.recordHookItemRunLogs(ctx, key, itemID, expt)
+		}
+	}
 	itemRunLog, err := e.ExptItemResultRepo.GetItemRunLog(ctx, exptID, exptRunID, itemID, spaceID)
 	if err != nil {
 		return nil, err

@@ -41,6 +41,7 @@ const (
 	SandboxExecuteStatusPending   SandboxExecuteStatus = 0
 	SandboxExecuteStatusCreating  SandboxExecuteStatus = 1
 	SandboxExecuteStatusRunning   SandboxExecuteStatus = 2
+	SandboxExecuteStatusCanceling SandboxExecuteStatus = 3 // Durable cancellation intent, not physical teardown.
 	SandboxExecuteStatusSucceeded SandboxExecuteStatus = 10
 	SandboxExecuteStatusFailed    SandboxExecuteStatus = 11
 	SandboxExecuteStatusCanceled  SandboxExecuteStatus = 12

@@ -75,7 +75,14 @@ type ExptSchedulerImpl struct {
 	// 为什么这两条必须单独接：它们由 daemon 直接把 item 判为 Fail 落库，consumer 那条
 	// 消息可能已经卡死或永不返回 —— 不在这里释放，这些 item 的额度会永久泄漏。
 	// 允许为 nil（开源部署注入 noop）。
-	centralGuard component.ICentralReservationGuard
+	centralGuard         component.ICentralReservationGuard
+	hookGate             repo.IHookGateRepo
+	hookScheduler        repo.IHookSchedulerRepo
+	hookSchedulerScope   string
+	hookRuns             repo.IHookRepo
+	hookInitialization   repo.IHookExecutionInitializationRepo
+	hookBoundInitializer *hookFrozenExecutionInitializer
+	hookBoundMode        entity.ExptRunMode
 }
 
 func NewExptSchedulerSvc(
@@ -139,19 +146,17 @@ func NewExptSchedulerSvc(
 		i.sandboxAgentNotifier = sandboxAgentNotifier[0]
 	}
 
-	i.Endpoints = SchedulerChain(
-		i.HandleEventErr,
-		i.SysOps,
-		i.HandleEventCheck,
-		i.HandleEventLock,
-		i.HandleEventEndpoint,
-		i.SandboxAgentHourlyNotify,
-	)(func(_ context.Context, _ *entity.ExptScheduleEvent) error { return nil })
+	i.Endpoints = i.schedulerEndpoints()
 
 	return i
 }
 
 func (e *ExptSchedulerImpl) Schedule(ctx context.Context, event *entity.ExptScheduleEvent) error {
+	if init := e.hookBoundInitializer; init != nil {
+		if ctx == nil || ctx.Err() != nil || event == nil || event.Session == nil || event.ExptRunMode != e.hookBoundMode || init.boundKey != (entity.HookRunKey{WorkspaceID: event.SpaceID, ExperimentID: event.ExptID, RunID: event.ExptRunID}) {
+			return schedulerHookRetryError{}
+		}
+	}
 	ctx = ctxcache.Init(ctx)
 
 	if err := e.Endpoints(ctx, event); err != nil {
@@ -187,18 +192,21 @@ func (e *ExptSchedulerImpl) SysOps(next SchedulerEndPoint) SchedulerEndPoint {
 
 func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEndPoint {
 	return func(ctx context.Context, event *entity.ExptScheduleEvent) error {
+		if stop, err := e.waitForHookAdmission(ctx, event); stop {
+			return err
+		}
 		runLog, err := e.Manager.GetRunLog(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session)
 		if err != nil {
 			return err
 		}
 
-		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
+		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) && !(e.boundOnline(event) && status == entity.ExptStatus_Draining) {
 			logs.CtxInfo(ctx, "ExptSchedulerConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 			return nil
 		}
 
 		interval := int64(e.Configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond())
-		if time.Now().Unix()-event.CreatedAt >= interval {
+		if !e.boundOnline(event) && time.Now().Unix()-event.CreatedAt >= interval {
 			return errno.NewExptZombieTimeoutErr(interval, event.ExptID, event.ExptRunID)
 		}
 
@@ -284,6 +292,10 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 			return nil
 		}
 
+		// Let MQ redeliver failed Hook continuations without exhausting the legacy error budget.
+		if errors.Is(nextErr, schedulerHookRetryError{}) {
+			return nextErr
+		}
 		logs.CtxError(ctx, "[ExptEval] HandleEventErr found error: %v, event: %v", nextErr, json.Jsonify(event))
 
 		// 基础设施类错误（Redis抖动、MQ发送失败、context cancel等）：尝试用新ctx重新调度，不直接终止实验
@@ -374,18 +386,36 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	if err != nil {
 		return err
 	}
+	if stop, err := e.waitForHookAdmission(ctx, event); stop {
+		return err
+	}
 
 	mode, err := e.schedulerModeFactory.NewSchedulerMode(event.ExptRunMode)
 	if err != nil {
 		return err
 	}
 
-	err = mode.ExptStart(ctx, event, exptDetail)
-	if err != nil {
+	initialized, stop, err := e.resumeHookSchedulerInitialization(ctx, event)
+	if stop || err != nil {
 		return err
 	}
+	if !initialized {
+		if err = mode.ExptStart(ctx, event, exptDetail); err != nil {
+			return err
+		}
+	}
 
-	err = mode.ScheduleStart(ctx, event, exptDetail)
+	if e.boundRetryItems(event) {
+		_, err = e.PrepareRetryItemsTail(ctx, entity.HookRunKey{WorkspaceID: event.SpaceID, ExperimentID: event.ExptID, RunID: event.ExptRunID})
+		if errors.Is(err, ErrHookPlanPreparationFailed) {
+			return e.finishHookSchedulerRun(ctx, event, nil)
+		}
+		if errors.Is(err, ErrHookPlanSourceRetry) || errors.Is(err, entity.ErrHookStoreConflict) || errors.Is(err, entity.ErrHookExecutionStorage) || errors.Is(err, entity.ErrHookPlanStorage) {
+			err = nil
+		}
+	} else if !e.boundOnline(event) {
+		err = mode.ScheduleStart(ctx, event, exptDetail)
+	}
 	if err != nil {
 		return err
 	}
@@ -458,7 +488,14 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
-	nextTick, err := mode.ExptEnd(ctx, event, exptDetail, len(toSubmit), len(incomplete))
+	var nextTick bool
+	if e.boundRetryItems(event) {
+		nextTick, err = e.finishRetryItemsTick(ctx, event)
+	} else if e.boundOnline(event) {
+		nextTick, err = e.finishOnlineTick(ctx, event, len(toSubmit), len(incomplete))
+	} else {
+		nextTick, err = mode.ExptEnd(ctx, event, exptDetail, len(toSubmit), len(incomplete))
+	}
 	if err != nil {
 		return err
 	}
@@ -478,6 +515,9 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return ctx.Err()
 	}
 	event.InfraErrorRetryTimes = 0
+	if e.boundOnline(event) {
+		return e.Publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(e.Configer.GetExptExecConf(ctx, event.SpaceID).GetDaemonInterval()))
+	}
 	return mode.NextTick(ctx, event, nextTick)
 }
 
@@ -694,6 +734,10 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 
 	defer e.Metric.EmitItemExecEval(event.SpaceID, int64(event.ExptRunMode), len(toSubmits))
 
+	if handled, err := e.persistHookSubmits(ctx, event, itemIDs); handled {
+		return err
+	}
+
 	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, itemIDs, map[string]any{"status": int32(entity.ItemRunState_Processing)},
 		event.SpaceID); err != nil {
 		return err
@@ -731,6 +775,9 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 }
 
 func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, expt *entity.Experiment) (alives, zombies []*entity.ExptEvalItem, err error) {
+	if handled, alive, failed, err := e.handleHookSchedulerFailures(ctx, event, items, expt, true); handled {
+		return alive, failed, err
+	}
 	asyncExec := false
 	if expt != nil {
 		asyncExec = expt.AsyncExec()
@@ -895,6 +942,9 @@ func (e *ExptSchedulerImpl) terminateZombieEvaluatorRecords(ctx context.Context,
 //
 // 非 SandboxAgent 类型 / adapter 未接入（开源 stub）时静默 no-op，返回原始 items。
 func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, expt *entity.Experiment) (alives, terminated []*entity.ExptEvalItem, err error) {
+	if handled, alive, failed, err := e.handleHookSchedulerFailures(ctx, event, items, expt, false); handled {
+		return alive, failed, err
+	}
 	if e.evalTargetService == nil || expt == nil {
 		return items, nil, nil
 	}
@@ -1264,6 +1314,13 @@ const exptStatsReconcileInterval = 5 * time.Minute
 //
 // 失败只告警：对账是自愈机制，它自己不能成为调度中断的理由。
 func (e *ExptSchedulerImpl) reconcileExptStats(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) {
+	if result, ok := e.ResultSvc.(*ExptResultServiceImpl); ok && result.hookArchive != nil {
+		source, err := result.hookArchive.ReadFinalizationSource(ctx, entity.HookRunKey{WorkspaceID: event.SpaceID, ExperimentID: event.ExptID, RunID: event.ExptRunID})
+		// Managed archive and finalization own conditional counters; a stale tick cannot replace them.
+		if err != nil || source == nil || source.Managed {
+			return
+		}
+	}
 	if e.ExptItemResultRepo == nil || e.ExptStatsRepo == nil || expt == nil {
 		return
 	}

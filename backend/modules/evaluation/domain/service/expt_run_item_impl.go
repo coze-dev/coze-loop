@@ -136,6 +136,9 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 		if err := e.storeTurnRunResult(ctx, etec, turnRunRes); err != nil {
 			return false, err
 		}
+		if itemHookControlOnly(turnRunRes.EvalErr) {
+			return false, turnRunRes.EvalErr
+		}
 
 		if turnRunRes.AsyncAbort {
 			logs.CtxInfo(ctx, "[ExptTurnEval] eval async abort, expt_id: %v, item_id: %v, turn_id: %v", eiec.Event.ExptID, eiec.Event.EvalSetItemID, turn.ID)
@@ -200,6 +203,8 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 	clone.Ext = etec.Ext
 
 	var evalErr error
+	interrupted, executionErr := splitItemHookControl(result.EvalErr)
+	managed := itemHookManagedWrite(ctx)
 
 	clone.ExptRunID = etec.Event.ExptRunID
 	if result.TargetResult != nil && result.TargetResult.ID > 0 {
@@ -228,13 +233,22 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 		}
 	}
 
-	if result.EvalErr != nil {
+	if interrupted || managed {
+		oldRefs := turnResultLog.EvaluatorResultIds
+		if clone.TargetResultID != turnResultLog.TargetResultID {
+			oldRefs = nil
+		}
+		clone.EvaluatorResultIds = mergeItemHookEvaluatorRefs(oldRefs, result.EvaluatorResults)
+	}
+	if executionErr != nil {
+		evalErr = executionErr
+	} else if interrupted && evalErr == nil {
 		evalErr = result.EvalErr
 	} else if evalErr == nil {
 		evalErr = e.validateEvaluatorResultsComplete(etec, result)
 	}
 
-	if evalErr != nil {
+	if evalErr != nil && !itemHookControlOnly(evalErr) {
 		var errMsg string
 		switch {
 		case isSandboxAgentExpt(etec.Expt):
@@ -262,7 +276,12 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 
 		clone.Status = entity.TurnRunState_Fail
 		clone.ErrMsg = errno.SerializeErr(evalErr)
-	} else {
+	} else if itemHookControlOnly(evalErr) {
+		if clone.Status != entity.TurnRunState_Terminal {
+			clone.Status = entity.TurnRunState_Processing
+			clone.ErrMsg = ""
+		}
+	} else if evalErr == nil {
 		if !result.AsyncAbort {
 			clone.Status = entity.TurnRunState_Success
 			clone.ErrMsg = ""
@@ -271,17 +290,47 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 
 	result.SetEvalErr(evalErr)
 
-	if err := e.TurnResultRepo.SaveTurnRunLogs(persistCtx, []*entity.ExptTurnResultRunLog{clone}); err != nil {
-		return err
+	var persistErr error
+	if interrupted {
+		if itemHookControlOnly(evalErr) {
+			clone.Status = entity.TurnRunState_Processing
+			clone.ErrMsg = ""
+		}
+		clone, persistErr = writeItemHookProgress(persistCtx, etec, turnResultLog, clone)
+	} else if managed {
+		clone, persistErr = writeItemHookResult(persistCtx, etec, turnResultLog, clone)
+	} else {
+		persistErr = e.TurnResultRepo.SaveTurnRunLogs(persistCtx, []*entity.ExptTurnResultRunLog{clone})
+	}
+	if persistErr != nil {
+		if itemHookControlOnly(evalErr) {
+			return itemHookControlError{wait: true}
+		}
+		if interrupted && evalErr != nil {
+			return evalErr
+		}
+		return persistErr
 	}
 	resumeCtx, resumeCancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
 	defer resumeCancel()
 	var resumeWG sync.WaitGroup
-	for _, record := range result.EvaluatorResults {
+	resumeRecords := result.EvaluatorResults
+	if interrupted && etec.ExptTurnRunResult != nil {
+		resumeRecords = append(append([]*entity.EvaluatorRecord(nil), resumeRecords...), etec.ExptTurnRunResult.EvaluatorResults...)
+	}
+	armed := make(map[int64]bool)
+	for _, record := range resumeRecords {
 		if record == nil || record.ID <= 0 || record.Status != entity.EvaluatorRunStatusAsyncInvoking {
 			continue
 		}
 		recordID := record.ID
+		if interrupted && !itemHookProgressHasRecord(clone.EvaluatorResultIds, recordID) {
+			continue
+		}
+		if interrupted && armed[recordID] {
+			continue
+		}
+		armed[recordID] = true
 		resumeWG.Add(1)
 		go func() {
 			defer resumeWG.Done()
@@ -386,6 +435,16 @@ func formatEvaluatorVerAlias(versionID int64, alias string) string {
 }
 
 func (e *ExptItemEvalCtxExecutor) SetItemRunProcessing(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, session *entity.Session) error {
+	if itemHookManagedWrite(ctx) {
+		terminal, err := writeItemHookRun(ctx, entity.HookRunKey{WorkspaceID: spaceID, ExperimentID: exptID, RunID: exptRunID}, itemID, entity.ItemRunState_Processing, nil)
+		if err != nil {
+			return err
+		}
+		if terminal {
+			return itemHookControlError{}
+		}
+		return nil
+	}
 	return e.ItemResultRepo.UpdateItemRunLog(ctx, exptID, exptRunID, []int64{itemID}, map[string]any{"status": int32(entity.ItemRunState_Processing)}, spaceID)
 }
 
@@ -401,6 +460,12 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 		}
 	)
 	etec.Ext = make(map[string]string)
+	if current, err := readItemHookContinuation(ctx, etec); err != nil {
+		return nil, err
+	} else if current != nil {
+		existTurnRunResult = current
+		eiec.ExistItemEvalResult.TurnResultRunLogs[turn.ID] = current
+	}
 	for k, v := range eiec.Event.Ext {
 		etec.Ext[k] = v
 	}
@@ -438,7 +503,7 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 		return etec, nil
 	}
 	recordCtx := ctx
-	if eiec.Event.ExptRunMode == entity.EvaluationModeFailRetry {
+	if eiec.Event.ExptRunMode == entity.EvaluationModeFailRetry || (eiec.Event.HookControlContinuation && ctx.Value(itemHookProgressContextKey{}) != nil) {
 		recordCtx = contexts.WithCtxWriteDB(ctx)
 	}
 
@@ -494,6 +559,12 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 }
 
 func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *entity.ExptItemEvalCtx, evalErr error) error {
+	if control, failure := splitItemHookControl(evalErr); control {
+		if failure == nil {
+			return evalErr
+		}
+		evalErr = failure
+	}
 	event := eiec.Event
 	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
 	defer cancel()
@@ -515,26 +586,36 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 		ufields["status"] = int32(entity.ItemRunState_Success)
 	}
 
-	// Terminal 是吸收态：该行已被用户行级终止时，在途执行的成功/失败结果 MUST NOT 回写 status / err_msg
-	// （对应 spec「终止后到达的执行结果不覆盖终止状态」）—— 用户要看到的是"被主动终止"，而不是终止前
-	// 那次执行的报错。
-	//
-	// ⚠️ 这里刻意**不**用「先 SELECT 判 Terminal 再 UPDATE」：普通 SELECT 会被路由到只读从库
-	// （商业化侧 db 以 WithReadReplicas 构建），主从延迟窗口内会读回终止前的旧状态并把 Terminal
-	// 覆盖成 Success —— 该行还会被重新扫成成功行、发 item-complete MQ、记进 success_cnt，
-	// 用户的终止操作被静默吞掉。即便读主库，读-判-写之间仍有 TOCTOU 窗口。
-	// 故拆成两条写，用 DB 的 WHERE 做原子判定：
-	//	 (1) 条件写：status/err_msg/result_state，仅对 status <> Terminal 的行生效；
-	//	 (2) 无条件写：result_state=Logged —— 对已 Terminal 的行也必须落，否则调度侧收不了口。
-	//	     该字段与终止语义无冲突（TerminateItems 自己也写 Logged），重复写幂等。
-	if err := e.ItemResultRepo.UpdateItemRunLogIfNotTerminal(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
-		return err
-	}
+	if itemHookManagedWrite(ctx) {
+		var errMsg *string
+		if evalErr != nil {
+			errMsg = gptr.Of(errno.SerializeErr(evalErr))
+		}
+		if _, err := writeItemHookRun(persistCtx, itemHookKey(event), event.EvalSetItemID, entity.ItemRunState(ufields["status"].(int32)), errMsg); err != nil {
+			return err
+		}
+	} else {
+		// Terminal 是吸收态：该行已被用户行级终止时，在途执行的成功/失败结果 MUST NOT 回写 status / err_msg
+		// （对应 spec「终止后到达的执行结果不覆盖终止状态」）—— 用户要看到的是"被主动终止"，而不是终止前
+		// 那次执行的报错。
+		//
+		// ⚠️ 这里刻意**不**用「先 SELECT 判 Terminal 再 UPDATE」：普通 SELECT 会被路由到只读从库
+		// （商业化侧 db 以 WithReadReplicas 构建），主从延迟窗口内会读回终止前的旧状态并把 Terminal
+		// 覆盖成 Success —— 该行还会被重新扫成成功行、发 item-complete MQ、记进 success_cnt，
+		// 用户的终止操作被静默吞掉。即便读主库，读-判-写之间仍有 TOCTOU 窗口。
+		// 故拆成两条写，用 DB 的 WHERE 做原子判定：
+		//	 (1) 条件写：status/err_msg/result_state，仅对 status <> Terminal 的行生效；
+		//	 (2) 无条件写：result_state=Logged —— 对已 Terminal 的行也必须落，否则调度侧收不了口。
+		//	     该字段与终止语义无冲突（TerminateItems 自己也写 Logged），重复写幂等。
+		if err := e.ItemResultRepo.UpdateItemRunLogIfNotTerminal(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
+			return err
+		}
 
-	if err := e.ItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, map[string]any{
-		"result_state": entity.ExptItemResultStateLogged,
-	}, event.SpaceID); err != nil {
-		return err
+		if err := e.ItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, map[string]any{
+			"result_state": entity.ExptItemResultStateLogged,
+		}, event.SpaceID); err != nil {
+			return err
+		}
 	}
 
 	// 沙箱 agent 实验:单行走到终态失败,立即发一张飞书卡。Notifier 内部做 sandbox agent + Enable 判定,

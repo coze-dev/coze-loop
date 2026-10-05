@@ -115,6 +115,10 @@ func NewExptManager(
 }
 
 type ExptMangerImpl struct {
+	finalization *ExptManagerFinalizationDependencies
+	deletion     repo.IHookDeletionRepo
+	hooks        *ExptManagerHookDependencies
+	onlineItems  EvaluationSetItemService
 	// tupleSvc       IExptTupleService
 	exptResultService           ExptResultService
 	exptAggrResultService       ExptAggrResultService
@@ -432,6 +436,9 @@ func (e *ExptMangerImpl) CheckGroupKey(ctx context.Context, groupKey string, spa
 }
 
 func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) error {
+	if e.deletion != nil {
+		return e.deleteHookExperiments(ctx, exptIDs, spaceID, false)
+	}
 	logs.CtxInfo(ctx, "batch delete expts, expt_ids: %v", exptIDs)
 
 	// 先获取实验信息，用于判断是否关联模板
@@ -1081,6 +1088,31 @@ func (e *ExptMangerImpl) authorizeSharedResource(
 }
 
 func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error) {
+	resources, err := e.resolveExptCreation(ctx, req, session)
+	if err != nil {
+		return nil, err
+	}
+	ids, err := e.idgenerator.GenMultiIDs(ctx, 2)
+	if err != nil {
+		return nil, err
+	}
+	prepared, err := e.prepareExptCreation(ctx, req, session, resources, ids, true)
+	if err != nil {
+		return nil, err
+	}
+	if err := e.exptResultService.CreateStats(ctx, prepared.stats, session); err != nil {
+		return nil, err
+	}
+	if err := e.exptResultService.InsertExptTurnResultFilterKeyMappings(ctx, prepared.mappings); err != nil {
+		return nil, err
+	}
+	if err := e.Create(ctx, prepared.experiment, session); err != nil {
+		return nil, err
+	}
+	return prepared.experiment, nil
+}
+
+func (e *ExptMangerImpl) resolveExptCreation(ctx context.Context, req *entity.CreateExptParam, session *entity.Session) (*exptCreationResources, error) {
 	if err := req.PrepareVerificationTarget(); err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
@@ -1267,10 +1299,16 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		return nil, err
 	}
 
-	ids, err := e.idgenerator.GenMultiIDs(ctx, 2)
-	if err != nil {
-		return nil, err
+	return &exptCreationResources{tuple: tuple, versionedTargetID: versionedTargetID, evalSetSpaceID: evalSetSpaceID, targetSpaceID: targetSpaceID, evalSetAccessLevel: evalSetAccessLevel}, nil
+}
+
+func (e *ExptMangerImpl) prepareExptCreation(ctx context.Context, req *entity.CreateExptParam, session *entity.Session, resources *exptCreationResources, ids []int64, persistBenefit bool) (*preparedExptCreation, error) {
+	if resources == nil || resources.tuple == nil || len(ids) != 2 || ids[0] <= 0 || ids[1] <= 0 || session == nil {
+		return nil, entity.ErrHookStoreConflict
 	}
+	tuple, versionedTargetID := resources.tuple, resources.versionedTargetID
+	evalSetSpaceID, targetSpaceID, evalSetAccessLevel := resources.evalSetSpaceID, resources.targetSpaceID, resources.evalSetAccessLevel
+	var err error
 
 	evaluatorRefs := make([]*entity.ExptEvaluatorVersionRef, 0)
 	exptTurnResultFilterKeyMappings := make([]*entity.ExptTurnResultFilterKeyMapping, 0)
@@ -1585,7 +1623,14 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	if err := do.EvalConf.NormalizeVerificationConfig(do.Target); err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
-	err = e.CheckRun(ctx, do, req.WorkspaceID, session, entity.WithCheckBenefit())
+	if persistBenefit {
+		err = e.CheckRun(ctx, do, req.WorkspaceID, session, entity.WithCheckBenefit())
+	} else {
+		err = e.CheckRun(ctx, do, req.WorkspaceID, session)
+		if err == nil && do.ExptType != entity.ExptType_Online {
+			err = e.checkBenefit(ctx, do, session, false)
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -1595,19 +1640,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		SpaceID: req.WorkspaceID,
 		ExptID:  do.ID,
 	}
-	if err := e.exptResultService.CreateStats(ctx, stats, session); err != nil {
-		return nil, err
-	}
-
-	if err := e.exptResultService.InsertExptTurnResultFilterKeyMappings(ctx, exptTurnResultFilterKeyMappings); err != nil {
-		return nil, err
-	}
-
-	if err := e.Create(ctx, do, session); err != nil {
-		return nil, err
-	}
-
-	return do, nil
+	return &preparedExptCreation{experiment: do, stats: stats, mappings: exptTurnResultFilterKeyMappings}, nil
 }
 
 func (e *ExptMangerImpl) Create(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
@@ -1831,6 +1864,9 @@ func (e *ExptMangerImpl) UpdateRunConf(ctx context.Context, param *entity.Update
 }
 
 func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, session *entity.Session) error {
+	if e.deletion != nil {
+		return e.deleteHookExperiments(ctx, []int64{exptID}, spaceID, true)
+	}
 	logs.CtxInfo(ctx, "delete expt, expt_id: %v", exptID)
 
 	// 先获取实验信息，用于判断是否关联模板

@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS `expt_template`
     `deleted_at`           timestamp       NULL     DEFAULT NULL COMMENT '删除时间',
     `visibility` int unsigned NOT NULL DEFAULT '0' COMMENT '可见性，默认0-可见，1-隐藏',
     `notification_conf`    blob COMMENT '通知配置，json格式存储webhook/飞书通知配置',
+    `lifecycle_hook_conf` mediumblob DEFAULT NULL COMMENT '受保护的生命周期Hook配置封套',
+    `schedule_run_binding` mediumblob DEFAULT NULL COMMENT '服务端定时执行身份绑定封套',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_space_id_name_deleted_at` (`space_id`, `name`, `deleted_at`),
     KEY `idx_space_id_created_by_deleted_at` (`space_id`, `created_by`, `deleted_at`),
@@ -34,5 +36,4 @@ CREATE TABLE IF NOT EXISTS `expt_template`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='expt_template';
-
 

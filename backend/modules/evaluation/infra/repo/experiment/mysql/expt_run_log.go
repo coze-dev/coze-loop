@@ -51,7 +51,7 @@ func (dao *ExptRunLogDAOImpl) Create(ctx context.Context, exptRunLog *model.Expt
 
 func (dao *ExptRunLogDAOImpl) Save(ctx context.Context, exptRunLog *model.ExptRunLog, opts ...db.Option) error {
 	db := dao.provider.NewSession(ctx, opts...)
-	if err := db.WithContext(ctx).Save(exptRunLog).Error; err != nil {
+	if err := db.WithContext(ctx).Omit("lifecycle_hook_version").Save(exptRunLog).Error; err != nil {
 		return errorx.Wrapf(err, "save expt_run_log fail, model: %v", json.Jsonify(exptRunLog))
 	}
 	logs.CtxInfo(ctx, "save expt_run_log success, model: %v", json.Jsonify(exptRunLog))
@@ -64,10 +64,11 @@ func (dao *ExptRunLogDAOImpl) Update(ctx context.Context, exptID, exptRunID int6
 	_, err := q.WithContext(ctx).
 		Where(q.ExptID.Eq(exptID)).
 		Where(q.ExptRunID.Eq(exptRunID)).
+		Omit(q.LifecycleHookVersion).
 		UpdateColumns(ufields)
 	if err != nil {
-		return errorx.Wrapf(err, "update expt_run_log fail, expt_id: %v, expt_run_id: %v, ufields: %v", exptID, exptRunID, ufields)
+		return errorx.Wrapf(err, "update expt_run_log fail, expt_id: %v, expt_run_id: %v", exptID, exptRunID)
 	}
-	logs.CtxInfo(ctx, "update expt_run_log success, expt_id: %v, expt_run_id: %v, ufields: %v", exptID, exptRunID, ufields)
+	logs.CtxInfo(ctx, "update expt_run_log success, expt_id: %v, expt_run_id: %v", exptID, exptRunID)
 	return nil
 }

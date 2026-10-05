@@ -30,6 +30,11 @@ import (
 // ExperimentDomainServiceSet 提供所有 Experiment 相关的 Domain Service
 var ExperimentDomainServiceSet = wire.NewSet(
 	NewExptManager,
+	ExperimentDomainServiceBaseSet,
+)
+
+// The application composition root may replace only the manager provider.
+var ExperimentDomainServiceBaseSet = wire.NewSet(
 	NewExptResultService,
 	NewExptAggrResultService,
 	NewExptSchedulerSvc,

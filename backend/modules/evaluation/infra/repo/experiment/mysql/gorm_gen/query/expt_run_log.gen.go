@@ -46,6 +46,7 @@ func newExptRunLog(db *gorm.DB, opts ...gen.DOOption) exptRunLog {
 	_exptRunLog.StatusMessage = field.NewBytes(tableName, "status_message")
 	_exptRunLog.ProcessingCnt = field.NewInt32(tableName, "processing_cnt")
 	_exptRunLog.TerminatedCnt = field.NewInt32(tableName, "terminated_cnt")
+	_exptRunLog.LifecycleHookVersion = field.NewInt32(tableName, "lifecycle_hook_version")
 
 	_exptRunLog.fillFieldMap()
 
@@ -56,26 +57,27 @@ func newExptRunLog(db *gorm.DB, opts ...gen.DOOption) exptRunLog {
 type exptRunLog struct {
 	exptRunLogDo exptRunLogDo
 
-	ALL           field.Asterisk
-	ID            field.Int64   // id
-	SpaceID       field.Int64   // 空间 id
-	CreatedBy     field.String  // 创建者 id
-	ExptID        field.Int64   // 实验 id
-	ExptRunID     field.Int64   // 运行 id
-	ItemIds       field.Bytes   // 组 ids
-	Mode          field.Int32   // 模式
-	Status        field.Int64   // 状态
-	PendingCnt    field.Int32   // item 未执行数量
-	SuccessCnt    field.Int32   // item 成功数量
-	FailCnt       field.Int32   // item 失败数量
-	CreditCost    field.Float64 // credit 消耗
-	TokenCost     field.Int64   // token 消耗
-	CreatedAt     field.Time    // 创建时间
-	UpdatedAt     field.Time    // 更新时间
-	DeletedAt     field.Field   // 删除时间
-	StatusMessage field.Bytes   // 提示信息
-	ProcessingCnt field.Int32   // processing_cnt
-	TerminatedCnt field.Int32   // terminated_cnt
+	ALL                  field.Asterisk
+	ID                   field.Int64   // id
+	SpaceID              field.Int64   // 空间 id
+	CreatedBy            field.String  // 创建者 id
+	ExptID               field.Int64   // 实验 id
+	ExptRunID            field.Int64   // 运行 id
+	ItemIds              field.Bytes   // 组 ids
+	Mode                 field.Int32   // 模式
+	Status               field.Int64   // 状态
+	PendingCnt           field.Int32   // item 未执行数量
+	SuccessCnt           field.Int32   // item 成功数量
+	FailCnt              field.Int32   // item 失败数量
+	CreditCost           field.Float64 // credit 消耗
+	TokenCost            field.Int64   // token 消耗
+	CreatedAt            field.Time    // 创建时间
+	UpdatedAt            field.Time    // 更新时间
+	DeletedAt            field.Field   // 删除时间
+	StatusMessage        field.Bytes   // 提示信息
+	ProcessingCnt        field.Int32   // processing_cnt
+	TerminatedCnt        field.Int32   // terminated_cnt
+	LifecycleHookVersion field.Int32   // NULL/0 legacy, 1 lifecycle managed
 
 	fieldMap map[string]field.Expr
 }
@@ -111,6 +113,7 @@ func (e *exptRunLog) updateTableName(table string) *exptRunLog {
 	e.StatusMessage = field.NewBytes(table, "status_message")
 	e.ProcessingCnt = field.NewInt32(table, "processing_cnt")
 	e.TerminatedCnt = field.NewInt32(table, "terminated_cnt")
+	e.LifecycleHookVersion = field.NewInt32(table, "lifecycle_hook_version")
 
 	e.fillFieldMap()
 
@@ -137,7 +140,7 @@ func (e *exptRunLog) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (e *exptRunLog) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 19)
+	e.fieldMap = make(map[string]field.Expr, 20)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["created_by"] = e.CreatedBy
@@ -157,6 +160,7 @@ func (e *exptRunLog) fillFieldMap() {
 	e.fieldMap["status_message"] = e.StatusMessage
 	e.fieldMap["processing_cnt"] = e.ProcessingCnt
 	e.fieldMap["terminated_cnt"] = e.TerminatedCnt
+	e.fieldMap["lifecycle_hook_version"] = e.LifecycleHookVersion
 }
 
 func (e exptRunLog) clone(db *gorm.DB) exptRunLog {

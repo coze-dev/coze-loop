@@ -66,6 +66,8 @@ type ExptItemEventEvalServiceImpl struct {
 	// centralScopeOwner 判定本进程是否拥有某实验的调度域。开源部署注入 noop（恒定拥有）。
 	// 防的是 item 消息跨环境投递后被错误的进程执行（详见该 port 的注释）。
 	centralScopeOwner component.ICentralSchedulerScopeOwner
+	hookAdmission     *itemHookAdmission
+	boundContext      *boundHookConsumerContext
 }
 
 func NewExptRecordEvalService(
@@ -148,6 +150,18 @@ func NewExptRecordEvalService(
 }
 
 func (e *ExptItemEventEvalServiceImpl) Eval(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+	if e.boundContext != nil && !e.boundContext.execute {
+		return itemHookControlError{wait: true}
+	}
+	if b := e.boundContext; b != nil {
+		source := b.binding.Input()
+		if event == nil || itemHookKey(event) != source.Key || event.ExptRunMode != source.Mode {
+			return itemHookControlError{}
+		}
+	}
+	if e.hookAdmission != nil && (ctx == nil || ctx.Err() != nil || event == nil) {
+		return itemHookControlError{}
+	}
 	ctx = ctxcache.Init(ctx)
 
 	if err := e.endpoints(ctx, event); err != nil {
@@ -178,7 +192,8 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventCheck(next RecordEvalEndPoint)
 			return err
 		}
 
-		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
+		online := e.boundContext != nil && e.boundContext.binding.Input().Mode == entity.EvaluationModeAppend && event.ExptRunMode == entity.EvaluationModeAppend
+		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) && !(online && status == entity.ExptStatus_Draining) {
 			logs.CtxInfo(ctx, "ExptRecordEvalConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 			return nil
 		}
@@ -318,6 +333,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 		if !ok {
 			// reservation 不存在：迟到消息、账本已重建、或已被释放。本条消息一律不执行，
 			// 但**必须先修正 run log 投影**，否则 item 会停在 Processing 占着并发槽位。
+			if result, err := e.applyHookConsumerControl(ctx, event, entity.HookConsumerReservationAbsent, nil); result.Handled {
+				return err
+			}
 			e.requeueOrphanedItemOnReservationAbsent(ctx, event)
 			return nil
 		}
@@ -333,7 +351,14 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 		// 投影已被 repair 修正。此时 reservation 校验已通过，说明额度是真的，继续执行是安全的。
 		// 现在本层在 item 锁内，同一 item 不会有并发的第二个执行者，未命中只剩"已 Processing
 		// 的重复投递"与"被 repair 修正"两种，两者继续执行都由 item 锁 + 幂等写兜住。
-		if e.dispatchRepo != nil {
+		if result, err := e.applyHookConsumerControl(ctx, event, entity.HookConsumerStartReserved, nil); result.Handled {
+			if err != nil {
+				return err
+			}
+			if !result.Proceed {
+				return itemHookControlError{}
+			}
+		} else if e.dispatchRepo != nil {
 			started, err := e.dispatchRepo.StartReservedItem(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
 			if err != nil {
 				// 投影写失败：返回错误让 MQ 重试。额度已预占且 reservation 已转 Running，
@@ -690,6 +715,14 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 			return next(ctx, event)
 		}(ctx, event)
 
+		var hookControl itemHookControlError
+		if errors.As(nextErr, &hookControl) {
+			if hookControl.wait {
+				return e.publishItemHookWait(ctx, event)
+			}
+			return nextErr
+		}
+
 		retryConf := e.configer.GetErrRetryConf(ctx, event.SpaceID, nextErr)
 		needRetry := event.RetryTimes < retryConf.GetRetryTimes()
 		if event.MaxRetryTimes > 0 {
@@ -717,6 +750,16 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 		}
 
 		if retryConf.IsInDebt {
+			if e.hookAdmission != nil {
+				source, err := e.readItemHookSource(ctx, itemHookKey(event))
+				if err != nil {
+					return err
+				}
+				if source.Managed {
+					// The outer handler runs after the item-lock defer; the decision is known here.
+					return e.manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, entity.WithStatus(entity.ExptStatus_Terminated), entity.WithStatusMessage(nextErr.Error()))
+				}
+			}
 			completeCID := fmt.Sprintf("terminate:indebt:%d", event.ExptRunID)
 
 			if err := e.manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
@@ -743,6 +786,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 				// ★ 让位分支(替换原 MQ 重投): 把行从 Processing 退回 Queueing、retry_times+1, 让出并发名额,
 				// 重试改由调度器 scanToSubmit 唯一驱动。updated_at 由 DB 的 ON UPDATE CURRENT_TIMESTAMP 随本次
 				// UPDATE 刷新 → 下次重新提交后单行超时兜底按次尝试独立计时。
+				if result, err := e.applyHookConsumerControl(ctx, event, entity.HookConsumerYield, nextErr); result.Handled {
+					return err
+				}
 				e.yieldItemRunForRetry(ctx, event, nextErr)
 				return nil
 			}
@@ -753,6 +799,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 			}
 
 			clone.RetryTimes += 1
+			clone.HookControlContinuation = false
 
 			return e.publisher.PublishExptRecordEvalEvent(ctx, clone, gptr.Of(retryConf.GetRetryInterval()), func(ne *entity.ExptItemEvalEvent) {
 				ne.AsyncReportTrigger = false
@@ -764,6 +811,15 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 		// 落 Fail, 但在 eval() 里 BuildExptRecordEvalCtx 等前置阶段就失败时压根没走到那里(eiec 未构建),
 		// item 停在进入执行时写的 Processing 上, 表现为"报错了却永久卡 processing、实验永不收敛"。
 		// 此处按 CompleteItemRun 同样的字段兜底(status=Fail + err_msg + result_state=Logged), 幂等可重复写。
+		if result, err := e.applyHookConsumerControl(ctx, event, entity.HookConsumerFail, nextErr); result.Handled {
+			if err != nil {
+				return err
+			}
+			if result.Changed {
+				e.releaseCentralQuotaOutsideGate(ctx, event, nextErr, "item unretriable pre-exec failure")
+			}
+			return nil
+		}
 		e.completeItemRunOnUnretriableErr(ctx, event, nextErr)
 
 		// ★ 顺序不能反：必须先落 Fail 再释放。
@@ -991,6 +1047,9 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 	if err != nil {
 		return err
 	}
+	if e.boundContext != nil && !e.boundContext.execute {
+		return itemHookControlError{wait: true}
+	}
 
 	ctx = e.WithCtx(ctx, eiec)
 
@@ -1031,6 +1090,9 @@ func (e *ExptItemEventEvalServiceImpl) WithCtx(ctx context.Context, eiec *entity
 }
 
 func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Context, event *entity.ExptItemEvalEvent) (*entity.ExptItemEvalCtx, error) {
+	if e.boundContext != nil {
+		return e.buildBoundHookConsumerContext(ctx, event)
+	}
 	exptDetail, err := e.manager.GetDetail(ctx, event.ExptID, event.SpaceID, event.Session)
 	if err != nil {
 		return nil, err
@@ -1231,6 +1293,13 @@ type ExptRecordEvalModeSubmit struct {
 }
 
 func (e *ExptRecordEvalModeSubmit) PreEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
+	itemVersion, versionErr := managedItemHookVersion(ctx, eiec)
+	if versionErr != nil {
+		return versionErr
+	}
+	if handled, err := initializeHookPreEval(ctx, eiec, e.idgen); handled {
+		return err
+	}
 	if eiec.GetExistItemResultLog() != nil && len(eiec.GetExistTurnResultLogs()) > 0 {
 		return nil
 	}
@@ -1268,14 +1337,15 @@ func (e *ExptRecordEvalModeSubmit) PreEval(ctx context.Context, eiec *entity.Exp
 		turnRunResults := make([]*entity.ExptTurnResultRunLog, 0, len(absentRunLogTurnIDs))
 		for idx, turnID := range absentRunLogTurnIDs {
 			turnRunResults = append(turnRunResults, &entity.ExptTurnResultRunLog{
-				ID:        ids[idx],
-				SpaceID:   event.SpaceID,
-				ExptID:    event.ExptID,
-				ExptRunID: event.ExptRunID,
-				ItemID:    event.EvalSetItemID,
-				TurnID:    turnID,
-				Status:    entity.TurnRunState_Processing,
-				LogID:     logID,
+				ID:            ids[idx],
+				SpaceID:       event.SpaceID,
+				ExptID:        event.ExptID,
+				ExptRunID:     event.ExptRunID,
+				ItemID:        event.EvalSetItemID,
+				ItemVersionID: itemVersion,
+				TurnID:        turnID,
+				Status:        entity.TurnRunState_Processing,
+				LogID:         logID,
 			})
 		}
 
@@ -1528,6 +1598,13 @@ type ExptRecordEvalModeFailRetry struct {
 }
 
 func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
+	if handled, err := initializeBoundHookRetry(ctx, eiec, e.idgen, e.evalTargetService, e.evaluatorRecordSvc, e.exptTurnResultRepo); handled {
+		return err
+	}
+	itemVersion, versionErr := managedItemHookVersion(ctx, eiec)
+	if versionErr != nil {
+		return versionErr
+	}
 	if eiec.GetExistItemResultLog() != nil && len(eiec.GetExistTurnResultLogs()) > 0 {
 		return nil
 	}
@@ -1570,6 +1647,9 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		runLog.ID = ids[idx]
 		runLog.Status = entity.TurnRunState_Processing
 		runLog.ExptRunID = eiec.Event.ExptRunID
+		if ctx.Value(itemHookProgressContextKey{}) != nil {
+			runLog.ItemVersionID = itemVersion
+		}
 		runLog.ErrMsg = ""
 		// 跨空间共享: Target 记录随执行落来源空间(冻结 TargetSpaceID), 失败重试选引用时须按来源空间读;
 		// 用调用方空间读会得 nil → 误判 Target 非 Success → 清零 target_result_id 触发无谓重跑 Target。
@@ -1608,6 +1688,15 @@ type ExptRecordEvalModeRetryIgnoreResult struct {
 }
 
 func (e *ExptRecordEvalModeRetryIgnoreResult) PreEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
+	if eiec.HookManifest != nil && eiec.Event.ExptRunMode == entity.EvaluationModeRetryAll {
+		if handled, err := initializeHookPreEval(ctx, eiec, e.idgen); handled {
+			return err
+		}
+	}
+	itemVersion, versionErr := managedItemHookVersion(ctx, eiec)
+	if versionErr != nil {
+		return versionErr
+	}
 	if eiec.GetExistItemResultLog() != nil && len(eiec.GetExistTurnResultLogs()) > 0 {
 		return nil
 	}
@@ -1623,14 +1712,15 @@ func (e *ExptRecordEvalModeRetryIgnoreResult) PreEval(ctx context.Context, eiec 
 	turnRunLogs := make([]*entity.ExptTurnResultRunLog, 0, len(eiec.EvalSetItem.Turns))
 	for idx, turn := range eiec.EvalSetItem.Turns {
 		turnRunLogs = append(turnRunLogs, &entity.ExptTurnResultRunLog{
-			ID:        ids[idx],
-			SpaceID:   event.SpaceID,
-			ExptID:    event.ExptID,
-			ExptRunID: event.ExptRunID,
-			ItemID:    event.EvalSetItemID,
-			TurnID:    turn.ID,
-			Status:    entity.TurnRunState_Processing,
-			LogID:     logID,
+			ID:            ids[idx],
+			SpaceID:       event.SpaceID,
+			ExptID:        event.ExptID,
+			ExptRunID:     event.ExptRunID,
+			ItemID:        event.EvalSetItemID,
+			ItemVersionID: itemVersion,
+			TurnID:        turn.ID,
+			Status:        entity.TurnRunState_Processing,
+			LogID:         logID,
 		})
 	}
 

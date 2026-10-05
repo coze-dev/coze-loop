@@ -179,7 +179,49 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	iCentralSchedulerScopeProvider := component.NewNoopCentralSchedulerScopeProvider()
 	iCentralAdmissionPolicy := component.NewNoopCentralAdmissionPolicy()
 	iCentralReservationGuard := component.NewNoopCentralReservationGuard()
-	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, componentIConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, serviceEvaluatorService, benefitSvc, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics, iCentralSchedulerScopeProvider, iCentralAdmissionPolicy, iCentralReservationGuard)
+	hookRuntimeManagerInputs := HookRuntimeManagerInputs{
+		ExptResultService:           exptResultService,
+		ExptRepo:                    iExperimentRepo,
+		ExptRunLogRepo:              iExptRunLogRepo,
+		ExptStatsRepo:               iExptStatsRepo,
+		ExptItemResultRepo:          iExptItemResultRepo,
+		ExptItemRefRepo:             iExptItemRefRepo,
+		ExptTurnResultRepo:          iExptTurnResultRepo,
+		Configer:                    componentIConfiger,
+		QuotaRepo:                   quotaRepo,
+		Mutex:                       iLocker,
+		Idem:                        idempotentService,
+		Publisher:                   exptEventPublisher,
+		Audit:                       auditClient,
+		Idgen:                       idgen2,
+		Metric:                      exptMetric,
+		Lwt:                         iLatestWriteTracker,
+		EvaluationSetVersionService: evaluationSetVersionService,
+		EvaluationSetService:        iEvaluationSetService,
+		EvalTargetService:           iEvalTargetService,
+		EvaluatorService:            serviceEvaluatorService,
+		BenefitService:              benefitSvc,
+		ExptAggrResultService:       exptAggrResultService,
+		TemplateRepo:                iExptTemplateRepo,
+		TemplateManager:             iExptTemplateManager,
+		NotifyRPCAdapter:            iNotifyRPCAdapter,
+		UserProvider:                iUserProvider,
+		PipelineListAdapter:         pipelineListAdapter,
+		ResourceAccessAuthorizer:    resourceAccessAuthorizer,
+		SandboxAgentMetrics:         sandboxAgentMetrics,
+		CentralScopeProvider:        iCentralSchedulerScopeProvider,
+		CentralAdmissionPolicy:      iCentralAdmissionPolicy,
+		CentralGuard:                iCentralReservationGuard,
+	}
+	hookRuntimePlatform, err := NewOSSHookRuntimePlatform(configFactory, rmqFactory, iUserProvider)
+	if err != nil {
+		return nil, err
+	}
+	hookRuntimeStores := NewHookRuntimeStores(db2, cmdable, hookRuntimePlatform)
+	iExptManager, err := NewHookRuntimeManager(hookRuntimeManagerInputs, hookRuntimeStores)
+	if err != nil {
+		return nil, err
+	}
 	v4 := service.ProvideNoSandboxAgentNotifiers()
 	schedulerModeFactory := service.NewSchedulerModeFactory(iExptManager, iExptItemResultRepo, iExptStatsRepo, iExptTurnResultRepo, idgen2, evaluationSetItemService, iExperimentRepo, iExptItemRefRepo, idempotentService, componentIConfiger, exptEventPublisher, evaluatorRecordService, exptResultService, iExptTemplateManager, iExptRunLogRepo, iLocker, v4...)
 	iItemCompletePublisher := service.ProvideNilItemCompletePublisher()
@@ -202,7 +244,33 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	noopWebhookSecretProvider := service.NewNoopWebhookSecretProvider()
 	webhookDispatcher := service.NewWebhookDispatcher(exptEventPublisher, noopWebhookSecretProvider, iExptStatsRepo)
 	exptLifecycleEventHandler := service.NewExptLifecycleEventHandler(iExperimentRepo, iNotifyRPCAdapter, iUserProvider, webhookDispatcher)
-	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, componentIConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, serviceEvaluatorService, iExptTemplateManager, iFileProvider, exptLifecycleEventHandler, sandboxSchedulerAdapter, sandboxAgentMetrics)
+	hookRuntimeExperimentApplicationInputs := HookRuntimeExperimentApplicationInputs{
+		AggResultSvc:               exptAggrResultService,
+		ResultSvc:                  exptResultService,
+		Manager:                    iExptManager,
+		Scheduler:                  exptSchedulerEvent,
+		RecordEval:                 exptItemEvalEvent,
+		Idgen:                      idgen2,
+		Configer:                   componentIConfiger,
+		Auth:                       iAuthProvider,
+		UserInfoService:            userInfoService,
+		EvalTargetService:          iEvalTargetService,
+		EvaluationSetItemService:   evaluationSetItemService,
+		AnnotateService:            iExptAnnotateService,
+		TagRPCAdapter:              iTagRPCAdapter,
+		ExptResultExportService:    iExptResultExportService,
+		ExptInsightAnalysisService: iExptInsightAnalysisService,
+		EvaluatorService:           serviceEvaluatorService,
+		TemplateManager:            iExptTemplateManager,
+		FileProvider:               iFileProvider,
+		LifecycleEventHandler:      exptLifecycleEventHandler,
+		SandboxSchedulerAdapter:    sandboxSchedulerAdapter,
+		SandboxAgentMetrics:        sandboxAgentMetrics,
+	}
+	iExperimentApplication, err := NewHookRuntimeExperimentApplication(hookRuntimeExperimentApplicationInputs, hookRuntimeStores, evaluationSetVersionService, iEvaluationSetService, iExptItemRefRepo, iExptTurnResultRepo, iExptItemResultRepo, iExperimentRepo)
+	if err != nil {
+		return nil, err
+	}
 	return iExperimentApplication, nil
 }
 
@@ -456,7 +524,49 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	iCentralSchedulerScopeProvider := component.NewNoopCentralSchedulerScopeProvider()
 	iCentralAdmissionPolicy := component.NewNoopCentralAdmissionPolicy()
 	iCentralReservationGuard := component.NewNoopCentralReservationGuard()
-	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, iConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, evaluatorService, benefitService, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics, iCentralSchedulerScopeProvider, iCentralAdmissionPolicy, iCentralReservationGuard)
+	hookRuntimeManagerInputs := HookRuntimeManagerInputs{
+		ExptResultService:           exptResultService,
+		ExptRepo:                    iExperimentRepo,
+		ExptRunLogRepo:              iExptRunLogRepo,
+		ExptStatsRepo:               iExptStatsRepo,
+		ExptItemResultRepo:          iExptItemResultRepo,
+		ExptItemRefRepo:             iExptItemRefRepo,
+		ExptTurnResultRepo:          iExptTurnResultRepo,
+		Configer:                    iConfiger,
+		QuotaRepo:                   quotaRepo,
+		Mutex:                       iLocker,
+		Idem:                        idempotentService,
+		Publisher:                   exptEventPublisher,
+		Audit:                       auditClient,
+		Idgen:                       idgen2,
+		Metric:                      exptMetric,
+		Lwt:                         iLatestWriteTracker,
+		EvaluationSetVersionService: evaluationSetVersionService,
+		EvaluationSetService:        iEvaluationSetService,
+		EvalTargetService:           iEvalTargetService,
+		EvaluatorService:            evaluatorService,
+		BenefitService:              benefitService,
+		ExptAggrResultService:       exptAggrResultService,
+		TemplateRepo:                iExptTemplateRepo,
+		TemplateManager:             iExptTemplateManager,
+		NotifyRPCAdapter:            iNotifyRPCAdapter,
+		UserProvider:                iUserProvider,
+		PipelineListAdapter:         pipelineListAdapter,
+		ResourceAccessAuthorizer:    resourceAccessAuthorizer,
+		SandboxAgentMetrics:         sandboxAgentMetrics,
+		CentralScopeProvider:        iCentralSchedulerScopeProvider,
+		CentralAdmissionPolicy:      iCentralAdmissionPolicy,
+		CentralGuard:                iCentralReservationGuard,
+	}
+	hookRuntimePlatform, err := NewOSSHookRuntimePlatform(configFactory, rmqFactory, iUserProvider)
+	if err != nil {
+		return nil, err
+	}
+	hookRuntimeStores := NewHookRuntimeStores(db2, cmdable, hookRuntimePlatform)
+	iExptManager, err := NewHookRuntimeManager(hookRuntimeManagerInputs, hookRuntimeStores)
+	if err != nil {
+		return nil, err
+	}
 	v4 := service.ProvideNoSandboxAgentNotifiers()
 	schedulerModeFactory := service.NewSchedulerModeFactory(iExptManager, iExptItemResultRepo, iExptStatsRepo, iExptTurnResultRepo, idgen2, evaluationSetItemService, iExperimentRepo, iExptItemRefRepo, idempotentService, iConfiger, exptEventPublisher, evaluatorRecordService, exptResultService, iExptTemplateManager, iExptRunLogRepo, iLocker, v4...)
 	iItemCompletePublisher := service.ProvideNilItemCompletePublisher()
@@ -479,9 +589,64 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	noopWebhookSecretProvider := service.NewNoopWebhookSecretProvider()
 	webhookDispatcher := service.NewWebhookDispatcher(exptEventPublisher, noopWebhookSecretProvider, iExptStatsRepo)
 	exptLifecycleEventHandler := service.NewExptLifecycleEventHandler(iExperimentRepo, iNotifyRPCAdapter, iUserProvider, webhookDispatcher)
-	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, iConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, evaluatorService, iExptTemplateManager, iFileProvider, exptLifecycleEventHandler, sandboxSchedulerAdapter, sandboxAgentMetrics)
+	hookRuntimeExperimentApplicationInputs := HookRuntimeExperimentApplicationInputs{
+		AggResultSvc:               exptAggrResultService,
+		ResultSvc:                  exptResultService,
+		Manager:                    iExptManager,
+		Scheduler:                  exptSchedulerEvent,
+		RecordEval:                 exptItemEvalEvent,
+		Idgen:                      idgen2,
+		Configer:                   iConfiger,
+		Auth:                       iAuthProvider,
+		UserInfoService:            userInfoService,
+		EvalTargetService:          iEvalTargetService,
+		EvaluationSetItemService:   evaluationSetItemService,
+		AnnotateService:            iExptAnnotateService,
+		TagRPCAdapter:              iTagRPCAdapter,
+		ExptResultExportService:    iExptResultExportService,
+		ExptInsightAnalysisService: iExptInsightAnalysisService,
+		EvaluatorService:           evaluatorService,
+		TemplateManager:            iExptTemplateManager,
+		FileProvider:               iFileProvider,
+		LifecycleEventHandler:      exptLifecycleEventHandler,
+		SandboxSchedulerAdapter:    sandboxSchedulerAdapter,
+		SandboxAgentMetrics:        sandboxAgentMetrics,
+	}
+	iExperimentApplication, err := NewHookRuntimeExperimentApplication(hookRuntimeExperimentApplicationInputs, hookRuntimeStores, evaluationSetVersionService, iEvaluationSetService, iExptItemRefRepo, iExptTurnResultRepo, iExptItemResultRepo, iExperimentRepo)
+	if err != nil {
+		return nil, err
+	}
 	evaluatorCallbackDispatcher := service.NewEvaluatorCallbackDispatcher(noopWebhookSecretProvider)
-	evalOpenAPIService := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iEvalTargetRepo, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, sandboxAgentMetrics, userInfoService, iExperimentApplication, iExptManager, exptResultService, exptAggrResultService, evaluatorService, evaluatorRecordService, iExptTemplateManager, iConfiger, sandboxSchedulerAdapter, iFileProvider, evaluatorCallbackDispatcher, resourceAccessAuthorizer)
+	hookRuntimeOpenAPIInputs := HookRuntimeOpenAPIInputs{
+		AsyncRepo:                   iEvalAsyncRepo,
+		Publisher:                   exptEventPublisher,
+		TargetSvc:                   iEvalTargetService,
+		EvalTargetRepo:              iEvalTargetRepo,
+		Auth:                        iAuthProvider,
+		EvaluationSetService:        iEvaluationSetService,
+		EvaluationSetVersionService: evaluationSetVersionService,
+		EvaluationSetItemService:    evaluationSetItemService,
+		EvaluationSetSchemaService:  evaluationSetSchemaService,
+		Metric:                      openAPIEvaluationMetrics,
+		SandboxAgentMetric:          sandboxAgentMetrics,
+		UserInfoService:             userInfoService,
+		ExperimentApp:               iExperimentApplication,
+		Manager:                     iExptManager,
+		ResultSvc:                   exptResultService,
+		AggResultSvc:                exptAggrResultService,
+		EvaluatorService:            evaluatorService,
+		EvaluatorRecordService:      evaluatorRecordService,
+		ExptTemplateManager:         iExptTemplateManager,
+		Configer:                    iConfiger,
+		SandboxSchedulerAdapter:     sandboxSchedulerAdapter,
+		FileProvider:                iFileProvider,
+		CallbackDispatcher:          evaluatorCallbackDispatcher,
+		ResourceAccessAuthorizer:    resourceAccessAuthorizer,
+	}
+	evalOpenAPIService, err := NewHookRuntimeOpenAPIApplication(hookRuntimeOpenAPIInputs)
+	if err != nil {
+		return nil, err
+	}
 	return evalOpenAPIService, nil
 }
 
@@ -491,7 +656,8 @@ var (
 	flagSet = wire.NewSet(platestwrite.NewLatestWriteTracker)
 
 	experimentSet = wire.NewSet(
-		NewExperimentApplication, service.ExperimentDomainServiceSet, service.EvaluationSetDomainServiceSet, service.TargetDomainServiceSet, service.EvaluatorDomainServiceSet, conf2.NewSharedResourceConfigProvider, service.NewResourceAccessAuthorizer, metrics2.ExperimentMetricsSet, metrics3.EvalTargetMetricsSet, sandbox_agent.SandboxAgentMetricsSet, http.NewHTTPClient, foundation.FoundationRPCSet, tag.TagRPCSet, agent.AgentRPCSet, notify.NotifyRPCSet, userinfo.NewUserInfoServiceImpl, NewLock,
+		NewHookRuntimeExperimentApplication, wire.Struct(new(HookRuntimeExperimentApplicationInputs), "*"), NewHookRuntimeManager, wire.Struct(new(HookRuntimeManagerInputs), "*"), NewOSSHookRuntimePlatform,
+		NewHookRuntimeStores, service.ExperimentDomainServiceBaseSet, service.EvaluationSetDomainServiceSet, service.TargetDomainServiceSet, service.EvaluatorDomainServiceSet, conf2.NewSharedResourceConfigProvider, service.NewResourceAccessAuthorizer, metrics2.ExperimentMetricsSet, metrics3.EvalTargetMetricsSet, sandbox_agent.SandboxAgentMetricsSet, http.NewHTTPClient, foundation.FoundationRPCSet, tag.TagRPCSet, agent.AgentRPCSet, notify.NotifyRPCSet, userinfo.NewUserInfoServiceImpl, NewLock,
 		flagSet, service.NewDefaultURLProcessor, storage.StorageSet,
 	)
 
@@ -508,8 +674,7 @@ var (
 	)
 
 	evalOpenAPISet = wire.NewSet(
-		NewEvalOpenAPIApplication,
-		experimentSet, conf2.NewConfiger, openapi.OpenAPIMetricsSet, service.NewEvaluatorCallbackDispatcher, wire.Bind(new(service.IEvaluatorCallbackDispatcher), new(*service.EvaluatorCallbackDispatcher)),
+		NewHookRuntimeOpenAPIApplication, wire.Struct(new(HookRuntimeOpenAPIInputs), "*"), experimentSet, conf2.NewConfiger, openapi.OpenAPIMetricsSet, service.NewEvaluatorCallbackDispatcher, wire.Bind(new(service.IEvaluatorCallbackDispatcher), new(*service.EvaluatorCallbackDispatcher)),
 	)
 )
 

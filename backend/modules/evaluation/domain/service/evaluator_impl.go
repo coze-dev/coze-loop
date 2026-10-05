@@ -737,6 +737,10 @@ func normalizeEvaluatorRecordSourceType(t entity.EvaluatorRecordSourceType) enti
 
 // ShouldInterceptEvaluator 判断评估器是否应劫持本次评估，劫持时创建记录并返回
 func (e *EvaluatorServiceImpl) ShouldInterceptEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, bool, error) {
+	itemVersion, versionErr := hookRecordItemVersion(ctx, request.SpaceID, request.ExperimentID, request.ExperimentRunID, request.ItemID, request.TurnID)
+	if versionErr != nil {
+		return nil, false, versionErr
+	}
 	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{request.EvaluatorVersionID}, false, false)
 	if err != nil {
 		return nil, false, err
@@ -768,6 +772,7 @@ func (e *EvaluatorServiceImpl) ShouldInterceptEvaluator(ctx context.Context, req
 		ExperimentID:        request.ExperimentID,
 		ExperimentRunID:     request.ExperimentRunID,
 		ItemID:              request.ItemID,
+		ItemVersionID:       itemVersion,
 		TurnID:              request.TurnID,
 		EvaluatorVersionID:  request.EvaluatorVersionID,
 		LogID:               logID,
@@ -781,6 +786,10 @@ func (e *EvaluatorServiceImpl) ShouldInterceptEvaluator(ctx context.Context, req
 			},
 		},
 	}
+	if ctx.Value(itemHookTurnIdentityKey{}) != nil {
+		recordDO.Alias = request.Alias
+		recordDO.SourceType = normalizeEvaluatorRecordSourceType(request.SourceType)
+	}
 	if err := e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, recordDO); err != nil {
 		return nil, true, err
 	}
@@ -790,6 +799,10 @@ func (e *EvaluatorServiceImpl) ShouldInterceptEvaluator(ctx context.Context, req
 // CreateSkippedEvaluatorRecord 行级 filter 不命中时落一条 Status=Skipped 的占位 record。
 // 不调底层 evaluator, 不带 input/output (只留状态骨架); ref 表行由上层 storeTurnRunResult 自动跟上。
 func (e *EvaluatorServiceImpl) CreateSkippedEvaluatorRecord(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+	itemVersion, versionErr := hookRecordItemVersion(ctx, request.SpaceID, request.ExperimentID, request.ExperimentRunID, request.ItemID, request.TurnID)
+	if versionErr != nil {
+		return nil, versionErr
+	}
 	recordID, err := e.idgen.GenID(ctx)
 	if err != nil {
 		return nil, err
@@ -803,6 +816,7 @@ func (e *EvaluatorServiceImpl) CreateSkippedEvaluatorRecord(ctx context.Context,
 		ExperimentID:       request.ExperimentID,
 		ExperimentRunID:    request.ExperimentRunID,
 		ItemID:             request.ItemID,
+		ItemVersionID:      itemVersion,
 		TurnID:             request.TurnID,
 		EvaluatorVersionID: request.EvaluatorVersionID,
 		Alias:              request.Alias,
@@ -869,6 +883,10 @@ func withCallerSpaceExt(ext map[string]string, callerSpaceID, resourceSpaceID in
 
 // RunEvaluator evaluator_version 运行
 func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+	itemVersion, versionErr := hookRecordItemVersion(ctx, request.SpaceID, request.ExperimentID, request.ExperimentRunID, request.ItemID, request.TurnID)
+	if versionErr != nil {
+		return nil, versionErr
+	}
 	logs.CtxInfo(ctx, "[RunEvaluator] RunEvaluator request: %v", request)
 	// 使用 BatchGetEvaluatorByVersionID 查询，不传 spaceID，允许查询所有空间的 evaluator
 	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{request.EvaluatorVersionID}, false, false)
@@ -920,6 +938,7 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 		ExperimentID:        request.ExperimentID,
 		ExperimentRunID:     request.ExperimentRunID,
 		ItemID:              request.ItemID,
+		ItemVersionID:       itemVersion,
 		TurnID:              request.TurnID,
 		EvaluatorVersionID:  request.EvaluatorVersionID,
 		Alias:               request.Alias,
@@ -957,6 +976,10 @@ func (e *EvaluatorServiceImpl) CreateEvaluatorRunFailRecord(ctx context.Context,
 	if request == nil {
 		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("run evaluator request is nil"))
 	}
+	itemVersion, versionErr := hookRecordItemVersion(ctx, request.SpaceID, request.ExperimentID, request.ExperimentRunID, request.ItemID, request.TurnID)
+	if versionErr != nil {
+		return nil, versionErr
+	}
 	if runErr == nil {
 		runErr = errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("evaluator run failed"))
 	}
@@ -986,6 +1009,7 @@ func (e *EvaluatorServiceImpl) CreateEvaluatorRunFailRecord(ctx context.Context,
 		ExperimentID:       request.ExperimentID,
 		ExperimentRunID:    request.ExperimentRunID,
 		ItemID:             request.ItemID,
+		ItemVersionID:      itemVersion,
 		TurnID:             request.TurnID,
 		EvaluatorVersionID: request.EvaluatorVersionID,
 		LogID:              logs.GetLogID(ctx),
@@ -1014,6 +1038,10 @@ func (e *EvaluatorServiceImpl) CreateEvaluatorRunFailRecord(ctx context.Context,
 
 // AsyncRunEvaluator coordinates evaluator async kickoff in the strict order Record -> Context -> Provider.
 func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *entity.AsyncRunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+	itemVersion, versionErr := hookRecordItemVersion(ctx, request.SpaceID, request.ExperimentID, request.ExperimentRunID, request.ItemID, request.TurnID)
+	if versionErr != nil {
+		return nil, versionErr
+	}
 	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{request.EvaluatorVersionID}, false, false)
 	if err != nil {
 		return nil, err
@@ -1061,6 +1089,7 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 		ExperimentID:        request.ExperimentID,
 		ExperimentRunID:     request.ExperimentRunID,
 		ItemID:              request.ItemID,
+		ItemVersionID:       itemVersion,
 		TurnID:              request.TurnID,
 		EvaluatorVersionID:  request.EvaluatorVersionID,
 		Alias:               request.Alias,

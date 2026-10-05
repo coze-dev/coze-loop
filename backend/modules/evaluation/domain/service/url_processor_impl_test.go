@@ -5,7 +5,6 @@ package service
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,46 +23,46 @@ func TestDefaultURLProcessor_ProcessSignURL(t *testing.T) {
 	tests := []struct {
 		name     string
 		signURL  string
-		setupEnv func()
+		setupEnv func(*testing.T)
 		want     string
 	}{
 		{
 			name:    "正常URL处理",
 			signURL: "https://example.com/path?param=value",
-			setupEnv: func() {
-				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
-				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "example.com")
-				_ = os.Setenv("COZE_LOOP_OSS_PORT", "")
+			setupEnv: func(t *testing.T) {
+				t.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
+				t.Setenv("COZE_LOOP_OSS_DOMAIN", "example.com")
+				t.Setenv("COZE_LOOP_OSS_PORT", "")
 			},
 			want: "https://example.com/path?param=value",
 		},
 		{
 			name:    "本地主机URL处理 - 匹配本地主机",
 			signURL: "https://test.com/path/to/file?query=123",
-			setupEnv: func() {
-				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
-				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "test.com")
-				_ = os.Setenv("COZE_LOOP_OSS_PORT", "")
+			setupEnv: func(t *testing.T) {
+				t.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
+				t.Setenv("COZE_LOOP_OSS_DOMAIN", "test.com")
+				t.Setenv("COZE_LOOP_OSS_PORT", "")
 			},
 			want: "https://test.com/path/to/file?query=123",
 		},
 		{
 			name:    "本地主机URL处理 - 带端口",
 			signURL: "https://localhost:8080/api/download?token=abc",
-			setupEnv: func() {
-				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
-				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "localhost")
-				_ = os.Setenv("COZE_LOOP_OSS_PORT", "8080")
+			setupEnv: func(t *testing.T) {
+				t.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
+				t.Setenv("COZE_LOOP_OSS_DOMAIN", "localhost")
+				t.Setenv("COZE_LOOP_OSS_PORT", "8080")
 			},
 			want: "/api/download?token=abc",
 		},
 		{
 			name:    "Unicode转义还原(JSON \\uXXXX 字面量)",
 			signURL: "https://example.com/path&file?param=value=123",
-			setupEnv: func() {
-				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
-				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "other.com")
-				_ = os.Setenv("COZE_LOOP_OSS_PORT", "")
+			setupEnv: func(t *testing.T) {
+				t.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
+				t.Setenv("COZE_LOOP_OSS_DOMAIN", "other.com")
+				t.Setenv("COZE_LOOP_OSS_PORT", "")
 			},
 			want: "https://example.com/path&file?param=value=123",
 		},
@@ -72,50 +71,50 @@ func TestDefaultURLProcessor_ProcessSignURL(t *testing.T) {
 			// 否则与签名服务签发时的编码不一致会破坏签名 / 路径结构。
 			name:    "保留path的percent编码(中文与空格)",
 			signURL: "https://example.com/path%20with%20spaces?param=%E4%B8%AD%E6%96%87",
-			setupEnv: func() {
-				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
-				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "other.com")
-				_ = os.Setenv("COZE_LOOP_OSS_PORT", "")
+			setupEnv: func(t *testing.T) {
+				t.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
+				t.Setenv("COZE_LOOP_OSS_DOMAIN", "other.com")
+				t.Setenv("COZE_LOOP_OSS_PORT", "")
 			},
 			want: "https://example.com/path%20with%20spaces?param=%E4%B8%AD%E6%96%87",
 		},
 		{
 			name:    "无效URL - 仍然返回原始值",
 			signURL: "not-a-valid-url",
-			setupEnv: func() {
-				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
-				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "example.com")
-				_ = os.Setenv("COZE_LOOP_OSS_PORT", "")
+			setupEnv: func(t *testing.T) {
+				t.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
+				t.Setenv("COZE_LOOP_OSS_DOMAIN", "example.com")
+				t.Setenv("COZE_LOOP_OSS_PORT", "")
 			},
 			want: "not-a-valid-url",
 		},
 		{
 			name:    "空URL",
 			signURL: "",
-			setupEnv: func() {
-				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
-				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "example.com")
-				_ = os.Setenv("COZE_LOOP_OSS_PORT", "")
+			setupEnv: func(t *testing.T) {
+				t.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
+				t.Setenv("COZE_LOOP_OSS_DOMAIN", "example.com")
+				t.Setenv("COZE_LOOP_OSS_PORT", "")
 			},
 			want: "",
 		},
 		{
 			name:    "非法百分号编码 - 原样保留",
 			signURL: "https://example.com/path%ZZinvalid?param=value",
-			setupEnv: func() {
-				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
-				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "other.com")
-				_ = os.Setenv("COZE_LOOP_OSS_PORT", "")
+			setupEnv: func(t *testing.T) {
+				t.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
+				t.Setenv("COZE_LOOP_OSS_DOMAIN", "other.com")
+				t.Setenv("COZE_LOOP_OSS_PORT", "")
 			},
 			want: "https://example.com/path%ZZinvalid?param=value",
 		},
 		{
 			name:    "本地主机URL处理 - 不匹配的主机",
 			signURL: "https://external.com/path?param=value",
-			setupEnv: func() {
-				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
-				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "internal.com")
-				_ = os.Setenv("COZE_LOOP_OSS_PORT", "")
+			setupEnv: func(t *testing.T) {
+				t.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
+				t.Setenv("COZE_LOOP_OSS_DOMAIN", "internal.com")
+				t.Setenv("COZE_LOOP_OSS_PORT", "")
 			},
 			want: "https://external.com/path?param=value",
 		},
@@ -123,10 +122,10 @@ func TestDefaultURLProcessor_ProcessSignURL(t *testing.T) {
 			// 签名参数（signature=xyz%3D%3D）必须保持原始编码，不能被反转义成 xyz==。
 			name:    "复杂路径和查询参数 - 保留签名编码",
 			signURL: "https://test.com/api/v1/users/123/files/document.pdf?token=abc123&expires=1234567890&signature=xyz%3D%3D",
-			setupEnv: func() {
-				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
-				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "test.com")
-				_ = os.Setenv("COZE_LOOP_OSS_PORT", "")
+			setupEnv: func(t *testing.T) {
+				t.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
+				t.Setenv("COZE_LOOP_OSS_DOMAIN", "test.com")
+				t.Setenv("COZE_LOOP_OSS_PORT", "")
 			},
 			want: "https://test.com/api/v1/users/123/files/document.pdf?token=abc123&expires=1234567890&signature=xyz%3D%3D",
 		},
@@ -135,10 +134,10 @@ func TestDefaultURLProcessor_ProcessSignURL(t *testing.T) {
 			// 不能被反转义成裸字符（否则签名失效，且 '/' 会破坏 object key 结构导致 404）。
 			name:    "保留特殊字符编码([] / 中文 与签名)",
 			signURL: "https://p9.byteimg.com/tos-cn-i-x/%5Bauto%5DPMO%2F%E9%A3%8E%E9%99%A9_%E5%AE%9E%E9%AA%8C%E6%8A%A5%E5%91%8A.csv~tplv-x-image.image?rk3s=eb124da7&x-signature=ab%2Bcd%3D",
-			setupEnv: func() {
-				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
-				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "other.com")
-				_ = os.Setenv("COZE_LOOP_OSS_PORT", "")
+			setupEnv: func(t *testing.T) {
+				t.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
+				t.Setenv("COZE_LOOP_OSS_DOMAIN", "other.com")
+				t.Setenv("COZE_LOOP_OSS_PORT", "")
 			},
 			want: "https://p9.byteimg.com/tos-cn-i-x/%5Bauto%5DPMO%2F%E9%A3%8E%E9%99%A9_%E5%AE%9E%E9%AA%8C%E6%8A%A5%E5%91%8A.csv~tplv-x-image.image?rk3s=eb124da7&x-signature=ab%2Bcd%3D",
 		},
@@ -146,12 +145,9 @@ func TestDefaultURLProcessor_ProcessSignURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 清理环境变量
-			os.Clearenv()
-
 			// 设置测试环境
 			if tt.setupEnv != nil {
-				tt.setupEnv()
+				tt.setupEnv(t)
 			}
 
 			// 执行测试
@@ -167,13 +163,12 @@ func TestDefaultURLProcessor_ProcessSignURL_Parallel(t *testing.T) {
 	ctx := context.Background()
 	processor := NewDefaultURLProcessor()
 
+	t.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
+	t.Setenv("COZE_LOOP_OSS_DOMAIN", "parallel.com")
+	t.Setenv("COZE_LOOP_OSS_PORT", "")
+
 	t.Run("并行处理测试", func(t *testing.T) {
 		t.Parallel()
-
-		// 设置环境变量
-		_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
-		_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "parallel.com")
-		_ = os.Setenv("COZE_LOOP_OSS_PORT", "")
 
 		signURL := "https://parallel.com/test?param=value"
 		want := "https://parallel.com/test?param=value"

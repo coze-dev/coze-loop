@@ -28,11 +28,16 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		ExptItemRef:                        newExptItemRef(db, opts...),
 		ExptItemResult:                     newExptItemResult(db, opts...),
 		ExptItemResultRunLog:               newExptItemResultRunLog(db, opts...),
+		ExptLifecycleHookAttempt:           newExptLifecycleHookAttempt(db, opts...),
+		ExptLifecycleHookRun:               newExptLifecycleHookRun(db, opts...),
+		ExptLifecycleRun:                   newExptLifecycleRun(db, opts...),
+		ExptLifecycleRunItem:               newExptLifecycleRunItem(db, opts...),
 		ExptResultExportRecord:             newExptResultExportRecord(db, opts...),
 		ExptRunLog:                         newExptRunLog(db, opts...),
 		ExptStats:                          newExptStats(db, opts...),
 		ExptTemplate:                       newExptTemplate(db, opts...),
 		ExptTemplateEvaluatorRef:           newExptTemplateEvaluatorRef(db, opts...),
+		ExptTemplateTrigger:                newExptTemplateTrigger(db, opts...),
 		ExptTurnAnnotateRecordRef:          newExptTurnAnnotateRecordRef(db, opts...),
 		ExptTurnEvaluatorResultRef:         newExptTurnEvaluatorResultRef(db, opts...),
 		ExptTurnResult:                     newExptTurnResult(db, opts...),
@@ -55,11 +60,16 @@ type Query struct {
 	ExptItemRef                        exptItemRef
 	ExptItemResult                     exptItemResult
 	ExptItemResultRunLog               exptItemResultRunLog
+	ExptLifecycleHookAttempt           exptLifecycleHookAttempt
+	ExptLifecycleHookRun               exptLifecycleHookRun
+	ExptLifecycleRun                   exptLifecycleRun
+	ExptLifecycleRunItem               exptLifecycleRunItem
 	ExptResultExportRecord             exptResultExportRecord
 	ExptRunLog                         exptRunLog
 	ExptStats                          exptStats
 	ExptTemplate                       exptTemplate
 	ExptTemplateEvaluatorRef           exptTemplateEvaluatorRef
+	ExptTemplateTrigger                exptTemplateTrigger
 	ExptTurnAnnotateRecordRef          exptTurnAnnotateRecordRef
 	ExptTurnEvaluatorResultRef         exptTurnEvaluatorResultRef
 	ExptTurnResult                     exptTurnResult
@@ -83,11 +93,16 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		ExptItemRef:                        q.ExptItemRef.clone(db),
 		ExptItemResult:                     q.ExptItemResult.clone(db),
 		ExptItemResultRunLog:               q.ExptItemResultRunLog.clone(db),
+		ExptLifecycleHookAttempt:           q.ExptLifecycleHookAttempt.clone(db),
+		ExptLifecycleHookRun:               q.ExptLifecycleHookRun.clone(db),
+		ExptLifecycleRun:                   q.ExptLifecycleRun.clone(db),
+		ExptLifecycleRunItem:               q.ExptLifecycleRunItem.clone(db),
 		ExptResultExportRecord:             q.ExptResultExportRecord.clone(db),
 		ExptRunLog:                         q.ExptRunLog.clone(db),
 		ExptStats:                          q.ExptStats.clone(db),
 		ExptTemplate:                       q.ExptTemplate.clone(db),
 		ExptTemplateEvaluatorRef:           q.ExptTemplateEvaluatorRef.clone(db),
+		ExptTemplateTrigger:                q.ExptTemplateTrigger.clone(db),
 		ExptTurnAnnotateRecordRef:          q.ExptTurnAnnotateRecordRef.clone(db),
 		ExptTurnEvaluatorResultRef:         q.ExptTurnEvaluatorResultRef.clone(db),
 		ExptTurnResult:                     q.ExptTurnResult.clone(db),
@@ -118,11 +133,16 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		ExptItemRef:                        q.ExptItemRef.replaceDB(db),
 		ExptItemResult:                     q.ExptItemResult.replaceDB(db),
 		ExptItemResultRunLog:               q.ExptItemResultRunLog.replaceDB(db),
+		ExptLifecycleHookAttempt:           q.ExptLifecycleHookAttempt.replaceDB(db),
+		ExptLifecycleHookRun:               q.ExptLifecycleHookRun.replaceDB(db),
+		ExptLifecycleRun:                   q.ExptLifecycleRun.replaceDB(db),
+		ExptLifecycleRunItem:               q.ExptLifecycleRunItem.replaceDB(db),
 		ExptResultExportRecord:             q.ExptResultExportRecord.replaceDB(db),
 		ExptRunLog:                         q.ExptRunLog.replaceDB(db),
 		ExptStats:                          q.ExptStats.replaceDB(db),
 		ExptTemplate:                       q.ExptTemplate.replaceDB(db),
 		ExptTemplateEvaluatorRef:           q.ExptTemplateEvaluatorRef.replaceDB(db),
+		ExptTemplateTrigger:                q.ExptTemplateTrigger.replaceDB(db),
 		ExptTurnAnnotateRecordRef:          q.ExptTurnAnnotateRecordRef.replaceDB(db),
 		ExptTurnEvaluatorResultRef:         q.ExptTurnEvaluatorResultRef.replaceDB(db),
 		ExptTurnResult:                     q.ExptTurnResult.replaceDB(db),
@@ -143,11 +163,16 @@ type queryCtx struct {
 	ExptItemRef                        *exptItemRefDo
 	ExptItemResult                     *exptItemResultDo
 	ExptItemResultRunLog               *exptItemResultRunLogDo
+	ExptLifecycleHookAttempt           *exptLifecycleHookAttemptDo
+	ExptLifecycleHookRun               *exptLifecycleHookRunDo
+	ExptLifecycleRun                   *exptLifecycleRunDo
+	ExptLifecycleRunItem               *exptLifecycleRunItemDo
 	ExptResultExportRecord             *exptResultExportRecordDo
 	ExptRunLog                         *exptRunLogDo
 	ExptStats                          *exptStatsDo
 	ExptTemplate                       *exptTemplateDo
 	ExptTemplateEvaluatorRef           *exptTemplateEvaluatorRefDo
+	ExptTemplateTrigger                *exptTemplateTriggerDo
 	ExptTurnAnnotateRecordRef          *exptTurnAnnotateRecordRefDo
 	ExptTurnEvaluatorResultRef         *exptTurnEvaluatorResultRefDo
 	ExptTurnResult                     *exptTurnResultDo
@@ -168,11 +193,16 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		ExptItemRef:                        q.ExptItemRef.WithContext(ctx),
 		ExptItemResult:                     q.ExptItemResult.WithContext(ctx),
 		ExptItemResultRunLog:               q.ExptItemResultRunLog.WithContext(ctx),
+		ExptLifecycleHookAttempt:           q.ExptLifecycleHookAttempt.WithContext(ctx),
+		ExptLifecycleHookRun:               q.ExptLifecycleHookRun.WithContext(ctx),
+		ExptLifecycleRun:                   q.ExptLifecycleRun.WithContext(ctx),
+		ExptLifecycleRunItem:               q.ExptLifecycleRunItem.WithContext(ctx),
 		ExptResultExportRecord:             q.ExptResultExportRecord.WithContext(ctx),
 		ExptRunLog:                         q.ExptRunLog.WithContext(ctx),
 		ExptStats:                          q.ExptStats.WithContext(ctx),
 		ExptTemplate:                       q.ExptTemplate.WithContext(ctx),
 		ExptTemplateEvaluatorRef:           q.ExptTemplateEvaluatorRef.WithContext(ctx),
+		ExptTemplateTrigger:                q.ExptTemplateTrigger.WithContext(ctx),
 		ExptTurnAnnotateRecordRef:          q.ExptTurnAnnotateRecordRef.WithContext(ctx),
 		ExptTurnEvaluatorResultRef:         q.ExptTurnEvaluatorResultRef.WithContext(ctx),
 		ExptTurnResult:                     q.ExptTurnResult.WithContext(ctx),

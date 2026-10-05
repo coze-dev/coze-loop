@@ -336,6 +336,10 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 	if param == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("[ExecuteTarget]param is zero"))
 	}
+	itemVersion, versionErr := hookRecordItemVersion(ctx, param.ExptSpaceID, gptr.Indirect(param.ExperimentID), gptr.Indirect(param.ExperimentRunID), param.ItemID, param.TurnID)
+	if versionErr != nil {
+		return nil, versionErr
+	}
 
 	var span looptracer.Span
 	spanParam := &targetSpanTagsParams{
@@ -443,6 +447,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 			TargetVersionID:      targetVersionID,
 			ExperimentRunID:      gptr.Indirect(param.ExperimentRunID),
 			ItemID:               param.ItemID,
+			ItemVersionID:        itemVersion,
 			TurnID:               param.TurnID,
 			TraceID:              span.GetTraceID(),
 			LogID:                logID,
@@ -584,6 +589,10 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 
 	targetID := target.ID
 	targetVersionID := target.EvalTargetVersion.ID
+	itemVersion, versionErr := hookRecordItemVersion(ctx, param.ExptSpaceID, gptr.Indirect(param.ExperimentID), gptr.Indirect(param.ExperimentRunID), param.ItemID, param.TurnID)
+	if versionErr != nil {
+		return nil, "", versionErr
+	}
 
 	operator := e.typedOperators[target.EvalTargetType]
 	if operator == nil {
@@ -642,6 +651,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		TargetVersionID:      targetVersionID,
 		ExperimentRunID:      gptr.Indirect(param.ExperimentRunID),
 		ItemID:               param.ItemID,
+		ItemVersionID:        itemVersion,
 		TurnID:               param.TurnID,
 		LogID:                logs.GetLogID(ctx),
 		EvalTargetInputData:  inputData,

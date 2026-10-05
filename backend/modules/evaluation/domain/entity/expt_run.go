@@ -551,6 +551,7 @@ type ExptItemEvalCtx struct {
 	// 由 BuildExptRecordEvalCtx 从 expt_item_ref 解析后回填; 单评测集/老实验为实验主集版本。
 	// EvalSetItem.EvaluationSetID 是归属集 ID, 二者配合可定位该 item 的 (集, 版本), 供下游事件组装。
 	EvalSetVersionID int64
+	HookManifest     *HookExecutionManifest `json:"-"`
 }
 
 // EvalSetSourceSpaceID 该行评测集来源空间: 多集从 ItemConfig(行级冻结), 单集从 Expt 冻结列; 0=同调用方空间。

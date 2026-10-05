@@ -75,8 +75,10 @@ type ExptTemplateManagerImpl struct {
 	exptRepo                    repo.IExperimentRepo
 	// scheduleAdapter SourceType=Evaluation 时通过该适配器把 Scheduler 配置投递到底层调度平台；
 	// 上游可能注入 noop 实现（无 ByteScheduler 依赖时）以便在创建/更新模板的主流程上保持一致语义。
-	scheduleAdapter rpc.IExptScheduleAdapter
-	configer        component.IConfiger
+	scheduleAdapter    rpc.IExptScheduleAdapter
+	configer           component.IConfiger
+	scheduleManagement *ExptTemplateScheduleDependencies
+	scheduleHook       *templateScheduleHookPatch
 }
 
 func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, spaceID int64, exptType entity.ExptType, session *entity.Session) (bool, error) {
@@ -93,6 +95,16 @@ func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, sp
 }
 
 func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.CreateExptTemplateParam, session *entity.Session) (*entity.ExptTemplate, error) {
+	if e.scheduleManagement != nil {
+		if param == nil {
+			return nil, entity.ErrHookConfigStorage
+		}
+		scoped, _, err := e.scopedTemplateSchedule(ctx, 0, param.SpaceID, true)
+		if err != nil {
+			return nil, err
+		}
+		return scoped.Create(ctx, param, templateScheduleSession(ctx, session))
+	}
 	if param.TemplateConf != nil && param.TemplateConf.VerificationConfig != nil {
 		adapter := &entity.CreateExptParam{
 			ExptType:              param.ExptType,
@@ -291,6 +303,47 @@ func (e *ExptTemplateManagerImpl) MGet(ctx context.Context, templateIDs []int64,
 }
 
 func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.UpdateExptTemplateParam, session *entity.Session) (*entity.ExptTemplate, error) {
+	if e.scheduleManagement != nil {
+		if param == nil {
+			return nil, entity.ErrHookConfigStorage
+		}
+		scoped, r, err := e.scopedTemplateSchedule(ctx, param.TemplateID, param.SpaceID, false)
+		if err != nil {
+			return nil, err
+		}
+		request := *param
+		r.explicitSchedule = param.CronActivate != nil || hookTemplateHasScheduler(param.ExptSource, param.TemplateConf)
+		source := param.ExptSource
+		if source == nil && param.TemplateConf != nil {
+			source = param.TemplateConf.ExptSource
+		}
+		if source != nil {
+			old := templateScheduleSource(r.state.Template)
+			if old != nil && source.SourceType != old.SourceType {
+				r.explicitSchedule = true
+			} else if old != nil && (templateScheduleHookEnabled(r.state.Config.Config) || r.state.Binding != nil) {
+				merged := mergeTemplateScheduleSource(old, source)
+				if param.ExptSource != nil {
+					request.ExptSource = merged
+				} else {
+					copy := *param.TemplateConf
+					copy.ExptSource = merged
+					request.TemplateConf = &copy
+				}
+			}
+		}
+		if request.EvaluatorIDVersionItems == nil {
+			old := r.state.Template.GetEvaluatorIDVersionItems()
+			request.EvaluatorIDVersionItems = make([]*entity.EvaluatorIDVersionItem, len(old))
+			for i, item := range old {
+				if item != nil {
+					copy := *item
+					request.EvaluatorIDVersionItems[i] = &copy
+				}
+			}
+		}
+		return scoped.Update(ctx, &request, templateScheduleSession(ctx, session))
+	}
 	// 获取现有模板
 	existingTemplate, err := e.templateRepo.GetByID(ctx, param.TemplateID, &param.SpaceID)
 	if err != nil {
@@ -583,6 +636,17 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 }
 
 func (e *ExptTemplateManagerImpl) UpdateMeta(ctx context.Context, param *entity.UpdateExptTemplateMetaParam, session *entity.Session) (*entity.ExptTemplate, error) {
+	if e.scheduleManagement != nil {
+		if param == nil {
+			return nil, entity.ErrHookConfigStorage
+		}
+		scoped, r, err := e.scopedTemplateSchedule(ctx, param.TemplateID, param.SpaceID, false)
+		if err != nil {
+			return nil, err
+		}
+		r.explicitSchedule = param.CronActivate != nil
+		return scoped.UpdateMeta(ctx, param, templateScheduleSession(ctx, session))
+	}
 	// 获取现有模板
 	existingTemplate, err := e.templateRepo.GetByID(ctx, param.TemplateID, &param.SpaceID)
 	if err != nil {

@@ -47,6 +47,8 @@ func newExptTemplate(db *gorm.DB, opts ...gen.DOOption) exptTemplate {
 	_exptTemplate.DeletedAt = field.NewField(tableName, "deleted_at")
 	_exptTemplate.Visibility = field.NewInt32(tableName, "visibility")
 	_exptTemplate.NotificationConf = field.NewBytes(tableName, "notification_conf")
+	_exptTemplate.LifecycleHookConf = field.NewBytes(tableName, "lifecycle_hook_conf")
+	_exptTemplate.ScheduleRunBinding = field.NewBytes(tableName, "schedule_run_binding")
 
 	_exptTemplate.fillFieldMap()
 
@@ -57,27 +59,29 @@ func newExptTemplate(db *gorm.DB, opts ...gen.DOOption) exptTemplate {
 type exptTemplate struct {
 	exptTemplateDo exptTemplateDo
 
-	ALL              field.Asterisk
-	ID               field.Int64  // id
-	SpaceID          field.Int64  // 空间 id
-	Name             field.String // 实验模板名称
-	Description      field.String // 实验模板描述
-	EvalSetID        field.Int64  // 评测集 id（模板创建后不可修改）
-	EvalSetVersionID field.Int64  // 评测集默认版本 id
-	TargetID         field.Int64  // 评估对象 id（模板创建后不可修改）
-	TargetType       field.Int64  // 评估对象类型
-	TargetVersionID  field.Int64  // 评估对象默认版本 id
-	ExptType         field.Int32  // 实验类型，offline:1,online:2...
-	CronActivate     field.Bool   // 是否开启定时触发
-	TemplateConf     field.Bytes  // 实验模板配置，包含评估器列表、字段映射、加权配置、默认并发及调度等，json
-	ExptInfo         field.Bytes  // 实验运行状态，包含创建实验数量，最后一次实验执行状态，json
-	CreatedBy        field.String // 创建人
-	UpdatedBy        field.String // 更新人
-	CreatedAt        field.Time   // 创建时间
-	UpdatedAt        field.Time   // 更新时间
-	DeletedAt        field.Field  // 删除时间
-	Visibility       field.Int32  // 可见性，默认0-可见，1-隐藏
-	NotificationConf field.Bytes  // 通知配置，json格式存储webhook/飞书通知配置
+	ALL                field.Asterisk
+	ID                 field.Int64  // id
+	SpaceID            field.Int64  // 空间 id
+	Name               field.String // 实验模板名称
+	Description        field.String // 实验模板描述
+	EvalSetID          field.Int64  // 评测集 id（模板创建后不可修改）
+	EvalSetVersionID   field.Int64  // 评测集默认版本 id
+	TargetID           field.Int64  // 评估对象 id（模板创建后不可修改）
+	TargetType         field.Int64  // 评估对象类型
+	TargetVersionID    field.Int64  // 评估对象默认版本 id
+	ExptType           field.Int32  // 实验类型，offline:1,online:2...
+	CronActivate       field.Bool   // 是否开启定时触发
+	TemplateConf       field.Bytes  // 实验模板配置，包含评估器列表、字段映射、加权配置、默认并发及调度等，json
+	ExptInfo           field.Bytes  // 实验运行状态，包含创建实验数量，最后一次实验执行状态，json
+	CreatedBy          field.String // 创建人
+	UpdatedBy          field.String // 更新人
+	CreatedAt          field.Time   // 创建时间
+	UpdatedAt          field.Time   // 更新时间
+	DeletedAt          field.Field  // 删除时间
+	Visibility         field.Int32  // 可见性，默认0-可见，1-隐藏
+	NotificationConf   field.Bytes  // 通知配置，json格式存储webhook/飞书通知配置
+	LifecycleHookConf  field.Bytes  // 受保护的生命周期Hook配置封套
+	ScheduleRunBinding field.Bytes  // 服务端定时执行身份绑定封套
 
 	fieldMap map[string]field.Expr
 }
@@ -114,6 +118,8 @@ func (e *exptTemplate) updateTableName(table string) *exptTemplate {
 	e.DeletedAt = field.NewField(table, "deleted_at")
 	e.Visibility = field.NewInt32(table, "visibility")
 	e.NotificationConf = field.NewBytes(table, "notification_conf")
+	e.LifecycleHookConf = field.NewBytes(table, "lifecycle_hook_conf")
+	e.ScheduleRunBinding = field.NewBytes(table, "schedule_run_binding")
 
 	e.fillFieldMap()
 
@@ -142,7 +148,7 @@ func (e *exptTemplate) GetFieldByName(fieldName string) (field.OrderExpr, bool) 
 }
 
 func (e *exptTemplate) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 20)
+	e.fieldMap = make(map[string]field.Expr, 22)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["name"] = e.Name
@@ -163,6 +169,8 @@ func (e *exptTemplate) fillFieldMap() {
 	e.fieldMap["deleted_at"] = e.DeletedAt
 	e.fieldMap["visibility"] = e.Visibility
 	e.fieldMap["notification_conf"] = e.NotificationConf
+	e.fieldMap["lifecycle_hook_conf"] = e.LifecycleHookConf
+	e.fieldMap["schedule_run_binding"] = e.ScheduleRunBinding
 }
 
 func (e exptTemplate) clone(db *gorm.DB) exptTemplate {

@@ -322,8 +322,6 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 	if limit > 0 && int(pageSize) > limit {
 		pageSize = int32(limit)
 	}
-	orderByDesc := gptr.Of(false)
-	orderByField := gptr.Of("item_id")
 
 	for i := 0; i < maxLoop; i++ {
 		logs.CtxInfo(ctx, "ExptTrialRunExec.ExptStart scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, page_token: %v, limit: %v, cur_cnt: %v, total: %v",
@@ -334,17 +332,8 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		var nextPageToken *string
 		if err := backoff.RetryThreeSeconds(ctx, func() error {
 			var retryErr error
-			items, t, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-				SpaceID:         resolveLoadSpaceID(event.SpaceID, expt.EvalSetSpaceID),
-				EvaluationSetID: evalSetID,
-				VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
-				PageSize:        &pageSize,
-				PageToken:       pageToken,
-				OrderBys: []*entity.OrderBy{{
-					Field: orderByField,
-					IsAsc: orderByDesc,
-				}},
-			})
+			items, t, nextPageToken, retryErr = readSingleSelectionPage(ctx, e.evaluationSetItemService,
+				resolveLoadSpaceID(event.SpaceID, expt.EvalSetSpaceID), evalSetID, evalSetVersionID, pageSize, pageToken, true)
 			return retryErr
 		}); err != nil {
 			return err
@@ -455,13 +444,8 @@ func (e *ExptTrialRunExec) exptStartByItemIds(ctx context.Context, event *entity
 		logs.CtxInfo(ctx, "ExptTrialRunExec.exptStartByItemIds scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, item_ids: %v",
 			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, chunk)
 
-		items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
-			// 跨空间共享: 单集点选执行按来源空间加载 item (对齐 List 路径)。
-			SpaceID:         resolveLoadSpaceID(event.SpaceID, expt.EvalSetSpaceID),
-			EvaluationSetID: evalSetID,
-			VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
-			ItemIDs:         chunk,
-		})
+		items, err := readExplicitSelectionItems(ctx, e.evaluationSetItemService,
+			resolveLoadSpaceID(event.SpaceID, expt.EvalSetSpaceID), evalSetID, evalSetVersionID, chunk)
 		if err != nil {
 			return err
 		}
@@ -562,13 +546,8 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 		var nextPageToken *string
 		if err := backoff.RetryThreeSeconds(ctx, func() error {
 			var retryErr error
-			items, t, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-				SpaceID:         resolveLoadSpaceID(event.SpaceID, expt.EvalSetSpaceID),
-				EvaluationSetID: evalSetID,
-				VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
-				PageSize:        &pageSize,
-				PageToken:       pageToken,
-			})
+			items, t, nextPageToken, retryErr = readSingleSelectionPage(ctx, e.evaluationSetItemService,
+				resolveLoadSpaceID(event.SpaceID, expt.EvalSetSpaceID), evalSetID, evalSetVersionID, pageSize, pageToken, false)
 			return retryErr
 		}); err != nil {
 			return err
@@ -2552,7 +2531,6 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 	}
 
 	const pageSize = int32(100)
-	pageSizePtr := pageSize
 	itemIdx := int32(0)
 	totalItemCnt := 0
 
@@ -2566,7 +2544,6 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 		baseItemConfig := buildItemConfigFromSetConf(setConf, evalConf.RunModeConfig)
 
 		// 草稿哨兵: 草稿集读侧走 live (VersionID=nil), ref 落 0; committed 走 ByVersion 冻结。
-		setReadVersionID := resolveSetReadVersionID(setConf.EvalSetID, setConf.EvalSetVersionID)
 		setRefVersionID := resolveSetRefVersionID(setConf.EvalSetID, setConf.EvalSetVersionID)
 
 		// 每批 item → 建 expt_item_ref / item_result / turn_result 并落库 (List 分页 / BatchGet 点选共用)
@@ -2653,38 +2630,13 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 			return nil
 		}
 
-		// 解析 set 级 item_filter:
-		//   - item_id 点选 (in/eq/not_in/not_eq) → 下游 Filter 已支持 item_id 顶层列 (itemIDOp),
-		//     常规量 (include/exclude 各 ≤ maxItemIDFilterInList) 直接进 Filter 走服务端 item_id IN/NOT IN 精准过滤 (不拉全集);
-		//     超限则回退内存过滤 (List 全集 + include/exclude 逐页筛, in/not_in 通用, not_in 无法分批故统一回退)。
-		//   - 普通列 → 下游 Filter (commercial 走 ml_flow 服务端裁剪; 开源版无字段降级全量)
-		//   - tag → 下游 TagFilter (同上)
-		//
-		// 版本: item 级 item_version_id 由下游 List 从 snapshot 回填 (persistBatch 从 item.ItemVersionID 写库),
-		//   两条路径 (服务端 filter / 内存过滤) 都走 List, 均无 601100201 风险。
-		includeIDs, excludeIDs, _, ferr := extractItemIDFilter(setConf.ItemFilter)
+		selectionFilter, ferr := newSetSelectionFilter(setConf.ItemFilter)
 		if ferr != nil {
 			return ferr
 		}
-		tFilter := extractTagFilter(setConf.ItemFilter)
-
-		// item_id 点选/排除是否下推到 Filter 服务端过滤: include/exclude 各自不超过下游单字段上限。
-		pushItemIDToFilter := len(includeIDs) <= maxItemIDFilterInList && len(excludeIDs) <= maxItemIDFilterInList
-		// nFilter 含 item_id 当且仅当下推; 否则 item_id 走内存过滤, nFilter 只带普通列。
-		nFilter := extractNormalColumnFilter(setConf.ItemFilter, pushItemIDToFilter)
-
-		// 超限回退内存过滤时才建 set; 下推场景 set 为空、跳过内存过滤。
-		excludeSet := make(map[int64]struct{})
-		includeSet := make(map[int64]struct{})
-		if !pushItemIDToFilter {
+		if selectionFilter.includeCount > maxItemIDFilterInList || selectionFilter.excludeCount > maxItemIDFilterInList {
 			logs.CtxWarn(ctx, "exptStartMultiSet item_id filter over limit, fallback to in-memory filter, expt_id=%d, set_id=%d, include=%d, exclude=%d, limit=%d",
-				event.ExptID, setConf.EvalSetID, len(includeIDs), len(excludeIDs), maxItemIDFilterInList)
-			for _, id := range excludeIDs {
-				excludeSet[id] = struct{}{}
-			}
-			for _, id := range includeIDs {
-				includeSet[id] = struct{}{}
-			}
+				event.ExptID, setConf.EvalSetID, selectionFilter.includeCount, selectionFilter.excludeCount, maxItemIDFilterInList)
 		}
 
 		// List 分页: Filter (含普通列, 常规量下含 item_id) / TagFilter 下传服务端裁剪; 超限时 item_id 在内存过滤
@@ -2697,41 +2649,17 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 			var items []*entity.EvaluationSetItem
 			var total *int64
 			var nextPageToken *string
+			var rawCount int
 			if err := backoff.RetryThreeSeconds(ctx, func() error {
 				var retryErr error
-				items, total, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-					SpaceID:         resolveLoadSpaceID(event.SpaceID, setConf.SourceSpaceID),
-					EvaluationSetID: setConf.EvalSetID,
-					VersionID:       setReadVersionID,
-					PageSize:        &pageSizePtr,
-					PageToken:       pageToken,
-					Filter:          nFilter,
-					TagFilter:       tFilter,
-				})
+				items, total, nextPageToken, rawCount, retryErr = readSetSelectionPage(ctx, e.evaluationSetItemService,
+					event.SpaceID, setConf, pageSize, pageToken, selectionFilter)
 				return retryErr
 			}); err != nil {
 				return err
 			}
 
-			pageTotalCnt += len(items)
-			// 超限回退: item_id 点选/排除逐页内存过滤 (常规量已进 Filter 服务端过滤, 此处 set 为空跳过):
-			//   - include (in/eq): 只保留白名单内的 item_id
-			//   - exclude (not_in/not_eq): 剔除黑名单内的 item_id
-			if len(includeSet) > 0 || len(excludeSet) > 0 {
-				kept := items[:0]
-				for _, it := range items {
-					if len(includeSet) > 0 {
-						if _, in := includeSet[it.ItemID]; !in {
-							continue
-						}
-					}
-					if _, ex := excludeSet[it.ItemID]; ex {
-						continue
-					}
-					kept = append(kept, it)
-				}
-				items = kept
-			}
+			pageTotalCnt += rawCount
 			if err := persistBatch(items); err != nil {
 				return err
 			}

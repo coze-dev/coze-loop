@@ -30,6 +30,9 @@ import (
 
 // ConvertCreateExptTemplateReq 转换创建实验模板请求为实体参数
 func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*entity.CreateExptTemplateParam, error) {
+	if _, err := entity.ResolveLifecycleHookConf(nil, LifecycleHookConfDTO2DO(req.GetLifecycleHookConf())); err != nil {
+		return nil, err
+	}
 	param := &entity.CreateExptTemplateParam{
 		SpaceID:               req.GetWorkspaceID(),
 		CreateEvalTargetParam: CreateEvalTargetParamDTO2DOForTemplate(req.CreateEvalTargetParam),
@@ -1323,6 +1326,9 @@ func ToExptTemplateDTOs(templates []*entity.ExptTemplate) []*domain_expt.ExptTem
 
 // ConvertUpdateExptTemplateReq 转换更新实验模板请求为实体参数
 func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*entity.UpdateExptTemplateParam, error) {
+	if _, err := entity.ResolveLifecycleHookConf(nil, LifecycleHookConfDTO2DO(req.GetLifecycleHookConf())); err != nil {
+		return nil, err
+	}
 	param := &entity.UpdateExptTemplateParam{
 		TemplateID:            req.GetTemplateID(),
 		SpaceID:               req.GetWorkspaceID(),

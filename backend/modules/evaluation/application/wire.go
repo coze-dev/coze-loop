@@ -61,9 +61,14 @@ var (
 	)
 
 	experimentSet = wire.NewSet(
-		NewExperimentApplication,
+		NewHookRuntimeExperimentApplication,
+		wire.Struct(new(HookRuntimeExperimentApplicationInputs), "*"),
+		NewHookRuntimeManager,
+		wire.Struct(new(HookRuntimeManagerInputs), "*"),
+		NewOSSHookRuntimePlatform,
+		NewHookRuntimeStores,
 		// Domain Service Sets
-		domainservice.ExperimentDomainServiceSet,
+		domainservice.ExperimentDomainServiceBaseSet,
 		domainservice.EvaluationSetDomainServiceSet,
 		domainservice.TargetDomainServiceSet,
 		domainservice.EvaluatorDomainServiceSet,
@@ -138,7 +143,8 @@ var (
 	)
 
 	evalOpenAPISet = wire.NewSet(
-		NewEvalOpenAPIApplication,
+		NewHookRuntimeOpenAPIApplication,
+		wire.Struct(new(HookRuntimeOpenAPIInputs), "*"),
 		experimentSet,
 		evalconf.NewConfiger,
 		openapimetrics.OpenAPIMetricsSet,

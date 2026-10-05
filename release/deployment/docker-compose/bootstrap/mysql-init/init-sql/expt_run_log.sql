@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS `expt_run_log`
     `status_message` blob COMMENT '提示信息',
     `processing_cnt` int             NOT NULL DEFAULT '0' COMMENT 'processing_cnt',
     `terminated_cnt` int             NOT NULL DEFAULT '0' COMMENT 'terminated_cnt',
+    `lifecycle_hook_version` smallint unsigned DEFAULT NULL COMMENT 'NULL/0 legacy, 1 lifecycle managed',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_expt_run` (`space_id`, `expt_id`, `expt_run_id`),
     KEY `idx_expt_run_item_turn` (`space_id`, `expt_id`)

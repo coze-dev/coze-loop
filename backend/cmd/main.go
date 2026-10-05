@@ -66,6 +66,12 @@ func main() {
 	signalCtx, signalCancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer signalCancel()
 
+	stopHooks, err := startHookRuntime(signalCtx, handler.IExperimentApplication)
+	if err != nil {
+		panic(err)
+	}
+	defer stopHooks()
+
 	r := registry.NewConsumerRegistryWithShutdown(signalCtx, c.mqFactory).Register(MustInitConsumerWorkers(c.cfgFactory, c.mqFactory, handler, handler, handler, handler))
 	if err := r.StartAll(ctx); err != nil {
 		panic(err)
