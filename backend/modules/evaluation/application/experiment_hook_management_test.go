@@ -20,13 +20,163 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 	convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/experiment"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	hookcomponent "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/hook"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
+	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 )
+
+func TestLifecycleHookEmptyExperimentList(t *testing.T) {
+	denied := errors.New("space permission denied")
+	for _, hooksEnabled := range []bool{false, true} {
+		for _, tc := range []struct {
+			name    string
+			items   []*entity.Experiment
+			authErr error
+		}{
+			{name: "nil"},
+			{name: "empty", items: []*entity.Experiment{}},
+			{name: "space_denied", authErr: denied},
+		} {
+			t.Run(fmt.Sprintf("hooks=%t/%s", hooksEnabled, tc.name), func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				auth := rpcmocks.NewMockIAuthProvider(ctrl)
+				manager := servicemocks.NewMockIExptManager(ctrl)
+				spaceAuth := auth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID: "7", SpaceID: 7,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+				}).Return(tc.authErr)
+				if tc.authErr == nil {
+					manager.EXPECT().List(gomock.Any(), int32(1), int32(5), int64(7), gomock.Any(), gomock.Any(), gomock.Any()).After(spaceAuth).Return(tc.items, int64(0), nil)
+				}
+				// Match the commercial provider's empty-batch rejection, keeping application authorization real.
+				auth.EXPECT().MAuthorizeWithoutSPI(gomock.Any(), int64(7), gomock.Len(0)).Return(errors.New("permission check with null action objects")).AnyTimes()
+				storage := &hookApplicationConfigStore{}
+				summaries := &hookApplicationSummaryStore{}
+				app := &experimentApplication{auth: auth, manager: manager}
+				if hooksEnabled {
+					app.hooks = &ExperimentHookApplicationDependencies{Configs: storage, Summaries: summaries, ExecutionScope: "test-scope"}
+				}
+				out, err := app.ListExperiments(context.Background(), &expt.ListExperimentsRequest{WorkspaceID: 7, PageNumber: gptr.Of(int32(1)), PageSize: gptr.Of(int32(5))})
+				if tc.authErr != nil {
+					require.ErrorIs(t, err, denied)
+					require.Nil(t, out)
+				} else {
+					require.NoError(t, err)
+					require.NotNil(t, out)
+					require.Empty(t, out.Experiments)
+					require.Zero(t, out.GetTotal())
+					require.Zero(t, out.BaseResp.StatusCode)
+				}
+				require.Zero(t, storage.batchCalls)
+				require.Zero(t, storage.reads)
+				require.Zero(t, summaries.calls)
+			})
+		}
+	}
+}
+
+func TestLifecycleHookEmptyTemplateList(t *testing.T) {
+	denied := errors.New("space permission denied")
+	for _, hooksEnabled := range []bool{false, true} {
+		for _, tc := range []struct {
+			name    string
+			items   []*entity.ExptTemplate
+			authErr error
+		}{
+			{name: "nil"},
+			{name: "empty", items: []*entity.ExptTemplate{}},
+			{name: "space_denied", authErr: denied},
+		} {
+			t.Run(fmt.Sprintf("hooks=%t/%s", hooksEnabled, tc.name), func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				auth := rpcmocks.NewMockIAuthProvider(ctrl)
+				manager := servicemocks.NewMockIExptTemplateManager(ctrl)
+				spaceAuth := auth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID: "7", SpaceID: 7,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExptTemplate), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+				}).Return(tc.authErr)
+				if tc.authErr == nil {
+					manager.EXPECT().List(gomock.Any(), int32(1), int32(5), int64(7), gomock.Any(), gomock.Any(), gomock.Any()).After(spaceAuth).Return(tc.items, int64(0), nil)
+				}
+				auth.EXPECT().MAuthorizeWithoutSPI(gomock.Any(), int64(7), gomock.Len(0)).Return(errors.New("permission check with null action objects")).AnyTimes()
+				storage := &hookApplicationConfigStore{}
+				app := &experimentApplication{auth: auth, templateManager: manager}
+				if hooksEnabled {
+					app.hooks = &ExperimentHookApplicationDependencies{Configs: storage, ExecutionScope: "test-scope"}
+				}
+				out, err := app.ListExperimentTemplates(context.Background(), &expt.ListExperimentTemplatesRequest{WorkspaceID: 7, PageNumber: gptr.Of(int32(1)), PageSize: gptr.Of(int32(5))})
+				if tc.authErr != nil {
+					require.ErrorIs(t, err, denied)
+					require.Nil(t, out)
+				} else {
+					require.NoError(t, err)
+					require.NotNil(t, out)
+					require.Empty(t, out.ExperimentTemplates)
+					require.Zero(t, out.GetTotal())
+					require.Zero(t, out.BaseResp.StatusCode)
+				}
+				require.Zero(t, storage.batchCalls)
+				require.Zero(t, storage.reads)
+			})
+		}
+	}
+}
+
+func TestLifecycleHookReadNonEmptyGuards(t *testing.T) {
+	denied := errors.New("resource permission denied")
+	for _, tc := range []struct {
+		name       string
+		id, space  int64
+		nilElement bool
+		want       error
+	}{
+		{name: "denied", id: 42, space: 7, want: denied},
+		{name: "nil_element", nilElement: true, want: entity.ErrHookConfigStorage},
+		{name: "invalid_id", space: 7, want: entity.ErrHookConfigStorage},
+		{name: "wrong_space", id: 42, space: 8, want: entity.ErrHookConfigStorage},
+	} {
+		for _, template := range []bool{false, true} {
+			t.Run(fmt.Sprintf("template=%t/%s", template, tc.name), func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				auth := rpcmocks.NewMockIAuthProvider(ctrl)
+				if tc.want == denied {
+					entityType := rpc.AuthEntityType_EvaluationExperiment
+					if template {
+						entityType = rpc.AuthEntityType_EvaluationExptTemplate
+					}
+					auth.EXPECT().MAuthorizeWithoutSPI(gomock.Any(), int64(7), []*rpc.AuthorizationWithoutSPIParam{{
+						ObjectID: "42", SpaceID: 7, ResourceSpaceID: 7, OwnerID: gptr.Of(""),
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(entityType)}},
+					}}).Return(denied)
+				}
+				storage := &hookApplicationConfigStore{}
+				summaries := &hookApplicationSummaryStore{}
+				app := &experimentApplication{auth: auth, hooks: &ExperimentHookApplicationDependencies{Configs: storage, Summaries: summaries, ExecutionScope: "test-scope"}}
+				x := &entity.Experiment{ID: tc.id, SpaceID: tc.space}
+				tpl := &entity.ExptTemplate{Meta: &entity.ExptTemplateMeta{ID: tc.id, WorkspaceID: tc.space}}
+				if tc.nilElement {
+					x, tpl = nil, nil
+				}
+				var err error
+				if template {
+					err = app.readTemplateHooks(context.Background(), []*entity.ExptTemplate{tpl}, []*domain.ExptTemplate{{}}, 7)
+				} else {
+					err = app.readExperimentHooks(context.Background(), []*entity.Experiment{x}, []*domain.Experiment{{}}, 7)
+				}
+				require.ErrorIs(t, err, tc.want)
+				require.Zero(t, storage.batchCalls)
+				require.Zero(t, storage.reads)
+				require.Zero(t, summaries.calls)
+			})
+		}
+	}
+}
 
 func TestLifecycleHookUpdateRejectsMissingStorage(t *testing.T) {
 	ctrl := gomock.NewController(t)

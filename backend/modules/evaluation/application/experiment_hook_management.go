@@ -193,7 +193,7 @@ func hookApplicationEnabled(c *entity.LifecycleHookConf) bool {
 }
 
 func (e *experimentApplication) readTemplateHooks(ctx context.Context, templates []*entity.ExptTemplate, dtos []*domain.ExptTemplate, spaceID int64) error {
-	if e.hooks == nil {
+	if e.hooks == nil || len(templates) == 0 {
 		return nil
 	}
 	for _, t := range templates {
@@ -219,7 +219,7 @@ func (e *experimentApplication) readTemplateHooks(ctx context.Context, templates
 }
 
 func (e *experimentApplication) readExperimentHooks(ctx context.Context, expts []*entity.Experiment, dtos []*domain.Experiment, spaceID int64) error {
-	if e.hooks == nil {
+	if e.hooks == nil || len(expts) == 0 {
 		return nil
 	}
 	for _, x := range expts {
