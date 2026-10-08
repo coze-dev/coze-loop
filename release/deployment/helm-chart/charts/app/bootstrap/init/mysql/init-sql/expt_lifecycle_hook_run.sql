@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS `expt_lifecycle_hook_run`
     `lease_generation` bigint unsigned NOT NULL DEFAULT '0',
     `version` bigint unsigned NOT NULL DEFAULT '0',
     `occurred_at` datetime(3) DEFAULT NULL,
-    `request_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+    `request_hash` varchar(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
     `result_redacted` blob DEFAULT NULL,
     `error_code` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
     `error_message` varchar(2048) DEFAULT NULL,

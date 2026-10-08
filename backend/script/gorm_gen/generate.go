@@ -237,7 +237,8 @@ func generateForEvaluationExpt(db *gorm.DB) {
 		case "expt_run_log":
 			opts = append(opts, gen.FieldJSONTag("lifecycle_hook_version", "-"))
 		case "expt_lifecycle_run":
-			opts = append(opts, gen.FieldJSONTag("snapshot_cipher", "-"))
+			// A nil byte slice represents SQL NULL without changing repository types.
+			opts = append(opts, gen.FieldJSONTag("snapshot_cipher", "-"), gen.FieldType("snapshot_cipher", "[]byte"))
 		case "expt_lifecycle_run_item":
 			opts = append(opts, gen.FieldJSONTag("execution_manifest", "-"))
 		}

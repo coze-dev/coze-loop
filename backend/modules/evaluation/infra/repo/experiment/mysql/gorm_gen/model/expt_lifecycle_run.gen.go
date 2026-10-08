@@ -19,14 +19,14 @@ type ExptLifecycleRun struct {
 	BeforeEnabled        bool       `gorm:"column:before_enabled;type:tinyint(1);not null;comment:创建时冻结的before启用状态" json:"before_enabled"` // 创建时冻结的before启用状态
 	AfterEnabled         bool       `gorm:"column:after_enabled;type:tinyint(1);not null;comment:创建时冻结的after启用状态" json:"after_enabled"`    // 创建时冻结的after启用状态
 	ExecutionScope       string     `gorm:"column:execution_scope;type:varchar(128) character set ascii;not null;index:idx_scope_finalize_reconcile,priority:1;index:idx_scope_plan_run,priority:1" json:"execution_scope"`
-	SnapshotCipher       []byte     `gorm:"column:snapshot_cipher;type:mediumblob binary;not null" json:"-"`
+	SnapshotCipher       []byte     `gorm:"column:snapshot_cipher;type:mediumblob binary" json:"-"`
 	SnapshotKeyID        string     `gorm:"column:snapshot_key_id;type:varchar(128) character set ascii;not null" json:"snapshot_key_id"`
-	SnapshotHash         string     `gorm:"column:snapshot_hash;type:char(64) character set ascii;not null" json:"snapshot_hash"`
+	SnapshotHash         string     `gorm:"column:snapshot_hash;type:varchar(64) character set ascii;not null" json:"snapshot_hash"`
 	Gate                 int32      `gorm:"column:gate;type:tinyint(4);not null;comment:0 waiting, 1 ready, 2 closed" json:"gate"`                                         // 0 waiting, 1 ready, 2 closed
 	PlanState            int32      `gorm:"column:plan_state;type:tinyint(4);not null;index:idx_scope_plan_run,priority:2;comment:0 preparing, 1 ready" json:"plan_state"` // 0 preparing, 1 ready
 	PlanCursor           *string    `gorm:"column:plan_cursor;type:text" json:"plan_cursor"`
 	PlanCount            int64      `gorm:"column:plan_count;type:bigint(20);not null" json:"plan_count"`
-	PlanHash             *string    `gorm:"column:plan_hash;type:char(64) character set ascii" json:"plan_hash"`
+	PlanHash             *string    `gorm:"column:plan_hash;type:varchar(64) character set ascii" json:"plan_hash"`
 	ExecutionStarted     bool       `gorm:"column:execution_started;type:tinyint(1);not null" json:"execution_started"`
 	ExecutionInitialized bool       `gorm:"column:execution_initialized;type:tinyint(1);not null" json:"execution_initialized"`
 	Version              int64      `gorm:"column:version;type:bigint(20) unsigned;not null" json:"version"`

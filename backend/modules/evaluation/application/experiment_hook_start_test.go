@@ -27,6 +27,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
+	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	hookinfra "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/hook"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -152,6 +153,10 @@ func (s *startLogs) Create(_ context.Context, log *entity.ExptRunLog) error {
 	return nil
 }
 
+func (s *startLogs) Update(context.Context, int64, int64, map[string]any) error {
+	return nil
+}
+
 type startQuota struct {
 	repo.QuotaRepo
 	quota *entity.QuotaSpaceExpt
@@ -192,10 +197,15 @@ func newStartApplication(t *testing.T, installed bool, config *entity.LifecycleH
 	tracker := lwtmocks.NewMockILatestWriteTracker(ctrl)
 	metrics := metricmocks.NewMockExptMetric(ctrl)
 	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	results := servicemocks.NewMockExptResultService(ctrl)
+	aggregates := servicemocks.NewMockExptAggrResultService(ctrl)
+	results.EXPECT().MGetStats(gomock.Any(), []int64{42}, int64(7), gomock.Any()).Return(nil, nil).AnyTimes()
+	aggregates.EXPECT().BatchGetExptAggrResultByExperimentIDs(gomock.Any(), int64(7), []int64{42}).Return(nil, nil).AnyTimes()
 	ids.EXPECT().GenID(gomock.Any()).Return(int64(71), nil).AnyTimes()
 	lock.EXPECT().BackoffLockWithValue(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), time.Second).Return(true, "", nil).AnyTimes()
 	lock.EXPECT().LockBackoff(gomock.Any(), gomock.Any(), gomock.Any(), time.Second).Return(true, nil).AnyTimes()
 	lock.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	lock.EXPECT().UnlockForce(gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
 	tracker.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
 	metrics.EXPECT().EmitExptExecRun(gomock.Any(), gomock.Any()).AnyTimes()
 	codec := hookinfra.NewStorageCodec(startProtector{})
@@ -206,14 +216,14 @@ func newStartApplication(t *testing.T, installed bool, config *entity.LifecycleH
 		store.authorized = authErr == nil
 		return authErr
 	}).AnyTimes()
-	expts := &startExpts{expt: &entity.Experiment{ID: 42, SpaceID: 7, Name: "source", ExptType: entity.ExptType_Offline, CreatedBy: "trusted-user", NotificationConf: &entity.ExptNotificationConf{}}}
+	expts := &startExpts{expt: &entity.Experiment{ID: 42, SpaceID: 7, EvalSetID: 11, EvalSetVersionID: 11, Name: "source", ExptType: entity.ExptType_Offline, CreatedBy: "trusted-user", NotificationConf: &entity.ExptNotificationConf{}}}
 	store.source = expts.expt
 	logs := &startLogs{}
 	store.legacyLogs = logs
 	quota := &startQuota{}
 	publisher := &startPublisher{}
 	configer := &startConfig{}
-	manager := service.NewExptManager(nil, expts, logs, nil, nil, nil, nil, configer, quota, lock, nil, publisher, nil, ids, metrics, tracker, service.NewEvaluationSetVersionServiceImpl(hookCreationDatasetRPC{}), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	manager := service.NewExptManager(results, expts, logs, nil, nil, nil, nil, configer, quota, lock, nil, publisher, nil, ids, metrics, tracker, service.NewEvaluationSetVersionServiceImpl(hookCreationDatasetRPC{}), service.NewEvaluationSetServiceImpl(hookCreationDatasetRPC{}), nil, nil, nil, aggregates, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	if installed {
 		identity, err := hookinfra.NewIdentityProvider(nil, 0)
 		require.NoError(t, err)

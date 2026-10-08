@@ -30,7 +30,7 @@ type ExptLifecycleHookRun struct {
 	LeaseGeneration   int64      `gorm:"column:lease_generation;type:bigint(20) unsigned;not null" json:"lease_generation"`
 	Version           int64      `gorm:"column:version;type:bigint(20) unsigned;not null" json:"version"`
 	OccurredAt        *time.Time `gorm:"column:occurred_at;type:datetime(3)" json:"occurred_at"`
-	RequestHash       *string    `gorm:"column:request_hash;type:char(64) character set ascii" json:"request_hash"`
+	RequestHash       *string    `gorm:"column:request_hash;type:varchar(64) character set ascii" json:"request_hash"`
 	ResultRedacted    *[]byte    `gorm:"column:result_redacted;type:blob binary" json:"result_redacted"`
 	ErrorCode         *string    `gorm:"column:error_code;type:varchar(128) character set utf8mb4" json:"error_code"`
 	ErrorMessage      *string    `gorm:"column:error_message;type:varchar(2048)" json:"error_message"`
