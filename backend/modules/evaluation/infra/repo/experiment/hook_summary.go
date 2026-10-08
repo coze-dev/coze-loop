@@ -5,7 +5,6 @@ package experiment
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -139,7 +138,7 @@ func (r *hookRunRepo) MGetSummaries(ctx context.Context, keys []entity.HookRunKe
 	err = read(session, true)
 	if err == nil && needsSnapshot {
 		// Mixed batches also restart all reads; no result from the probe is retained.
-		err = session.Transaction(func(tx *gorm.DB) error { return read(tx, false) }, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+		err = readHookSnapshot(ctx, r.provider, func(tx *gorm.DB) error { return read(tx, false) })
 	}
 	if err != nil {
 		return nil, entity.ErrHookSummaryUnavailable

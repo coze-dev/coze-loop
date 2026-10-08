@@ -6,7 +6,6 @@ package experiment
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"encoding/json"
 	"io"
 	"math"
@@ -35,7 +34,7 @@ func (r *hookFinalizationRepo) read(ctx context.Context, fn func(*gorm.DB) error
 	if ctx == nil || r == nil || r.provider == nil {
 		return entity.ErrHookStoreCorrupt
 	}
-	return r.provider.NewSession(ctx, db.WithMaster()).Session(&gorm.Session{Logger: logger.Discard}).Transaction(fn, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+	return readHookSnapshot(ctx, r.provider, fn)
 }
 
 func (r *hookFinalizationRepo) ReadFinalizationSource(ctx context.Context, key entity.HookRunKey) (*entity.HookFinalizationSource, error) {

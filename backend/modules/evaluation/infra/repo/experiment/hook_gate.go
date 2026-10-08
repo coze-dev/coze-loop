@@ -5,7 +5,6 @@ package experiment
 
 import (
 	"context"
-	"database/sql"
 	"reflect"
 
 	"github.com/bytedance/gg/gptr"
@@ -142,7 +141,7 @@ func (r *hookGateRepo) CanDispatch(ctx context.Context, key entity.HookRunKey) (
 	}
 	if err == nil && needsSnapshot {
 		// A managed Run must be reread entirely in one snapshot, never joined to the probe.
-		err = session.Transaction(func(tx *gorm.DB) error { return read(tx, false) }, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+		err = readHookSnapshot(ctx, r.provider, func(tx *gorm.DB) error { return read(tx, false) })
 	}
 	if err != nil {
 		return wait, entity.ErrHookGateUnavailable
