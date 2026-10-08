@@ -198,6 +198,9 @@ func TestHookGateMySQLSnapshotAndNoLocks(t *testing.T) {
 	changed := false
 	const callback = "gate_concurrent_commit"
 	require.NoError(t, f.sql.Callback().Query().After("gorm:query").Register(callback, func(tx *gorm.DB) {
+		if _, inSnapshot := tx.Statement.ConnPool.(gorm.TxCommitter); !inSnapshot {
+			return
+		}
 		if changed || !strings.Contains(tx.Statement.SQL.String(), "expt_run_log AS l") {
 			return
 		}

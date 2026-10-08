@@ -68,9 +68,7 @@ func TestHookGateDoesNotLogSQLOnFailure(t *testing.T) {
 	p, m := gateMock(t)
 	var output bytes.Buffer
 	p = &gateLoggedProvider{Provider: p, output: logger.New(log.New(&output, "", 0), logger.Config{LogLevel: logger.Info})}
-	m.ExpectBegin()
 	m.ExpectQuery("SELECT").WillReturnError(errors.New("SQL with private-parameter"))
-	m.ExpectRollback()
 	got, err := NewHookGateRepo(p, nil).CanDispatch(context.Background(), gateTestKey)
 	require.Equal(t, entity.HookGateWaiting, got.Gate)
 	require.ErrorIs(t, err, entity.ErrHookGateUnavailable)
@@ -127,7 +125,6 @@ func TestHookGateNilReceiverDoesNotPanic(t *testing.T) {
 func TestHookGateLegacyValueProvider(t *testing.T) {
 	p, m := gateMock(t)
 	gateExpectLog(m, gateLogValues(nil))
-	m.ExpectCommit()
 	got, err := NewHookGateRepo(struct{ db.Provider }{p}, nil).CanDispatch(context.Background(), gateTestKey)
 	require.NoError(t, err)
 	require.Equal(t, entity.HookAdmissionDecision{Gate: entity.HookGateReady}, got)
@@ -138,19 +135,24 @@ func gateLogValues(marker driver.Value) []driver.Value {
 }
 
 func gateExpectLog(m sqlmock.Sqlmock, values []driver.Value) {
-	rows := sqlmock.NewRows([]string{"id", "space_id", "expt_id", "expt_run_id", "lifecycle_hook_version", "deleted_at", "status", "experiment_id", "experiment_space_id", "latest_run_id", "experiment_status", "experiment_deleted_at"})
-	if values != nil {
-		rows.AddRow(values...)
+	query := func() {
+		rows := sqlmock.NewRows([]string{"id", "space_id", "expt_id", "expt_run_id", "lifecycle_hook_version", "deleted_at", "status", "experiment_id", "experiment_space_id", "latest_run_id", "experiment_status", "experiment_deleted_at"})
+		if values != nil {
+			rows.AddRow(values...)
+		}
+		m.ExpectQuery("SELECT .* FROM expt_run_log AS l LEFT JOIN experiment AS e .* WHERE l.id=\\?").WithArgs(int64(30)).WillReturnRows(rows)
 	}
-	m.ExpectBegin()
-	m.ExpectQuery("SELECT .* FROM expt_run_log AS l LEFT JOIN experiment AS e .* WHERE l.id=\\?").WithArgs(int64(30)).WillReturnRows(rows)
+	query()
+	if values != nil && values[4] == int64(1) {
+		m.ExpectBegin()
+		query()
+	}
 }
 
 func TestHookGateLegacySkipsHookAndScope(t *testing.T) {
 	for _, marker := range []driver.Value{nil, int64(0)} {
 		p, m := gateMock(t)
 		gateExpectLog(m, gateLogValues(marker))
-		m.ExpectCommit()
 		got, err := NewHookGateRepo(p, func(context.Context) (string, error) {
 			t.Error("legacy must not resolve scope")
 			return "", errors.New("unavailable")
@@ -194,11 +196,6 @@ func TestHookGateRunBoundaries(t *testing.T) {
 			values := gateLogValues(nil)
 			values[tc.index] = tc.value
 			gateExpectLog(m, values)
-			if tc.bad {
-				m.ExpectRollback()
-			} else {
-				m.ExpectCommit()
-			}
 			got, err := NewHookGateRepo(p, nil).CanDispatch(context.Background(), gateTestKey)
 			if tc.bad {
 				require.ErrorIs(t, err, entity.ErrHookGateUnavailable)
@@ -217,16 +214,16 @@ func TestHookGateMissingAndDBFailure(t *testing.T) {
 			secret := errors.New("SELECT private SQL with parameter secret-user")
 			switch where {
 			case "begin":
+				m.ExpectQuery("SELECT").WillReturnRows(legacyGateRows(int64(1)))
 				m.ExpectBegin().WillReturnError(secret)
 			case "log":
-				m.ExpectBegin()
 				m.ExpectQuery("SELECT").WillReturnError(secret)
-				m.ExpectRollback()
 			case "missing":
 				gateExpectLog(m, nil)
-				m.ExpectRollback()
 			case "commit":
-				gateExpectLog(m, gateLogValues(nil))
+				values := gateLogValues(int64(1))
+				values[6] = int64(entity.ExptStatus_Success)
+				gateExpectLog(m, values)
 				m.ExpectCommit().WillReturnError(secret)
 			}
 			got, err := NewHookGateRepo(p, nil).CanDispatch(context.Background(), gateTestKey)

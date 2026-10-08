@@ -35,8 +35,9 @@ func (r *hookRunRepo) MGetSummaries(ctx context.Context, keys []entity.HookRunKe
 		ids = append(ids, key.RunID)
 		wanted[key.RunID] = key
 	}
-	// Both reads share an MVCC snapshot, without locking or loading encrypted data.
-	err = r.provider.NewSession(ctx, db.WithMaster()).Transaction(func(tx *gorm.DB) error {
+	session := r.provider.NewSession(ctx, db.WithMaster())
+	needsSnapshot := false
+	read := func(tx *gorm.DB, legacyOnly bool) error {
 		var logs []hookSummaryLogRow
 		if err := tx.Table("expt_run_log AS l").
 			Select("l.id, l.space_id, l.expt_id, l.expt_run_id, l.lifecycle_hook_version, l.deleted_at, l.status").
@@ -47,11 +48,15 @@ func (r *hookRunRepo) MGetSummaries(ctx context.Context, keys []entity.HookRunKe
 		if len(logs) != len(keys) {
 			return entity.ErrHookSummaryUnavailable
 		}
+		out = make(map[entity.HookRunKey]*entity.LifecycleHookRunSummary, len(keys))
 		var managed [][]any
 		runStatuses := make(map[int64]entity.ExptStatus, len(logs))
 		for _, row := range logs {
 			key, ok := wanted[row.ID]
 			if !ok || row.SpaceID != key.WorkspaceID || row.ExptID != key.ExperimentID || row.ExptRunID != key.RunID || row.DeletedAt.Valid {
+				return entity.ErrHookSummaryUnavailable
+			}
+			if _, duplicate := out[key]; duplicate {
 				return entity.ErrHookSummaryUnavailable
 			}
 			out[key] = nil
@@ -65,6 +70,10 @@ func (r *hookRunRepo) MGetSummaries(ctx context.Context, keys []entity.HookRunKe
 			runStatuses[key.RunID] = entity.ExptStatus(gptr.Indirect(row.Status))
 		}
 		if len(managed) == 0 {
+			return nil
+		}
+		if legacyOnly {
+			needsSnapshot = true
 			return nil
 		}
 		var rows []hookSummaryRow
@@ -126,7 +135,12 @@ func (r *hookRunRepo) MGetSummaries(ctx context.Context, keys []entity.HookRunKe
 			}
 		}
 		return nil
-	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+	}
+	err = read(session, true)
+	if err == nil && needsSnapshot {
+		// Mixed batches also restart all reads; no result from the probe is retained.
+		err = session.Transaction(func(tx *gorm.DB) error { return read(tx, false) }, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+	}
 	if err != nil {
 		return nil, entity.ErrHookSummaryUnavailable
 	}

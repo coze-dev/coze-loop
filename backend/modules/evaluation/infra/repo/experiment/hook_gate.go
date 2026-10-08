@@ -47,7 +47,9 @@ func (r *hookGateRepo) CanDispatch(ctx context.Context, key entity.HookRunKey) (
 	}
 	out := wait
 	// Suppress driver SQL/parameters; callers observe the fixed error and reason.
-	err := r.provider.NewSession(ctx, db.WithMaster()).Session(&gorm.Session{Logger: logger.Discard}).Transaction(func(tx *gorm.DB) error {
+	session := r.provider.NewSession(ctx, db.WithMaster()).Session(&gorm.Session{Logger: logger.Discard})
+	needsSnapshot := r.binding != nil
+	read := func(tx *gorm.DB, legacyOnly bool) error {
 		var rows []hookGateLogRow
 		logColumns := hookGateLogColumns
 		if r.execution {
@@ -61,6 +63,13 @@ func (r *hookGateRepo) CanDispatch(ctx context.Context, key entity.HookRunKey) (
 			return entity.ErrHookGateUnavailable
 		}
 		row := rows[0]
+		if row.ID != key.RunID || row.LifecycleHookVersion != nil && *row.LifecycleHookVersion != 0 && *row.LifecycleHookVersion != 1 {
+			return entity.ErrHookGateUnavailable
+		}
+		if legacyOnly && row.LifecycleHookVersion != nil && *row.LifecycleHookVersion == 1 {
+			needsSnapshot = true
+			return nil
+		}
 		if row.DeletedAt.Valid || row.ExperimentDeletedAt.Valid {
 			out = entity.HookAdmissionDecision{Gate: entity.HookGateClosed, Reason: "RUN_CLOSED"}
 			return nil
@@ -126,7 +135,15 @@ func (r *hookGateRepo) CanDispatch(ctx context.Context, key entity.HookRunKey) (
 			out = entity.HookAdmissionDecision{Gate: entity.HookGateWaiting, Reason: "HOOK_EXECUTION_PENDING"}
 		}
 		return nil
-	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+	}
+	var err error
+	if !needsSnapshot {
+		err = read(session, true)
+	}
+	if err == nil && needsSnapshot {
+		// A managed Run must be reread entirely in one snapshot, never joined to the probe.
+		err = session.Transaction(func(tx *gorm.DB) error { return read(tx, false) }, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+	}
 	if err != nil {
 		return wait, entity.ErrHookGateUnavailable
 	}

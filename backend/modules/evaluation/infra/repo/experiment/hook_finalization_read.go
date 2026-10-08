@@ -39,8 +39,14 @@ func (r *hookFinalizationRepo) read(ctx context.Context, fn func(*gorm.DB) error
 }
 
 func (r *hookFinalizationRepo) ReadFinalizationSource(ctx context.Context, key entity.HookRunKey) (*entity.HookFinalizationSource, error) {
-	if key.WorkspaceID <= 0 || key.ExperimentID <= 0 || key.RunID < 0 {
+	if ctx == nil || r == nil || r.provider == nil || key.WorkspaceID <= 0 || key.ExperimentID <= 0 || key.RunID < 0 {
 		return nil, entity.ErrHookStoreCorrupt
+	}
+	if r.binding == nil {
+		source, err := r.readLegacySource(ctx, key)
+		if err != nil || source != nil {
+			return source, err
+		}
 	}
 	var out *entity.HookFinalizationSource
 	err := r.read(ctx, func(tx *gorm.DB) error {
@@ -83,6 +89,64 @@ func (r *hookFinalizationRepo) ReadFinalizationSource(ctx context.Context, key e
 		return nil
 	})
 	return out, err
+}
+
+type hookLegacySourceRow struct {
+	Experiment model.Experiment `gorm:"embedded"`
+	Log        model.ExptRunLog `gorm:"embedded;embeddedPrefix:run_"`
+}
+
+const hookLegacySourceColumns = `e.*,l.id AS run_id,l.space_id AS run_space_id,l.expt_id AS run_expt_id,l.expt_run_id AS run_expt_run_id,
+l.lifecycle_hook_version AS run_lifecycle_hook_version,l.deleted_at AS run_deleted_at,l.status AS run_status,l.mode AS run_mode,
+l.created_by AS run_created_by,l.item_ids AS run_item_ids,l.pending_cnt AS run_pending_cnt,l.success_cnt AS run_success_cnt,l.fail_cnt AS run_fail_cnt,
+l.processing_cnt AS run_processing_cnt,l.terminated_cnt AS run_terminated_cnt,l.credit_cost AS run_credit_cost,l.token_cost AS run_token_cost,
+l.status_message AS run_status_message,l.created_at AS run_created_at,l.updated_at AS run_updated_at`
+
+func (r *hookFinalizationRepo) readLegacySource(ctx context.Context, key entity.HookRunKey) (*entity.HookFinalizationSource, error) {
+	var rows []hookLegacySourceRow
+	q := r.provider.NewSession(ctx, db.WithMaster()).Session(&gorm.Session{Logger: logger.Discard}).
+		Unscoped().Table("experiment AS e").Select(hookLegacySourceColumns)
+	if key.RunID == 0 {
+		q = q.Joins("LEFT JOIN expt_run_log AS l ON l.id=e.latest_run_id")
+	} else {
+		q = q.Joins("LEFT JOIN expt_run_log AS l ON l.id=?", key.RunID)
+	}
+	if err := q.Where("e.id=? AND e.space_id=?", key.ExperimentID, key.WorkspaceID).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	if len(rows) != 1 {
+		return nil, entity.ErrHookStoreMissing
+	}
+	e, log := &rows[0].Experiment, &rows[0].Log
+	if key.RunID == 0 {
+		key.RunID = e.LatestRunID
+	}
+	if key.RunID <= 0 || log.ID == 0 {
+		return nil, entity.ErrHookStoreMissing
+	}
+	if e.ID != key.ExperimentID || e.SpaceID != key.WorkspaceID || log.ID != key.RunID || log.SpaceID != key.WorkspaceID || log.ExptID != key.ExperimentID || log.ExptRunID != key.RunID || log.DeletedAt.Valid || log.Status == nil || log.Mode == nil {
+		return nil, entity.ErrHookStoreCorrupt
+	}
+	switch gptr.Indirect(log.LifecycleHookVersion) {
+	case 1:
+		// Bound/deleted recovery and all managed reads retain the original RR path.
+		return nil, nil
+	case 0:
+		if e.DeletedAt.Valid {
+			return nil, entity.ErrHookStoreMissing
+		}
+	default:
+		return nil, entity.ErrHookStoreCorrupt
+	}
+	expt, err := convert.NewExptConverter().PO2DO(e, nil)
+	if err != nil {
+		return nil, err
+	}
+	rl, err := convert.NewExptRunLogConvertor().PO2DO(log)
+	if err != nil {
+		return nil, err
+	}
+	return &entity.HookFinalizationSource{Key: key, Experiment: expt, RunLog: rl}, nil
 }
 
 func (r *hookFinalizationRepo) ReadFinalizationStats(ctx context.Context, key entity.HookRunKey, scope string) (*entity.HookFinalizationStats, error) {

@@ -56,7 +56,7 @@ func TestHookSummaryPendingFixedRun(t *testing.T) {
 	require.NotNil(t, out[old.Key].Before.UpdatedAt)
 	require.Nil(t, out[old.Key].Before.Response)
 	require.Nil(t, out[old.Key].Before.Error)
-	require.Len(t, *queries, 2)
+	require.Len(t, *queries, 3)
 	for _, query := range *queries {
 		for _, forbidden := range []string{"snapshot", "lifecycle_hook_conf", "created_by", "lease_owner", "idempotency_key", "request_hash", "latest_run_id", "for update", "select *"} {
 			require.NotContains(t, query, forbidden)

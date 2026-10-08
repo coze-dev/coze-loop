@@ -57,6 +57,9 @@ func TestHookSummaryReadsOneSnapshotWithoutRowLocks(t *testing.T) {
 	const callback = "summary_concurrent_commit"
 	changed := false
 	require.NoError(t, f.sql.Callback().Query().After("gorm:query").Register(callback, func(tx *gorm.DB) {
+		if _, inSnapshot := tx.Statement.ConnPool.(gorm.TxCommitter); !inSnapshot {
+			return
+		}
 		if !changed && strings.Contains(tx.Statement.SQL.String(), "expt_run_log") {
 			changed = true
 			require.NoError(t, f.sql.Model(&model.ExptLifecycleHookRun{}).Where("operation_id=?", in.Before.OperationID).UpdateColumns(map[string]any{"status": "succeeded", "attempt": 1, "result_redacted": []byte(`{"v":"new"}`)}).Error)
