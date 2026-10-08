@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS `expt_lifecycle_hook_run`
 (
-    `id` bigint NOT NULL,
+    `id` bigint unsigned NOT NULL,
     `space_id` bigint NOT NULL,
     `expt_id` bigint NOT NULL,
     `expt_run_id` bigint NOT NULL,

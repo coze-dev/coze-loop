@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS `expt_lifecycle_hook_attempt`
 (
-    `id` bigint NOT NULL,
+    `id` bigint unsigned NOT NULL,
     `operation_id` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     `attempt` int NOT NULL,
     `delivery_id` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,

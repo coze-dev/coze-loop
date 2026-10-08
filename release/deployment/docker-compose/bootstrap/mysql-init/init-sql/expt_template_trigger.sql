@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS `expt_template_trigger`
 (
-    `id` bigint NOT NULL,
+    `id` bigint unsigned NOT NULL,
     `binding_id` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     `binding_version` bigint unsigned NOT NULL,
     `instance_id` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,

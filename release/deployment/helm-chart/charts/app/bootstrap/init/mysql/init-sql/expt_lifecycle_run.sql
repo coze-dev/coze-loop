@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS `expt_lifecycle_run`
 (
-    `space_id` bigint NOT NULL,
+    `space_id` bigint unsigned NOT NULL,
     `expt_id` bigint NOT NULL,
-    `expt_run_id` bigint NOT NULL,
+    `expt_run_id` bigint unsigned NOT NULL,
     `source_run_id` bigint DEFAULT NULL,
     `before_enabled` bool NOT NULL DEFAULT false COMMENT '创建时冻结的before启用状态',
     `after_enabled` bool NOT NULL DEFAULT false COMMENT '创建时冻结的after启用状态',
