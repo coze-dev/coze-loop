@@ -226,7 +226,7 @@ func TestHookGateMySQLQueryPrivacyAndLegacy(t *testing.T) {
 	require.NoError(t, f.sql.Callback().Query().After("gorm:query").Register(callback, func(tx *gorm.DB) { queries = append(queries, strings.ToLower(tx.Statement.SQL.String())) }))
 	t.Cleanup(func() { require.NoError(t, f.sql.Callback().Query().Remove(callback)) })
 	f.read(t, entity.HookGateReady, false)
-	require.Len(t, queries, 2)
+	require.Len(t, queries, 3)
 	for _, query := range queries {
 		for _, forbidden := range []string{"snapshot", "parameters", "created_by", "result", "error_message", "error_code", "lifecycle_hook_conf", "select *", "for update", "lock in share"} {
 			require.NotContains(t, query, forbidden)

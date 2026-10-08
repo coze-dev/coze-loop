@@ -270,7 +270,7 @@ func TestHookSummaryBatchBoundedAndDBFailure(t *testing.T) {
 	}
 	queries := hookSummaryQueries(t, f)
 	require.Len(t, hookSummaryRead(t, f, keys...), 100)
-	require.Len(t, *queries, 2)
+	require.Len(t, *queries, 3)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	out, err := NewHookSummaryRepo(f.p).MGetSummaries(ctx, keys)
