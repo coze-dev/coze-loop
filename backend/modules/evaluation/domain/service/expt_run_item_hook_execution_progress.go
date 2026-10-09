@@ -11,6 +11,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 type itemHookProgressContextKey struct{}
@@ -107,15 +108,18 @@ func itemHookManagedWrite(ctx context.Context) bool {
 func writeItemHookResult(ctx context.Context, etec *entity.ExptTurnEvalCtx, base, next *entity.ExptTurnResultRunLog) (*entity.ExptTurnResultRunLog, error) {
 	b, err := itemHookProgressFor(ctx, etec)
 	if err != nil {
+		logs.CtxWarn(ctx, "hook result write rejected: stage=context_binding")
 		return nil, err
 	}
 	k := entity.HookTurnProgressIdentity(base)
 	writer, ok := b.repo.(repo.IHookTurnResultWriteRepo)
 	if !ok || hookExecutionNil(writer) || k.Validate() != nil || k.HookRunKey != b.key || k.ItemID != b.itemID || k.ItemVersionID != b.itemVersion || k.TurnID != etec.Turn.ID || k != entity.HookTurnProgressIdentity(next) {
+		logs.CtxWarn(ctx, "hook result write rejected: stage=identity run=%d item=%d turn=%d version=%d expected_version=%d writer=%t", b.key.RunID, k.ItemID, k.TurnID, k.ItemVersionID, b.itemVersion, ok)
 		return nil, itemHookControlError{wait: true}
 	}
 	current, err := writer.WriteTurnResult(ctx, entity.HookTurnProgressInput{Base: base, Progress: next})
 	if err != nil || entity.HookTurnProgressIdentity(current) != k {
+		logs.CtxWarn(ctx, "hook result write rejected: stage=repository run=%d item=%d turn=%d err=%v", b.key.RunID, k.ItemID, k.TurnID, err)
 		return nil, itemHookControlError{wait: true}
 	}
 	return current, nil
