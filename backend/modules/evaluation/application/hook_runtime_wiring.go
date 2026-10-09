@@ -197,7 +197,7 @@ func (c hookRuntimeAdmissionConfig) GetRuntimeConfig(ctx context.Context) (entit
 		return entity.HookRuntimeConfig{}, entity.ErrHookConfigStorage
 	}
 	broker, err := p.Wake.brokerConfig(ctx)
-	if err != nil || broker.DisableProduce != nil && *broker.DisableProduce || broker.DisableConsume != nil && *broker.DisableConsume {
+	if err != nil || broker != nil && (broker.DisableProduce != nil && *broker.DisableProduce || broker.DisableConsume != nil && *broker.DisableConsume) {
 		return entity.HookRuntimeConfig{}, ErrHookWakeUnavailable
 	}
 	return cfg, nil

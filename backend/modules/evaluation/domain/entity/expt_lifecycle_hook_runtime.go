@@ -19,6 +19,7 @@ func ValidateHookLeaseTiming(leaseSeconds, renewSeconds int32) error {
 type HookRuntimeConfig struct {
 	AdmissionEnabled            bool
 	WorkerEnabled               bool
+	MQWakeEnabled               bool
 	WorkerConcurrency           int32
 	WorkspaceConcurrency        int32
 	ScanIntervalSeconds         int32

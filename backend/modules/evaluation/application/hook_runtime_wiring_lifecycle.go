@@ -35,12 +35,19 @@ func NewHookRuntimeWake(loader conf.IConfigLoader, factory mq.IFactory, config *
 	return &HookRuntimeWake{loader: loader, factory: factory, config: config, scope: scope, secrets: secrets}
 }
 
+// A nil config without an error means validated, intentional polling-only mode.
 func (w *HookRuntimeWake) brokerConfig(ctx context.Context) (*rocket.RMQConf, error) {
-	if w == nil || ctx == nil || ctx.Err() != nil || hookWorkerNil(w.loader) || hookWorkerNil(w.factory) {
+	if w == nil || ctx == nil || ctx.Err() != nil {
 		return nil, ErrHookWakeUnavailable
 	}
 	c, err := w.config.GetRuntimeConfig(ctx)
 	if err != nil || !c.WorkerEnabled {
+		return nil, ErrHookWakeUnavailable
+	}
+	if !c.MQWakeEnabled {
+		return nil, nil
+	}
+	if hookWorkerNil(w.loader) || hookWorkerNil(w.factory) {
 		return nil, ErrHookWakeUnavailable
 	}
 	cfg := &rocket.RMQConf{}
@@ -60,6 +67,9 @@ func (w *HookRuntimeWake) PublishWake(ctx context.Context, event entity.HookWake
 	cfg, err := w.brokerConfig(ctx)
 	if err != nil {
 		return err
+	}
+	if cfg == nil {
+		return nil
 	}
 	if cfg.DisableProduce != nil && *cfg.DisableProduce {
 		return ErrHookWakeUnavailable
@@ -93,6 +103,7 @@ func (s *HookRuntimeServices) ExecutionScope(context.Context) (string, error) {
 
 // Start is called only by the process owning Hook scans (Commercial offline).
 // The ordinary API and evaluator consumers still install the routing/Gate.
+// Switching polling-only to MQ requires a process restart to subscribe.
 func (s *HookRuntimeServices) Start(ctx context.Context, handler mq.IConsumerHandler) (func(context.Context) error, error) {
 	if s == nil || s.Worker == nil || s.Wake == nil || ctx == nil {
 		return nil, ErrHookWorkerConfiguration
@@ -144,7 +155,7 @@ func (s *HookRuntimeServices) Start(ctx context.Context, handler mq.IConsumerHan
 		hookRuntimeObserver{}.Observe(hook.WorkerEvent{Code: hook.WorkerConfigFailed})
 		return stop, nil
 	}
-	if cfg.DisableConsume != nil && *cfg.DisableConsume {
+	if cfg == nil || cfg.DisableConsume != nil && *cfg.DisableConsume {
 		return stop, nil
 	}
 	if hookWorkerNil(handler) {

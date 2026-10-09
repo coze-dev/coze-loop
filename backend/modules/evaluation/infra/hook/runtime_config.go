@@ -27,6 +27,7 @@ type runtimeConfigInput struct {
 	StorageKeyID                string                  `json:"storage_key_id"`
 	AdmissionEnabled            *bool                   `json:"admission_enabled"`
 	WorkerEnabled               *bool                   `json:"worker_enabled"`
+	MQWakeEnabled               *bool                   `json:"mq_wake_enabled"`
 	WorkerConcurrency           *int32                  `json:"worker_concurrency"`
 	WorkspaceConcurrency        *int32                  `json:"workspace_concurrency"`
 	ScanIntervalSeconds         *int32                  `json:"scan_interval_seconds"`
@@ -141,6 +142,7 @@ func (p *RuntimeConfigProvider) read(ctx context.Context) (runtimeConfigSnapshot
 	snapshot := runtimeConfigSnapshot{runtime: entity.HookRuntimeConfig{
 		AdmissionEnabled:  input.AdmissionEnabled != nil && *input.AdmissionEnabled,
 		WorkerEnabled:     p.workerInstalled && (input.WorkerEnabled == nil || *input.WorkerEnabled),
+		MQWakeEnabled:     input.MQWakeEnabled == nil || *input.MQWakeEnabled,
 		WorkerConcurrency: runtimeValue(input.WorkerConcurrency, 8), WorkspaceConcurrency: runtimeValue(input.WorkspaceConcurrency, 2),
 		ScanIntervalSeconds: runtimeValue(input.ScanIntervalSeconds, 10), ScanBatchSize: runtimeValue(input.ScanBatchSize, 100),
 		LeaseSeconds: runtimeValue(input.LeaseSeconds, entity.HookDefaultLeaseSeconds), RenewSeconds: runtimeValue(input.RenewSeconds, entity.HookDefaultRenewSeconds),

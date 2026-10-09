@@ -95,3 +95,43 @@ func TestHookRuntimeWiringDisabledNeverCreatesBroker(t *testing.T) {
 		require.Zero(t, factory.calls)
 	}
 }
+
+func TestHookRuntimePollingOnlyAdmission(t *testing.T) {
+	const value = `{"mq_wake_enabled":false,"admission_enabled":true,"storage_key_id":"storage-v1","endpoint_policy":[{"workspace_id":42,"host":"example.com","port":443,"environment":"Prod"}],"signing_key_refs":[{"workspace_id":42,"host":"example.com","port":443,"environment":"Prod","key_id":"sign-v1","key_ref":"sign-ref"}]}`
+	for _, mode := range []string{"ready", "no_factory", "no_backend", "no_storage_key", "changed_key", "worker_disabled", "worker_not_installed", "invalid_policy", "admission_disabled"} {
+		t.Run(mode, func(t *testing.T) {
+			loader := &wiringBrokerLoader{wiringLoader: wiringLoader{value: value}}
+			factory := &wiringBrokerFactory{}
+			config := infraHook.NewRuntimeConfigProvider(loader, mode != "worker_not_installed")
+			p := &HookRuntimePlatform{Config: config, StorageKeyID: "storage-v1", ProtectedBackend: true, Wake: NewHookRuntimeWake(loader, factory, config, "test", nil)}
+			switch mode {
+			case "no_factory":
+				p.Wake.factory = nil
+			case "no_backend":
+				p.ProtectedBackend = false
+			case "no_storage_key":
+				loader.value = strings.Replace(value, `"storage_key_id":"storage-v1",`, "", 1)
+			case "changed_key":
+				p.StorageKeyID = "storage-v2"
+			case "worker_disabled":
+				loader.value = strings.Replace(value, `"mq_wake_enabled":false`, `"mq_wake_enabled":false,"worker_enabled":false`, 1)
+			case "invalid_policy":
+				loader.value = strings.Replace(value, `"port":443`, `"port":0`, 1)
+			case "admission_disabled":
+				loader.value = `{"mq_wake_enabled":false,"admission_enabled":false}`
+			}
+			cfg, err := (hookRuntimeAdmissionConfig{p}).GetRuntimeConfig(context.Background())
+			if mode == "ready" || mode == "no_factory" || mode == "admission_disabled" {
+				require.NoError(t, err)
+				require.Equal(t, mode != "admission_disabled", cfg.AdmissionEnabled)
+				require.True(t, cfg.WorkerEnabled)
+			} else {
+				require.Error(t, err)
+				require.Equal(t, entity.HookRuntimeConfig{}, cfg)
+			}
+			require.Empty(t, loader.keys, "polling-only admission must not read broker configuration")
+			require.Zero(t, factory.producerCalls)
+			require.Zero(t, factory.consumerCalls)
+		})
+	}
+}

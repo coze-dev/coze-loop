@@ -38,7 +38,7 @@ func TestHookRuntimeDefaultsAndWorkerInstallation(t *testing.T) {
 		p := NewRuntimeConfigProvider(&hookConfigLoader{value: `{}`}, installed)
 		got, err := p.GetRuntimeConfig(context.Background())
 		require.NoError(t, err)
-		require.Equal(t, entity.HookRuntimeConfig{AdmissionEnabled: false, WorkerEnabled: installed, WorkerConcurrency: 8, WorkspaceConcurrency: 2, ScanIntervalSeconds: 10, ScanBatchSize: 100, LeaseSeconds: 30, RenewSeconds: 10, IdentityEnrichmentTimeoutMS: 500, RetentionDays: 30}, got)
+		require.Equal(t, entity.HookRuntimeConfig{AdmissionEnabled: false, WorkerEnabled: installed, MQWakeEnabled: true, WorkerConcurrency: 8, WorkspaceConcurrency: 2, ScanIntervalSeconds: 10, ScanBatchSize: 100, LeaseSeconds: 30, RenewSeconds: 10, IdentityEnrichmentTimeoutMS: 500, RetentionDays: 30}, got)
 		_, err = p.EndpointPolicies(context.Background())
 		require.Error(t, err)
 	}
@@ -51,6 +51,38 @@ func TestHookRuntimeDefaultsAndWorkerInstallation(t *testing.T) {
 	got, err = NewRuntimeConfigProvider(loader, true).GetRuntimeConfig(context.Background())
 	require.NoError(t, err)
 	require.False(t, got.WorkerEnabled)
+}
+
+func TestHookRuntimeMQWakeFlagParsing(t *testing.T) {
+	for _, tc := range []struct {
+		raw        string
+		mq, worker bool
+	}{
+		{`{}`, true, true},
+		{`{"mq_wake_enabled":true}`, true, true},
+		{`{"mq_wake_enabled":false}`, false, true},
+		{`{"mq_wake_enabled":null}`, true, true},
+		{`{"mq_wake_enabled":false,"worker_enabled":false}`, false, false},
+	} {
+		t.Run(tc.raw, func(t *testing.T) {
+			got, err := NewRuntimeConfigProvider(&hookConfigLoader{value: tc.raw}, true).GetRuntimeConfig(context.Background())
+			require.NoError(t, err)
+			require.Equal(t, tc.mq, got.MQWakeEnabled)
+			require.Equal(t, tc.worker, got.WorkerEnabled)
+			require.False(t, got.AdmissionEnabled)
+		})
+	}
+	for _, raw := range []string{
+		`{"mq_wake_enabled":"false"}`, `{"mq_wake_enabled":0}`, `{"mq_wake_enabled":[]}`, `{"mq_wake_enabled":{}}`,
+		`{"mq_wake_enabled":false,"mq_wake_enabled":true}`, `{"mq_wake_enabled":false,"unknown":true}`,
+		`{"mq_wake_enabled":false,"scan_interval_seconds":0}`,
+	} {
+		t.Run(raw, func(t *testing.T) {
+			got, err := NewRuntimeConfigProvider(&hookConfigLoader{value: raw}, true).GetRuntimeConfig(context.Background())
+			require.Error(t, err)
+			require.Equal(t, entity.HookRuntimeConfig{}, got)
+		})
+	}
 }
 
 func TestHookRuntimeCapacityMatchesWorker(t *testing.T) {
@@ -100,7 +132,7 @@ func TestHookRuntimeOverridesAndCurrentPolicies(t *testing.T) {
 	p := NewRuntimeConfigProvider(loader, true)
 	got, err := p.GetRuntimeConfig(context.Background())
 	require.NoError(t, err)
-	require.Equal(t, entity.HookRuntimeConfig{AdmissionEnabled: true, WorkerEnabled: true, WorkerConcurrency: 4, WorkspaceConcurrency: 1, ScanIntervalSeconds: 5, ScanBatchSize: 25, LeaseSeconds: 20, RenewSeconds: 5, IdentityEnrichmentTimeoutMS: 100, RetentionDays: 10}, got)
+	require.Equal(t, entity.HookRuntimeConfig{AdmissionEnabled: true, WorkerEnabled: true, MQWakeEnabled: true, WorkerConcurrency: 4, WorkspaceConcurrency: 1, ScanIntervalSeconds: 5, ScanBatchSize: 25, LeaseSeconds: 20, RenewSeconds: 5, IdentityEnrichmentTimeoutMS: 100, RetentionDays: 10}, got)
 	policies, err := p.EndpointPolicies(context.Background())
 	require.NoError(t, err)
 	require.Len(t, policies, 1)
