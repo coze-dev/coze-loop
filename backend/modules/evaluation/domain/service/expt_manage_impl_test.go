@@ -2709,6 +2709,112 @@ func TestExptMangerImpl_UpdateRunConf(t *testing.T) {
 		err := mgr.UpdateRunConf(context.Background(), &entity.UpdateRunConfParam{ExptID: exptID, SpaceID: spaceID, ItemConcurNum: gptr.Of(10), Session: session})
 		assert.Error(t, err)
 	})
+
+	t.Run("更新并发度不创建 RunModeConfig 或 VerificationConfig", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+		mgr := &ExptMangerImpl{exptRepo: mockRepo}
+
+		mockRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(buildExpt(entity.ExptStatus_Pending), nil)
+		mockRepo.EXPECT().UpdateFields(gomock.Any(), exptID, gomock.Any()).DoAndReturn(
+			func(_ context.Context, _ int64, ufields map[string]any) error {
+				raw := ufields["eval_conf"].(*[]byte)
+				var got entity.EvaluationConfiguration
+				assert.NoError(t, json.Unmarshal(*raw, &got))
+				assert.Nil(t, got.RunModeConfig)
+				assert.Nil(t, got.VerificationConfig)
+				return nil
+			})
+
+		err := mgr.UpdateRunConf(context.Background(), &entity.UpdateRunConfParam{
+			ExptID: exptID, SpaceID: spaceID, ItemConcurNum: gptr.Of(10), Session: session,
+		})
+		assert.NoError(t, err)
+	})
+}
+
+func TestExptMangerImpl_UpdateRunConf_PreservesCreationConfig(t *testing.T) {
+	for _, status := range []entity.ExptStatus{entity.ExptStatus_Pending, entity.ExptStatus_Processing} {
+		for name, fields := range map[string]entity.UpdateRunConfParam{
+			"empty":       {},
+			"concurrency": {ItemConcurNum: gptr.Of(10)},
+			"retry_zero":  {ItemRetryNum: gptr.Of(0)},
+			"priority":    {PriorityLevel: gptr.Of(int32(80))},
+			"quota":       {ExpectedQuotaConsumption: newVector()},
+			"combined": {
+				ItemConcurNum: gptr.Of(10), ItemRetryNum: gptr.Of(0),
+				PriorityLevel: gptr.Of(int32(80)), ExpectedQuotaConsumption: newVector(),
+			},
+		} {
+			for _, configKind := range []string{"run_mode", "verification_only"} {
+				t.Run(fmt.Sprintf("%v/%s/%s", status, name, configKind), func(t *testing.T) {
+					ctrl := gomock.NewController(t)
+					mockRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+					mgr := &ExptMangerImpl{exptRepo: mockRepo}
+					expt := enforceExptForRunConf()
+					expt.Status = status
+					expt.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
+					expt.Target = &entity.EvalTarget{
+						EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+						EvalTargetVersion: &entity.EvalTargetVersion{
+							EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+							SandboxAgent:   &entity.SandboxAgent{Name: "agent"},
+						},
+					}
+					expt.EvalConf.ItemRetryNum = gptr.Of(2)
+					if configKind == "run_mode" {
+						expt.EvalConf.RunModeConfig = &entity.RunModeConfig{
+							RunMode: entity.RunModeSUALoopMultiTurn, SuaMode: entity.SuaModeLoop,
+							MaxRunMinutes: 20, MaxTurns: 3, SuaGoal: "finish the task",
+							SuaPersona: "tester", SuaBehavioralConstraints: "one question per turn",
+							SuaPETemplate: "{{eval_result}}", SkillsMode: "merge",
+							Skills: []*entity.AgentSkillDeclare{{SkillKey: "test-skill"}},
+						}
+					} else {
+						expt.EvalConf.VerificationConfig = &entity.VerificationConfig{Mode: entity.VerificationModeF2P}
+					}
+					_, _, err := expt.EvalConf.ResolveVerificationConfig(expt.Target)
+					require.NoError(t, err)
+
+					// Snapshot before UpdateRunConf can mutate the repository object.
+					snapshot, err := json.Marshal(expt.EvalConf)
+					require.NoError(t, err)
+					var want entity.EvaluationConfiguration
+					require.NoError(t, json.Unmarshal(snapshot, &want))
+					if fields.ItemConcurNum != nil {
+						want.ItemConcurNum = fields.ItemConcurNum
+					}
+					if fields.ItemRetryNum != nil {
+						want.ItemRetryNum = fields.ItemRetryNum
+					}
+					if fields.ExpectedQuotaConsumption != nil {
+						want.ExpectedQuotaConsumption = fields.ExpectedQuotaConsumption
+					}
+
+					mockRepo.EXPECT().GetByID(gomock.Any(), runConfExptID, runConfSpaceID).Return(expt, nil)
+					mockRepo.EXPECT().UpdateFields(gomock.Any(), runConfExptID, gomock.Any()).DoAndReturn(
+						func(_ context.Context, _ int64, ufields map[string]any) error {
+							raw, ok := ufields["eval_conf"].(*[]byte)
+							require.True(t, ok)
+							var got entity.EvaluationConfiguration
+							require.NoError(t, json.Unmarshal(*raw, &got))
+							assert.Equal(t, want, got)
+							if fields.PriorityLevel != nil {
+								assert.Len(t, ufields, 2)
+								assert.Equal(t, *fields.PriorityLevel, ufields["priority_level"])
+							} else {
+								assert.Len(t, ufields, 1)
+							}
+							return nil
+						})
+
+					fields.ExptID, fields.SpaceID = runConfExptID, runConfSpaceID
+					require.NoError(t, mgr.UpdateRunConf(context.Background(), &fields))
+				})
+			}
+		}
+	}
 }
 
 func TestExptMangerImpl_CheckExpt_ItemRetryNumBounds(t *testing.T) {

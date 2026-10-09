@@ -509,8 +509,12 @@ type ExptListFilter struct {
 	// EvalSetSourceTypes 评测集来源模式筛选 (experiment.eval_set_source_type 列): 1=SingleSet / 2=MultiSetConfig。
 	// 与 FuzzyName 同级 (不走 Includes/Excludes)。ListExperiments 默认仅返回 1; 由 Convert 在调用方未指定时注入 [1]。
 	EvalSetSourceTypes []int64
-	Includes           *ExptFilterFields
-	Excludes           *ExptFilterFields
+	// OnlyResultSetEval 结果集评测筛选: true = 仅返回无评测对象的实验 (target_id = 0)。
+	// 与 FuzzyName 同级 (不走 Includes/Excludes)。true 时 DAO 层豁免 EvalSetSourceTypes 的默认排除
+	// (结果集评测实验本身即 MultiSetConfig, 不豁免会滤成空)。缺省不过滤。
+	OnlyResultSetEval bool
+	Includes          *ExptFilterFields
+	Excludes          *ExptFilterFields
 }
 
 type ExptFilterFields struct {
@@ -756,6 +760,8 @@ type ExptTurnResultFilterAccelerator struct {
 	ItemIDs                 []*FieldFilter `json:"item_id"`
 	ItemRunStatus           []*FieldFilter `json:"item_status"`
 	TurnRunStatus           []*FieldFilter `json:"turn_status"`
+	// EvalSetIDs 多评测集实验下按评测集筛明细，落到主表 eval_set_id 列上。
+	EvalSetIDs []*FieldFilter `json:"eval_set_id"`
 	// map类查询条件
 	MapCond          *ExptTurnResultFilterMapCond `json:"map_cond,omitempty"`
 	ItemSnapshotCond *ItemSnapshotFilter          `json:"item_snapshot_cond,omitempty"`
@@ -782,7 +788,8 @@ func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
 	hasFilters := e.EvaluatorScoreCorrected != nil ||
 		len(e.ItemIDs) > 0 ||
 		len(e.ItemRunStatus) > 0 ||
-		len(e.TurnRunStatus) > 0
+		len(e.TurnRunStatus) > 0 ||
+		len(e.EvalSetIDs) > 0
 	hasFilters = hasFilters || (e.MapCond != nil && (len(e.MapCond.EvalTargetDataFilters) > 0 ||
 		len(e.MapCond.EvaluatorScoreFilters) > 0 ||
 		e.MapCond.EvaluatorWeightedScoreFilter != nil ||

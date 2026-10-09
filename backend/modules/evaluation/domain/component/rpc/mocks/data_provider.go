@@ -488,17 +488,17 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) UpdateDataset(arg0, arg1, arg2, ar
 }
 
 // UpdateDatasetItem mocks base method.
-func (m *MockIDatasetRPCAdapter) UpdateDatasetItem(arg0 context.Context, arg1, arg2, arg3 int64, arg4 []*entity.Turn, arg5 []*entity.FieldWriteOption, arg6 []*entity.ResourceTagRef) error {
+func (m *MockIDatasetRPCAdapter) UpdateDatasetItem(arg0 context.Context, arg1, arg2, arg3 int64, arg4 []*entity.Turn, arg5 []*entity.FieldWriteOption, arg6 []*entity.ResourceTagRef, arg7, arg8 *string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateDatasetItem", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+	ret := m.ctrl.Call(m, "UpdateDatasetItem", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateDatasetItem indicates an expected call of UpdateDatasetItem.
-func (mr *MockIDatasetRPCAdapterMockRecorder) UpdateDatasetItem(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
+func (mr *MockIDatasetRPCAdapterMockRecorder) UpdateDatasetItem(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDatasetItem", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).UpdateDatasetItem), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDatasetItem", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).UpdateDatasetItem), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
 }
 
 // UpdateDatasetItemVersion mocks base method.

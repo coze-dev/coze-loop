@@ -454,6 +454,9 @@ struct ExptFilterOption {
     // 评测集来源模式筛选: 不传 = 默认仅返回 SingleSet(老实验), 排除 MultiSetConfig(新实验);
     // 显式传 (含 MultiSetConfig) 才返回新实验。与 fuzzy_name 同级, 不走 filters。
     2: optional list<ExptEvalSetSourceType> eval_set_source_types
+    // 结果集评测筛选: true = 仅返回无评测对象的实验 (结果集评测, target_id=0);
+    // 缺省不过滤。与 fuzzy_name 同级, 不走 filters。
+    3: optional bool only_result_set_eval
     10: optional Filters filters
 }
 

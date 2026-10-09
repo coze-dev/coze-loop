@@ -375,11 +375,13 @@ func (a *DatasetRPCAdapter) BatchUpdateDatasetItems(ctx context.Context, param *
 	return nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("BatchUpdateDatasetItems not implemented"))
 }
 
-func (a *DatasetRPCAdapter) UpdateDatasetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption, tags []*entity.ResourceTagRef) (err error) {
+func (a *DatasetRPCAdapter) UpdateDatasetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption, tags []*entity.ResourceTagRef, _, _ *string) (err error) {
 	data, err := convert2DatasetData(ctx, turns)
 	if err != nil {
 		return err
 	}
+	// itemVersion / itemVersionDescription：datasetdto.UpdateDatasetItemRequest 暂无 item_version 字段
+	// （开源本地 dataset 服务尚不支持 versioned_item），参数留给实现了本接口的外部后端消费。
 	resp, err := a.client.UpdateDatasetItem(ctx, &datasetdto.UpdateDatasetItemRequest{
 		WorkspaceID:       &spaceID,
 		DatasetID:         evaluationSetID,

@@ -255,6 +255,7 @@ struct UpdateExptRunConfRequest {
     3: optional i32 item_concur_num (api.body='item_concur_num')
     // 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
     4: optional i32 item_retry_num (api.body='item_retry_num')
+    // 5/6 retired: run-mode limits are fixed at experiment creation. Do not reuse.
 
     // 以下两个是中心调度特权参数，字段号与 CreateExperimentRequest 对齐（92/93），
     // 便于两处对照。未获授权的调用方传了会被丢弃并打 WARN，不报错。

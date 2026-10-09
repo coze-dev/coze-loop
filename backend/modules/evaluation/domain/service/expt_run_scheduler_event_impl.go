@@ -650,7 +650,7 @@ func (e *ExptSchedulerImpl) sendItemComplete(ctx context.Context, event *entity.
 		logs.CtxWarn(ctx, "[ExptEval] item complete meta missing, skip publish, expt_id: %v, item_id: %v", event.ExptID, item.ItemID)
 		return nil
 	}
-	completeEvent := buildItemCompleteEventFromScheduler(event.SpaceID, event.ExptID, event.ExptRunID, expt, item, evalSetItem, evalSetVersionID)
+	completeEvent := BuildItemCompleteEventFromScheduler(event.SpaceID, event.ExptID, event.ExptRunID, expt, item, evalSetItem, evalSetVersionID)
 	if err := e.itemCompletePublisher.PublishItemComplete(ctx, completeEvent); err != nil {
 		logs.CtxError(ctx, "[ExptEval] publish item complete event failed, expt_id: %v, item_id: %v, err: %v", event.ExptID, item.ItemID, err)
 		return err

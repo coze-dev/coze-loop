@@ -16510,7 +16510,10 @@ type ExptFilterOption struct {
 	// 评测集来源模式筛选: 不传 = 默认仅返回 SingleSet(老实验), 排除 MultiSetConfig(新实验);
 	// 显式传 (含 MultiSetConfig) 才返回新实验。与 fuzzy_name 同级, 不走 filters。
 	EvalSetSourceTypes []ExptEvalSetSourceType `thrift:"eval_set_source_types,2,optional" frugal:"2,optional,list<ExptEvalSetSourceType>" form:"eval_set_source_types" json:"eval_set_source_types,omitempty" query:"eval_set_source_types"`
-	Filters            *Filters                `thrift:"filters,10,optional" frugal:"10,optional,Filters" form:"filters" json:"filters,omitempty" query:"filters"`
+	// 结果集评测筛选: true = 仅返回无评测对象的实验 (结果集评测, target_id=0);
+	// 缺省不过滤。与 fuzzy_name 同级, 不走 filters。
+	OnlyResultSetEval *bool    `thrift:"only_result_set_eval,3,optional" frugal:"3,optional,bool" form:"only_result_set_eval" json:"only_result_set_eval,omitempty" query:"only_result_set_eval"`
+	Filters           *Filters `thrift:"filters,10,optional" frugal:"10,optional,Filters" form:"filters" json:"filters,omitempty" query:"filters"`
 }
 
 func NewExptFilterOption() *ExptFilterOption {
@@ -16544,6 +16547,18 @@ func (p *ExptFilterOption) GetEvalSetSourceTypes() (v []ExptEvalSetSourceType) {
 	return p.EvalSetSourceTypes
 }
 
+var ExptFilterOption_OnlyResultSetEval_DEFAULT bool
+
+func (p *ExptFilterOption) GetOnlyResultSetEval() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOnlyResultSetEval() {
+		return ExptFilterOption_OnlyResultSetEval_DEFAULT
+	}
+	return *p.OnlyResultSetEval
+}
+
 var ExptFilterOption_Filters_DEFAULT *Filters
 
 func (p *ExptFilterOption) GetFilters() (v *Filters) {
@@ -16561,6 +16576,9 @@ func (p *ExptFilterOption) SetFuzzyName(val *string) {
 func (p *ExptFilterOption) SetEvalSetSourceTypes(val []ExptEvalSetSourceType) {
 	p.EvalSetSourceTypes = val
 }
+func (p *ExptFilterOption) SetOnlyResultSetEval(val *bool) {
+	p.OnlyResultSetEval = val
+}
 func (p *ExptFilterOption) SetFilters(val *Filters) {
 	p.Filters = val
 }
@@ -16568,6 +16586,7 @@ func (p *ExptFilterOption) SetFilters(val *Filters) {
 var fieldIDToName_ExptFilterOption = map[int16]string{
 	1:  "fuzzy_name",
 	2:  "eval_set_source_types",
+	3:  "only_result_set_eval",
 	10: "filters",
 }
 
@@ -16577,6 +16596,10 @@ func (p *ExptFilterOption) IsSetFuzzyName() bool {
 
 func (p *ExptFilterOption) IsSetEvalSetSourceTypes() bool {
 	return p.EvalSetSourceTypes != nil
+}
+
+func (p *ExptFilterOption) IsSetOnlyResultSetEval() bool {
+	return p.OnlyResultSetEval != nil
 }
 
 func (p *ExptFilterOption) IsSetFilters() bool {
@@ -16612,6 +16635,14 @@ func (p *ExptFilterOption) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -16688,6 +16719,17 @@ func (p *ExptFilterOption) ReadField2(iprot thrift.TProtocol) error {
 	p.EvalSetSourceTypes = _field
 	return nil
 }
+func (p *ExptFilterOption) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.OnlyResultSetEval = _field
+	return nil
+}
 func (p *ExptFilterOption) ReadField10(iprot thrift.TProtocol) error {
 	_field := NewFilters()
 	if err := _field.Read(iprot); err != nil {
@@ -16709,6 +16751,10 @@ func (p *ExptFilterOption) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 		if err = p.writeField10(oprot); err != nil {
@@ -16777,6 +16823,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *ExptFilterOption) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOnlyResultSetEval() {
+		if err = oprot.WriteFieldBegin("only_result_set_eval", thrift.BOOL, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.OnlyResultSetEval); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 func (p *ExptFilterOption) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetFilters() {
 		if err = oprot.WriteFieldBegin("filters", thrift.STRUCT, 10); err != nil {
@@ -16816,6 +16880,9 @@ func (p *ExptFilterOption) DeepEqual(ano *ExptFilterOption) bool {
 	if !p.Field2DeepEqual(ano.EvalSetSourceTypes) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.OnlyResultSetEval) {
+		return false
+	}
 	if !p.Field10DeepEqual(ano.Filters) {
 		return false
 	}
@@ -16844,6 +16911,18 @@ func (p *ExptFilterOption) Field2DeepEqual(src []ExptEvalSetSourceType) bool {
 		if v != _src {
 			return false
 		}
+	}
+	return true
+}
+func (p *ExptFilterOption) Field3DeepEqual(src *bool) bool {
+
+	if p.OnlyResultSetEval == src {
+		return true
+	} else if p.OnlyResultSetEval == nil || src == nil {
+		return false
+	}
+	if *p.OnlyResultSetEval != *src {
+		return false
 	}
 	return true
 }

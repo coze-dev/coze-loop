@@ -10749,6 +10749,7 @@ type UpdateExptRunConfRequest struct {
 	ItemConcurNum *int32 `thrift:"item_concur_num,3,optional" frugal:"3,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty"`
 	// 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
 	ItemRetryNum *int32 `thrift:"item_retry_num,4,optional" frugal:"4,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
+	// 5/6 retired: run-mode limits are fixed at experiment creation. Do not reuse.
 	// 以下两个是中心调度特权参数，字段号与 CreateExperimentRequest 对齐（92/93），
 	// 便于两处对照。未获授权的调用方传了会被丢弃并打 WARN，不报错。
 	// 调度优先级：不传表示不修改。改完下一拍生效（调度器每拍从库重扫队列）。

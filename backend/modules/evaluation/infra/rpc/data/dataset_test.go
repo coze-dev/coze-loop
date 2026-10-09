@@ -214,7 +214,7 @@ func TestUpdateDatasetItem(t *testing.T) {
 				},
 			},
 		}
-		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil, nil)
+		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil, nil, nil, nil)
 		assert.NoError(t, err)
 	})
 
@@ -262,7 +262,7 @@ func TestUpdateDatasetItem(t *testing.T) {
 				},
 			},
 		}
-		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, fieldWriteOptions, nil)
+		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, fieldWriteOptions, nil, nil, nil)
 		assert.NoError(t, err)
 	})
 
@@ -279,7 +279,7 @@ func TestUpdateDatasetItem(t *testing.T) {
 		turns := []*entity.Turn{
 			{FieldDataList: []*entity.FieldData{{Key: "k1", Name: "n1", Content: &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("text")}}}},
 		}
-		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil, nil)
+		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil, nil, nil, nil)
 		assert.Error(t, err)
 	})
 
@@ -296,7 +296,7 @@ func TestUpdateDatasetItem(t *testing.T) {
 		turns := []*entity.Turn{
 			{FieldDataList: []*entity.FieldData{{Key: "k1", Name: "n1", Content: &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("text")}}}},
 		}
-		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil, nil)
+		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil, nil, nil, nil)
 		assert.Error(t, err)
 	})
 
@@ -315,7 +315,7 @@ func TestUpdateDatasetItem(t *testing.T) {
 		turns := []*entity.Turn{
 			{FieldDataList: []*entity.FieldData{{Key: "k1", Name: "n1", Content: &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("text")}}}},
 		}
-		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil, nil)
+		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil, nil, nil, nil)
 		assert.Error(t, err)
 	})
 }

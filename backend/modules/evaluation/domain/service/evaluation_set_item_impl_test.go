@@ -19,6 +19,23 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
+func TestEvaluationSetItemServiceImpl_UpdateEvaluationSetItem_ForwardsItemVersion(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAdapter := mocks.NewMockIDatasetRPCAdapter(ctrl)
+	svc := &EvaluationSetItemServiceImpl{datasetRPCAdapter: mockAdapter}
+
+	itemVersion := "0.0.1"
+	itemVersionDesc := "first version"
+	mockAdapter.EXPECT().
+		UpdateDatasetItem(gomock.Any(), int64(1), int64(100), int64(1000), gomock.Any(), gomock.Any(), gomock.Any(), &itemVersion, &itemVersionDesc).
+		Return(nil)
+
+	err := svc.UpdateEvaluationSetItem(context.Background(), 1, 100, 1000, nil, nil, nil, &itemVersion, &itemVersionDesc)
+	assert.NoError(t, err)
+}
+
 func TestBatchCreateEvaluationSetItems(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -118,7 +135,7 @@ func TestEvaluationSetItemServiceImpl_UpdateEvaluationSetItem(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockDatasetRPCAdapter.EXPECT().
-					UpdateDatasetItem(gomock.Any(), int64(1), int64(100), int64(1000), gomock.Any(), gomock.Any(), nil).
+					UpdateDatasetItem(gomock.Any(), int64(1), int64(100), int64(1000), gomock.Any(), gomock.Any(), nil, gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
 			wantErr: false,
@@ -131,7 +148,7 @@ func TestEvaluationSetItemServiceImpl_UpdateEvaluationSetItem(t *testing.T) {
 			turns:   []*entity.Turn{},
 			mockSetup: func() {
 				mockDatasetRPCAdapter.EXPECT().
-					UpdateDatasetItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), nil).
+					UpdateDatasetItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), nil, gomock.Any(), gomock.Any()).
 					Return(errorx.NewByCode(errno.CommonInternalErrorCode))
 			},
 			wantErr: true,
@@ -142,7 +159,7 @@ func TestEvaluationSetItemServiceImpl_UpdateEvaluationSetItem(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
 
-			err := service.UpdateEvaluationSetItem(context.Background(), tt.spaceID, tt.setID, tt.itemID, tt.turns, nil, nil)
+			err := service.UpdateEvaluationSetItem(context.Background(), tt.spaceID, tt.setID, tt.itemID, tt.turns, nil, nil, nil, nil)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {

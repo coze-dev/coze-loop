@@ -568,7 +568,7 @@ func Test_buildItemCompleteEventFromScheduler(t *testing.T) {
 				EvaluationSetID: datasetID,
 			}
 
-			ev := buildItemCompleteEventFromScheduler(spaceID, exptID, exptRunID, expt, item, evalSetItem, datasetVer)
+			ev := BuildItemCompleteEventFromScheduler(spaceID, exptID, exptRunID, expt, item, evalSetItem, datasetVer)
 
 			require.Equal(t, "2", ev.ExptID)
 			require.Equal(t, "3", ev.ExptRunID)
@@ -1342,7 +1342,7 @@ func Test_buildItemCompleteEvent(t *testing.T) {
 }
 
 // Test_buildItemCompleteEvent_LinkAB_Equivalence 钉死"发送内容与原链路A一致"契约:
-// 同一份输入, 原组装 buildItemCompleteEvent(链路A) 与 buildItemCompleteEventFromScheduler(链路B拆参)
+// 同一份输入, 原组装 buildItemCompleteEvent(链路A) 与 BuildItemCompleteEventFromScheduler(链路B拆参)
 // 必须产出完全相等的 ItemCompleteEvent。任一函数改动导致漂移, 此测试立即失败。
 func Test_buildItemCompleteEvent_LinkAB_Equivalence(t *testing.T) {
 	const (
@@ -1387,7 +1387,7 @@ func Test_buildItemCompleteEvent_LinkAB_Equivalence(t *testing.T) {
 
 	// 链路B: scheduler 拆参入口
 	item := &entity.ExptEvalItem{ExptID: exptID, ItemID: itemID, State: entity.ItemRunState_Success}
-	fromLinkB := buildItemCompleteEventFromScheduler(spaceID, exptID, exptRunID, expt, item, evalSetItem, datasetV)
+	fromLinkB := BuildItemCompleteEventFromScheduler(spaceID, exptID, exptRunID, expt, item, evalSetItem, datasetV)
 
 	require.Equal(t, fromLinkA, fromLinkB, "链路A与链路B的 item-complete 组装结果必须完全一致")
 }
