@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
@@ -224,7 +225,7 @@ func (r *hookTurnProgressRepo) writeTurn(ctx context.Context, in entity.HookTurn
 				return entity.ErrHookStoreCorrupt
 			}
 			effective = effective || !maps.Equal(current.Ext, ext)
-			fields["ext"], current.Ext = rawExt, ext
+			fields["ext"], current.Ext = datatypes.JSON(rawExt), ext
 		}
 		if current.Status != entity.TurnRunState_Terminal {
 			effective = effective || current.Status != in.Progress.Status || current.ErrMsg != in.Progress.ErrMsg
