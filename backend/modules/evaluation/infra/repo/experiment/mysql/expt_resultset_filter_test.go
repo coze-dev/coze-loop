@@ -41,7 +41,7 @@ func TestExptDAO_toConditions_OnlyResultSetEval(t *testing.T) {
 
 	// true + 显式 source_types: 两者 AND (调用方显式意图优先)
 	conds3, ok := dao.toConditions(&entity.ExptListFilter{
-		OnlyResultSetEval: true,
+		OnlyResultSetEval:  true,
 		EvalSetSourceTypes: []int64{int64(entity.ExptEvalSetSourceType_MultiSetConfig)},
 		Includes:           &entity.ExptFilterFields{},
 		Excludes:           &entity.ExptFilterFields{},

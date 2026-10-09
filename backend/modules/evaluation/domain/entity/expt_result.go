@@ -513,8 +513,8 @@ type ExptListFilter struct {
 	// 与 FuzzyName 同级 (不走 Includes/Excludes)。true 时 DAO 层豁免 EvalSetSourceTypes 的默认排除
 	// (结果集评测实验本身即 MultiSetConfig, 不豁免会滤成空)。缺省不过滤。
 	OnlyResultSetEval bool
-	Includes           *ExptFilterFields
-	Excludes           *ExptFilterFields
+	Includes          *ExptFilterFields
+	Excludes          *ExptFilterFields
 }
 
 type ExptFilterFields struct {
