@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS `expt_item_result`
     `item_version_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT 'item 自身版本号; 0=旧数据/无版本概念; 真值源 expt_item_ref',
     `item_idx`        int unsigned             DEFAULT NULL COMMENT 'item 序号',
     `status`          int unsigned    NOT NULL DEFAULT '0' COMMENT '状态',
-    `backflow_status` int unsigned    NOT NULL DEFAULT '0' COMMENT '回流段状态; 0=不适用(未接入回流的历史实验)',
+    `backflow_status` int unsigned    NOT NULL DEFAULT '0' COMMENT '回流段状态, 0=不适用(未接入回流的历史实验)',
     `err_msg`         blob COMMENT '错误信息',
     `created_at`      timestamp       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at`      timestamp       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
