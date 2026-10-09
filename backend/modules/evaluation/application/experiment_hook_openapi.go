@@ -19,6 +19,21 @@ func (e *EvalOpenAPIApplication) hookApplication() *experimentApplication {
 	return &experimentApplication{auth: e.auth, hooks: app.hooks}
 }
 
+func (e *EvalOpenAPIApplication) readExperimentOpenAPIHooks(ctx context.Context, model *entity.Experiment, dto *openapi.Experiment, spaceID int64) error {
+	app := e.hookApplication()
+	if app.hooks == nil {
+		return nil
+	}
+	internal := &domain.Experiment{}
+	if err := app.readExperimentHooks(ctx, []*entity.Experiment{model}, []*domain.Experiment{internal}, spaceID); err != nil {
+		return err
+	}
+	view := experiment.DomainExperimentDTO2OpenAPI(internal)
+	dto.LifecycleHookConf = view.LifecycleHookConf
+	dto.LifecycleHookSummary = view.LifecycleHookSummary
+	return nil
+}
+
 func (e *EvalOpenAPIApplication) templateDTOsWithHooks(ctx context.Context, templates []*entity.ExptTemplate, spaceID int64) ([]*openapi.ExptTemplate, error) {
 	dtos := experiment.OpenAPIExptTemplateDO2DTOs(templates)
 	app := e.hookApplication()

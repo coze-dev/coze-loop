@@ -2030,9 +2030,13 @@ func (e *EvalOpenAPIApplication) GetExperimentsOApi(ctx context.Context, req *op
 	if err != nil {
 		return nil, err
 	}
+	dto := experiment_convertor.OpenAPIExptDO2DTO(do)
+	if err := e.readExperimentOpenAPIHooks(ctx, do, dto, req.GetWorkspaceID()); err != nil {
+		return nil, err
+	}
 	return &openapi.GetExperimentsOApiResponse{
 		Data: &openapi.GetExperimentsOpenAPIDataData{
-			Experiment: experiment_convertor.OpenAPIExptDO2DTO(do),
+			Experiment: dto,
 		},
 	}, nil
 }
