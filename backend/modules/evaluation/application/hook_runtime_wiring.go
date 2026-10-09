@@ -131,7 +131,12 @@ func wireHookRuntime(app *experimentApplication, stores *HookRuntimeStores, item
 	if err != nil {
 		return nil, err
 	}
-	scheduler, err := service.NewHookAwareExptSchedulerSvc(app.ExptSchedulerEvent, stores.Gate)
+	initializer, err := service.NewHookFrozenExecutionInitializer(service.HookFrozenExecutionInitializerDependencies{
+		Repository: experiment.NewHookExecutionInitializationRepo(stores.DB), Loader: loader, IDs: ids})
+	if err != nil {
+		return nil, err
+	}
+	scheduler, err := service.NewHookAwareExptSchedulerSvc(app.ExptSchedulerEvent, stores.Gate, initializer)
 	if err != nil {
 		return nil, err
 	}

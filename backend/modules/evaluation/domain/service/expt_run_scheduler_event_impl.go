@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/hook"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -75,14 +76,15 @@ type ExptSchedulerImpl struct {
 	// 为什么这两条必须单独接：它们由 daemon 直接把 item 判为 Fail 落库，consumer 那条
 	// 消息可能已经卡死或永不返回 —— 不在这里释放，这些 item 的额度会永久泄漏。
 	// 允许为 nil（开源部署注入 noop）。
-	centralGuard         component.ICentralReservationGuard
-	hookGate             repo.IHookGateRepo
-	hookScheduler        repo.IHookSchedulerRepo
-	hookSchedulerScope   string
-	hookRuns             repo.IHookRepo
-	hookInitialization   repo.IHookExecutionInitializationRepo
-	hookBoundInitializer *hookFrozenExecutionInitializer
-	hookBoundMode        entity.ExptRunMode
+	centralGuard          component.ICentralReservationGuard
+	hookGate              repo.IHookGateRepo
+	hookScheduler         repo.IHookSchedulerRepo
+	hookSchedulerScope    string
+	hookRuns              repo.IHookRepo
+	hookInitialization    repo.IHookExecutionInitializationRepo
+	hookBoundInitializer  *hookFrozenExecutionInitializer
+	hookFrozenInitializer hook.ExecutionInitializer
+	hookBoundMode         entity.ExptRunMode
 }
 
 func NewExptSchedulerSvc(

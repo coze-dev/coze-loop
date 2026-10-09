@@ -10,6 +10,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/hook"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -25,13 +26,19 @@ func (schedulerHookRetryError) Error() string { return "hook scheduler continuat
 
 // NewHookAwareExptSchedulerSvc builds an isolated scheduler with the mandatory Gate.
 // The old constructor and its generated wiring remain unchanged; this is not a setter.
-func NewHookAwareExptSchedulerSvc(base ExptSchedulerEvent, gate repo.IHookGateRepo) (ExptSchedulerEvent, error) {
+func NewHookAwareExptSchedulerSvc(base ExptSchedulerEvent, gate repo.IHookGateRepo, initializers ...hook.ExecutionInitializer) (ExptSchedulerEvent, error) {
 	legacy, ok := base.(*ExptSchedulerImpl)
 	if !ok || legacy == nil || hookExecutionNil(gate) || hookExecutionNil(legacy.Publisher) {
 		return nil, schedulerHookRetryError{}
 	}
 	aware := *legacy
 	aware.hookGate = gate
+	if len(initializers) > 1 || len(initializers) == 1 && hookExecutionNil(initializers[0]) {
+		return nil, schedulerHookRetryError{}
+	}
+	if len(initializers) == 1 {
+		aware.hookFrozenInitializer = initializers[0]
+	}
 	manager, ok := legacy.Manager.(*ExptMangerImpl)
 	if !ok || manager == nil || manager.finalization == nil {
 		return nil, schedulerHookRetryError{}
@@ -113,6 +120,18 @@ func (e *ExptSchedulerImpl) waitForHookAdmission(ctx context.Context, event *ent
 		err = gateCtx.Err()
 	}
 	cancel()
+	if e.hookBoundInitializer == nil && e.hookFrozenInitializer != nil && err == nil && decision.Reason == "HOOK_EXECUTION_PENDING" {
+		key := entity.HookRunKey{WorkspaceID: event.SpaceID, ExperimentID: event.ExptID, RunID: event.ExptRunID}
+		if _, initErr := e.hookFrozenInitializer.InitializeExecution(ctx, key, e.hookSchedulerScope); initErr != nil {
+			if permanentHookInitializationError(initErr) {
+				return true, e.finishHookSchedulerRun(ctx, event, initErr)
+			}
+			return true, e.publishHookWait(ctx, event)
+		}
+		gateCtx, cancel = context.WithTimeout(ctx, schedulerHookDependencyTimeout)
+		decision, err = e.hookGate.CanDispatch(gateCtx, key)
+		cancel()
+	}
 	if init := e.hookBoundInitializer; init != nil {
 		if init.boundKey != (entity.HookRunKey{WorkspaceID: event.SpaceID, ExperimentID: event.ExptID, RunID: event.ExptRunID}) {
 			return true, schedulerHookRetryError{}
