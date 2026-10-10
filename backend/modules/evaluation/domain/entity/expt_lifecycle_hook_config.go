@@ -32,11 +32,11 @@ func ResolveLifecycleHookConf(base, override *LifecycleHookConf) (*LifecycleHook
 	}
 	before, err := normalizeHookConfig(selected.Before, true)
 	if err != nil {
-		return nil, invalidParam("lifecycle_hook_conf.before: " + err.Error())
+		return nil, hookConfigValidationError("before", err)
 	}
 	after, err := normalizeHookConfig(selected.After, false)
 	if err != nil {
-		return nil, invalidParam("lifecycle_hook_conf.after: " + err.Error())
+		return nil, hookConfigValidationError("after", err)
 	}
 	return &LifecycleHookConf{Before: before, After: after}, nil
 }
@@ -61,15 +61,8 @@ func normalizeHookConfig(input *HookConfig, before bool) (*HookConfig, error) {
 	default:
 		return nil, errors.New("environment must be Prod, PPE or BOE")
 	}
-	if c.Lane != nil && !utf8.ValidString(*c.Lane) {
-		return nil, errors.New("lane must be UTF-8")
-	}
-	if *c.Environment == HookEnvironmentProd {
-		if c.Lane != nil && *c.Lane != "" {
-			return nil, errors.New("Prod must not specify lane")
-		}
-	} else if *c.Enabled && (c.Lane == nil || strings.TrimSpace(*c.Lane) == "") {
-		return nil, errors.New("enabled PPE/BOE hook requires lane")
+	if err := validateHookLane(c.Lane, *c.Environment, *c.Enabled); err != nil {
+		return nil, err
 	}
 	httpInfo := HookHTTPInfo{}
 	if input.InvokeHTTPInfo != nil {
@@ -114,6 +107,36 @@ func normalizeHookConfig(input *HookConfig, before bool) (*HookConfig, error) {
 	}
 	*c.ParametersJSON = parameters
 	return c, nil
+}
+
+type hookLaneError string
+
+func (e hookLaneError) Error() string { return string(e) }
+
+func hookConfigValidationError(phase string, err error) error {
+	field := "lifecycle_hook_conf." + phase
+	if _, ok := err.(hookLaneError); ok {
+		field += ".lane"
+	}
+	return invalidParam(field + ": " + err.Error())
+}
+
+func validateHookLane(lane *string, environment HookEnvironment, enabled bool) error {
+	if lane == nil || *lane == "" {
+		if enabled && environment != HookEnvironmentProd {
+			return hookLaneError("enabled PPE/BOE hook requires lane")
+		}
+		return nil
+	}
+	if environment == HookEnvironmentProd {
+		return hookLaneError("Prod must not specify lane")
+	}
+	for i := 0; i < len(*lane); i++ {
+		if (*lane)[i] < 0x21 || (*lane)[i] > 0x7e {
+			return hookLaneError("lane must contain only printable ASCII without whitespace")
+		}
+	}
+	return nil
 }
 
 // Endpoint admission and DNS/IP safety are enforced by the transport, not here.

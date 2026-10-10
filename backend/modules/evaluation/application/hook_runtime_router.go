@@ -200,6 +200,20 @@ func (r *hookRuntimeRouter) Eval(ctx context.Context, event *entity.ExptItemEval
 	return r.consumer.Eval(ctx, event)
 }
 
+func (r *hookRuntimeRouter) SetExptTerminating(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session) error {
+	if runID <= 0 {
+		return entity.ErrHookStoreCorrupt
+	}
+	execution, key, err := r.execution(ctx, entity.HookRunKey{WorkspaceID: spaceID, ExperimentID: exptID, RunID: runID})
+	if err != nil {
+		return err
+	}
+	if execution != nil {
+		return execution.Manager.SetExptTerminating(ctx, exptID, key.RunID, spaceID, session)
+	}
+	return r.IExptManager.SetExptTerminating(ctx, exptID, key.RunID, spaceID, session)
+}
+
 func (r *hookRuntimeRouter) CompleteRun(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
 	execution, key, err := r.execution(ctx, entity.HookRunKey{WorkspaceID: spaceID, ExperimentID: exptID, RunID: runID})
 	if err != nil {
