@@ -225,7 +225,7 @@ func newComponent(ctx context.Context) (*component, error) {
 		cfg.AccessKeyID = getOssUser()
 		cfg.SecretAccessKey = getOssPassword()
 		cfg.Bucket = getOssBucket()
-		cfg.ForcePathStyle = getOssForcePathStyle()
+		cfg.ForcePathStyle = getOssForcePathStyle(componentConfig)
 	})
 	objectStorage, err := fileserver.NewS3Client(s3Config)
 	if err != nil {
@@ -359,7 +359,13 @@ func getOssBucket() string {
 	return os.Getenv("COZE_LOOP_OSS_BUCKET")
 }
 
-func getOssForcePathStyle() *bool {
+func getOssForcePathStyle(componentConfig *ComponentConfig) *bool {
+	// 优先从配置文件读取
+	if componentConfig != nil && componentConfig.S3Config.ForcePathStyle != nil {
+		return componentConfig.S3Config.ForcePathStyle
+	}
+
+	// 配置文件未设置时，回退到域名判断（向后兼容）
 	if getOssDomain() == "coze-loop-minio" {
 		return gptr.Of(true)
 	}
