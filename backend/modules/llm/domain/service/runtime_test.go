@@ -28,6 +28,32 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/unittest"
 )
 
+func TestRuntimeImpl_ValidModelAndRequest_Video(t *testing.T) {
+	input := []*entity.Message{{
+		Role: entity.RoleUser,
+		MultiModalContent: []*entity.ChatMessagePart{{
+			Type:     entity.ChatMessagePartTypeVideoURL,
+			VideoURL: &entity.ChatMessageVideoURL{URL: "https://example.com/video.mp4"},
+		}},
+	}}
+	runtime := &RuntimeImpl{}
+
+	unsupported := &entity.Model{Ability: &entity.Ability{
+		MultiModal:        true,
+		AbilityMultiModal: &entity.AbilityMultiModal{},
+	}}
+	assert.Error(t, runtime.ValidModelAndRequest(context.Background(), unsupported, input))
+
+	supported := &entity.Model{Ability: &entity.Ability{
+		MultiModal: true,
+		AbilityMultiModal: &entity.AbilityMultiModal{
+			Video:        true,
+			AbilityVideo: &entity.AbilityVideo{},
+		},
+	}}
+	assert.NoError(t, runtime.ValidModelAndRequest(context.Background(), supported, input))
+}
+
 func TestRuntimeImpl_Generate(t *testing.T) {
 	var opts []entity.Option
 	opts = append(opts, entity.WithTools([]*entity.ToolInfo{
