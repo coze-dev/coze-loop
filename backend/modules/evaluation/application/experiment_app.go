@@ -2230,6 +2230,9 @@ func (e *experimentApplication) BatchGetExperimentResult_(ctx context.Context, r
 		return nil, err
 	}
 
+	if err := fillItemEvidenceArchiveURLs(ctx, e.fileProvider, result.ItemResults, req.GetWorkspaceID()); err != nil {
+		logs.CtxError(ctx, "[BatchGetExperimentResult_] fillItemEvidenceArchiveURLs fail, err: %v", err)
+	}
 	resp := &expt.BatchGetExperimentResultResponse{
 		ColumnEvalSetFields:   experiment.ColumnEvalSetFieldsDO2DTOs(result.ColumnEvalSetFields),
 		ColumnEvaluators:      experiment.ColumnEvaluatorsDO2DTOs(result.ColumnEvaluators),

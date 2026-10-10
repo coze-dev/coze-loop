@@ -142,6 +142,19 @@ struct InvokeEvaluatorOutputData {
     3: optional InvokeEvaluatorRunError evaluator_run_error
 
     12: optional EvaluatorExtraOutputContent extra_output
+    13: optional EvaluatorEvidenceArchive evidence_archive
+}
+
+struct EvaluatorEvidenceArchive {
+    1: optional string schema_version
+    2: optional string object_key
+    3: optional string status
+    4: optional string trigger
+    5: optional i64 size_bytes
+    6: optional string sha256
+    7: optional i64 truncated_files
+    14: optional string error
+    15: optional string fornax_evaluator_log_url
 }
 
 // the result data structure for custom evaluator

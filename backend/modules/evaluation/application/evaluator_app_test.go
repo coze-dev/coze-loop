@@ -2118,6 +2118,162 @@ func TestEvaluatorHandlerImpl_GetEvaluatorRecord_ExtraOutputURIToURL(t *testing.
 	}
 }
 
+type evidenceArchiveURLProviderStub struct {
+	deny     bool
+	requests []*rpc.EvidenceArchiveDownloadRequest
+	urls     map[string]string
+	err      error
+	gotKeys  []string
+	gotTTL   time.Duration
+}
+
+func (s *evidenceArchiveURLProviderStub) MGetFileURL(context.Context, []string) (map[string]string, error) {
+	return nil, nil
+}
+
+func (s *evidenceArchiveURLProviderStub) MGetEvidenceArchiveDownloadURL(_ context.Context, requests []*rpc.EvidenceArchiveDownloadRequest, ttl time.Duration) (map[int64]string, error) {
+	s.requests = requests
+	s.gotTTL = ttl
+	urls := make(map[int64]string)
+	seen := make(map[string]bool)
+	for _, req := range requests {
+		if s.deny {
+			continue
+		}
+		urls[req.RecordID] = ""
+		if isEvaluatorEvidenceArchiveDownloadable(req.Status) {
+			urls[req.RecordID] = s.urls[req.ObjectKey]
+			if !seen[req.ObjectKey] {
+				s.gotKeys = append(s.gotKeys, req.ObjectKey)
+				seen[req.ObjectKey] = true
+			}
+		}
+	}
+	return urls, s.err
+}
+
+func newEvidenceArchiveRecordForTest(id, spaceID int64, key, status string) *entity.EvaluatorRecord {
+	return &entity.EvaluatorRecord{ID: id, SpaceID: spaceID, EvaluatorVersionID: 30, EvaluatorOutputData: &entity.EvaluatorOutputData{
+		EvidenceArchive: &entity.EvaluatorEvidenceArchive{ObjectKey: key, Status: status},
+	}}
+}
+
+func TestEvaluatorHandlerImpl_GetEvaluatorRecord_EvidenceArchiveURL(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		status   string
+		urls     map[string]string
+		err      error
+		wantKeys []string
+		wantURL  string
+	}{
+		{name: "complete archive signed for ten minutes", status: "complete", urls: map[string]string{"evidence/10.tar.gz": "https://signed.example/10"}, wantKeys: []string{"evidence/10.tar.gz"}, wantURL: "https://signed.example/10"},
+		{name: "partial archive is downloadable", status: "partial", urls: map[string]string{"evidence/10.tar.gz": "https://signed.example/10"}, wantKeys: []string{"evidence/10.tar.gz"}, wantURL: "https://signed.example/10"},
+		{name: "pending archive is not signed", status: "pending"},
+		{name: "failed archive is not signed", status: "failed"},
+		{name: "sign failure degrades to empty URL", status: "complete", wantKeys: []string{"evidence/10.tar.gz"}, err: errors.New("sign failed")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+			mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
+			mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
+			provider := &evidenceArchiveURLProviderStub{urls: tc.urls, err: tc.err}
+			record := &entity.EvaluatorRecord{ID: 10, SpaceID: 100, EvaluatorVersionID: 30, EvaluatorOutputData: &entity.EvaluatorOutputData{
+				EvidenceArchive: &entity.EvaluatorEvidenceArchive{ObjectKey: "evidence/10.tar.gz", Status: tc.status},
+			}}
+			app := &EvaluatorHandlerImpl{
+				auth: mockAuth, evaluatorRecordService: mockEvaluatorRecordService,
+				userInfoService: mockUserInfoService, fileProvider: provider,
+			}
+			mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(10), false).Return(record, nil)
+			mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return()
+
+			resp, err := app.GetEvaluatorRecord(context.Background(), &evaluatorservice.GetEvaluatorRecordRequest{EvaluatorRecordID: 10})
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantKeys, provider.gotKeys)
+			if len(tc.wantKeys) > 0 {
+				assert.Equal(t, 10*time.Minute, provider.gotTTL)
+			}
+			if assert.NotNil(t, resp.GetRecord().GetEvaluatorOutputData().EvidenceArchive) {
+				assert.Equal(t, tc.wantURL, resp.GetRecord().GetEvaluatorOutputData().EvidenceArchive.GetFornaxEvaluatorLogURL())
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_BatchGetEvaluatorRecords_EvidenceArchiveURLs(t *testing.T) {
+	t.Parallel()
+	const spaceID = int64(100)
+	records := []*entity.EvaluatorRecord{
+		newEvidenceArchiveRecordForTest(10, spaceID, "evidence/a.tar.gz", "complete"),
+		newEvidenceArchiveRecordForTest(11, spaceID, "evidence/a.tar.gz", "complete"),
+		newEvidenceArchiveRecordForTest(12, spaceID, "evidence/b.tar.gz", "partial"),
+		newEvidenceArchiveRecordForTest(13, spaceID, "evidence/a.tar.gz", "pending"),
+		newEvidenceArchiveRecordForTest(14, spaceID, "evidence/b.tar.gz", "failed"),
+	}
+	ctrl := gomock.NewController(t)
+	recordService := mocks.NewMockEvaluatorRecordService(ctrl)
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	provider := &evidenceArchiveURLProviderStub{urls: map[string]string{
+		"evidence/a.tar.gz": "https://signed.example/a",
+		"evidence/b.tar.gz": "https://signed.example/b",
+	}}
+	app := &EvaluatorHandlerImpl{auth: auth, evaluatorRecordService: recordService, fileProvider: provider}
+	recordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{10, 11, 12, 13, 14}, false, false).Return(records, nil)
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+
+	resp, err := app.BatchGetEvaluatorRecords(context.Background(), &evaluatorservice.BatchGetEvaluatorRecordsRequest{
+		WorkspaceID:        spaceID,
+		EvaluatorRecordIds: []int64{10, 11, 12, 13, 14},
+	})
+	require.NoError(t, err)
+	require.Len(t, resp.Records, 5)
+	assert.Equal(t, []string{"evidence/a.tar.gz", "evidence/b.tar.gz"}, provider.gotKeys)
+	assert.Equal(t, 10*time.Minute, provider.gotTTL)
+	assert.Equal(t, "https://signed.example/a", resp.Records[0].GetEvaluatorOutputData().GetEvidenceArchive().GetFornaxEvaluatorLogURL())
+	assert.Equal(t, "https://signed.example/a", resp.Records[1].GetEvaluatorOutputData().GetEvidenceArchive().GetFornaxEvaluatorLogURL())
+	assert.Equal(t, "https://signed.example/b", resp.Records[2].GetEvaluatorOutputData().GetEvidenceArchive().GetFornaxEvaluatorLogURL())
+	assert.Empty(t, resp.Records[3].GetEvaluatorOutputData().GetEvidenceArchive().GetFornaxEvaluatorLogURL())
+	assert.Empty(t, resp.Records[4].GetEvaluatorOutputData().GetEvidenceArchive().GetFornaxEvaluatorLogURL())
+}
+
+func TestFillEvaluatorEvidenceArchiveURLs_MissingProviderIsFailOpen(t *testing.T) {
+	record := newEvidenceArchiveRecordForTest(10, 100, "evidence/a.tar.gz", "complete")
+	require.NoError(t, fillEvaluatorEvidenceArchiveURLs(context.Background(), nil, []*entity.EvaluatorRecord{record}, nil))
+	assert.Nil(t, record.EvaluatorOutputData.EvidenceArchive)
+}
+
+func TestEvaluatorHandlerImpl_EvidenceArchiveAuthorizationFailureDoesNotSign(t *testing.T) {
+	for _, batch := range []bool{false, true} {
+		t.Run(fmt.Sprintf("batch=%t", batch), func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			recordService := mocks.NewMockEvaluatorRecordService(ctrl)
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			provider := &evidenceArchiveURLProviderStub{}
+			app := &EvaluatorHandlerImpl{auth: auth, evaluatorRecordService: recordService, fileProvider: provider}
+			record := newEvidenceArchiveRecordForTest(10, 200, "evaluator-evidence/v1/private.tar.gz", "complete")
+			auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *rpc.AuthorizationParam) error {
+				assert.Equal(t, int64(200), param.SpaceID)
+				return errors.New("access denied")
+			})
+			if batch {
+				recordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{10}, false, false).Return([]*entity.EvaluatorRecord{record}, nil)
+				resp, err := app.BatchGetEvaluatorRecords(context.Background(), &evaluatorservice.BatchGetEvaluatorRecordsRequest{WorkspaceID: 100, EvaluatorRecordIds: []int64{10}})
+				require.Error(t, err)
+				assert.Nil(t, resp)
+			} else {
+				recordService.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(10), false).Return(record, nil)
+				resp, err := app.GetEvaluatorRecord(context.Background(), &evaluatorservice.GetEvaluatorRecordRequest{EvaluatorRecordID: 10})
+				require.Error(t, err)
+				assert.Nil(t, resp)
+			}
+			assert.Empty(t, provider.gotKeys)
+		})
+	}
+}
+
 func TestEvaluatorHandlerImpl_transformURIsToURLs(t *testing.T) {
 	tests := []struct {
 		name        string

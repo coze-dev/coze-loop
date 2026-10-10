@@ -228,6 +228,36 @@ func TestOpenAPIEvaluatorOutputDataDO2DTO(t *testing.T) {
 		assert.Equal(t, "https://tos.example.com/signed-url", *dto.ExtraOutput.URL)
 	})
 
+	t.Run("with evidence_archive separate from extra_output", func(t *testing.T) {
+		outputType := entity.EvaluatorExtraOutputTypeHTML
+		do := &entity.EvaluatorOutputData{
+			ExtraOutput: &entity.EvaluatorExtraOutputContent{
+				OutputType: &outputType,
+				URL:        gptr.Of("https://tos.example.com/extra-output"),
+			},
+			EvidenceArchive: &entity.EvaluatorEvidenceArchive{
+				SchemaVersion:         "1",
+				ObjectKey:             "evidence/openapi.tar.gz",
+				Status:                "uploaded",
+				SizeBytes:             2048,
+				SHA256:                "sha-openapi",
+				TruncatedFiles:        1,
+				FornaxEvaluatorLogURL: "https://signed.example/evidence?ttl=600",
+			},
+		}
+
+		dto := OpenAPIEvaluatorOutputDataDO2DTO(do)
+		if assert.NotNil(t, dto) && assert.NotNil(t, dto.EvidenceArchive) {
+			assert.Equal(t, "evidence/openapi.tar.gz", dto.EvidenceArchive.GetObjectKey())
+			assert.Equal(t, "sha-openapi", dto.EvidenceArchive.GetSha256())
+			assert.Equal(t, int64(1), dto.EvidenceArchive.GetTruncatedFiles())
+			assert.Equal(t, "https://signed.example/evidence?ttl=600", dto.EvidenceArchive.GetFornaxEvaluatorLogURL())
+		}
+		if assert.NotNil(t, dto.ExtraOutput) {
+			assert.Equal(t, "https://tos.example.com/extra-output", dto.ExtraOutput.GetURL())
+		}
+	})
+
 	t.Run("with nil extra_output", func(t *testing.T) {
 		do := &entity.EvaluatorOutputData{
 			TimeConsumingMS: 100,
