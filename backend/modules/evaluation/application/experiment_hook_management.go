@@ -79,7 +79,7 @@ func (e *experimentApplication) hookConfigUpdateInput(ctx context.Context, owner
 			return entity.HookConfigUpdateInput{}, nil, entity.ErrHookConfigStorage
 		}
 		config, err := e.hooks.Runtime.GetRuntimeConfig(ctx)
-		if err != nil || !config.AdmissionEnabled {
+		if err != nil || !config.AllowsWorkspace(owner.WorkspaceID) {
 			return entity.HookConfigUpdateInput{}, nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("HOOK_FEATURE_DISABLED"))
 		}
 	}

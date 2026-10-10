@@ -75,6 +75,32 @@ type wiringMQ struct {
 	calls int
 }
 
+type workspaceWiringSecret struct{}
+
+func (*workspaceWiringSecret) GetWorkspaceSigningSecret(context.Context, int64) (string, error) {
+	return "test-space-sk", nil
+}
+
+func TestHookWorkspaceAdmissionRequiresSigningProvider(t *testing.T) {
+	for _, ready := range []bool{false, true} {
+		loader := wiringLoader{value: `{"mq_wake_enabled":false,"admission_enabled":true,"storage_key_id":"storage-v1","workspace_allowlist":[42]}`}
+		config := infraHook.NewRuntimeConfigProvider(loader, true)
+		var secret *workspaceWiringSecret
+		if ready {
+			secret = &workspaceWiringSecret{}
+		}
+		p := &HookRuntimePlatform{Config: config, StorageKeyID: "storage-v1", ProtectedBackend: true, WorkspaceSigningSecrets: secret, Wake: NewHookRuntimeWake(loader, nil, config, "test", nil)}
+		cfg, err := (hookRuntimeAdmissionConfig{p}).GetRuntimeConfig(context.Background())
+		if ready {
+			require.NoError(t, err)
+			require.True(t, cfg.AllowsWorkspace(42))
+		} else {
+			require.Error(t, err)
+			require.False(t, cfg.AllowsWorkspace(42))
+		}
+	}
+}
+
 func (m *wiringMQ) NewProducer(mq.ProducerConfig) (mq.IProducer, error) {
 	m.calls++
 	panic("unexpected external producer")

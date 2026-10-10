@@ -18,3 +18,9 @@ type RuntimeConfigProvider interface {
 type SigningSecretProvider interface {
 	ReadSigningSecret(context.Context, string) ([]byte, error)
 }
+
+// WorkspaceSigningSecretProvider uses the server-resolved workspace identity.
+// Implementations must honor ctx and never log or expose the returned secret.
+type WorkspaceSigningSecretProvider interface {
+	GetWorkspaceSigningSecret(context.Context, int64) (string, error)
+}

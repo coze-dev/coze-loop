@@ -26,6 +26,7 @@ type RuntimeConfigProvider struct {
 type runtimeConfigInput struct {
 	StorageKeyID                string                  `json:"storage_key_id"`
 	AdmissionEnabled            *bool                   `json:"admission_enabled"`
+	WorkspaceAllowlist          json.RawMessage         `json:"workspace_allowlist"`
 	WorkerEnabled               *bool                   `json:"worker_enabled"`
 	MQWakeEnabled               *bool                   `json:"mq_wake_enabled"`
 	WorkerConcurrency           *int32                  `json:"worker_concurrency"`
@@ -102,6 +103,36 @@ func (p *RuntimeConfigProvider) EndpointPolicies(ctx context.Context) ([]Endpoin
 	return snapshot.policies, nil
 }
 
+// Existing Runs keep their frozen targets after admission is closed or revoked.
+func (p *RuntimeConfigProvider) ResolveEndpointPolicy(ctx context.Context, target EndpointTarget) (EndpointPolicy, error) {
+	snapshot, err := p.read(ctx)
+	if err != nil {
+		return EndpointPolicy{}, err
+	}
+	return snapshot.resolveEndpointPolicy(target)
+}
+
+func (s runtimeConfigSnapshot) resolveEndpointPolicy(target EndpointTarget) (EndpointPolicy, error) {
+	if !s.runtime.WorkspaceAllowlistConfigured {
+		return MatchEndpoint(target, s.policies)
+	}
+	host, port, err := normalizedEndpointURL(target.URL)
+	if err != nil {
+		return EndpointPolicy{}, err
+	}
+	policy, err := normalizeEndpointPolicy(EndpointPolicy{WorkspaceID: target.WorkspaceID, Host: host, Port: port,
+		Environment: target.Environment, Lane: target.Lane, AllowPrivateIPs: true})
+	if err != nil {
+		return EndpointPolicy{}, err
+	}
+	if ip, err := netip.ParseAddr(policy.Host); err == nil {
+		if err := ValidateEndpointIPs(policy, []netip.Addr{ip}); err != nil {
+			return EndpointPolicy{}, err
+		}
+	}
+	return policy, nil
+}
+
 func (p *RuntimeConfigProvider) read(ctx context.Context) (runtimeConfigSnapshot, error) {
 	var empty runtimeConfigSnapshot
 	if p == nil || p.loader == nil || ctx == nil || ctx.Err() != nil {
@@ -148,6 +179,22 @@ func (p *RuntimeConfigProvider) read(ctx context.Context) (runtimeConfigSnapshot
 		LeaseSeconds: runtimeValue(input.LeaseSeconds, entity.HookDefaultLeaseSeconds), RenewSeconds: runtimeValue(input.RenewSeconds, entity.HookDefaultRenewSeconds),
 		IdentityEnrichmentTimeoutMS: runtimeValue(input.IdentityEnrichmentTimeoutMS, 500), RetentionDays: runtimeValue(input.RetentionDays, 30),
 	}, storageKeyID: input.StorageKeyID, keys: make(map[runtimeEndpointBinding]runtimeSigningKeyRef)}
+	if input.WorkspaceAllowlist != nil {
+		var ids []runtimeWorkspaceID
+		if json.Unmarshal(input.WorkspaceAllowlist, &ids) != nil || ids == nil {
+			return empty, errHookRuntimeConfig
+		}
+		snapshot.runtime.WorkspaceAllowlistConfigured = true
+		snapshot.runtime.WorkspaceAllowlist = make([]int64, 0, len(ids))
+		seen := make(map[runtimeWorkspaceID]bool, len(ids))
+		for _, id := range ids {
+			if seen[id] {
+				return empty, errHookRuntimeConfig
+			}
+			seen[id] = true
+			snapshot.runtime.WorkspaceAllowlist = append(snapshot.runtime.WorkspaceAllowlist, int64(id))
+		}
+	}
 	cfg := snapshot.runtime
 	if entity.ValidateHookWorkerConfig(cfg) != nil || entity.ValidateHookLeaseTiming(cfg.LeaseSeconds, cfg.RenewSeconds) != nil ||
 		cfg.IdentityEnrichmentTimeoutMS <= 0 || cfg.IdentityEnrichmentTimeoutMS > 500 || cfg.RetentionDays <= 0 {
@@ -199,7 +246,7 @@ func (p *RuntimeConfigProvider) read(ctx context.Context) (runtimeConfigSnapshot
 		key.runtimeEndpointBinding = binding
 		snapshot.keys[binding] = key
 	}
-	if len(allowed) != len(snapshot.keys) || (cfg.AdmissionEnabled && len(allowed) == 0) || ctx.Err() != nil {
+	if len(allowed) != len(snapshot.keys) || (cfg.AdmissionEnabled && !cfg.WorkspaceAllowlistConfigured && len(allowed) == 0) || ctx.Err() != nil {
 		return empty, errHookRuntimeConfig
 	}
 	return snapshot, nil

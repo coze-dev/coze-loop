@@ -12,6 +12,7 @@ import (
 	"net/netip"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 
 	hookcomponent "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/hook"
@@ -19,23 +20,28 @@ import (
 )
 
 type KeyResolver struct {
-	config  *RuntimeConfigProvider
-	secrets hookcomponent.SigningSecretProvider
+	config           *RuntimeConfigProvider
+	secrets          hookcomponent.SigningSecretProvider
+	workspaceSecrets hookcomponent.WorkspaceSigningSecretProvider
 }
 
 var _ hookcomponent.KeyResolver = (*KeyResolver)(nil)
 
-func NewKeyResolver(config *RuntimeConfigProvider, secrets hookcomponent.SigningSecretProvider) *KeyResolver {
+func NewKeyResolver(config *RuntimeConfigProvider, secrets hookcomponent.SigningSecretProvider, workspaceProviders ...hookcomponent.WorkspaceSigningSecretProvider) *KeyResolver {
 	if identityNilProvider(secrets) {
 		secrets = nil
 	}
-	return &KeyResolver{config: config, secrets: secrets}
+	r := &KeyResolver{config: config, secrets: secrets}
+	if len(workspaceProviders) == 1 && !identityNilProvider(workspaceProviders[0]) {
+		r.workspaceSecrets = workspaceProviders[0]
+	}
+	return r
 }
 
 func (r *KeyResolver) Resolve(ctx context.Context, binding entity.HookKeyBinding) (entity.HookSigningKey, error) {
 	empty := entity.HookSigningKey{}
 	unavailable := errors.New("hook signing key unavailable")
-	if r == nil || r.config == nil || r.secrets == nil || ctx == nil || ctx.Err() != nil || strings.Contains(binding.URL, "#") {
+	if r == nil || r.config == nil || ctx == nil || ctx.Err() != nil || strings.Contains(binding.URL, "#") {
 		return empty, unavailable
 	}
 	u, err := url.Parse(binding.URL)
@@ -47,12 +53,30 @@ func (r *KeyResolver) Resolve(ctx context.Context, binding entity.HookKeyBinding
 	if err != nil {
 		return empty, unavailable
 	}
-	policy, err := MatchEndpoint(target, snapshot.policies)
+	policy, err := snapshot.resolveEndpointPolicy(target)
 	if err != nil {
 		return empty, unavailable
 	}
 	fingerprint, err := endpointPolicyFingerprint(policy)
 	if err != nil {
+		return empty, unavailable
+	}
+	if snapshot.runtime.WorkspaceAllowlistConfigured {
+		if r.workspaceSecrets == nil {
+			return empty, unavailable
+		}
+		secret, err := r.workspaceSecrets.GetWorkspaceSigningSecret(ctx, binding.WorkspaceID)
+		if err != nil || ctx.Err() != nil || strings.TrimSpace(secret) == "" {
+			return empty, unavailable
+		}
+		current, err := r.config.read(ctx)
+		if err != nil || !current.runtime.WorkspaceAllowlistConfigured || ctx.Err() != nil {
+			return empty, unavailable
+		}
+		return entity.HookSigningKey{KeyID: "fornax-space-" + strconv.FormatInt(binding.WorkspaceID, 10),
+			Secret: []byte(secret), PolicyFingerprint: fingerprint}, nil
+	}
+	if r.secrets == nil {
 		return empty, unavailable
 	}
 	key, ok := snapshot.keys[runtimeBinding(policy)]
@@ -65,7 +89,7 @@ func (r *KeyResolver) Resolve(ctx context.Context, binding entity.HookKeyBinding
 	}
 	// A secret read may block while operators revoke or rotate its binding.
 	current, err := r.config.read(ctx)
-	if err != nil {
+	if err != nil || current.runtime.WorkspaceAllowlistConfigured {
 		return empty, unavailable
 	}
 	currentPolicy, err := MatchEndpoint(target, current.policies)

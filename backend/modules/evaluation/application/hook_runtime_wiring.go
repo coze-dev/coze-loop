@@ -29,13 +29,14 @@ import (
 // Platform bindings are deployment-owned. Runtime switches and endpoint policy
 // are always read by the existing RuntimeConfigProvider, including on recovery.
 type HookRuntimePlatform struct {
-	Scope            string
-	StorageKeyID     string
-	Config           *infraHook.RuntimeConfigProvider
-	Codec            *infraHook.StorageCodec
-	Identity         hook.IdentityProvider
-	Wake             *HookRuntimeWake
-	ProtectedBackend bool
+	Scope                   string
+	StorageKeyID            string
+	Config                  *infraHook.RuntimeConfigProvider
+	Codec                   *infraHook.StorageCodec
+	Identity                hook.IdentityProvider
+	WorkspaceSigningSecrets hook.WorkspaceSigningSecretProvider
+	Wake                    *HookRuntimeWake
+	ProtectedBackend        bool
 }
 
 func NewOSSHookRuntimePlatform(cf conf.IConfigLoaderFactory, factory mq.IFactory, users rpc.IUserProvider) (*HookRuntimePlatform, error) {
@@ -161,7 +162,7 @@ func wireHookRuntime(app *experimentApplication, stores *HookRuntimeStores, item
 	if err != nil {
 		return nil, err
 	}
-	transport := infraHook.NewHTTPTransport(infraHook.NewKeyResolver(p.Config, p.Wake.secrets), p.Config.EndpointPolicies)
+	transport := infraHook.NewHTTPTransport(infraHook.NewKeyResolver(p.Config, p.Wake.secrets, p.WorkspaceSigningSecrets), p.Config.EndpointPolicies, p.Config.ResolveEndpointPolicy)
 	executor, err := service.NewHookAttemptExecutorWithConfig(stores.Runs, p.Codec, p.Codec, transport, infraHook.NewCompletionProjector(), p.Config)
 	if err != nil {
 		return nil, err
@@ -196,6 +197,9 @@ func (c hookRuntimeAdmissionConfig) GetRuntimeConfig(ctx context.Context) (entit
 	cfg, err := p.Config.GetRuntimeConfig(ctx)
 	if err != nil || !cfg.AdmissionEnabled {
 		return cfg, err
+	}
+	if cfg.WorkspaceAllowlistConfigured && hookWorkerNil(p.WorkspaceSigningSecrets) {
+		return entity.HookRuntimeConfig{}, entity.ErrHookConfigStorage
 	}
 	key, err := p.Config.StorageKeyID(ctx)
 	if err != nil || key != p.StorageKeyID || !p.ProtectedBackend {

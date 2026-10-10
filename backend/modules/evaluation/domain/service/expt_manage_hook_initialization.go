@@ -264,7 +264,7 @@ func (e *ExptMangerImpl) initializeHookRun(ctx context.Context, log *entity.Expt
 		return entity.ErrHookConfigStorage
 	}
 	runtime, err := h.Runtime.GetRuntimeConfig(ctx)
-	if err != nil || !runtime.AdmissionEnabled {
+	if err != nil || !runtime.AllowsWorkspace(key.WorkspaceID) {
 		return errors.New("HOOK_ADMISSION_UNAVAILABLE")
 	}
 	initiator, err := h.Identity.ResolveInitiator(ctx, log.CreatedBy)

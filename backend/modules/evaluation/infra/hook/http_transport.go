@@ -30,14 +30,17 @@ import (
 // EndpointPolicyProvider reads trusted current configuration and must honor ctx.
 type EndpointPolicyProvider func(context.Context) ([]EndpointPolicy, error)
 
+type TargetEndpointPolicyProvider func(context.Context, EndpointTarget) (EndpointPolicy, error)
+
 type HTTPTransport struct {
-	keys     hookcomponent.KeyResolver
-	policies EndpointPolicyProvider
-	lookup   func(context.Context, string, string) ([]netip.Addr, error)
-	dial     func(context.Context, string, string) (net.Conn, error)
-	now      func() time.Time
-	nonce    func() (string, error)
-	rootCAs  *x509.CertPool
+	keys         hookcomponent.KeyResolver
+	policies     EndpointPolicyProvider
+	targetPolicy TargetEndpointPolicyProvider
+	lookup       func(context.Context, string, string) ([]netip.Addr, error)
+	dial         func(context.Context, string, string) (net.Conn, error)
+	now          func() time.Time
+	nonce        func() (string, error)
+	rootCAs      *x509.CertPool
 }
 
 var _ hookcomponent.HTTPTransport = (*HTTPTransport)(nil)
@@ -45,7 +48,7 @@ var _ hookcomponent.HTTPTransport = (*HTTPTransport)(nil)
 var errHookPeerPolicy = errors.New("hook connection violates endpoint policy")
 
 // NewHTTPTransport is lazy: missing runtime configuration fails Invoke, not startup.
-func NewHTTPTransport(keys hookcomponent.KeyResolver, policies EndpointPolicyProvider) *HTTPTransport {
+func NewHTTPTransport(keys hookcomponent.KeyResolver, policies EndpointPolicyProvider, targets ...TargetEndpointPolicyProvider) *HTTPTransport {
 	if keys != nil {
 		value := reflect.ValueOf(keys)
 		switch value.Kind() {
@@ -55,8 +58,12 @@ func NewHTTPTransport(keys hookcomponent.KeyResolver, policies EndpointPolicyPro
 			}
 		}
 	}
-	return &HTTPTransport{keys: keys, policies: policies, lookup: net.DefaultResolver.LookupNetIP,
+	t := &HTTPTransport{keys: keys, policies: policies, lookup: net.DefaultResolver.LookupNetIP,
 		dial: (&net.Dialer{}).DialContext, now: time.Now, nonce: newHTTPNonce}
+	if len(targets) == 1 {
+		t.targetPolicy = targets[0]
+	}
+	return t
 }
 
 func newHTTPNonce() (string, error) {
@@ -82,7 +89,7 @@ func (t *HTTPTransport) Invoke(ctx context.Context, input entity.HookTransportIn
 		return result
 	}
 	config := input.Config
-	if t == nil || t.keys == nil || t.policies == nil || config == nil || config.TimeoutSeconds == nil ||
+	if t == nil || t.keys == nil || (t.policies == nil && t.targetPolicy == nil) || config == nil || config.TimeoutSeconds == nil ||
 		*config.TimeoutSeconds < 0 || *config.TimeoutSeconds > 1200 {
 		return result
 	}
@@ -117,11 +124,21 @@ func (t *HTTPTransport) Invoke(ctx context.Context, input entity.HookTransportIn
 	if config.Lane != nil {
 		lane = *config.Lane
 	}
-	policies, err := t.policies(ctx)
+	target := EndpointTarget{WorkspaceID: input.WorkspaceID, URL: u, Environment: string(*config.Environment), Lane: lane}
+	var policy EndpointPolicy
+	if t.targetPolicy != nil {
+		policy, err = t.targetPolicy(ctx, target)
+	} else {
+		var policies []EndpointPolicy
+		policies, err = t.policies(ctx)
+		if err == nil {
+			policy, err = MatchEndpoint(target, policies)
+		}
+	}
 	if err != nil || ctx.Err() != nil {
 		return result
 	}
-	policy, err := MatchEndpoint(EndpointTarget{WorkspaceID: input.WorkspaceID, URL: u, Environment: string(*config.Environment), Lane: lane}, policies)
+	policy, err = MatchEndpoint(target, []EndpointPolicy{policy})
 	if err != nil {
 		return result
 	}

@@ -25,12 +25,13 @@ type EndpointTarget struct {
 // EndpointPolicy is trusted operator configuration for one HTTPS host/port and
 // workspace/environment/lane. Host is a bare DNS name or unbracketed IP, not a URL.
 type EndpointPolicy struct {
-	WorkspaceID  int64
-	Host         string
-	Port         uint16
-	Environment  string
-	Lane         string
-	PrivateCIDRs []netip.Prefix
+	WorkspaceID     int64
+	Host            string
+	Port            uint16
+	Environment     string
+	Lane            string
+	PrivateCIDRs    []netip.Prefix
+	AllowPrivateIPs bool `json:",omitempty"`
 }
 
 // MatchEndpoint performs no DNS or network I/O and returns an owned normalized copy.
@@ -85,7 +86,7 @@ func ValidateEndpointIPs(policy EndpointPolicy, addresses []netip.Addr) error {
 		if literalErr == nil && address != literal {
 			return errors.New("hook endpoint IP differs from literal host")
 		}
-		if privateEndpointIP(address) && !inEndpointCIDRs(address, policy.PrivateCIDRs) {
+		if privateEndpointIP(address) && !policy.AllowPrivateIPs && !inEndpointCIDRs(address, policy.PrivateCIDRs) {
 			return errors.New("hook endpoint private IP is not authorized")
 		}
 	}

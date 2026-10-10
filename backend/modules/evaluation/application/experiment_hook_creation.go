@@ -23,12 +23,15 @@ func (e *experimentApplication) hookConfigCreateInput(ctx context.Context, space
 	if conf == nil || (conf.Before == nil && conf.After == nil) {
 		return repo.HookConfigCreateInput{}, nil
 	}
-	if e.hooks == nil || nilHookApplicationDependency(e.hooks.Configs) || nilHookApplicationDependency(e.hooks.Runtime) {
+	if e.hooks == nil || nilHookApplicationDependency(e.hooks.Configs) {
 		return repo.HookConfigCreateInput{}, entity.ErrHookConfigStorage
 	}
 	if hookApplicationEnabled(conf) {
+		if nilHookApplicationDependency(e.hooks.Runtime) {
+			return repo.HookConfigCreateInput{}, entity.ErrHookConfigStorage
+		}
 		runtime, err := e.hooks.Runtime.GetRuntimeConfig(ctx)
-		if err != nil || !runtime.AdmissionEnabled {
+		if err != nil || !runtime.AllowsWorkspace(spaceID) {
 			return repo.HookConfigCreateInput{}, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("HOOK_FEATURE_DISABLED"))
 		}
 	}

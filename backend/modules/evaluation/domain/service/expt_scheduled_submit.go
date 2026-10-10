@@ -179,7 +179,7 @@ func (p *scheduledTemplatePreparation) Prepare(ctx context.Context, tr entity.Sc
 		return nil, entity.ErrHookStoreConflict
 	}
 	runtime, err := m.hooks.Runtime.GetRuntimeConfig(ctx)
-	if err != nil || !runtime.AdmissionEnabled {
+	if err != nil || !runtime.AllowsWorkspace(tr.SpaceID) {
 		return nil, entity.ErrHookAdmissionDenied
 	}
 	config, err := entity.ResolveLifecycleHookConf(nil, state.Config.Config)

@@ -17,15 +17,33 @@ func ValidateHookLeaseTiming(leaseSeconds, renewSeconds int32) error {
 
 // HookRuntimeConfig contains validated process-local controls, not a Run snapshot.
 type HookRuntimeConfig struct {
-	AdmissionEnabled            bool
-	WorkerEnabled               bool
-	MQWakeEnabled               bool
-	WorkerConcurrency           int32
-	WorkspaceConcurrency        int32
-	ScanIntervalSeconds         int32
-	ScanBatchSize               int32
-	LeaseSeconds                int32
-	RenewSeconds                int32
-	IdentityEnrichmentTimeoutMS int32
-	RetentionDays               int32
+	AdmissionEnabled             bool
+	WorkspaceAllowlistConfigured bool
+	WorkspaceAllowlist           []int64
+	WorkerEnabled                bool
+	MQWakeEnabled                bool
+	WorkerConcurrency            int32
+	WorkspaceConcurrency         int32
+	ScanIntervalSeconds          int32
+	ScanBatchSize                int32
+	LeaseSeconds                 int32
+	RenewSeconds                 int32
+	IdentityEnrichmentTimeoutMS  int32
+	RetentionDays                int32
+}
+
+// AllowsWorkspace governs new admission, not execution of already admitted Runs.
+func (c HookRuntimeConfig) AllowsWorkspace(spaceID int64) bool {
+	if !c.AdmissionEnabled || spaceID <= 0 {
+		return false
+	}
+	if !c.WorkspaceAllowlistConfigured {
+		return true
+	}
+	for _, allowed := range c.WorkspaceAllowlist {
+		if allowed == spaceID {
+			return true
+		}
+	}
+	return false
 }
