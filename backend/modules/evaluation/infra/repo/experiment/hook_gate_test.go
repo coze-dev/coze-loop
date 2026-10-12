@@ -162,6 +162,61 @@ func TestHookGateLegacySkipsHookAndScope(t *testing.T) {
 	}
 }
 
+func TestHookGateOrdinaryPendingRetryIgnoresPreviousTerminal(t *testing.T) {
+	for _, marker := range []driver.Value{nil, int64(0)} {
+		for _, status := range []entity.ExptStatus{entity.ExptStatus_Success, entity.ExptStatus_Failed, entity.ExptStatus_Terminated} {
+			for _, execution := range []bool{false, true} {
+				t.Run(fmt.Sprintf("marker=%v/old=%v/execution=%v", marker, status, execution), func(t *testing.T) {
+					p, m := gateMock(t)
+					values := gateLogValues(marker)
+					values[6], values[10] = int64(entity.ExptStatus_Pending), int64(status)
+					gateExpectLog(m, values)
+					gate := &hookGateRepo{provider: p, execution: execution}
+					got, err := gate.CanDispatch(context.Background(), gateTestKey)
+					require.NoError(t, err)
+					require.Equal(t, entity.HookAdmissionDecision{Gate: entity.HookGateReady}, got)
+				})
+			}
+		}
+	}
+}
+
+func TestHookGateOrdinaryPendingRetryKeepsBoundaries(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		index int
+		value driver.Value
+		bad   bool
+	}{
+		{"old run", 9, int64(31), false}, {"wrong workspace", 1, int64(11), false},
+		{"wrong experiment", 2, int64(21), false}, {"experiment workspace", 8, int64(11), false},
+		{"deleted run", 5, time.Now(), false}, {"deleted experiment", 11, time.Now(), false},
+		{"cancel accepted", 6, int64(entity.ExptStatus_Terminating), false},
+		{"experiment cancel accepted", 10, int64(entity.ExptStatus_Terminating), false},
+		{"invalid marker", 4, int64(2), true}, {"invalid run status", 6, int64(99), true},
+		{"missing experiment status", 10, nil, true},
+		{"managed marker", 4, int64(1), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p, m := gateMock(t)
+			values := gateLogValues(nil)
+			values[6], values[10] = int64(entity.ExptStatus_Pending), int64(entity.ExptStatus_Terminated)
+			values[tc.index] = tc.value
+			gateExpectLog(m, values)
+			if tc.name == "managed marker" {
+				m.ExpectCommit()
+			}
+			got, err := NewHookGateRepo(p, nil).CanDispatch(context.Background(), gateTestKey)
+			if tc.bad {
+				require.ErrorIs(t, err, entity.ErrHookGateUnavailable)
+			} else {
+				require.NoError(t, err)
+			}
+			require.NotEqual(t, entity.HookGateReady, got.Gate)
+		})
+	}
+}
+
 func TestHookGateRunBoundaries(t *testing.T) {
 	for _, tc := range []struct {
 		name  string

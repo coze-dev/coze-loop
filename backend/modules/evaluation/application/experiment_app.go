@@ -2354,7 +2354,15 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 			}
 		}
 	}
-	if got.Status != entity.ExptStatus_Processing && !managedPending {
+	recovery, canRecover := e.manager.(service.IOrdinaryManualCancellation)
+	resuming := got.Status == entity.ExptStatus_Terminating && canRecover
+	if resuming {
+		resuming, err = recovery.CanResumeManualCancellation(ctx, entity.HookRunKey{WorkspaceID: req.GetWorkspaceID(), ExperimentID: req.GetExptID(), RunID: got.LatestRunID})
+		if err != nil {
+			return nil, err
+		}
+	}
+	if got.Status != entity.ExptStatus_Processing && !managedPending && !resuming {
 		return nil, errorx.NewByCode(errno.TerminateNonRunningExperimentErrorCode)
 	}
 
@@ -2370,6 +2378,19 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 		}
 	}
 
+	manual := false
+	if canRecover && !managedPending {
+		manual, err = recovery.StartManualCancellation(ctx, entity.HookRunKey{WorkspaceID: req.GetWorkspaceID(), ExperimentID: req.GetExptID(), RunID: got.LatestRunID}, session)
+		if err != nil {
+			return nil, err
+		}
+		if resuming && !manual {
+			return nil, errorx.NewByCode(errno.TerminateNonRunningExperimentErrorCode)
+		}
+		if resuming {
+			return &expt.KillExperimentResponse{BaseResp: base.NewBaseResp()}, nil
+		}
+	}
 	if managedPending {
 		// Pending cancellation must enter the bound runtime before any legacy state write.
 		if err := e.manager.CompleteExpt(ctx, got.ID, &got.LatestRunID, got.SpaceID, session, entity.WithStatus(entity.ExptStatus_Terminated), entity.NoAggrCalculate()); err != nil {
@@ -2377,11 +2398,16 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 		}
 		return &expt.KillExperimentResponse{BaseResp: base.NewBaseResp()}, nil
 	}
-	if err := e.manager.SetExptTerminating(ctx, req.GetExptID(), got.LatestRunID, req.GetWorkspaceID(), session); err != nil {
-		return nil, err
+	if !manual {
+		if err := e.manager.SetExptTerminating(ctx, req.GetExptID(), got.LatestRunID, req.GetWorkspaceID(), session); err != nil {
+			return nil, err
+		}
 	}
 
 	kill := func(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
+		if manual {
+			return recovery.CompleteManualCancellation(ctx, entity.HookRunKey{WorkspaceID: spaceID, ExperimentID: exptID, RunID: exptRunID}, session)
+		}
 		if err := e.manager.CompleteRun(ctx, exptID, exptRunID, spaceID, session, entity.WithStatus(entity.ExptStatus_Terminated)); err != nil {
 			return err
 		}

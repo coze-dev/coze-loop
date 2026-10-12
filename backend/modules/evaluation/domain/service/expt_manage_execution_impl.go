@@ -1818,7 +1818,11 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 		return e.logHookRun(ctx, exptID, exptRunID, mode, spaceID, itemIDs, session, nil)
 	}
 	duration := time.Duration(e.configer.GetExptExecConf(ctx, spaceID).GetZombieIntervalSecond()) * time.Second
-	locked, err := e.mutex.LockBackoff(ctx, e.makeExptMutexLockKey(exptID), duration, time.Second)
+	owner, err := newManagerHookLockOwner(exptRunID)
+	if err != nil {
+		return err
+	}
+	locked, _, err := e.mutex.BackoffLockWithValue(ctx, e.makeExptMutexLockKey(exptID), owner, duration, time.Second)
 	if err != nil {
 		return err
 	}

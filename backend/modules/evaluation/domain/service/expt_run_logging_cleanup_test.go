@@ -73,8 +73,10 @@ func TestLogRunPersistenceFailureReleasesOwnedLock(t *testing.T) {
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Save(ctx, gomock.Any()).DoAndReturn(persist).Times(2)
 				mgr.mtr.(*metricsMocks.MockExptMetric).EXPECT().EmitExptExecRun(spaceID, int64(entity.EvaluationModeRetryItems))
 			} else {
-				mgr.mutex.(*lockMocks.MockILocker).EXPECT().LockBackoff(ctx, mgr.makeExptMutexLockKey(exptID), gomock.Any(), gomock.Any()).
-					DoAndReturn(func(context.Context, string, time.Duration, time.Duration) (bool, error) { return acquire(), nil }).Times(2)
+				mgr.mutex.(*lockMocks.MockILocker).EXPECT().BackoffLockWithValue(ctx, mgr.makeExptMutexLockKey(exptID), gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(context.Context, string, string, time.Duration, time.Duration) (bool, string, error) {
+						return acquire(), "", nil
+					}).Times(2)
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Create(ctx, gomock.Any()).DoAndReturn(persist).Times(2)
 				mgr.mtr.(*metricsMocks.MockExptMetric).EXPECT().EmitExptExecRun(spaceID, int64(entity.EvaluationModeFailRetry)).Times(2)
 			}
@@ -192,7 +194,7 @@ func TestLogRunLockErrorDoesNotCleanup(t *testing.T) {
 				_, _, err := mgr.LogRetryItemsRun(ctx, 1, entity.EvaluationModeRetryItems, 3, nil, &entity.Session{UserID: "u"})
 				require.ErrorIs(t, err, lockErr)
 			} else {
-				mgr.mutex.(*lockMocks.MockILocker).EXPECT().LockBackoff(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(true, lockErr)
+				mgr.mutex.(*lockMocks.MockILocker).EXPECT().BackoffLockWithValue(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, "", lockErr)
 				require.ErrorIs(t, mgr.LogRun(ctx, 1, 2, entity.EvaluationModeFailRetry, 3, nil, &entity.Session{UserID: "u"}), lockErr)
 			}
 		})
@@ -226,7 +228,7 @@ func TestLogRunLatestFailureDoesNotRollbackSupersededQuota(t *testing.T) {
 					mgr.mutex.(*lockMocks.MockILocker).EXPECT().BackoffLockWithValue(ctx, gomock.Any(), "3", gomock.Any(), gomock.Any()).Return(true, "", nil)
 					mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Save(ctx, gomock.Any()).Return(nil)
 				} else {
-					mgr.mutex.(*lockMocks.MockILocker).EXPECT().LockBackoff(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+					mgr.mutex.(*lockMocks.MockILocker).EXPECT().BackoffLockWithValue(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, "", nil)
 					mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Create(ctx, gomock.Any()).Return(nil)
 					mgr.mtr.(*metricsMocks.MockExptMetric).EXPECT().EmitExptExecRun(spaceID, int64(entity.EvaluationModeFailRetry))
 				}

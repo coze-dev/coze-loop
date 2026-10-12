@@ -214,6 +214,30 @@ func (r *hookRuntimeRouter) SetExptTerminating(ctx context.Context, exptID, runI
 	return r.IExptManager.SetExptTerminating(ctx, exptID, key.RunID, spaceID, session)
 }
 
+func (r *hookRuntimeRouter) CanResumeManualCancellation(ctx context.Context, key entity.HookRunKey) (bool, error) {
+	manager := r.HookConfigBaseManager()
+	if manager == nil {
+		return false, nil
+	}
+	return manager.CanResumeManualCancellation(ctx, key)
+}
+
+func (r *hookRuntimeRouter) StartManualCancellation(ctx context.Context, key entity.HookRunKey, session *entity.Session) (bool, error) {
+	manager := r.HookConfigBaseManager()
+	if manager == nil {
+		return false, nil
+	}
+	return manager.StartManualCancellation(ctx, key, session)
+}
+
+func (r *hookRuntimeRouter) CompleteManualCancellation(ctx context.Context, key entity.HookRunKey, session *entity.Session) error {
+	manager := r.HookConfigBaseManager()
+	if manager == nil {
+		return entity.ErrHookStoreCorrupt
+	}
+	return manager.CompleteManualCancellation(ctx, key, session)
+}
+
 func (r *hookRuntimeRouter) CompleteRun(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
 	execution, key, err := r.execution(ctx, entity.HookRunKey{WorkspaceID: spaceID, ExperimentID: exptID, RunID: runID})
 	if err != nil {

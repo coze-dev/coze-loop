@@ -200,7 +200,7 @@ func TestCompleteExpt_TerminatesItemRunLogsAfterRelease(t *testing.T) {
 func stubRetryLogRunMocks(t *testing.T, mgr *ExptMangerImpl, spaceID int64, mode entity.ExptRunMode) {
 	t.Helper()
 	mgr.mutex.(*lockMocks.MockILocker).EXPECT().
-		LockBackoff(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+		BackoffLockWithValue(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, "", nil)
 	mgr.mtr.(*metricsMocks.MockExptMetric).EXPECT().EmitExptExecRun(spaceID, int64(mode)).AnyTimes()
 	mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)

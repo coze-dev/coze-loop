@@ -48,16 +48,17 @@ import (
 )
 
 type routerTerminationFixture struct {
-	t      *testing.T
-	p      db.Provider
-	sql    *gorm.DB
-	runs   repo.IHookRepo
-	codec  hook.StorageCodec
-	router *hookRuntimeRouter
-	app    *experimentApplication
-	auth   *rpcm.MockIAuthProvider
-	key    entity.HookRunKey
-	before bool
+	t         *testing.T
+	p         db.Provider
+	sql       *gorm.DB
+	runs      repo.IHookRepo
+	codec     hook.StorageCodec
+	router    *hookRuntimeRouter
+	app       *experimentApplication
+	auth      *rpcm.MockIAuthProvider
+	key       entity.HookRunKey
+	before    bool
+	publisher *em.MockExptEventPublisher
 }
 
 func newRouterTerminationFixture(t *testing.T, mode entity.ExptRunMode, before ...bool) *routerTerminationFixture {
@@ -85,6 +86,7 @@ func newRouterTerminationFixture(t *testing.T, mode entity.ExptRunMode, before .
 	metric := mm.NewMockExptMetric(ctrl)
 	metric.EXPECT().EmitExptExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	pub := em.NewMockExptEventPublisher(ctrl)
+	f.publisher = pub
 	pub.EXPECT().PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	pub.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	experiments := exptrepo.NewExptRepo(exptmysql.NewExptDAO(p), exptmysql.NewExptEvaluatorRefDAO(p), nil)
@@ -366,6 +368,12 @@ func TestHookRuntimeRouterKillExperimentOnlineProcessing(t *testing.T) {
 
 func TestHookRuntimeRouterKillExperimentLegacy(t *testing.T) {
 	f := newRouterTerminationFixture(t, 0)
+	f.publisher.EXPECT().PublishExptScheduleEvent(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, event *entity.ExptScheduleEvent, _ *time.Duration) error {
+		require.Equal(t, int64(30), event.ExptRunID)
+		require.Equal(t, int64(20), event.ExptID)
+		require.Equal(t, int64(10), event.SpaceID)
+		return nil
+	})
 	require.NoError(t, f.sql.Create(&model.ExptRunLog{ID: 30, SpaceID: 10, ExptID: 20, ExptRunID: 30, Mode: gptr.Of(int32(entity.EvaluationModeSubmit)), Status: gptr.Of(int64(entity.ExptStatus_Processing)), CreatedBy: "owner"}).Error)
 	require.NoError(t, f.sql.Model(&model.Experiment{}).Where("id=?", 20).UpdateColumns(map[string]any{"latest_run_id": 30, "eval_set_source_type": int32(entity.ExptEvalSetSourceType_SingleSet)}).Error)
 	// Legacy must not need a factory, storage codec, or a Hook snapshot.

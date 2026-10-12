@@ -169,11 +169,34 @@ func (e *ExptSchedulerImpl) waitForHookAdmission(ctx context.Context, event *ent
 		case entity.HookGateReady:
 			return false, nil
 		case entity.HookGateClosed:
-			return true, nil
+			return true, e.resumeManualCancellation(ctx, event)
 		}
 	}
 	// Waiting, unknown state and read errors share a bounded independent continuation.
 	return true, e.publishHookWait(ctx, event)
+}
+
+func (e *ExptSchedulerImpl) resumeManualCancellation(ctx context.Context, event *entity.ExptScheduleEvent) error {
+	manager, ok := e.Manager.(*ExptMangerImpl)
+	if !ok || manager.finalization == nil {
+		return nil
+	}
+	key := entity.HookRunKey{WorkspaceID: event.SpaceID, ExperimentID: event.ExptID, RunID: event.ExptRunID}
+	source, err := manager.readManualCancellationSource(ctx, key)
+	if errors.Is(err, entity.ErrHookStoreMissing) || errors.Is(err, entity.ErrHookStoreConflict) {
+		return nil
+	}
+	if err != nil {
+		return schedulerHookRetryError{}
+	}
+	if !manualCancellationPending(source) {
+		return nil
+	}
+	if err := manager.CompleteManualCancellation(ctx, key, event.Session); err != nil {
+		logs.CtxWarn(ctx, "manual cancellation awaiting recovery, run=%d: %v", key.RunID, err)
+		return e.publishHookWait(ctx, event)
+	}
+	return nil
 }
 
 func (e *ExptSchedulerImpl) publishHookWait(ctx context.Context, event *entity.ExptScheduleEvent) error {

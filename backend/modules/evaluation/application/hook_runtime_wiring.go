@@ -105,7 +105,7 @@ func (s *HookRuntimeStores) manager(base service.IExptManager) (service.IExptMan
 	}
 	manager, err := service.NewExptManagerWithHookFinalization(base, service.ExptManagerFinalizationDependencies{
 		Runs: s.Runs, Repository: s.Finalization, Owners: experiment.NewHookFinalizationOwnerReader(s.Redis),
-		ExecutionScope: p.Scope, NewItemLocker: func() lock.ILocker { return lock.NewRedisLockerWithHolder(s.Redis, "evaluation") }})
+		ExecutionScope: p.Scope, NewItemLocker: func() lock.ILocker { return lock.NewRedisLocker(s.Redis) }})
 	if err != nil {
 		return nil, err
 	}

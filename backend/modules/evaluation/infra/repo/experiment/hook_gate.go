@@ -87,6 +87,10 @@ func (r *hookGateRepo) CanDispatch(ctx context.Context, key entity.HookRunKey) (
 		experimentInput.Actual.WorkspaceID = row.ExperimentSpaceID
 		experimentInput.Actual.ExperimentID = *row.ExperimentID
 		experimentInput.Status = entity.ExptStatus(gptr.Indirect(row.ExperimentStatus))
+		// Ordinary retries retain the preceding experiment terminal state until ExptStart.
+		if gptr.Indirect(row.LifecycleHookVersion) == 0 && input.Status == entity.ExptStatus_Pending && entity.IsExptFinished(experimentInput.Status) {
+			experimentInput.Status = input.Status
+		}
 		out = entity.CheckHookAdmission(experimentInput)
 		if out.Gate == entity.HookGateClosed {
 			return nil
