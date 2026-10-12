@@ -453,7 +453,11 @@ func TestHookFrozenLoaderRecursiveResolverIntegrity(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "full body", *out.Items[0].Item.Turns[0].FieldDataList[0].Content.MultiPart[0].MultiPart[0].Text)
 			} else {
-				require.ErrorIs(t, err, entity.ErrHookFrozenContentUnavailable)
+				if kind == "error" {
+					require.ErrorIs(t, err, errFrozenSourceRead)
+				} else {
+					require.ErrorIs(t, err, entity.ErrHookFrozenContentUnavailable)
+				}
 				require.Nil(t, out)
 				require.NotContains(t, err.Error(), "secret")
 			}

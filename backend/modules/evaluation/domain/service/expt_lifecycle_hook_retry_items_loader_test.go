@@ -96,8 +96,12 @@ func TestHookRetryItemsRealLoaderIOClassification(t *testing.T) {
 				require.Zero(t, ports.counted)
 				require.Equal(t, 1, ports.finalized)
 			}
-			_, legacyErr := api.LoadPage(ctx, f.input)
-			require.ErrorIs(t, legacyErr, fallback, "published LoadPage retains the old four-mode error contract")
+			_, pageErr := api.LoadPage(ctx, f.input)
+			if transient {
+				require.ErrorIs(t, pageErr, sourceErr, "published and candidate reads must share the retryable class")
+			} else {
+				require.ErrorIs(t, pageErr, fallback)
+			}
 		})
 	}
 }

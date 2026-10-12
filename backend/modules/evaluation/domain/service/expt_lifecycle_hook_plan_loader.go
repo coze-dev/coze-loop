@@ -5,7 +5,9 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"io/fs"
 	"strings"
 	"unicode/utf8"
 
@@ -13,6 +15,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/hook"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 type HookFrozenPlanLoaderDependencies struct {
@@ -75,12 +79,10 @@ func (l *hookFrozenPlanLoader) LoadCandidates(ctx context.Context, in entity.Hoo
 	if ctx == nil {
 		return nil, entity.ErrHookFrozenPlanInvalid
 	}
-	return l.loadCandidates(context.WithValue(ctx, frozenCandidateIOKey{}, true), in, page)
+	return l.loadCandidates(ctx, in, page)
 }
 
-type frozenCandidateIOKey struct{}
-
-var errFrozenCandidateSourceRead = errors.New("frozen hook source read unavailable")
+var errFrozenSourceRead = errors.New("frozen hook source read unavailable")
 
 func (l *hookFrozenPlanLoader) loadCandidates(ctx context.Context, in entity.HookPlanReadInput, page *entity.HookPlanReadPage) (*entity.HookLoadedPlanPage, error) {
 	if ctx == nil || in.Validate() != nil || page == nil || !page.Ready {
@@ -340,14 +342,30 @@ func frozenReadError(ctx context.Context, err, fallback error) error {
 			return cause
 		}
 	}
-	if candidate, _ := ctx.Value(frozenCandidateIOKey{}).(bool); candidate && err != nil {
-		for _, cause := range []error{entity.ErrHookFrozenPlanInvalid, entity.ErrHookFrozenItemUnavailable, entity.ErrHookFrozenSchemaInvalid, entity.ErrHookFrozenContentUnavailable} {
-			if errors.Is(err, cause) {
-				return cause
-			}
+	for _, cause := range []error{entity.ErrHookFrozenPlanInvalid, entity.ErrHookFrozenPlanNotReady, entity.ErrHookFrozenItemUnavailable, entity.ErrHookFrozenSchemaInvalid, entity.ErrHookFrozenContentUnavailable} {
+		if errors.Is(err, cause) {
+			return cause
 		}
-		// Keep the failure class, never the upstream diagnostic or credentials.
-		return errFrozenCandidateSourceRead
 	}
-	return fallback
+	if err == nil || errors.Is(err, fs.ErrPermission) || errors.Is(err, fs.ErrNotExist) || errors.Is(err, sql.ErrNoRows) || errors.Is(err, entity.ErrHookAdmissionDenied) {
+		return fallback
+	}
+	if status, ok := errorx.FromStatusError(err); ok {
+		// Upstream RPC contracts from data/foundation errno; do not import their domain modules.
+		const (
+			dataNoPermission       = 601100101
+			dataNotFound           = 601103001
+			dataUnauthorized       = 601103002
+			dataJSONError          = 601103003
+			dataFileNotFound       = 601104001
+			foundationNoPermission = 602000101
+		)
+		switch status.Code() {
+		case errno.CommonNoPermissionCode, errno.ResourceNotFoundCode,
+			dataNoPermission, dataNotFound, dataUnauthorized, dataJSONError, dataFileNotFound, foundationNoPermission:
+			return fallback
+		}
+	}
+	// Keep the failure class, never the upstream diagnostic or credentials.
+	return errFrozenSourceRead
 }
