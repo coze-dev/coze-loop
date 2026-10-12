@@ -3159,6 +3159,34 @@ func (p *RunModeConfig) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 13:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField14(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -3342,6 +3370,34 @@ func (p *RunModeConfig) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *RunModeConfig) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.MaxQaTurns = _field
+	return offset, nil
+}
+
+func (p *RunModeConfig) FastReadField14(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SuaQaReplyTemplate = _field
+	return offset, nil
+}
+
 func (p *RunModeConfig) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -3351,6 +3407,7 @@ func (p *RunModeConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	if p != nil {
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
+		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
@@ -3360,6 +3417,7 @@ func (p *RunModeConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField9(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
+		offset += p.fastWriteField14(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -3379,6 +3437,8 @@ func (p *RunModeConfig) BLength() int {
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
+		l += p.field13Length()
+		l += p.field14Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -3490,6 +3550,24 @@ func (p *RunModeConfig) fastWriteField12(buf []byte, w thrift.NocopyWriter) int 
 	return offset
 }
 
+func (p *RunModeConfig) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMaxQaTurns() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 13)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.MaxQaTurns)
+	}
+	return offset
+}
+
+func (p *RunModeConfig) fastWriteField14(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuaQaReplyTemplate() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 14)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SuaQaReplyTemplate)
+	}
+	return offset
+}
+
 func (p *RunModeConfig) field1Length() int {
 	l := 0
 	if p.IsSetRunMode() {
@@ -3593,6 +3671,24 @@ func (p *RunModeConfig) field12Length() int {
 	return l
 }
 
+func (p *RunModeConfig) field13Length() int {
+	l := 0
+	if p.IsSetMaxQaTurns() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *RunModeConfig) field14Length() int {
+	l := 0
+	if p.IsSetSuaQaReplyTemplate() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SuaQaReplyTemplate)
+	}
+	return l
+}
+
 func (p *RunModeConfig) DeepCopy(s interface{}) error {
 	src, ok := s.(*RunModeConfig)
 	if !ok {
@@ -3680,6 +3776,19 @@ func (p *RunModeConfig) DeepCopy(s interface{}) error {
 
 			p.Skills = append(p.Skills, _elem)
 		}
+	}
+
+	if src.MaxQaTurns != nil {
+		tmp := *src.MaxQaTurns
+		p.MaxQaTurns = &tmp
+	}
+
+	if src.SuaQaReplyTemplate != nil {
+		var tmp string
+		if *src.SuaQaReplyTemplate != "" {
+			tmp = kutils.StringDeepCopy(*src.SuaQaReplyTemplate)
+		}
+		p.SuaQaReplyTemplate = &tmp
 	}
 
 	return nil
