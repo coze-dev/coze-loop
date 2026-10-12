@@ -206,6 +206,11 @@ struct RunModeConfig {
     // 与 skills_mode 同容器同链路; 结构对齐 runtime testcase.Skill, 由 runtime 按
     // skills_mode 与题目级 dataset_item.skills 合并安装。
     12: optional list<AgentSkillDeclare> skills (go.tag = 'json:"skills"')
+    // max_qa_turns 实验级 QA(被测 Agent 反问)次数上限, 文本与工具提问共用同一个额度。
+    // **optional i32 是刻意的**: nil = 未配置, 0/负数 = 显式非法值, 由 runtime 拒绝; 不可合并。
+    13: optional i32 max_qa_turns (go.tag = 'json:"max_qa_turns"')
+    // sua_qa_reply_template 实验级 QA 回答设定(长 PE), 与正常续轮模板独立; 题目级优先。
+    14: optional string sua_qa_reply_template (go.tag = 'json:"sua_qa_reply_template"')
 }
 
 // Kept structurally aligned with domain/expt.thrift without cross-domain includes.
