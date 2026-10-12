@@ -541,7 +541,8 @@ func normalizeStandardEvalDatasetKeys(content *expt.StandardEvalOutputContent) e
 }
 
 func isItemStandardEvalOutputContentReady(item *entity.ItemResult) bool {
-	return item != nil && item.SystemInfo != nil && item.SystemInfo.RunState == entity.ItemRunState_Success
+	return item != nil && item.SystemInfo != nil &&
+		(item.SystemInfo.RunState == entity.ItemRunState_Success || item.SystemInfo.RunState == entity.ItemRunState_Fail)
 }
 
 func newItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBuildOptions) *expt.ItemStandardEvalOutput {
@@ -561,8 +562,7 @@ func newItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBu
 			}
 		}
 	}
-	// 沙箱日志链接刻意放在这里（即 isItemStandardEvalOutputContentReady 早退**之前**）：
-	// 那个门只放行 Success，而失败 item 恰恰最需要日志排障。
+	// 非终态也需要日志排障，因此日志链接在内容就绪校验前填充。
 	// item_id_only 精简查询下没加载 payload，取不到值自然为空、不填 key。
 	if logURL := sandboxLogURLFromItem(item, opt.ExptID); logURL != "" {
 		res.FornaxSandboxLogURL = gptr.Of(logURL)
