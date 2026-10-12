@@ -151,19 +151,22 @@ func TestBuildItemStandardEvalOutput_ProcessingOnlyReturnsMetadata(t *testing.T)
 	assert.Nil(t, got.Extra)
 }
 
-func TestBuildItemStandardEvalOutput_FailOnlyReturnsMetadata(t *testing.T) {
+func TestBuildItemStandardEvalOutput_FailReturnsAvailableContent(t *testing.T) {
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
 	item.SystemInfo.RunState = entity.ItemRunState_Fail
+	const rounds = `[{"round_id":"partial-round","output":{"answer":"partial answer"}}]`
+	injectFornaxField(item, "FORNAX_rounds", rounds)
 
 	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	assert.Equal(t, exptdomain.ItemRunState_Fail, got.GetStatus())
-	assert.Nil(t, got.Detail)
-	assert.Nil(t, got.Rounds)
-	assert.Nil(t, got.Agent)
-	assert.Nil(t, got.Output)
-	assert.Nil(t, got.Eval)
-	assert.Nil(t, got.Extra)
+	require.NotNil(t, got.Detail)
+	require.NotNil(t, got.Rounds)
+	assert.JSONEq(t, rounds, got.GetRounds().GetText())
+	assert.NotNil(t, got.Agent)
+	assert.NotNil(t, got.Output)
+	assert.NotNil(t, got.Eval)
+	assert.NotNil(t, got.Extra)
 }
 
 func TestBuildItemStandardEvalOutput_ItemEndTime(t *testing.T) {
@@ -1037,8 +1040,8 @@ func TestBuildItemStandardEvalOutput_FornaxSandboxLogURL(t *testing.T) {
 		got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 		require.NoError(t, err)
 		assert.Equal(t, "https://example.invalid/fail.log", got.GetFornaxSandboxLogURL())
-		// 失败 item 仍不产出内容块，确认早退语义没被破坏
-		assert.Nil(t, got.Detail)
+		assert.Equal(t, exptdomain.ItemRunState_Fail, got.GetStatus())
+		assert.NotNil(t, got.Detail)
 	})
 
 	t.Run("多轮取最后一个非空", func(t *testing.T) {
