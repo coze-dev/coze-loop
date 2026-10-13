@@ -32,7 +32,6 @@ import (
 )
 
 // emptyEvaluatorResultIDsJSONForRunLogUpdate 返回写入 expt_turn_result_run_log.evaluator_result_ids 的空 JSON。
-// GORM Updates(map) 会忽略值为 nil 的键，传 nil 无法清空 blob 列，旧 EvalVerIDToResID 会残留。
 func emptyEvaluatorResultIDsJSONForRunLogUpdate() []byte {
 	b, _ := (&entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{}}).Serialize()
 	return b
@@ -1022,6 +1021,7 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 		}
 
 		if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, plan.itemIDs, map[string]any{
+			"err_msg":     nil,
 			"status":      int32(entity.ItemRunState_Queueing),
 			"expt_run_id": event.ExptRunID,
 		}); err != nil {
@@ -1030,6 +1030,7 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 
 		if len(plan.preserveTargetTurns) > 0 {
 			if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, plan.preserveTargetTurns, event.SpaceID, map[string]any{
+				"err_msg":     nil,
 				"status":      int32(entity.TurnRunState_Queueing),
 				"expt_run_id": event.ExptRunID,
 			}); err != nil {
@@ -1038,6 +1039,7 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 		}
 		for targetResultID, turns := range plan.restoreTurnsByTargetID {
 			if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, turns, event.SpaceID, map[string]any{
+				"err_msg":          nil,
 				"status":           int32(entity.TurnRunState_Queueing),
 				"expt_run_id":      event.ExptRunID,
 				"target_result_id": targetResultID,
@@ -1047,6 +1049,7 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 		}
 		if len(plan.clearTargetTurns) > 0 {
 			if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, plan.clearTargetTurns, event.SpaceID, map[string]any{
+				"err_msg":          nil,
 				"status":           int32(entity.TurnRunState_Queueing),
 				"target_result_id": int64(0),
 				"expt_run_id":      event.ExptRunID,
@@ -1730,12 +1733,14 @@ func resetRetryRunLogsForItems(ctx context.Context, deps retryItemResetDeps, eve
 		return nil, nil
 	}
 	if err := deps.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, itemIDs, map[string]any{
+		"err_msg":     nil,
 		"status":      int32(entity.ItemRunState_Queueing),
 		"expt_run_id": event.ExptRunID,
 	}); err != nil {
 		return nil, err
 	}
 	if err := deps.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
+		"err_msg":          nil,
 		"status":           int32(entity.TurnRunState_Queueing),
 		"target_result_id": int64(0),
 		"expt_run_id":      event.ExptRunID,
@@ -1904,6 +1909,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		}
 
 		if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k }), map[string]any{
+			"err_msg":     nil,
 			"status":      int32(entity.ItemRunState_Queueing),
 			"expt_run_id": event.ExptRunID,
 		}); err != nil {
@@ -1911,6 +1917,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		}
 
 		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
+			"err_msg":          nil,
 			"status":           int32(entity.TurnRunState_Queueing),
 			"target_result_id": int64(0),
 			"expt_run_id":      event.ExptRunID,
@@ -2337,6 +2344,7 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 		}
 
 		if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, maps.ToSlice(itemIDMap, func(k int64, v bool) int64 { return k }), map[string]any{
+			"err_msg":     nil,
 			"status":      int32(entity.ItemRunState_Queueing),
 			"expt_run_id": event.ExptRunID,
 		}); err != nil {
@@ -2344,6 +2352,7 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 		}
 
 		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
+			"err_msg":          nil,
 			"status":           int32(entity.TurnRunState_Queueing),
 			"target_result_id": int64(0),
 			"expt_run_id":      event.ExptRunID,
