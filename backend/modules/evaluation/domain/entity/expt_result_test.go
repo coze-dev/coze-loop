@@ -341,6 +341,15 @@ func TestExptTurnResultFilterAccelerator_HasFilters(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "has ItemSnapshotCond with only ItemKey",
+			filter: &ExptTurnResultFilterAccelerator{
+				ItemSnapshotCond: &ItemSnapshotFilter{
+					ItemKey: &FieldFilter{Key: "item_key", Op: "LIKE", Values: []any{"题目"}},
+				},
+			},
+			want: true,
+		},
+		{
 			name: "has KeywordSearch with ItemSnapshotFilter BoolMapFilters",
 			filter: &ExptTurnResultFilterAccelerator{
 				KeywordSearch: &KeywordFilter{

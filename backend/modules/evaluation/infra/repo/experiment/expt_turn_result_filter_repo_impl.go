@@ -96,6 +96,7 @@ func itemSnapshotCondsEntityToCK(src []*entity.ItemSnapshotVersionCond) []*ck.It
 				FloatMapFilters:  fieldFiltersEntityToCK(s.Cond.FloatMapFilters),
 				IntMapFilters:    fieldFiltersEntityToCK(s.Cond.IntMapFilters),
 				StringMapFilters: fieldFiltersEntityToCK(s.Cond.StringMapFilters),
+				ItemKey:          fieldFilterEntityToCK(s.Cond.ItemKey),
 			},
 		})
 	}
@@ -147,6 +148,7 @@ func (e *ExptTurnResultFilterRepoImpl) QueryItemIDStates(ctx context.Context, fi
 			FloatMapFilters:  fieldFiltersEntityToCK(filter.ItemSnapshotCond.FloatMapFilters),
 			IntMapFilters:    fieldFiltersEntityToCK(filter.ItemSnapshotCond.IntMapFilters),
 			StringMapFilters: fieldFiltersEntityToCK(filter.ItemSnapshotCond.StringMapFilters),
+			ItemKey:          fieldFilterEntityToCK(filter.ItemSnapshotCond.ItemKey),
 		}
 	}
 	// ★ 多评测集：per-set 条件透传，DAO 侧按 dis.version_id 分组 OR。

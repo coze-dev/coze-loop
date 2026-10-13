@@ -8712,6 +8712,120 @@ func TestExptResultServiceImpl_mapItemSnapshotFilter_UnqueryableGroupFallsBack(t
 	})
 }
 
+// ItemKey（题目名称，快照表物理列 dis.item_key）作为评测集快照筛选条件：
+// 不做 schema mapping 翻译也能成组，且不因 schema 缺同名列被判 unmatched。
+func TestExptResultServiceImpl_mapItemSnapshotFilter_ItemKey(t *testing.T) {
+	multiSetExpt := func() *entity.Experiment {
+		return &entity.Experiment{
+			SpaceID: 1, ExptType: entity.ExptType_Offline,
+			EvalSetID: 10, EvalSetVersionID: 100,
+			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+			EvalConf: &entity.EvaluationConfiguration{
+				EvalSetConfigs: []*entity.EvalSetConfig{
+					{EvalSetID: 10, EvalSetVersionID: 100},
+					{EvalSetID: 20, EvalSetVersionID: 200},
+				},
+			},
+		}
+	}
+	newItemKeyFilter := func() *entity.ExptTurnResultFilterAccelerator {
+		return &entity.ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &entity.ItemSnapshotFilter{
+				ItemKey: &entity.FieldFilter{Key: "item_key", Op: "LIKE", Values: []any{"miniprogram"}},
+			},
+			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
+		}
+	}
+
+	t.Run("ItemKey-only 不提前返回，每个 per-set 组都带 ItemKey", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
+		// schema 里没有 item_key 同名列也不影响：ItemKey 是物理列条件，不查 mapping
+		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.QueryItemSnapshotMappingRequest) ([]*entity.ItemSnapshotFieldMapping, string, error) {
+				switch req.DatasetID {
+				case 10:
+					return []*entity.ItemSnapshotFieldMapping{
+						{FieldKey: "other", MappingKey: "string_map", MappingSubKey: "string_key_0"},
+					}, "2026-09-01", nil
+				case 20:
+					return nil, "2026-09-02", nil
+				}
+				t.Fatalf("unexpected datasetID %d", req.DatasetID)
+				return nil, "", nil
+			}).Times(2)
+		svc := ExptResultServiceImpl{evaluationSetService: mockEvalSetSvc}
+
+		filter := newItemKeyFilter()
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, multiSetExpt()))
+
+		require.Len(t, filter.ItemSnapshotCondBySet, 2)
+		assert.False(t, filter.ItemSnapshotCondUnmatched)
+		for _, set := range filter.ItemSnapshotCondBySet {
+			require.NotNil(t, set.Cond.ItemKey)
+			assert.Equal(t, "LIKE", set.Cond.ItemKey.Op)
+			assert.Equal(t, []any{"miniprogram"}, set.Cond.ItemKey.Values)
+		}
+		assert.Equal(t, int64(100), filter.ItemSnapshotCondBySet[0].EvalSetVersionID)
+		assert.Equal(t, "2026-09-01", filter.ItemSnapshotCondBySet[0].SyncCkDate)
+		assert.Equal(t, int64(200), filter.ItemSnapshotCondBySet[1].EvalSetVersionID)
+		assert.Equal(t, "2026-09-02", filter.ItemSnapshotCondBySet[1].SyncCkDate)
+		// 主集那组回填单值字段 + 分区日期
+		require.NotNil(t, filter.ItemSnapshotCond.ItemKey)
+		assert.Equal(t, "2026-09-01", filter.EvalSetSyncCkDate)
+		// ItemKey-only 必须能触发 accelerator 分支
+		assert.True(t, filter.HasFilters())
+	})
+
+	t.Run("translateItemSnapshotCond 原样透传 ItemKey 且不影响 full 判定", func(t *testing.T) {
+		src := &entity.ItemSnapshotFilter{
+			ItemKey: &entity.FieldFilter{Op: "LIKE", Values: []any{"kw"}},
+		}
+		dst, full := translateItemSnapshotCond(context.Background(), src, map[string]*entity.ItemSnapshotFieldMapping{}, false, false)
+		assert.True(t, full)
+		require.NotNil(t, dst.ItemKey)
+		assert.Equal(t, "LIKE", dst.ItemKey.Op)
+		assert.Equal(t, []any{"kw"}, dst.ItemKey.Values)
+	})
+
+	t.Run("非法 ItemKey 告警丢弃后等价于无快照条件", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc := ExptResultServiceImpl{evaluationSetService: svcMocks.NewMockIEvaluationSetService(ctrl)}
+		// 不应有任何 mapping 调用
+		expt := &entity.Experiment{SpaceID: 1, EvalSetID: 10, EvalSetVersionID: 100, ExptType: entity.ExptType_Offline}
+
+		for _, bad := range []*entity.FieldFilter{
+			{Op: "=", Values: []any{"v"}},         // 非 LIKE
+			{Op: "LIKE", Values: []any{"a", "b"}}, // 多值
+			{Op: "LIKE"},                          // 空值
+			{Op: "LIKE", Values: []any{123}},      // 非 string
+		} {
+			filter := &entity.ExptTurnResultFilterAccelerator{
+				ItemSnapshotCond: &entity.ItemSnapshotFilter{ItemKey: bad},
+			}
+			require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, expt))
+			assert.Nil(t, filter.ItemSnapshotCond.ItemKey)
+			assert.Empty(t, filter.ItemSnapshotCondBySet)
+			assert.False(t, filter.ItemSnapshotCondUnmatched)
+			assert.False(t, filter.HasFilters())
+		}
+	})
+
+	// mapping RPC 全失败必须报错（ItemKey 也依赖它解析分区日期 sync_ck_date），与 StringMapFilters 路径一致
+	t.Run("mapping 查询全失败时报错", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		allFail := svcMocks.NewMockIEvaluationSetService(ctrl)
+		allFail.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
+			Return(nil, "", errors.New("fieldMapping not found")).Times(2)
+		svc := ExptResultServiceImpl{evaluationSetService: allFail}
+
+		assert.Error(t, svc.mapItemSnapshotFilter(context.Background(), newItemKeyFilter(), multiSetExpt()))
+	})
+}
+
 // loadItemEvalSetRefs：未注入 repo / 空 itemIDs / 查询失败 / 正常映射四条分支。
 func TestExptResultServiceImpl_loadItemEvalSetRefs(t *testing.T) {
 	ctx := context.Background()

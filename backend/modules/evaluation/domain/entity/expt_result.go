@@ -709,6 +709,9 @@ type ItemSnapshotFilter struct {
 	FloatMapFilters  []*FieldFilter
 	IntMapFilters    []*FieldFilter
 	StringMapFilters []*FieldFilter
+	// ItemKey 对快照表物理列 dis.item_key（题目名称元数据）的筛选，不参与 schema
+	// field_key -> map subkey 的映射翻译；与其他 map 条件是 AND 关系，nil 表示不筛。
+	ItemKey *FieldFilter `json:"item_key,omitempty"`
 }
 
 type KeywordFilter struct {
@@ -800,7 +803,8 @@ func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
 	hasFilters = hasFilters || (e.ItemSnapshotCond != nil && (len(e.ItemSnapshotCond.BoolMapFilters) > 0 ||
 		len(e.ItemSnapshotCond.FloatMapFilters) > 0 ||
 		len(e.ItemSnapshotCond.IntMapFilters) > 0 ||
-		len(e.ItemSnapshotCond.StringMapFilters) > 0))
+		len(e.ItemSnapshotCond.StringMapFilters) > 0 ||
+		e.ItemSnapshotCond.ItemKey != nil))
 	hasFilters = hasFilters || (e.KeywordSearch != nil && ((e.KeywordSearch.ItemSnapshotFilter != nil && (len(e.KeywordSearch.ItemSnapshotFilter.BoolMapFilters) > 0 ||
 		len(e.KeywordSearch.ItemSnapshotFilter.FloatMapFilters) > 0 ||
 		len(e.KeywordSearch.ItemSnapshotFilter.IntMapFilters) > 0 ||
