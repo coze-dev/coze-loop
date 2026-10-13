@@ -67,6 +67,8 @@ const (
 	SandboxCountModeMacVMPlusSandbox = "mac_vm_plus_sandbox"
 	// orchestrator + SSH/Runner sandbox + Mac VM Remote-SSH IDE
 	SandboxCountModeMacVMPlusSSH = "mac_vm_plus_ssh"
+	// ⚠️ 只对远程 FaaS 对象成立，配给本地 CLI/GUI 对象会被 runtime fail-closed 拒绝。
+	SandboxCountModeShared = "shared"
 )
 
 type EvalTargetType = string
