@@ -568,3 +568,41 @@ func TestExptTurnResultFilterAccelerator_HasFilters_EvalTargetMetricsFilters(t *
 		})
 	}
 }
+
+func TestExptTurnResultFilterAccelerator_HasItemKeyFilter(t *testing.T) {
+	itemKey := &FieldFilter{Key: "item_key", Op: "LIKE", Values: []any{"kw"}}
+	tests := []struct {
+		name   string
+		filter *ExptTurnResultFilterAccelerator
+		want   bool
+	}{
+		{name: "nil filter", filter: &ExptTurnResultFilterAccelerator{}, want: false},
+		{name: "无快照条件", filter: &ExptTurnResultFilterAccelerator{
+			ItemIDs: []*FieldFilter{{Key: "item_id"}},
+		}, want: false},
+		{name: "ItemSnapshotCond 仅 map 条件", filter: &ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &ItemSnapshotFilter{
+				StringMapFilters: []*FieldFilter{{Key: "f"}},
+			},
+		}, want: false},
+		{name: "ItemSnapshotCond 带 ItemKey", filter: &ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &ItemSnapshotFilter{ItemKey: itemKey},
+		}, want: true},
+		{name: "per-set 组无 Cond（名称命中标记组）", filter: &ExptTurnResultFilterAccelerator{
+			ItemSnapshotCondBySet: []*ItemSnapshotVersionCond{
+				{EvalSetID: 5, EvalSetVersionID: 7, SyncCkDate: "2026-10-13"},
+			},
+		}, want: false},
+		{name: "per-set 组带 ItemKey", filter: &ExptTurnResultFilterAccelerator{
+			ItemSnapshotCondBySet: []*ItemSnapshotVersionCond{
+				{EvalSetID: 5, EvalSetVersionID: 7, SyncCkDate: "2026-10-13",
+					Cond: &ItemSnapshotFilter{ItemKey: itemKey}},
+			},
+		}, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.filter.HasItemKeyFilter())
+		})
+	}
+}

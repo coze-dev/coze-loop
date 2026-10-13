@@ -787,6 +787,22 @@ type ExptTurnResultFilterAccelerator struct {
 	IsOnlineExpt bool `json:"is_online_expt"`
 }
 
+// HasItemKeyFilter 判断请求是否携带 item_key（题目名称物理列）强筛选。
+// 该筛选由本链路显式引入，语义上「查不到条件满足的题」≠「返回全部题」：
+// 任何一层若吞掉校验/mapping/CK 错误并回退无筛选查询，会静默返回未筛选全量。
+// 因此 Repo/Service 对该路径 fail-loud 透传错误；旧请求保持既有容错回退策略。
+func (e *ExptTurnResultFilterAccelerator) HasItemKeyFilter() bool {
+	if e.ItemSnapshotCond != nil && e.ItemSnapshotCond.ItemKey != nil {
+		return true
+	}
+	for _, group := range e.ItemSnapshotCondBySet {
+		if group != nil && group.Cond != nil && group.Cond.ItemKey != nil {
+			return true
+		}
+	}
+	return false
+}
+
 func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
 	hasFilters := e.EvaluatorScoreCorrected != nil ||
 		len(e.ItemIDs) > 0 ||

@@ -5,6 +5,7 @@ package experiment
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -548,4 +549,56 @@ func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_ItemKeyPassthrough(t *te
 		},
 	})
 	assert.NoError(t, err)
+}
+
+// item_key 强筛选请求：DAO 错误必须透传（吞错返回空集会被上层当真实零命中，
+// 且触发 service 层无筛选回退）；旧请求保持既有吞错容错。
+func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_ItemKeyErrorPropagation(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockDAO := ckmocks.NewMockIExptTurnResultFilterDAO(ctrl)
+	mockKeyMappingDAO := mysqlmocks.NewMockIExptTurnResultFilterKeyMappingDAO(ctrl)
+	repo := NewExptTurnResultFilterRepo(mockDAO, mockKeyMappingDAO)
+
+	daoErr := errors.New("ck rpc error")
+	itemKeyFilter := &entity.ExptTurnResultFilterAccelerator{
+		SpaceID: 1, ExptID: 1,
+		ItemSnapshotCond: &entity.ItemSnapshotFilter{
+			ItemKey: &entity.FieldFilter{Key: "item_key", Op: "LIKE", Values: []any{"deepswe"}},
+		},
+	}
+	legacyFilter := &entity.ExptTurnResultFilterAccelerator{
+		SpaceID: 1, ExptID: 1,
+		ItemIDs: []*entity.FieldFilter{{Key: "item_id", Op: "=", Values: []any{"10"}}},
+	}
+	perSetFilter := &entity.ExptTurnResultFilterAccelerator{
+		SpaceID: 1, ExptID: 1,
+		ItemSnapshotCondBySet: []*entity.ItemSnapshotVersionCond{
+			{EvalSetID: 5, EvalSetVersionID: 7, SyncCkDate: "2026-10-13",
+				Cond: &entity.ItemSnapshotFilter{
+					ItemKey: &entity.FieldFilter{Key: "item_key", Op: "LIKE", Values: []any{"deepswe"}},
+				}},
+		},
+	}
+
+	t.Run("单值 ItemKey 条件透传 DAO 错误", func(t *testing.T) {
+		mockDAO.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).Return(nil, int64(0), daoErr).Times(1)
+		_, _, err := repo.QueryItemIDStates(context.Background(), itemKeyFilter)
+		assert.Equal(t, daoErr, err)
+	})
+
+	t.Run("per-set ItemKey 条件透传 DAO 错误", func(t *testing.T) {
+		mockDAO.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).Return(nil, int64(0), daoErr).Times(1)
+		_, _, err := repo.QueryItemIDStates(context.Background(), perSetFilter)
+		assert.Equal(t, daoErr, err)
+	})
+
+	t.Run("旧请求保持吞错返回空集", func(t *testing.T) {
+		mockDAO.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).Return(nil, int64(0), daoErr).Times(1)
+		states, total, err := repo.QueryItemIDStates(context.Background(), legacyFilter)
+		assert.NoError(t, err)
+		assert.Empty(t, states)
+		assert.Equal(t, int64(0), total)
+	})
 }

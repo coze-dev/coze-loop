@@ -9399,3 +9399,108 @@ func TestExptResultBuilder_fillProcessingTargetResultID_RestoresZombieTargetResu
 	require.NoError(t, err)
 	assert.Equal(t, targetResultID, builder.turnResultDO[0].TargetResultID)
 }
+
+// item_key 强筛选路径必须 fail-loud：校验 / mapping / CK 任一失败都直接返回错误，
+// 不能吞错后用空 itemIDs + 原分页回退 RDS（等于未筛选全量，且覆盖原始错误）。
+// 旧请求（无 item_key）保持既有容错回退策略。
+func TestExptResultServiceImpl_ListTurnResult_ItemKeyFailLoud(t *testing.T) {
+	now := time.Now()
+	itemKeyCond := &entity.ItemSnapshotFilter{
+		ItemKey: &entity.FieldFilter{Key: "item_key", Op: "LIKE", Values: []any{"deepswe"}},
+	}
+	newParam := func(acc *entity.ExptTurnResultFilterAccelerator) *entity.MGetExperimentResultParam {
+		return &entity.MGetExperimentResultParam{
+			SpaceID:            100,
+			ExptIDs:            []int64{1},
+			BaseExptID:         gptr.Of(int64(1)),
+			UseAccelerator:     true,
+			FilterAccelerators: map[int64]*entity.ExptTurnResultFilterAccelerator{1: acc},
+			Page:               entity.NewPage(1, 20),
+		}
+	}
+	baseExpt := &entity.Experiment{
+		ID: 1, SpaceID: 100, ExptType: entity.ExptType_Offline, StartAt: &now,
+		EvalSetID: 5, EvalSetVersionID: 7,
+	}
+
+	t.Run("CK 查询失败直接返回错误，不回退 RDS", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
+		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
+			Return(nil, "2026-10-13", nil).Times(1)
+		mockMetric := metricsMocks.NewMockExptMetric(ctrl)
+		mockMetric.EXPECT().EmitExptTurnResultFilterQueryLatency(gomock.Any(), gomock.Any(), true).Times(1)
+		mockFilterRepo := repoMocks.NewMockIExptTurnResultFilterRepo(ctrl)
+		// DAO 错误经 Repo 透传（Repo 层已对 ItemKey fail-loud）
+		mockFilterRepo.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).
+			Return(nil, int64(0), errors.New("ck query timeout")).Times(1)
+
+		svc := ExptResultServiceImpl{
+			evaluationSetService:      mockEvalSetSvc,
+			Metric:                    mockMetric,
+			exptTurnResultFilterRepo: mockFilterRepo,
+		}
+
+		// 不 mock ListTurnResultByItemIDs / BatchGet：gomock 严格模式下一旦回退即测试失败
+		_, _, _, err := svc.ListTurnResult(context.Background(), newParam(&entity.ExptTurnResultFilterAccelerator{
+			SpaceID: 100, ExptID: 1, ItemSnapshotCond: itemKeyCond,
+		}), baseExpt)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ck query timeout")
+	})
+
+	t.Run("mapping 失败直接返回错误，不回退 RDS", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
+		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
+			Return(nil, "", errors.New("mapping rpc error")).Times(1)
+
+		svc := ExptResultServiceImpl{evaluationSetService: mockEvalSetSvc}
+
+		// 不 mock QueryItemIDStates / ListTurnResultByItemIDs：一旦继续走即测试失败
+		_, _, _, err := svc.ListTurnResult(context.Background(), newParam(&entity.ExptTurnResultFilterAccelerator{
+			SpaceID: 100, ExptID: 1, ItemSnapshotCond: itemKeyCond,
+		}), baseExpt)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "mapping rpc error")
+	})
+
+	t.Run("旧请求（无 item_key）保持容错回退", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockMetric := metricsMocks.NewMockExptMetric(ctrl)
+		mockMetric.EXPECT().EmitExptTurnResultFilterQueryLatency(gomock.Any(), gomock.Any(), true).Times(1)
+		mockFilterRepo := repoMocks.NewMockIExptTurnResultFilterRepo(ctrl)
+		mockFilterRepo.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).
+			Return(nil, int64(0), errors.New("ck query timeout")).Times(1)
+		mockTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+		// 回退路径：空 itemIDs + 原分页查 RDS
+		mockTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(1), gomock.Nil(), gomock.Any(), false).
+			Return([]*entity.ExptTurnResult{
+				{ID: 1, SpaceID: 100, ExptID: 1, ItemID: 10, TurnID: 20, Status: int32(entity.TurnRunState_Success)},
+			}, int64(1), nil).Times(1)
+		mockItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+		mockItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(100), int64(1), gomock.Any()).
+			Return([]*entity.ExptItemResult{{ID: 1, ItemID: 10, SpaceID: 100, ExptID: 1, ItemIdx: 1}}, nil).Times(1)
+
+		svc := ExptResultServiceImpl{
+			Metric:                    mockMetric,
+			exptTurnResultFilterRepo: mockFilterRepo,
+			ExptTurnResultRepo:        mockTurnResultRepo,
+			ExptItemResultRepo:        mockItemResultRepo,
+		}
+
+		turnResults, _, total, err := svc.ListTurnResult(context.Background(), newParam(&entity.ExptTurnResultFilterAccelerator{
+			SpaceID: 100, ExptID: 1,
+			ItemIDs: []*entity.FieldFilter{{Key: "item_id", Op: "=", Values: []any{"10"}}},
+		}), baseExpt)
+		require.NoError(t, err)
+		assert.Len(t, turnResults, 1)
+		assert.Equal(t, int64(1), total)
+	})
+}
