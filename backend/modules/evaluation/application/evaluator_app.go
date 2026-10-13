@@ -2153,6 +2153,16 @@ func (e *EvaluatorHandlerImpl) AsyncDebugEvaluator(ctx context.Context, req *eva
 	if err != nil {
 		return nil, err
 	}
+	if req.EvaluatorType == evaluatordto.EvaluatorType_CustomRPC {
+		// Async debugging must not inherit the synchronous management-space exception.
+		allowed, policyErr := e.configer.CheckCustomRPCEvaluatorWritable(ctx, strconv.FormatInt(req.WorkspaceID, 10), nil)
+		if policyErr != nil {
+			return nil, policyErr
+		}
+		if !allowed {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("current app does not support async custom RPC evaluator"))
+		}
+	}
 	if req.InputData != nil {
 		inputMaps := []map[string]*evaluatorcommon.Content{req.InputData.InputFields}
 		if req.EvaluatorType == evaluatordto.EvaluatorType_CustomRPC {

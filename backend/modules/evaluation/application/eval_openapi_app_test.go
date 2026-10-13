@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	infraredis "github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
 	evaluation "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	domainexpt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
@@ -38,6 +39,7 @@ import (
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	experimentredisdao "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/redis/dao"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
@@ -9620,4 +9622,33 @@ func TestEvalOpenAPIApplication_ListEvaluationSetVersionsOApi_SharedExecuteHides
 	assert.Equal(t, versionID, resp.Data.Versions[0].GetID())
 	assert.Nil(t, resp.Data.Versions[0].EvaluationSetSchema)
 	assert.NotNil(t, version.EvaluationSetSchema)
+}
+
+func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult_ExpiredDebugContext(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	redisClient := infraredis.NewTestRedis(t)
+	asyncRepo := experimentredisdao.NewEvalAsyncDAO(redisClient, nil)
+	ctx := context.Background()
+	require.NoError(t, asyncRepo.SetEvalAsyncCtx(ctx, "evaluator:42", &entity.EvalAsyncCtx{RecordID: 42, ResumeReady: true}))
+	fresh, err := asyncRepo.GetEvalAsyncCtxStrong(ctx, "evaluator:42")
+	require.NoError(t, err)
+	require.Equal(t, int64(42), fresh.RecordID)
+	raw, ok := infraredis.Unwrap(redisClient)
+	require.True(t, ok)
+	expired, err := raw.Expire(ctx, "[experiment]item_turn_eval_async_ctx:evaluator:42", 0).Result()
+	require.NoError(t, err)
+	require.True(t, expired)
+	app := &EvalOpenAPIApplication{
+		auth: auth, asyncRepo: asyncRepo,
+		evaluatorService: servicemocks.NewMockEvaluatorService(ctrl),
+		publisher:        eventmocks.NewMockExptEventPublisher(ctrl),
+	}
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	resp, err := app.ReportEvaluatorInvokeResult_(ctx, &openapi.ReportEvaluatorInvokeResultRequest{
+		WorkspaceID: gptr.Of(int64(1001)), InvokeID: gptr.Of(int64(42)), Status: gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
+		Output: &spi.InvokeEvaluatorOutputData{EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(1.0)}},
+	})
+	require.ErrorContains(t, err, "eval async context not found after bounded retry")
+	require.Nil(t, resp)
 }
