@@ -1164,14 +1164,21 @@ func (e *EvaluatorServiceImpl) failAsyncEvaluatorRecord(ctx context.Context, rec
 	return record, runErr
 }
 
-// AsyncDebugEvaluator Agent evaluator_version 异步调试
+// AsyncDebugEvaluator evaluator_version 异步调试
 func (e *EvaluatorServiceImpl) AsyncDebugEvaluator(ctx context.Context, request *entity.AsyncDebugEvaluatorRequest) (*entity.AsyncDebugEvaluatorResponse, error) {
 	evaluatorDO := request.EvaluatorDO
 	if evaluatorDO == nil {
 		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode, errorx.WithExtraMsg("evaluator is nil"))
 	}
+	if evaluatorDO.EvaluatorType == entity.EvaluatorTypeCustomRPC {
+		record, err := e.asyncDebugCustomRPCEvaluator(ctx, request)
+		if err != nil {
+			return nil, err
+		}
+		return &entity.AsyncDebugEvaluatorResponse{InvokeID: record.ID, TraceID: record.TraceID}, nil
+	}
 	if evaluatorDO.EvaluatorType != entity.EvaluatorTypeAgent {
-		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("async debug only supports Agent evaluator type"))
+		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("async debug only supports Agent or CustomRPC evaluator type"))
 	}
 	if allow := e.limiter.AllowInvoke(ctx, request.SpaceID); !allow {
 		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to space-level rate limit"))
@@ -1226,6 +1233,90 @@ func (e *EvaluatorServiceImpl) AsyncDebugEvaluator(ctx context.Context, request 
 		InvokeID: invokeID,
 		TraceID:  traceID,
 	}, nil
+}
+
+func (e *EvaluatorServiceImpl) asyncDebugCustomRPCEvaluator(ctx context.Context, request *entity.AsyncDebugEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+	evaluatorDO := request.EvaluatorDO
+	if evaluatorDO.Builtin {
+		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("builtin CustomRPC evaluator does not support async debug"))
+	}
+	if err := checkEvaluatorSpaceAccess(evaluatorDO, request.SpaceID, nil); err != nil {
+		return nil, err
+	}
+	version := evaluatorDO.CustomRPCEvaluatorVersion
+	if version == nil || !version.IsAsync {
+		return nil, errorx.NewByCode(errno.InvalidEvaluatorConfigurationCode, errorx.WithExtraMsg("CustomRPC evaluator is not configured for async debug"))
+	}
+	if err := version.ValidateBaseInfo(); err != nil {
+		return nil, err
+	}
+	if err := version.ValidateInput(request.InputData); err != nil {
+		return nil, err
+	}
+	evaluatorSourceService, ok := e.evaluatorSourceServices[entity.EvaluatorTypeCustomRPC]
+	if !ok {
+		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("evaluator source service not found for CustomRPC type"))
+	}
+	if !e.limiter.AllowInvoke(ctx, request.SpaceID) {
+		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to space-level rate limit"))
+	}
+	invokeID, err := e.idgen.GenID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now().UnixMilli()
+	userID := session.UserIDInCtxOrEmpty(ctx)
+	record := &entity.EvaluatorRecord{
+		ID:                  invokeID,
+		SpaceID:             request.SpaceID,
+		LogID:               logs.GetLogID(ctx),
+		EvaluatorInputData:  request.InputData,
+		EvaluatorOutputData: &entity.EvaluatorOutputData{},
+		Status:              entity.EvaluatorRunStatusAsyncInvoking,
+		BaseInfo: &entity.BaseInfo{
+			CreatedBy: &entity.UserInfo{UserID: gptr.Of(userID)},
+			UpdatedBy: &entity.UserInfo{UserID: gptr.Of(userID)},
+			CreatedAt: gptr.Of(now),
+			UpdatedAt: gptr.Of(now),
+		},
+	}
+	// Persistence truncation and provider input unfolding must not mutate each other's input.
+	persistedRecord := *record
+	persistedRecord.EvaluatorInputData = deepCopyEvaluatorInputData(request.InputData)
+	if persistedRecord.EvaluatorInputData == request.InputData {
+		return nil, errorx.New("deep copy evaluator input data failed")
+	}
+	if err := e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, &persistedRecord); err != nil {
+		return nil, err
+	}
+	if e.evalAsyncRepo == nil {
+		return e.failAsyncEvaluatorRecord(ctx, record, errorx.New("eval async repo is nil"))
+	}
+	asyncCtx := &entity.EvalAsyncCtx{
+		RecordID:    invokeID,
+		AsyncUnixMS: now,
+		Session:     &entity.Session{UserID: userID},
+		// Match AsyncRun construction; Event=nil debug callbacks do not consume ResumeReady.
+		ResumeReady: true,
+	}
+	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, fmt.Sprintf("evaluator:%d", invokeID), asyncCtx); err != nil {
+		return e.failAsyncEvaluatorRecord(ctx, record, err)
+	}
+
+	ext, traceID, err := evaluatorSourceService.AsyncDebug(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
+	if err != nil {
+		return e.failAsyncEvaluatorRecord(ctx, record, err)
+	}
+	record.TraceID = traceID
+	record.EvaluatorOutputData.Ext = ext
+	if traceID != "" || len(ext) > 0 {
+		if err := e.evaluatorRecordRepo.UpdateEvaluatorRecordAsyncDispatch(ctx, record.ID, record.SpaceID, traceID, record.EvaluatorOutputData); err != nil {
+			// Accepted work must remain eligible for callbacks even if dispatch metadata cannot be saved.
+			logs.CtxError(ctx, "[AsyncDebugEvaluator] persist dispatch metadata fail, invokeID: %d, err: %v", invokeID, err)
+		}
+	}
+	return record, nil
 }
 
 // ReportEvaluatorInvokeResult 上报评估器异步执行结果 using a terminal CAS.

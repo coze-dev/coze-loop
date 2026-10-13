@@ -2154,10 +2154,15 @@ func (e *EvaluatorHandlerImpl) AsyncDebugEvaluator(ctx context.Context, req *eva
 		return nil, err
 	}
 	if req.InputData != nil {
-		err = e.transformURIsToURLs(ctx, req.InputData.InputFields)
-		if err != nil {
-			logs.CtxError(ctx, "failed to transform URIs to URLs: %v", err)
-			return nil, err
+		inputMaps := []map[string]*evaluatorcommon.Content{req.InputData.InputFields}
+		if req.EvaluatorType == evaluatordto.EvaluatorType_CustomRPC {
+			inputMaps = append(inputMaps, req.InputData.EvaluateDatasetFields, req.InputData.EvaluateTargetOutputFields)
+		}
+		for _, fields := range inputMaps {
+			if err = e.transformURIsToURLs(ctx, fields); err != nil {
+				logs.CtxError(ctx, "failed to transform URIs to URLs: %v", err)
+				return nil, err
+			}
 		}
 	}
 	dto := &evaluatordto.Evaluator{
@@ -2193,15 +2198,18 @@ func (e *EvaluatorHandlerImpl) AsyncDebugEvaluator(ctx context.Context, req *eva
 		return nil, err
 	}
 
-	asyncCtxKey := fmt.Sprintf("evaluator:%d", resp.InvokeID)
-	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
-		RecordID:           resp.InvokeID,
-		AsyncUnixMS:        startTime.UnixMilli(),
-		Session:            &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)},
-		EvaluatorVersionID: do.GetEvaluatorVersionID(),
-	}); err != nil {
-		logs.CtxError(ctx, "[AsyncDebugEvaluator] SetEvalAsyncCtx fail, invokeID: %d, err: %v", resp.InvokeID, err)
-		return nil, err
+	// CustomRPC owns its context before dispatch so fast callbacks cannot race this write.
+	if do.EvaluatorType != entity.EvaluatorTypeCustomRPC {
+		asyncCtxKey := fmt.Sprintf("evaluator:%d", resp.InvokeID)
+		if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
+			RecordID:           resp.InvokeID,
+			AsyncUnixMS:        startTime.UnixMilli(),
+			Session:            &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)},
+			EvaluatorVersionID: do.GetEvaluatorVersionID(),
+		}); err != nil {
+			logs.CtxError(ctx, "[AsyncDebugEvaluator] SetEvalAsyncCtx fail, invokeID: %d, err: %v", resp.InvokeID, err)
+			return nil, err
+		}
 	}
 
 	return &evaluatorservice.AsyncDebugEvaluatorResponse{

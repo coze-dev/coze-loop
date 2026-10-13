@@ -9598,3 +9598,62 @@ func TestAsyncDebugEvaluator_ErrorBranches(t *testing.T) {
 		assert.Equal(t, int64(777), resp.GetInvokeID())
 	})
 }
+
+func TestEvaluatorHandlerImpl_AsyncDebugEvaluator_CustomRPCInputsAndContextOwnership(t *testing.T) {
+	for _, failURI := range []string{"", "dataset-uri", "target-uri"} {
+		t.Run("file error "+failURI, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+			mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+			mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+			mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
+			handler := &EvaluatorHandlerImpl{evaluatorService: mockEvaluatorService, auth: mockAuth, evalAsyncRepo: mockEvalAsyncRepo, fileProvider: mockFileProvider}
+			imageContent := func(uri string) *common.Content {
+				return &common.Content{ContentType: gptr.Of(common.ContentType(common.ContentTypeImage)), Image: &common.Image{URI: gptr.Of(uri)}}
+			}
+			req := &evaluatorservice.AsyncDebugEvaluatorRequest{
+				WorkspaceID: 2, EvaluatorType: evaluatordto.EvaluatorType_CustomRPC,
+				EvaluatorContent: &evaluatordto.EvaluatorContent{CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
+					IsAsync: gptr.Of(true), AccessProtocol: "rpc", ServiceName: gptr.Of("test.custom.evaluator"),
+				}},
+				InputData: &evaluatordto.EvaluatorInputData{
+					InputFields:                map[string]*common.Content{"input": imageContent("input-uri")},
+					EvaluateDatasetFields:      map[string]*common.Content{"dataset": imageContent("dataset-uri")},
+					EvaluateTargetOutputFields: map[string]*common.Content{"target": imageContent("target-uri")},
+				},
+				EvaluatorRunConf: &evaluatordto.EvaluatorRunConfig{EvaluatorRuntimeParam: &common.RuntimeParam{JSONValue: gptr.Of(`{"mode":"fast"}`)}},
+			}
+			mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			for _, uri := range []string{"input-uri", "dataset-uri", "target-uri"} {
+				if uri == failURI {
+					mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), []string{uri}).Return(nil, errors.New("file unavailable"))
+					break
+				}
+				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), []string{uri}).Return(map[string]string{uri: "https://example.com/" + uri}, nil)
+			}
+			if failURI == "" {
+				mockEvaluatorService.EXPECT().AsyncDebugEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, got *entity.AsyncDebugEvaluatorRequest) (*entity.AsyncDebugEvaluatorResponse, error) {
+					assert.Equal(t, "https://example.com/input-uri", gptr.Indirect(got.InputData.InputFields["input"].Image.URL))
+					assert.Equal(t, "https://example.com/dataset-uri", gptr.Indirect(got.InputData.EvaluateDatasetFields["dataset"].Image.URL))
+					assert.Equal(t, "https://example.com/target-uri", gptr.Indirect(got.InputData.EvaluateTargetOutputFields["target"].Image.URL))
+					assert.Equal(t, `{"mode":"fast"}`, got.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+					assert.Equal(t, `{"mode":"fast"}`, gptr.Indirect(got.EvaluatorRunConf.EvaluatorRuntimeParam.JSONValue))
+					assert.True(t, got.EvaluatorDO.CustomRPCEvaluatorVersion.IsAsync)
+					assert.Zero(t, got.EvaluatorDO.GetEvaluatorVersionID())
+					return &entity.AsyncDebugEvaluatorResponse{InvokeID: 999}, nil
+				})
+			}
+			// The service owns the context; a second write could overwrite a fast callback's state.
+			mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			resp, err := handler.AsyncDebugEvaluator(context.Background(), req)
+			if failURI != "" {
+				require.Error(t, err)
+				assert.Nil(t, resp)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				assert.Equal(t, int64(999), resp.GetInvokeID())
+			}
+		})
+	}
+}
