@@ -478,6 +478,7 @@ func Test_ExptItemEvalCtxExecutor_CompleteItemRun_NoItemCompletePublish(t *testi
 			}
 			wantFields := map[string]any{
 				"result_state": entity.ExptItemResultStateLogged,
+				"err_msg":      nil,
 				"status":       int32(entity.ItemRunState_Success),
 			}
 			if tt.evalErr != nil {

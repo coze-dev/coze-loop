@@ -48,11 +48,12 @@ func (m turnResetMapMatcher) Matches(x any) bool {
 	if got["expt_run_id"] != m.wantRunID {
 		return false
 	}
-	return true
+	value, exists := got["err_msg"]
+	return exists && value == nil
 }
 
 func (m turnResetMapMatcher) String() string {
-	return "map{status:Queueing, target_result_id:0, expt_run_id:<new>}"
+	return "map{status:Queueing, target_result_id:0, expt_run_id:<new>, err_msg:nil}"
 }
 
 // TestExptFailRetryExec_ExptStart_PreservesSuccessfulTargetAndClearsFailedTarget 覆盖批量失败重试:
@@ -98,6 +99,7 @@ func TestExptFailRetryExec_ExptStart_PreservesSuccessfulTargetAndClearsFailedTar
 	exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 
 	exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, gomock.Any(), map[string]any{
+		"err_msg":     nil,
 		"status":      int32(entity.ItemRunState_Queueing),
 		"expt_run_id": newRunID,
 	}).Return(nil).Times(1)
@@ -161,6 +163,7 @@ func TestExptRetryAllExec_ExptStart_ResetsTurnResultTargetAndRunID(t *testing.T)
 
 	f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{600, 601}, nil).Times(1)
 	f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, gomock.Any(), map[string]any{
+		"err_msg":     nil,
 		"status":      int32(entity.ItemRunState_Queueing),
 		"expt_run_id": newRunID,
 	}).Return(nil).Times(1)
@@ -221,6 +224,7 @@ func TestExptRetryItemsExec_ResetEvalItems_ResetsTurnResultTargetAndRunID(t *tes
 	f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{800, 801}, nil).Times(1)
 	f.exptItemResultRepo.EXPECT().MGetItemResults(gomock.Any(), exptID, gomock.Any(), spaceID).Return([]*entity.ExptItemResult{{ItemID: itemID, Status: entity.ItemRunState_Fail}}, nil).Times(1)
 	f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, gomock.Any(), map[string]any{
+		"err_msg":     nil,
 		"status":      int32(entity.ItemRunState_Queueing),
 		"expt_run_id": newRunID,
 	}).Return(nil).Times(1)
@@ -481,6 +485,7 @@ func TestResetRetryRunLogsForItems_VersionPrecedenceAndTurnMap(t *testing.T) {
 
 	deps.idgenerator.(*idgenmocks.MockIIDGenerator).EXPECT().GenMultiIDs(gomock.Any(), 6).Return([]int64{1, 2, 3, 4, 5, 6}, nil).Times(1)
 	deps.exptItemResultRepo.(*mock_repo.MockIExptItemResultRepo).EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, gomock.Any(), map[string]any{
+		"err_msg":     nil,
 		"status":      int32(entity.ItemRunState_Queueing),
 		"expt_run_id": newRunID,
 	}).Return(nil).Times(1)

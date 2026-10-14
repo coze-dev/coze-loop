@@ -506,6 +506,7 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 
 	ufields := map[string]any{
 		"result_state": entity.ExptItemResultStateLogged,
+		"err_msg":      nil,
 	}
 
 	if evalErr != nil {
