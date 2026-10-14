@@ -575,10 +575,12 @@ func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_ItemKeyErrorPropagation(
 	perSetFilter := &entity.ExptTurnResultFilterAccelerator{
 		SpaceID: 1, ExptID: 1,
 		ItemSnapshotCondBySet: []*entity.ItemSnapshotVersionCond{
-			{EvalSetID: 5, EvalSetVersionID: 7, SyncCkDate: "2026-10-13",
+			{
+				EvalSetID: 5, EvalSetVersionID: 7, SyncCkDate: "2026-10-13",
 				Cond: &entity.ItemSnapshotFilter{
 					ItemKey: &entity.FieldFilter{Key: "item_key", Op: "LIKE", Values: []any{"deepswe"}},
-				}},
+				},
+			},
 		},
 	}
 

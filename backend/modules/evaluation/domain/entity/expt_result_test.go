@@ -595,8 +595,10 @@ func TestExptTurnResultFilterAccelerator_HasItemKeyFilter(t *testing.T) {
 		}, want: false},
 		{name: "per-set 组带 ItemKey", filter: &ExptTurnResultFilterAccelerator{
 			ItemSnapshotCondBySet: []*ItemSnapshotVersionCond{
-				{EvalSetID: 5, EvalSetVersionID: 7, SyncCkDate: "2026-10-13",
-					Cond: &ItemSnapshotFilter{ItemKey: itemKey}},
+				{
+					EvalSetID: 5, EvalSetVersionID: 7, SyncCkDate: "2026-10-13",
+					Cond: &ItemSnapshotFilter{ItemKey: itemKey},
+				},
 			},
 		}, want: true},
 	}

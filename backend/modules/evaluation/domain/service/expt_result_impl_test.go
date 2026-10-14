@@ -9438,8 +9438,8 @@ func TestExptResultServiceImpl_ListTurnResult_ItemKeyFailLoud(t *testing.T) {
 			Return(nil, int64(0), errors.New("ck query timeout")).Times(1)
 
 		svc := ExptResultServiceImpl{
-			evaluationSetService:      mockEvalSetSvc,
-			Metric:                    mockMetric,
+			evaluationSetService:     mockEvalSetSvc,
+			Metric:                   mockMetric,
 			exptTurnResultFilterRepo: mockFilterRepo,
 		}
 
@@ -9489,10 +9489,10 @@ func TestExptResultServiceImpl_ListTurnResult_ItemKeyFailLoud(t *testing.T) {
 			Return([]*entity.ExptItemResult{{ID: 1, ItemID: 10, SpaceID: 100, ExptID: 1, ItemIdx: 1}}, nil).Times(1)
 
 		svc := ExptResultServiceImpl{
-			Metric:                    mockMetric,
+			Metric:                   mockMetric,
 			exptTurnResultFilterRepo: mockFilterRepo,
-			ExptTurnResultRepo:        mockTurnResultRepo,
-			ExptItemResultRepo:        mockItemResultRepo,
+			ExptTurnResultRepo:       mockTurnResultRepo,
+			ExptItemResultRepo:       mockItemResultRepo,
 		}
 
 		turnResults, _, total, err := svc.ListTurnResult(context.Background(), newParam(&entity.ExptTurnResultFilterAccelerator{
