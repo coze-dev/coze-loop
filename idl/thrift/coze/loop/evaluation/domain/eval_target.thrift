@@ -292,6 +292,10 @@ const SandboxCountMode SandboxCountMode_MacVMPlusSSH = "mac_vm_plus_ssh"
 // 能省掉第二个沙箱是因为远程对象跑在 ByteFaaS 上，沙箱里没有 agent 进程。
 // ⚠️ 只对远程 FaaS 对象成立，配给本地 CLI/GUI 对象会被 runtime fail-closed 拒绝。
 const SandboxCountMode SandboxCountMode_Shared = "shared"
+// ARM Mac VM + orchestrator sandbox
+const SandboxCountMode SandboxCountMode_ArmMacVMPlusSandbox = "arm_mac_vm_plus_sandbox"
+// Windows 配置预留，尚不支持执行
+const SandboxCountMode SandboxCountMode_WindowsPlusSandbox = "windows_plus_sandbox"
 
 // 环境变量键值对
 struct SandboxEnvVar {
