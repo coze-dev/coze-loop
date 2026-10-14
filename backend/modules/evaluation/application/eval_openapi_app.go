@@ -3743,8 +3743,8 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("status must be SUCCESS or FAILED"))
 	}
 	if req.GetStatus() == spi.InvokeEvaluatorRunStatus_SUCCESS {
-		if req.Output == nil || req.Output.EvaluatorResult_ == nil || req.Output.EvaluatorResult_.Score == nil {
-			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_result.score is required for SUCCESS"))
+		if req.Output == nil || req.Output.EvaluatorResult_ == nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_result is required for SUCCESS"))
 		}
 	}
 	if req.GetStatus() == spi.InvokeEvaluatorRunStatus_FAILED {

@@ -160,9 +160,9 @@ func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecordForAggr(ctx context.Con
 	return aggrRecords, nil
 }
 
-func evaluatorRecordResultValues(outputData *entity.EvaluatorOutputData) (score float64, outputDataStr string) {
-	if outputData != nil && outputData.EvaluatorResult != nil && outputData.EvaluatorResult.Score != nil {
-		score = *outputData.EvaluatorResult.Score
+func evaluatorRecordResultValues(outputData *entity.EvaluatorOutputData) (score *float64, outputDataStr string) {
+	if outputData != nil && outputData.EvaluatorResult != nil {
+		score = outputData.EvaluatorResult.Score
 	}
 	if outputData != nil {
 		outputDataStr = json.Jsonify(outputData)
