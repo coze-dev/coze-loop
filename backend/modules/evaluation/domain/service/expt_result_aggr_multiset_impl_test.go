@@ -232,13 +232,15 @@ func TestComputeEvaluatorAggrGroup_SkipsNilScore(t *testing.T) {
 		Return([]*entity.ExptTurnEvaluatorResultRef{
 			{EvaluatorVersionID: 100, EvaluatorResultID: 11},
 			{EvaluatorVersionID: 100, EvaluatorResultID: 12},
+			{EvaluatorVersionID: 100, EvaluatorResultID: 13},
 		}, nil)
 
 	mockEvaluatorRecordService.EXPECT().
 		BatchGetEvaluatorRecordForAggr(gomock.Any(), gomock.Any()).
 		Return([]*entity.EvaluatorRecordAggr{
-			{ID: 11, Status: entity.EvaluatorRunStatusSuccess, Score: gptr.Of(1.0)},
+			{ID: 11, Status: entity.EvaluatorRunStatusSuccess, Score: gptr.Of(0.0)},
 			{ID: 12, Status: entity.EvaluatorRunStatusSuccess, Score: nil}, // ★ score nil 应被跳过, 不当 0 分算
+			{ID: 13, Status: entity.EvaluatorRunStatusSuccess, Score: gptr.Of(5.0)},
 		}, nil)
 
 	svc := &ExptAggrResultServiceImpl{
@@ -258,8 +260,8 @@ func TestComputeEvaluatorAggrGroup_SkipsNilScore(t *testing.T) {
 			break
 		}
 	}
-	// 只有 1.0 计入 (nil 被跳过); 若 nil 被误当 0, average 会变成 0.5。
-	assert.InDelta(t, 1.0, average, 1e-9)
+	// N/A 不计入分母，0 分仍参与聚合。
+	assert.InDelta(t, 2.5, average, 1e-9)
 }
 
 // computeEvaluatorAggrGroup 按 (version_id, alias) 分桶 —

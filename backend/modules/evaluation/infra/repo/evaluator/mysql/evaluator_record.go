@@ -24,7 +24,7 @@ type EvaluatorRecordDAO interface {
 	CreateEvaluatorRecord(ctx context.Context, evaluatorRecord *model.EvaluatorRecord, opts ...db.Option) error
 	UpdateEvaluatorRecord(ctx context.Context, evaluatorRecord *model.EvaluatorRecord, opts ...db.Option) error
 	UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status int8, score float64, outputData string, opts ...db.Option) error
-	CompareAndSwapEvaluatorRecordResult(ctx context.Context, recordID, spaceID int64, fromStatus, toStatus int8, score float64, outputData string, opts ...db.Option) (int64, error)
+	CompareAndSwapEvaluatorRecordResult(ctx context.Context, recordID, spaceID int64, fromStatus, toStatus int8, score *float64, outputData string, opts ...db.Option) (int64, error)
 	UpdateEvaluatorRecordAsyncDispatch(ctx context.Context, recordID, spaceID int64, traceID, outputData string, opts ...db.Option) error
 	GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool, opts ...db.Option) (*model.EvaluatorRecord, error)
 	BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorRecord, error)
@@ -87,7 +87,7 @@ func (dao *EvaluatorRecordDAOImpl) UpdateEvaluatorRecordResult(ctx context.Conte
 		}).Error
 }
 
-func (dao *EvaluatorRecordDAOImpl) CompareAndSwapEvaluatorRecordResult(ctx context.Context, recordID, spaceID int64, fromStatus, toStatus int8, score float64, outputData string, opts ...db.Option) (int64, error) {
+func (dao *EvaluatorRecordDAOImpl) CompareAndSwapEvaluatorRecordResult(ctx context.Context, recordID, spaceID int64, fromStatus, toStatus int8, score *float64, outputData string, opts ...db.Option) (int64, error) {
 	dbsession := dao.provider.NewSession(ctx, opts...)
 	result := dbsession.WithContext(ctx).
 		Model(&model.EvaluatorRecord{}).
@@ -163,9 +163,8 @@ func (dao *EvaluatorRecordDAOImpl) BatchGetEvaluatorRecord(ctx context.Context, 
 //
 // WHERE 过滤条件与内存聚合的 contributing 集严格对齐:
 //   - status = Success(1): 只有成功的 record 才在内存路径贡献分数; Skipped(4)/Fail(2)/AsyncInvoking(3)
-//     在内存路径因 nil EvaluatorResult / 显式 Skipped 过滤被跳过。注意 async 僵尸失败会把 score 列写成 0
-//     (见 UpdateEvaluatorRecordResult), 若只按 status != Skipped 过滤会把这些 0 分误算进聚合, 故必须白名单 Success。
-//   - score IS NOT NULL: 防御性兜底, 对齐旧内存路径 "取不到有效分数则跳过" 的语义。
+//     在内存路径不贡献分数，故必须白名单 Success。
+//   - score IS NOT NULL: N/A 不参与聚合，对齐内存路径 "取不到有效分数则跳过" 的语义。
 func (dao *EvaluatorRecordDAOImpl) BatchGetEvaluatorRecordForAggr(ctx context.Context, evaluatorRecordIDs []int64, opts ...db.Option) ([]*model.EvaluatorRecord, error) {
 	var pos []*model.EvaluatorRecord
 
