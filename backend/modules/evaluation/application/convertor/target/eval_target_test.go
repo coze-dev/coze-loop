@@ -1635,3 +1635,12 @@ func TestSandboxAgent_CustomFieldSchemas_RoundTrip(t *testing.T) {
 	}
 	assert.Equal(t, "x", roundTrip.CustomFieldSchemas[2].TextSchema)
 }
+
+func TestSandboxAgentExecutionModesRoundTrip(t *testing.T) {
+	for _, mode := range []do.SandboxCountMode{"arm_mac_vm_plus_sandbox", "windows_plus_sandbox"} {
+		t.Run(string(mode), func(t *testing.T) {
+			in := &do.SandboxAgent{SandboxCountMode: mode}
+			assert.Equal(t, mode, SandboxAgentDTO2DO(SandboxAgentDO2DTO(in)).SandboxCountMode)
+		})
+	}
+}
