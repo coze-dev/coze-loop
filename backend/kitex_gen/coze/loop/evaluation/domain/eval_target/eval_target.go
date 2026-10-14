@@ -46,8 +46,14 @@ const (
 	SandboxCountModeMacVMPlusSandbox = "mac_vm_plus_sandbox"
 	// orchestrator + SSH/Runner sandbox + Mac VM Remote-SSH IDE
 	SandboxCountModeMacVMPlusSSH = "mac_vm_plus_ssh"
+	// 远程 FaaS 对象专用：一个沙箱里跑 Runner + Orchestrator 两个进程，走 loopback 互联。
+	// 能省掉第二个沙箱是因为远程对象跑在 ByteFaaS 上，沙箱里没有 agent 进程。
 	// ⚠️ 只对远程 FaaS 对象成立，配给本地 CLI/GUI 对象会被 runtime fail-closed 拒绝。
 	SandboxCountModeShared = "shared"
+	// ARM Mac VM + orchestrator sandbox
+	SandboxCountModeArmMacVMPlusSandbox = "arm_mac_vm_plus_sandbox"
+	// Windows 配置预留，尚不支持执行
+	SandboxCountModeWindowsPlusSandbox = "windows_plus_sandbox"
 )
 
 type EvalTargetType int64
