@@ -1090,6 +1090,119 @@ func TestExptTurnResultFilterDAOImpl_PerSetEdgeCases(t *testing.T) {
 	})
 }
 
+// ItemKey（题目名称，快照表物理列 dis.item_key）的 SQL 生成：
+// 单组与 per-set 两条路径都要带上版本谓词，值做 LIKE 通配符转义，非法条件跳过。
+func TestExptTurnResultFilterDAOImpl_buildItemSnapshotConditions_ItemKey(t *testing.T) {
+	d := &exptTurnResultFilterDAOImpl{}
+
+	t.Run("单组路径生成 dis.item_key LIKE ? 并触发联表", func(t *testing.T) {
+		cond := &ExptTurnResultFilterQueryCond{
+			ItemSnapshotCond: &ItemSnapshotFilter{
+				ItemKey: &FieldFilter{Op: "LIKE", Values: []any{"miniprogram"}},
+			},
+		}
+		whereSQL := ""
+		args := []interface{}{}
+		d.buildItemSnapshotConditions(cond, &whereSQL, &args)
+		assert.Equal(t, " AND dis.item_key LIKE ?", whereSQL)
+		assert.Equal(t, []interface{}{"%miniprogram%"}, args)
+		assert.True(t, d.needJoinItemSnapshot(cond))
+		assert.True(t, d.hasItemSnapshotFilters(cond.ItemSnapshotCond))
+	})
+
+	t.Run("per-set 路径每组带版本谓词，同日多版本不串查", func(t *testing.T) {
+		cond := &ExptTurnResultFilterQueryCond{
+			ItemSnapshotCondBySet: []*ItemSnapshotVersionCond{
+				{
+					EvalSetVersionID: "100", SyncCkDate: "2026-09-01",
+					Cond: &ItemSnapshotFilter{ItemKey: &FieldFilter{Op: "LIKE", Values: []any{"kw1"}}},
+				},
+				{
+					EvalSetVersionID: "200", SyncCkDate: "2026-09-01",
+					Cond: &ItemSnapshotFilter{
+						StringMapFilters: []*FieldFilter{{Key: "string_key_3", Op: "=", Values: []any{"v"}}},
+						ItemKey:          &FieldFilter{Op: "LIKE", Values: []any{"kw2"}},
+					},
+				},
+			},
+		}
+		whereSQL := ""
+		args := []interface{}{}
+		d.buildItemSnapshotConditions(cond, &whereSQL, &args)
+
+		// 每组 = (1=1 AND dis.version_id = ? AND dis.item_key LIKE ? ...)
+		assert.Contains(t, whereSQL, "(1=1 AND dis.version_id = ? AND dis.item_key LIKE ?")
+		assert.Contains(t, whereSQL, "dis.string_map['string_key_3'] = ?")
+		assert.Contains(t, whereSQL, " OR ")
+		assert.Len(t, args, 5)
+		assert.Equal(t, "100", args[0])
+		assert.Equal(t, "%kw1%", args[1])
+		assert.Equal(t, "200", args[2])
+		assert.Equal(t, "%kw2%", args[3])
+		assert.Equal(t, "v", args[4])
+		assert.True(t, d.needJoinItemSnapshot(cond))
+	})
+
+	t.Run("LIKE 通配符被转义", func(t *testing.T) {
+		cond := &ExptTurnResultFilterQueryCond{
+			ItemSnapshotCond: &ItemSnapshotFilter{
+				ItemKey: &FieldFilter{Op: "LIKE", Values: []any{"a%b_c\\d"}},
+			},
+		}
+		whereSQL := ""
+		args := []interface{}{}
+		d.buildItemSnapshotConditions(cond, &whereSQL, &args)
+		assert.Equal(t, " AND dis.item_key LIKE ?", whereSQL)
+		assert.Equal(t, []interface{}{"%a\\%b\\_c\\\\d%"}, args)
+	})
+
+	t.Run("非法 Op 或空 Values 跳过不拼谓词", func(t *testing.T) {
+		for _, bad := range []*FieldFilter{
+			{Op: "=", Values: []any{"v"}},
+			{Op: "LIKE"},
+			{Op: "LIKE", Values: []any{}},
+			{Op: "LIKE", Values: []any{"a", "b"}},
+		} {
+			cond := &ExptTurnResultFilterQueryCond{
+				ItemSnapshotCond: &ItemSnapshotFilter{ItemKey: bad},
+			}
+			whereSQL := ""
+			args := []interface{}{}
+			d.buildItemSnapshotConditions(cond, &whereSQL, &args)
+			assert.Empty(t, whereSQL, "op=%v values=%v", bad.Op, bad.Values)
+			assert.Empty(t, args)
+		}
+	})
+
+	t.Run("per-set 组只有非法 ItemKey 时按既有语义恒假", func(t *testing.T) {
+		cond := &ExptTurnResultFilterQueryCond{
+			ItemSnapshotCondBySet: []*ItemSnapshotVersionCond{
+				{EvalSetVersionID: "100", Cond: &ItemSnapshotFilter{
+					ItemKey: &FieldFilter{Op: "=", Values: []any{"v"}},
+				}},
+			},
+		}
+		whereSQL := ""
+		args := []interface{}{}
+		d.buildItemSnapshotConditions(cond, &whereSQL, &args)
+		assert.Equal(t, " AND 1=0", whereSQL)
+		assert.Empty(t, args)
+	})
+
+	t.Run("无 ItemKey 的旧查询不受影响", func(t *testing.T) {
+		cond := &ExptTurnResultFilterQueryCond{
+			ItemSnapshotCond: &ItemSnapshotFilter{
+				StringMapFilters: []*FieldFilter{{Key: "string_key_0", Op: "=", Values: []any{"v"}}},
+			},
+		}
+		whereSQL := ""
+		args := []interface{}{}
+		d.buildItemSnapshotConditions(cond, &whereSQL, &args)
+		assert.Equal(t, " AND dis.string_map['string_key_0'] = ?", whereSQL)
+		assert.Equal(t, []interface{}{"v"}, args)
+	})
+}
+
 func TestExptTurnResultFilterDAOImpl_buildMainTableConditions_EvalSetIDs(t *testing.T) {
 	d := &exptTurnResultFilterDAOImpl{}
 

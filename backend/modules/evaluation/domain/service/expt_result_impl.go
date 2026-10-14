@@ -851,7 +851,13 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 				}
 			}
 			// 如果errOccur为true，直接跳过后续filter流程，继续执行ListTurnResult
-			if !errOccur {
+			if errOccur {
+				// item_key 强筛选请求 fail-loud：继续走下去会用空 itemIDs + 原分页查 RDS，
+				// 等于未筛选全量，且覆盖原始错误
+				if filterAccelerator.HasItemKeyFilter() {
+					return nil, nil, 0, err
+				}
+			} else {
 				page = entity.Page{} // filter表查询后，后续无需再带分页条件
 			}
 		}
@@ -2987,19 +2993,24 @@ func (e ExptResultServiceImpl) loadItemEvalSetRefs(ctx context.Context, spaceID,
 // 由 DAO 侧分组查询后取 item_id 并集。单评测集实验只有 1 组，行为与改动前一致。
 func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter *entity.ExptTurnResultFilterAccelerator, baseExpt *entity.Experiment) error {
 	rawCond := filter.ItemSnapshotCond
+	if rawCond != nil {
+		// ItemKey 校验要先于下面的早退判断：非法条件丢弃后可能整体无 map 条件。
+		rawCond.ItemKey = sanitizeItemKeyCond(ctx, rawCond.ItemKey)
+	}
 	var rawKeywordCond *entity.ItemSnapshotFilter
 	if filter.KeywordSearch != nil {
 		rawKeywordCond = filter.KeywordSearch.ItemSnapshotFilter
 	}
 
-	hasCond := rawCond != nil && len(rawCond.StringMapFilters) > 0
+	hasCond := rawCond != nil && (len(rawCond.StringMapFilters) > 0 || rawCond.ItemKey != nil)
 	hasKeywordCond := rawKeywordCond != nil && len(rawKeywordCond.StringMapFilters) > 0
 	if !hasCond && !hasKeywordCond {
 		return nil
 	}
 	// map 类条件（评测集 schema 字段）需要 field_key → string_map/int_map/... 的映射，
 	// 对 mapping 是硬依赖：所有评测集都查不到就无法翻译条件，必须报错（让上游走 errOccur
-	// 降级到保留分页的普通查询），而不是静默返回 0 条。
+	// 降级到保留分页的普通查询），而不是静默返回 0 条。ItemKey 虽不做 subkey 映射，
+	// 但离线查询必需的分区日期 sync_ck_date 同样来自该 RPC，依赖不变。
 	needMapping := hasCond || hasKeywordCond
 
 	isOnline := baseExpt.ExptType == entity.ExptType_Online
@@ -3140,6 +3151,9 @@ func translateItemSnapshotCond(ctx context.Context, src *entity.ItemSnapshotFilt
 	if src == nil {
 		return dst, true
 	}
+	// ItemKey 是快照表物理列条件，不做 field_key -> subkey 映射，原样透传；
+	// schema 里有没有同名列也不影响它，不参与 full 判定。
+	dst.ItemKey = src.ItemKey
 	dst.BoolMapFilters = make([]*entity.FieldFilter, 0, len(src.BoolMapFilters))
 	dst.FloatMapFilters = make([]*entity.FieldFilter, 0, len(src.FloatMapFilters))
 	dst.IntMapFilters = make([]*entity.FieldFilter, 0, len(src.IntMapFilters))
@@ -3180,6 +3194,23 @@ func translateItemSnapshotCond(ctx context.Context, src *entity.ItemSnapshotFilt
 		}
 	}
 	return dst, full
+}
+
+// sanitizeItemKeyCond ItemKey 本期只支持 LIKE + 单个字符串值。其他视为非法条件：告警后丢弃
+// （等价于未传、退回不筛），而不是置 0 条 —— 非法值只会来自调用方，静默返回空列表更难排查。
+func sanitizeItemKeyCond(ctx context.Context, f *entity.FieldFilter) *entity.FieldFilter {
+	if f == nil {
+		return nil
+	}
+	if f.Op != "LIKE" || len(f.Values) != 1 {
+		logs.CtxWarn(ctx, "invalid item_key cond, only LIKE with single string value is supported, op: %v, values: %v", f.Op, f.Values)
+		return nil
+	}
+	if _, ok := f.Values[0].(string); !ok {
+		logs.CtxWarn(ctx, "invalid item_key cond value type, want string, got %T", f.Values[0])
+		return nil
+	}
+	return f
 }
 
 // 提取MapCond映射逻辑
