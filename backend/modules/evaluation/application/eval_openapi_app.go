@@ -3890,6 +3890,9 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 		if err != nil {
 			return nil, err
 		}
+		if record == nil {
+			return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("async debug eval target returned nil record"))
+		}
 
 		if err := e.asyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(record.ID, 10), &entity.EvalAsyncCtx{
 			RecordID:    record.ID,
@@ -3952,6 +3955,9 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 		})
 		if err != nil {
 			return nil, err
+		}
+		if record == nil {
+			return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("async debug eval target returned nil record"))
 		}
 
 		if err := e.asyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(record.ID, 10), &entity.EvalAsyncCtx{

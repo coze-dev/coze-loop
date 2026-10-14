@@ -9399,6 +9399,54 @@ func TestEvalOpenAPIApplication_AsyncDebugEvalTargetOApi_MacVMPlusSSHInitsBothTa
 	assert.Equal(t, rpc.SandboxResourceTypeMacVM, gotResourceType[sandboxDebugTaskID+sandboxMacVMTaskIDSuffix])
 }
 
+func TestEvalOpenAPIApplication_AsyncDebugEvalTargetOApi_ReturnsErrorWhenRecordNil(t *testing.T) {
+	tests := []struct {
+		name           string
+		evalTargetType openapiEvalTarget.EvalTargetType
+		callee         string
+		sandboxAgent   *openapiEvalTarget.SandboxAgent
+	}{
+		{
+			name:           "custom rpc",
+			evalTargetType: openapiEvalTarget.EvalTargetTypeCustomRPCServer,
+			callee:         "custom-rpc",
+		},
+		{
+			name:           "sandbox agent",
+			evalTargetType: openapiEvalTarget.EvalTargetTypeSandboxAgent,
+			callee:         "sandbox-agent",
+			sandboxAgent:   &openapiEvalTarget.SandboxAgent{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			targetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
+			auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			targetSvc.EXPECT().AsyncDebugTarget(gomock.Any(), gomock.Any()).Return(nil, tt.callee, nil)
+
+			app := &EvalOpenAPIApplication{
+				auth: auth, targetSvc: targetSvc, metric: &fakeOpenAPIMetric{},
+			}
+			_, err := app.AsyncDebugEvalTargetOApi(context.Background(), &openapi.AsyncDebugEvalTargetOApiRequest{
+				WorkspaceID:    gptr.Of(int64(123)),
+				EvalTargetType: gptr.Of(tt.evalTargetType),
+				Param:          gptr.Of("{}"),
+				SandboxAgent:   tt.sandboxAgent,
+			})
+
+			require.Error(t, err)
+			statusErr, ok := errorx.FromStatusError(err)
+			require.True(t, ok)
+			assert.Equal(t, int32(errno.CommonInternalErrorCode), statusErr.Code())
+		})
+	}
+}
+
 func TestEvalOpenAPIApplication_DestroyDebugSandboxExecutionsSplitsMacVMTask(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
