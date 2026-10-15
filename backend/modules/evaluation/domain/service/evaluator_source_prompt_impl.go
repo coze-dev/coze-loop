@@ -478,7 +478,13 @@ func parseRegexExtractedJSON(ctx context.Context, content string, output *entity
 
 // parseScoreWithRegex 策略4：通过正则解析score字段，优先尝试用正则提取reason字段作为reason，否则使用完整内容作为reason
 func parseScoreWithRegex(ctx context.Context, content string, output *entity.EvaluatorOutputData) (bool, error) {
-	scoreRegex := regexp.MustCompile(`(?i)score[^0-9]*([0-9]+(?:\.[0-9]+)?)`)
+	// Anchor the `score` key before capturing digits: a quoted `"score"` must follow `{`/`,` (a real
+	// JSON field position) or the content start, and a bare `score` only at content start (prose like
+	// `score: 0.85, reason: ...`). This rejects a `score:` substring inside the `reason` value, which
+	// the previous `score[^0-9]*` silently parsed as the score (e.g. `{"score": "优秀", "reason": "请用score: 3"}`
+	// became Score=3). The lazy `[^"]*?` keeps non-digit prefixes inside a quoted value (`得分8分`->8,
+	// `90分`->90) without crossing the closing quote; `[+-]?` preserves explicit signs (scenarios 3/30/31/33-42).
+	scoreRegex := regexp.MustCompile(`(?i)(?:(?:^|[{,])\s*"score"|^\s*score)\s*:\s*"?[^"]*?([+-]?[0-9]+(?:\.[0-9]+)?)"?`)
 	scoreMatches := scoreRegex.FindStringSubmatch(content)
 	if len(scoreMatches) > 1 {
 		scoreStr := scoreMatches[1]
