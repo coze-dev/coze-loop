@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 	"unicode/utf8"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
@@ -2144,7 +2143,6 @@ func buildAsyncRunEvaluatorRequest(evaluatorName string, request *evaluatorservi
 }
 
 func (e *EvaluatorHandlerImpl) AsyncDebugEvaluator(ctx context.Context, req *evaluatorservice.AsyncDebugEvaluatorRequest) (r *evaluatorservice.AsyncDebugEvaluatorResponse, err error) {
-	startTime := time.Now()
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
 		SpaceID:       req.WorkspaceID,
@@ -2206,20 +2204,6 @@ func (e *EvaluatorHandlerImpl) AsyncDebugEvaluator(ctx context.Context, req *eva
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	// CustomRPC owns its context before dispatch so fast callbacks cannot race this write.
-	if do.EvaluatorType != entity.EvaluatorTypeCustomRPC {
-		asyncCtxKey := fmt.Sprintf("evaluator:%d", resp.InvokeID)
-		if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
-			RecordID:           resp.InvokeID,
-			AsyncUnixMS:        startTime.UnixMilli(),
-			Session:            &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)},
-			EvaluatorVersionID: do.GetEvaluatorVersionID(),
-		}); err != nil {
-			logs.CtxError(ctx, "[AsyncDebugEvaluator] SetEvalAsyncCtx fail, invokeID: %d, err: %v", resp.InvokeID, err)
-			return nil, err
-		}
 	}
 
 	return &evaluatorservice.AsyncDebugEvaluatorResponse{

@@ -9129,7 +9129,7 @@ func TestEvaluatorHandlerImpl_AsyncDebugEvaluator(t *testing.T) {
 			setupMocks: func() {
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockEvaluatorService.EXPECT().AsyncDebugEvaluator(gomock.Any(), gomock.Any()).Return(&entity.AsyncDebugEvaluatorResponse{InvokeID: 888}, nil)
-				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:888", gomock.Any()).Return(nil)
+				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantErr: false,
 		},
@@ -9145,15 +9145,6 @@ func TestEvaluatorHandlerImpl_AsyncDebugEvaluator(t *testing.T) {
 			setupMocks: func() {
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockEvaluatorService.EXPECT().AsyncDebugEvaluator(gomock.Any(), gomock.Any()).Return(nil, errors.New("debug failed"))
-			},
-			wantErr: true,
-		},
-		{
-			name: "失败 - SetEvalAsyncCtx失败",
-			setupMocks: func() {
-				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				mockEvaluatorService.EXPECT().AsyncDebugEvaluator(gomock.Any(), gomock.Any()).Return(&entity.AsyncDebugEvaluatorResponse{InvokeID: 888}, nil)
-				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:888", gomock.Any()).Return(errors.New("set ctx failed"))
 			},
 			wantErr: true,
 		},
@@ -9177,7 +9168,7 @@ func TestEvaluatorHandlerImpl_AsyncDebugEvaluator(t *testing.T) {
 
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockEvaluatorService.EXPECT().AsyncDebugEvaluator(gomock.Any(), gomock.Any()).Return(&entity.AsyncDebugEvaluatorResponse{InvokeID: 888}, nil)
-				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:888", gomock.Any()).Return(nil)
+				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantErr: false,
 		},
@@ -9595,7 +9586,7 @@ func TestAsyncDebugEvaluator_ErrorBranches(t *testing.T) {
 				assert.Equal(t, rpJSON, gptr.Indirect(req.EvaluatorRunConf.EvaluatorRuntimeParam.JSONValue))
 				return &entity.AsyncDebugEvaluatorResponse{InvokeID: 777}, nil
 			})
-		mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:777", gomock.Any()).Return(nil)
+		mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
 		resp, err := handler.AsyncDebugEvaluator(ctx, req)
 		assert.NoError(t, err)
@@ -9751,4 +9742,33 @@ func TestEvaluatorHandlerImpl_StockOSSRejectsCustomRPCAsyncDebug(t *testing.T) {
 	})
 	require.ErrorContains(t, err, "current app does not support async custom RPC evaluator")
 	require.Nil(t, resp)
+}
+
+func TestEvaluatorHandlerImpl_AsyncDebugEvaluator_ContextOwnedByService(t *testing.T) {
+	for _, evaluatorType := range []evaluatordto.EvaluatorType{evaluatordto.EvaluatorType_Agent, evaluatordto.EvaluatorType_CustomRPC} {
+		t.Run(fmt.Sprint(evaluatorType), func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			svc := mocks.NewMockEvaluatorService(ctrl)
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+			configer := confmocks.NewMockIConfiger(ctrl)
+			if evaluatorType == evaluatordto.EvaluatorType_CustomRPC {
+				configer.EXPECT().CheckCustomRPCEvaluatorWritable(gomock.Any(), "2", nil).Return(true, nil)
+			}
+			auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			svc.EXPECT().AsyncDebugEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *entity.AsyncDebugEvaluatorRequest) (*entity.AsyncDebugEvaluatorResponse, error) {
+				assert.Zero(t, req.EvaluatorDO.GetEvaluatorVersionID())
+				return &entity.AsyncDebugEvaluatorResponse{InvokeID: 999}, nil
+			})
+			asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			handler := &EvaluatorHandlerImpl{evaluatorService: svc, auth: auth, evalAsyncRepo: asyncRepo, configer: configer}
+			response, err := handler.AsyncDebugEvaluator(context.Background(), &evaluatorservice.AsyncDebugEvaluatorRequest{
+				WorkspaceID: 2, EvaluatorType: evaluatorType,
+				EvaluatorContent: &evaluatordto.EvaluatorContent{AgentEvaluator: &evaluatordto.AgentEvaluator{}, CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{}},
+				InputData:        &evaluatordto.EvaluatorInputData{},
+			})
+			require.NoError(t, err)
+			assert.Equal(t, int64(999), response.GetInvokeID())
+		})
+	}
 }

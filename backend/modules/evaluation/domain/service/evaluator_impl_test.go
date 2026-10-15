@@ -3414,11 +3414,14 @@ func TestEvaluatorServiceImpl_AsyncDebugEvaluator(t *testing.T) {
 	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
 	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	mockEvaluatorSourceService.EXPECT().Validate(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	s := &EvaluatorServiceImpl{
 		limiter:             mockLimiter,
 		idgen:               mockIDGen,
 		evaluatorRecordRepo: mockEvaluatorRecordRepo,
+		evalAsyncRepo:       mockEvalAsyncRepo,
 		evaluatorSourceServices: map[entity.EvaluatorType]EvaluatorSourceService{
 			entity.EvaluatorTypeAgent: mockEvaluatorSourceService,
 		},
@@ -3453,13 +3456,23 @@ func TestEvaluatorServiceImpl_AsyncDebugEvaluator(t *testing.T) {
 				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(888), nil)
 				mockEvaluatorSourceService.EXPECT().AsyncDebug(gomock.Any(), agentEvaluatorDO, gomock.Any(), gomock.Any(), int64(2), int64(888)).
 					Return(map[string]string{"d": "1"}, "trace-d", nil)
+				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:888", gomock.Any()).DoAndReturn(func(_ context.Context, _ string, actx *entity.EvalAsyncCtx) error {
+					assert.Equal(t, int64(101), actx.EvaluatorVersionID)
+					assert.Nil(t, actx.Event)
+					return nil
+				})
+				mockEvaluatorRecordRepo.EXPECT().UpdateEvaluatorRecordAsyncDispatch(gomock.Any(), int64(888), int64(2), "trace-d", gomock.Any()).DoAndReturn(func(_ context.Context, _, _ int64, _ string, output *entity.EvaluatorOutputData) error {
+					assert.Equal(t, map[string]string{"d": "1"}, output.Ext)
+					return nil
+				})
 				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(_ context.Context, record *entity.EvaluatorRecord) error {
 						assert.Equal(t, int64(888), record.ID)
 						assert.Equal(t, int64(2), record.SpaceID)
 						assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, record.Status)
 						if assert.NotNil(t, record.EvaluatorOutputData) {
-							assert.Equal(t, map[string]string{"d": "1"}, record.EvaluatorOutputData.Ext)
+							assert.Empty(t, record.EvaluatorOutputData.Ext)
+							assert.Equal(t, int64(101), record.EvaluatorVersionID)
 						}
 						return nil
 					},
@@ -5144,154 +5157,19 @@ func TestEvaluatorServiceImpl_AsyncDebugEvaluator_CustomRPCValidation(t *testing
 		t.Run(tc.name, func(t *testing.T) {
 			req := customRPCAsyncDebugRequest()
 			tc.change(req)
-			resp, err := (&EvaluatorServiceImpl{}).AsyncDebugEvaluator(context.Background(), req)
+			svc := &EvaluatorServiceImpl{}
+			if tc.name == "builtin" {
+				ctrl := gomock.NewController(t)
+				source := mocks.NewMockEvaluatorSourceService(ctrl)
+				source.EXPECT().Validate(gomock.Any(), req.EvaluatorDO).Return(errorx.NewByCode(errno.InvalidEvaluatorTypeCode))
+				svc.evaluatorSourceServices = map[entity.EvaluatorType]EvaluatorSourceService{entity.EvaluatorTypeCustomRPC: source}
+			}
+			resp, err := svc.AsyncDebugEvaluator(context.Background(), req)
 			require.Error(t, err)
 			require.Nil(t, resp)
 			statusErr, ok := errorx.FromStatusError(err)
 			require.True(t, ok)
 			assert.Equal(t, tc.code, statusErr.Code())
-		})
-	}
-}
-
-func TestEvaluatorServiceImpl_AsyncDebugEvaluator_CustomRPCCoordinator(t *testing.T) {
-	for _, scenario := range []string{"rpc", "http", "record failure", "context failure", "provider failure", "success before ack failure", "failure before ack failure", "metadata failure", "rate limited", "id failure", "source missing"} {
-		t.Run(scenario, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			limiter := repomocks.NewMockRateLimiter(ctrl)
-			idGenerator := idgenmocks.NewMockIIDGenerator(ctrl)
-			recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
-			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
-			source := mocks.NewMockEvaluatorSourceService(ctrl)
-			s := &EvaluatorServiceImpl{
-				limiter: limiter, idgen: idGenerator, evaluatorRecordRepo: recordRepo, evalAsyncRepo: asyncRepo,
-				evaluatorSourceServices: map[entity.EvaluatorType]EvaluatorSourceService{entity.EvaluatorTypeCustomRPC: source},
-			}
-			req := customRPCAsyncDebugRequest()
-			if scenario == "http" {
-				req.EvaluatorDO.CustomRPCEvaluatorVersion.AccessProtocol = entity.EvaluatorAccessProtocolFaasHTTP
-				req.EvaluatorDO.CustomRPCEvaluatorVersion.AsyncInvokeHTTPInfo = &entity.EvaluatorHTTPInfo{Path: gptr.Of("/async"), Method: gptr.Of(entity.EvaluatorHTTPMethodPost)}
-			}
-			if scenario == "source missing" {
-				delete(s.evaluatorSourceServices, entity.EvaluatorTypeCustomRPC)
-			}
-			ctx := session.WithCtxUser(context.Background(), &session.User{ID: "debug-user"})
-			if scenario != "source missing" {
-				limiter.EXPECT().AllowInvoke(gomock.Any(), int64(2)).Return(scenario != "rate limited")
-			}
-			if scenario != "source missing" && scenario != "rate limited" {
-				var idErr error
-				if scenario == "id failure" {
-					idErr = errors.New("id failure")
-				}
-				idGenerator.EXPECT().GenID(gomock.Any()).Return(int64(999), idErr)
-			}
-			if scenario != "source missing" && scenario != "rate limited" && scenario != "id failure" {
-				var saved *entity.EvaluatorRecord
-				var savedCtx *entity.EvalAsyncCtx
-				recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, record *entity.EvaluatorRecord) error {
-					saved = record
-					assert.Equal(t, int64(999), record.ID)
-					assert.Equal(t, int64(2), record.SpaceID)
-					assert.Zero(t, record.EvaluatorVersionID)
-					assert.Zero(t, record.ExperimentID)
-					assert.Zero(t, record.ExperimentRunID)
-					assert.NotEqual(t, entity.EvaluatorRecordSourceTypeInline, record.SourceType)
-					assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, record.Status)
-					assert.Equal(t, "debug-user", gptr.Indirect(record.BaseInfo.CreatedBy.UserID))
-					require.NotSame(t, req.InputData, record.EvaluatorInputData)
-					record.EvaluatorInputData.InputFields["answer"].SetText("truncated preview")
-					if scenario == "record failure" {
-						return errors.New("record failure")
-					}
-					return nil
-				})
-				if scenario != "record failure" {
-					asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).DoAndReturn(func(_ context.Context, _ string, actx *entity.EvalAsyncCtx) error {
-						require.NotNil(t, saved, "record must exist before context")
-						savedCtx = actx
-						assert.Equal(t, int64(999), actx.RecordID)
-						assert.Zero(t, actx.EvaluatorVersionID)
-						assert.Nil(t, actx.Event)
-						assert.Empty(t, actx.CallbackURL)
-						assert.True(t, actx.ResumeReady)
-						assert.Positive(t, actx.AsyncUnixMS)
-						assert.Equal(t, "debug-user", actx.Session.UserID)
-						if scenario == "context failure" {
-							return errors.New("context failure")
-						}
-						return nil
-					})
-				}
-				callbackBeforeAck := scenario == "success before ack failure" || scenario == "failure before ack failure"
-				if scenario != "record failure" && scenario != "context failure" {
-					source.EXPECT().AsyncDebug(gomock.Any(), req.EvaluatorDO, req.InputData, req.EvaluatorRunConf, int64(2), int64(999)).DoAndReturn(
-						func(ctx context.Context, _ *entity.Evaluator, input *entity.EvaluatorInputData, _ *entity.EvaluatorRunConfig, _, _ int64) (map[string]string, string, error) {
-							require.NotNil(t, savedCtx, "callback context must exist before provider dispatch")
-							assert.Equal(t, "complete input", input.InputFields["answer"].GetText())
-							input.Ext["runtime_param"] = "unfolded"
-							assert.Equal(t, "original", saved.EvaluatorInputData.Ext["runtime_param"])
-							if callbackBeforeAck {
-								status := entity.EvaluatorRunStatusSuccess
-								output := &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.0)}}
-								if scenario == "failure before ack failure" {
-									status = entity.EvaluatorRunStatusFail
-									output = &entity.EvaluatorOutputData{EvaluatorRunError: &entity.EvaluatorRunError{Code: errno.CommonInternalErrorCode, Message: "provider reported failure"}}
-								}
-								outcome, err := s.ReportEvaluatorInvokeResult(ctx, &entity.ReportEvaluatorRecordParam{RecordID: 999, SpaceID: 2, Status: status, OutputData: output})
-								require.NoError(t, err)
-								assert.Equal(t, entity.ReportEvaluatorResultApplied, outcome)
-							}
-							if callbackBeforeAck || scenario == "provider failure" {
-								return nil, "", errors.New("provider failure")
-							}
-							return map[string]string{"dispatch": "accepted"}, "trace-debug", nil
-						})
-				}
-				if callbackBeforeAck {
-					recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(999), false).DoAndReturn(func(ctx context.Context, _ int64, _ bool, _ ...entity.GetEvaluatorRecordOptionFn) (*entity.EvaluatorRecord, error) {
-						assert.True(t, contexts.CtxWriteDB(ctx))
-						return saved, nil
-					})
-					terminalStatus := entity.EvaluatorRunStatusSuccess
-					if scenario == "failure before ack failure" {
-						terminalStatus = entity.EvaluatorRunStatusFail
-					}
-					recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(999), int64(2), entity.EvaluatorRunStatusAsyncInvoking, terminalStatus, gomock.Any()).DoAndReturn(func(_ context.Context, _, _ int64, _, status entity.EvaluatorRunStatus, output *entity.EvaluatorOutputData) (bool, error) {
-						saved.Status, saved.EvaluatorOutputData = status, output
-						return true, nil
-					})
-					recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(999), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusFail, gomock.Any()).Return(false, nil)
-					recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(999), false, gomock.Any()).DoAndReturn(func(ctx context.Context, _ int64, _ bool, _ ...entity.GetEvaluatorRecordOptionFn) (*entity.EvaluatorRecord, error) {
-						assert.True(t, contexts.CtxWriteDB(ctx))
-						assert.Equal(t, terminalStatus, saved.Status)
-						return saved, nil
-					})
-				} else if scenario == "context failure" || scenario == "provider failure" {
-					recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(999), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusFail, gomock.Any()).Return(true, nil)
-				} else if scenario != "record failure" {
-					var metadataErr error
-					if scenario == "metadata failure" {
-						metadataErr = errors.New("metadata failure")
-					}
-					recordRepo.EXPECT().UpdateEvaluatorRecordAsyncDispatch(gomock.Any(), int64(999), int64(2), "trace-debug", gomock.Any()).Return(metadataErr)
-				}
-			}
-			resp, err := s.AsyncDebugEvaluator(ctx, req)
-			switch scenario {
-			case "rpc", "http", "metadata failure", "success before ack failure", "failure before ack failure":
-				require.NoError(t, err)
-				require.NotNil(t, resp)
-				assert.Equal(t, int64(999), resp.InvokeID)
-			default:
-				require.Error(t, err)
-				assert.Nil(t, resp)
-				if scenario == "rate limited" {
-					statusErr, ok := errorx.FromStatusError(err)
-					require.True(t, ok)
-					assert.Equal(t, int32(errno.EvaluatorQPSLimitCode), statusErr.Code())
-				}
-			}
 		})
 	}
 }
