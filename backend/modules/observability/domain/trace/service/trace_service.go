@@ -62,6 +62,17 @@ const (
 	FetchAllMaxSpanLimit int32 = 100000
 )
 
+const (
+	creationAgentAsyncSpan     = "creation_agent_async"
+	creationAgentAsyncTempSpan = "creation_agent_async_temp"
+	creationAgentDebugTCCKey   = "creation_agent_debug"
+	creationAgentTenant        = "doubao"
+)
+
+type creationAgentDebugConfig struct {
+	Enabled bool `json:"enabled"`
+}
+
 type ListSpansReq struct {
 	WorkspaceID           int64
 	ThirdPartyWorkspaceID string
@@ -1625,6 +1636,16 @@ func (r *TraceServiceImpl) ListPreSpanOApi(ctx context.Context, req *ListPreSpan
 }
 
 func (r *TraceServiceImpl) IngestTraces(ctx context.Context, req *IngestTracesReq) error {
+	debugEnabled := req.Tenant == creationAgentTenant && creationAgentDebugEnabledFromConfig(ctx, r.traceConfig)
+	if debugEnabled {
+		for _, span := range req.Spans {
+			if isCreationAgentDebugSpan(span) {
+				logs.CtxInfo(ctx, "creation agent span at IngestTraces, logid=%s trace_id=%s span_id=%s span_name=%s input_size=%d output_size=%d",
+					span.LogID, span.TraceID, span.SpanID, span.SpanName, len(span.Input), len(span.Output))
+			}
+		}
+	}
+
 	processors, err := r.buildHelper.BuildIngestTraceProcessors(ctx, span_processor.Settings{})
 	if err != nil {
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -1652,6 +1673,22 @@ func (r *TraceServiceImpl) IngestTraces(ctx context.Context, req *IngestTracesRe
 	}
 	logs.CtxInfo(ctx, "Send msg successfully, spans count %d", len(req.Spans))
 	return nil
+}
+
+func creationAgentDebugEnabledFromConfig(ctx context.Context, traceConfig config.ITraceConfig) bool {
+	if traceConfig == nil {
+		return false
+	}
+	cfg := &creationAgentDebugConfig{}
+	return creationAgentDebugEnabled(cfg, traceConfig.UnmarshalKey(ctx, creationAgentDebugTCCKey, cfg))
+}
+
+func creationAgentDebugEnabled(cfg *creationAgentDebugConfig, err error) bool {
+	return err == nil && cfg != nil && cfg.Enabled
+}
+
+func isCreationAgentDebugSpan(span *loop_span.Span) bool {
+	return span != nil && (span.SpanName == creationAgentAsyncSpan || span.SpanName == creationAgentAsyncTempSpan)
 }
 
 func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTracesAdvanceInfoReq) (*GetTracesAdvanceInfoResp, error) {
