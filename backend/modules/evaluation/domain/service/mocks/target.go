@@ -376,15 +376,22 @@ func (mr *MockIEvalTargetServiceMockRecorder) ReportInvokeRecords(ctx, recordID2
 }
 
 // TerminateAsyncRecordsAndDestroySandbox mocks base method.
-func (m *MockIEvalTargetService) TerminateAsyncRecordsAndDestroySandbox(ctx context.Context, spaceID int64, recordIDs []int64, errCode int32, errMessage string, zombieTimeout bool) {
+func (m *MockIEvalTargetService) TerminateAsyncRecordsAndDestroySandbox(ctx context.Context, spaceID int64, recordIDs []int64, errCode int32, errMessage string, zombieTimeout bool, waitForDestroy ...bool) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "TerminateAsyncRecordsAndDestroySandbox", ctx, spaceID, recordIDs, errCode, errMessage, zombieTimeout)
+	varargs := []any{ctx, spaceID, recordIDs, errCode, errMessage, zombieTimeout}
+	for _, a := range waitForDestroy {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "TerminateAsyncRecordsAndDestroySandbox", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // TerminateAsyncRecordsAndDestroySandbox indicates an expected call of TerminateAsyncRecordsAndDestroySandbox.
-func (mr *MockIEvalTargetServiceMockRecorder) TerminateAsyncRecordsAndDestroySandbox(ctx, spaceID, recordIDs, errCode, errMessage, zombieTimeout any) *gomock.Call {
+func (mr *MockIEvalTargetServiceMockRecorder) TerminateAsyncRecordsAndDestroySandbox(ctx, spaceID, recordIDs, errCode, errMessage, zombieTimeout any, waitForDestroy ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateAsyncRecordsAndDestroySandbox", reflect.TypeOf((*MockIEvalTargetService)(nil).TerminateAsyncRecordsAndDestroySandbox), ctx, spaceID, recordIDs, errCode, errMessage, zombieTimeout)
+	varargs := append([]any{ctx, spaceID, recordIDs, errCode, errMessage, zombieTimeout}, waitForDestroy...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateAsyncRecordsAndDestroySandbox", reflect.TypeOf((*MockIEvalTargetService)(nil).TerminateAsyncRecordsAndDestroySandbox), varargs...)
 }
 
 // ValidateRuntimeParam mocks base method.

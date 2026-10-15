@@ -1380,14 +1380,17 @@ func (e *ExptMangerImpl) listItemTurnIDs(ctx context.Context, spaceID, exptID in
 //
 // targetSourceSpaceID: 跨空间共享场景下评测对象的来源空间 (Expt.TargetSpaceID, 0=同消费方空间);
 // EvalTargetRecord 落库时 SpaceID = 来源空间, 用消费方 spaceID 查会漏, 沙箱清不掉。
-func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.Context, spaceID, targetSourceSpaceID, exptID int64, exptRunID *int64, terminatedItemIDs []int64) {
+func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.Context, spaceID, targetSourceSpaceID, exptID int64, exptRunID *int64, terminatedItemIDs []int64, waitForDestroy ...bool) error {
 	if e.evalTargetService == nil || exptRunID == nil || *exptRunID <= 0 || len(terminatedItemIDs) == 0 {
-		return
+		if len(terminatedItemIDs) > 0 && len(waitForDestroy) > 0 && waitForDestroy[0] {
+			return fmt.Errorf("sandbox cleanup unavailable")
+		}
+		return nil
 	}
 	turnRunLogs, err := e.turnResultRepo.MGetItemTurnRunLogs(ctx, exptID, *exptRunID, terminatedItemIDs, spaceID)
 	if err != nil {
 		logs.CtxWarn(ctx, "[SandboxDestroy] MGetItemTurnRunLogs fail on cancel, expt_id=%d, expt_run_id=%d, err=%v", exptID, *exptRunID, err)
-		return
+		return err
 	}
 	recordIDSet := make(map[int64]struct{})
 	for _, rl := range turnRunLogs {
@@ -1397,7 +1400,7 @@ func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.C
 		recordIDSet[rl.TargetResultID] = struct{}{}
 	}
 	if len(recordIDSet) == 0 {
-		return
+		return nil
 	}
 	recordIDs := make([]int64, 0, len(recordIDSet))
 	for id := range recordIDSet {
@@ -1406,13 +1409,14 @@ func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.C
 	// 跨空间: EvalTargetRecord.SpaceID = 来源空间, TerminateAsyncRecordsAndDestroySandbox 的
 	// List/Version/Destroy 全链路都用它，否则 space 过滤把 record 过滤空、Destroy RPC 发不出。
 	targetSpaceID := resolveLoadSpaceID(spaceID, targetSourceSpaceID)
-	e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
+	return e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
 		ctx,
 		targetSpaceID,
 		recordIDs,
 		int32(errno.AsyncEvalTargetTerminatedCode),
 		"async eval target terminated: experiment cancelled",
 		false,
+		waitForDestroy...,
 	)
 }
 
