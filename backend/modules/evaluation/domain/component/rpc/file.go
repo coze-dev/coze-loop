@@ -5,6 +5,7 @@ package rpc
 
 import (
 	"context"
+	"time"
 
 	"github.com/cloudwego/kitex/client/callopt"
 
@@ -21,4 +22,19 @@ type IFileRPCAdapter interface {
 //go:generate mockgen -destination=mocks/file_provider.go -package=mocks . IFileProvider
 type IFileProvider interface {
 	MGetFileURL(ctx context.Context, keys []string) (urls map[string]string, err error)
+}
+
+type EvidenceArchiveDownloadRequest struct {
+	CallerSpaceID      int64
+	RecordID           int64
+	ResourceSpaceID    int64
+	EvaluatorVersionID int64
+	ObjectKey          string
+	Status             string
+}
+
+// IEvidenceArchiveURLProvider authorizes each record before signing. A missing
+// record ID in the response denies access to both archive metadata and its URL.
+type IEvidenceArchiveURLProvider interface {
+	MGetEvidenceArchiveDownloadURL(ctx context.Context, requests []*EvidenceArchiveDownloadRequest, ttl time.Duration) (urls map[int64]string, err error)
 }

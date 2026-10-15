@@ -4,16 +4,36 @@
 package evaluator
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 	evaluatorentity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
+
+func TestEvidenceArchive_RuntimeCallbackKeepsMetadataWithoutDiagnostics(t *testing.T) {
+	t.Parallel()
+	const payload = `{"evaluator_run_error":{"code":9,"message":"runtime timeout"},"extra_output":{"uri":"legacy/report.html","url":"https://legacy.example/report"},"evidence_archive":{"schema_version":"v1","object_key":"space/1/evaluator/2/evidence.tar.gz","status":"partial","trigger":"runtime_timeout","size_bytes":1234,"sha256":"abc","truncated_files":1,"deadline_at_unix_ms":123456789,"last_phase":"checkpoint","last_progress_at":123456700,"termination_source":"runtime_deadline","archive_executor":"ago-daemon","agent_termination_result":"terminated","error":"truncated","fornax_evaluator_log_url":"https://untrusted.example/archive"}}`
+	var dto spi.InvokeEvaluatorOutputData
+	require.NoError(t, json.Unmarshal([]byte(payload), &dto))
+	do := ToInvokeEvaluatorOutputDataDO(&dto, spi.InvokeEvaluatorRunStatus_FAILED)
+	require.NotNil(t, do)
+	encoded, err := json.Marshal(do.EvidenceArchive)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"schema_version":"v1","object_key":"space/1/evaluator/2/evidence.tar.gz","status":"partial","trigger":"runtime_timeout","size_bytes":1234,"sha256":"abc","truncated_files":1,"error":"truncated"}`, string(encoded))
+	assert.Empty(t, do.EvidenceArchive.FornaxEvaluatorLogURL)
+	assert.Equal(t, "legacy/report.html", gptr.Indirect(do.ExtraOutput.URI))
+	assert.Equal(t, "https://legacy.example/report", gptr.Indirect(do.ExtraOutput.URL))
+	public, err := json.Marshal(ConvertEvaluatorEvidenceArchiveDO2DTO(do.EvidenceArchive))
+	require.NoError(t, err)
+	assert.JSONEq(t, string(encoded), string(public))
+}
 
 func TestConvertEvaluatorOutputData_RoundTrip(t *testing.T) {
 	t.Parallel()
@@ -42,6 +62,17 @@ func TestConvertEvaluatorOutputData_RoundTrip(t *testing.T) {
 					URL:        gptr.Of("url"),
 					OutputType: gptr.Of(evaluatordto.EvaluatorExtraOutputTypeHTML),
 				},
+				EvidenceArchive: &evaluatordto.EvaluatorEvidenceArchive{
+					SchemaVersion:         gptr.Of("1"),
+					ObjectKey:             gptr.Of("evidence/record.tar.gz"),
+					Status:                gptr.Of("uploaded"),
+					Trigger:               gptr.Of("run_timeout"),
+					SizeBytes:             gptr.Of(int64(4096)),
+					Sha256:                gptr.Of("abc123"),
+					TruncatedFiles:        gptr.Of(int64(1)),
+					Error:                 gptr.Of(""),
+					FornaxEvaluatorLogURL: gptr.Of("https://untrusted.example/callback-url"),
+				},
 			},
 		},
 		{
@@ -68,6 +99,17 @@ func TestConvertEvaluatorOutputData_RoundTrip(t *testing.T) {
 					URL:        gptr.Of("url2"),
 					OutputType: gptr.Of(evaluatorentity.EvaluatorExtraOutputTypeHTML),
 				},
+				EvidenceArchive: &evaluatorentity.EvaluatorEvidenceArchive{
+					SchemaVersion:         "1",
+					ObjectKey:             "evidence/record-2.tar.gz",
+					Status:                "uploaded",
+					Trigger:               "completed",
+					SizeBytes:             8192,
+					SHA256:                "def456",
+					TruncatedFiles:        1,
+					Error:                 "none",
+					FornaxEvaluatorLogURL: "https://signed.example/evidence?ttl=600",
+				},
 			},
 		},
 	}
@@ -92,6 +134,12 @@ func TestConvertEvaluatorOutputData_RoundTrip(t *testing.T) {
 							assert.Equal(t, evaluatorentity.EvaluatorExtraOutputType(*tc.dto.ExtraOutput.OutputType), *gotDO.ExtraOutput.OutputType)
 						}
 					}
+					if assert.NotNil(t, gotDO.EvidenceArchive) {
+						assert.Equal(t, tc.dto.EvidenceArchive.GetObjectKey(), gotDO.EvidenceArchive.ObjectKey)
+						assert.Equal(t, tc.dto.EvidenceArchive.GetSha256(), gotDO.EvidenceArchive.SHA256)
+						assert.Equal(t, tc.dto.EvidenceArchive.GetTruncatedFiles(), gotDO.EvidenceArchive.TruncatedFiles)
+						assert.Empty(t, gotDO.EvidenceArchive.FornaxEvaluatorLogURL, "callback/read-only URL must not enter persisted domain data")
+					}
 				}
 			}
 
@@ -109,6 +157,12 @@ func TestConvertEvaluatorOutputData_RoundTrip(t *testing.T) {
 						if assert.NotNil(t, tc.do.ExtraOutput.OutputType) {
 							assert.Equal(t, evaluatordto.EvaluatorExtraOutputType(*tc.do.ExtraOutput.OutputType), *gotDTO.ExtraOutput.OutputType)
 						}
+					}
+					if assert.NotNil(t, gotDTO.EvidenceArchive) {
+						assert.Equal(t, tc.do.EvidenceArchive.ObjectKey, gotDTO.EvidenceArchive.GetObjectKey())
+						assert.Equal(t, tc.do.EvidenceArchive.SHA256, gotDTO.EvidenceArchive.GetSha256())
+						assert.Equal(t, tc.do.EvidenceArchive.TruncatedFiles, gotDTO.EvidenceArchive.GetTruncatedFiles())
+						assert.Equal(t, tc.do.EvidenceArchive.FornaxEvaluatorLogURL, gotDTO.EvidenceArchive.GetFornaxEvaluatorLogURL())
 					}
 				}
 			}
@@ -214,11 +268,20 @@ func TestToInvokeEvaluatorOutputDataDO(t *testing.T) {
 			},
 		},
 		{
-			name: "success",
+			name: "success preserves evidence archive separately from extra output",
 			in: &spi.InvokeEvaluatorOutputData{
 				EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(float64(0.9)), Reasoning: gptr.Of("r")},
 				EvaluatorUsage:   &spi.InvokeEvaluatorUsage{InputTokens: gptr.Of(int64(1)), OutputTokens: gptr.Of(int64(2))},
 				ExtraOutput:      &spi.EvaluatorExtraOutputContent{URI: gptr.Of("u"), URL: gptr.Of("l")},
+				EvidenceArchive: &spi.EvaluatorEvidenceArchive{
+					SchemaVersion:         gptr.Of("1"),
+					ObjectKey:             gptr.Of("evidence/callback.tar.gz"),
+					Status:                gptr.Of("uploaded"),
+					SizeBytes:             gptr.Of(int64(1024)),
+					Sha256:                gptr.Of("sha-callback"),
+					TruncatedFiles:        gptr.Of(int64(1)),
+					FornaxEvaluatorLogURL: gptr.Of("https://untrusted.example/callback-url"),
+				},
 			},
 			status: spi.InvokeEvaluatorRunStatus_SUCCESS,
 			check: func(t *testing.T, got *evaluatorentity.EvaluatorOutputData) {
@@ -229,6 +292,11 @@ func TestToInvokeEvaluatorOutputDataDO(t *testing.T) {
 					assert.Equal(t, float64(0.9), gptr.Indirect(got.EvaluatorResult.Score))
 					assert.Equal(t, int64(1), got.EvaluatorUsage.InputTokens)
 					assert.Equal(t, "u", gptr.Indirect(got.ExtraOutput.URI))
+					assert.Equal(t, "evidence/callback.tar.gz", got.EvidenceArchive.ObjectKey)
+					assert.Equal(t, "sha-callback", got.EvidenceArchive.SHA256)
+					assert.Equal(t, int64(1), got.EvidenceArchive.TruncatedFiles)
+					assert.Empty(t, got.EvidenceArchive.FornaxEvaluatorLogURL, "SPI callbacks cannot persist a read-only signed URL")
+					assert.Equal(t, "u", gptr.Indirect(got.ExtraOutput.URI), "evidence archive must not overwrite extra_output")
 				}
 			},
 		},
@@ -244,6 +312,7 @@ func TestToInvokeEvaluatorOutputDataDO(t *testing.T) {
 					assert.Equal(t, "unknown error", got.EvaluatorRunError.Message)
 					assert.Nil(t, got.EvaluatorResult)
 					assert.Nil(t, got.EvaluatorUsage)
+					assert.Nil(t, got.EvidenceArchive, "legacy callbacks remain compatible when evidence_archive is absent")
 				}
 			},
 		},
@@ -254,6 +323,13 @@ func TestToInvokeEvaluatorOutputDataDO(t *testing.T) {
 				EvaluatorRunError: &spi.InvokeEvaluatorRunError{
 					Code:    gptr.Of(int32(3)),
 					Message: gptr.Of("run error"),
+				},
+				EvidenceArchive: &spi.EvaluatorEvidenceArchive{
+					ObjectKey:      gptr.Of("evidence/failed.tar.gz"),
+					Status:         gptr.Of("failed"),
+					Trigger:        gptr.Of("run_timeout"),
+					TruncatedFiles: gptr.Of(int64(2)),
+					Error:          gptr.Of("upload interrupted"),
 				},
 			},
 			status: spi.InvokeEvaluatorRunStatus_FAILED,
@@ -267,6 +343,12 @@ func TestToInvokeEvaluatorOutputDataDO(t *testing.T) {
 					if assert.NotNil(t, got.EvaluatorRunError) {
 						assert.Equal(t, int32(3), got.EvaluatorRunError.Code)
 						assert.Equal(t, "run error", got.EvaluatorRunError.Message)
+					}
+					if assert.NotNil(t, got.EvidenceArchive) {
+						assert.Equal(t, "evidence/failed.tar.gz", got.EvidenceArchive.ObjectKey)
+						assert.Equal(t, "failed", got.EvidenceArchive.Status)
+						assert.Equal(t, int64(2), got.EvidenceArchive.TruncatedFiles)
+						assert.Equal(t, "upload interrupted", got.EvidenceArchive.Error)
 					}
 				}
 			},
