@@ -18,7 +18,7 @@ import (
 type IExptRunLogDAO interface {
 	Create(ctx context.Context, exptRunLog *model.ExptRunLog, opts ...db.Option) error
 	Save(ctx context.Context, exptRunLog *model.ExptRunLog, opts ...db.Option) error
-	Update(ctx context.Context, exptID, exptRunID int64, ufields map[string]any, opts ...db.Option) error
+	Update(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any, opts ...db.Option) error
 	Get(ctx context.Context, exptID, exptRunID int64, opts ...db.Option) (*model.ExptRunLog, error)
 }
 
@@ -58,10 +58,11 @@ func (dao *ExptRunLogDAOImpl) Save(ctx context.Context, exptRunLog *model.ExptRu
 	return nil
 }
 
-func (dao *ExptRunLogDAOImpl) Update(ctx context.Context, exptID, exptRunID int64, ufields map[string]any, opts ...db.Option) error {
+func (dao *ExptRunLogDAOImpl) Update(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any, opts ...db.Option) error {
 	db := dao.provider.NewSession(ctx, opts...)
 	q := query.Use(db).ExptRunLog
 	_, err := q.WithContext(ctx).
+		Where(q.SpaceID.Eq(spaceID)).
 		Where(q.ExptID.Eq(exptID)).
 		Where(q.ExptRunID.Eq(exptRunID)).
 		UpdateColumns(ufields)

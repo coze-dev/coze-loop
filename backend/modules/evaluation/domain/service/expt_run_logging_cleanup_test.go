@@ -93,8 +93,8 @@ func TestLogRunPersistenceFailureReleasesOwnedLock(t *testing.T) {
 					latestRunID = expt.LatestRunID
 					return nil
 				}).Times(updates)
-			mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), exptID, runID, gomock.Any()).
-				DoAndReturn(func(cleanupCtx context.Context, _, _ int64, fields map[string]any) error {
+			mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), exptID, runID, spaceID, gomock.Any()).
+				DoAndReturn(func(cleanupCtx context.Context, _, _, _ int64, fields map[string]any) error {
 					require.NoError(t, cleanupCtx.Err())
 					require.Equal(t, map[string]any{"status": int64(entity.ExptStatus_Failed), "status_message": []byte(writeErr.Error())}, fields)
 					if saved == nil {
@@ -203,7 +203,7 @@ func TestCleanupUnscheduledRunRejectsInvalidRunID(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mgr := newTestExptManager(ctrl)
 	for _, runID := range []int64{0, -1} {
-		mgr.cleanupUnscheduledRun(context.Background(), 1, runID, errors.New("run failed"))
+		mgr.cleanupUnscheduledRun(context.Background(), 1, runID, 3, errors.New("run failed"))
 	}
 }
 
@@ -244,7 +244,7 @@ func TestLogRunLatestFailureDoesNotRollbackSupersededQuota(t *testing.T) {
 						}
 						return writeErr
 					})
-				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), exptID, newRunID, gomock.Any()).Return(nil)
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), exptID, newRunID, spaceID, gomock.Any()).Return(nil)
 				mgr.mutex.(*lockMocks.MockILocker).EXPECT().UnlockForce(gomock.Any(), mgr.makeExptMutexLockKey(exptID)).Return(true, nil)
 				if retryItems {
 					_, _, err := mgr.LogRetryItemsRun(ctx, exptID, entity.EvaluationModeRetryItems, spaceID, nil, &entity.Session{UserID: "u"})

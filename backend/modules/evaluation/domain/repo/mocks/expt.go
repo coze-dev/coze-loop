@@ -1055,17 +1055,17 @@ func (mr *MockIExptRunLogRepoMockRecorder) Save(ctx, exptRunLog any) *gomock.Cal
 }
 
 // Update mocks base method.
-func (m *MockIExptRunLogRepo) Update(ctx context.Context, exptID, exptRunID int64, ufields map[string]any) error {
+func (m *MockIExptRunLogRepo) Update(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", ctx, exptID, exptRunID, ufields)
+	ret := m.ctrl.Call(m, "Update", ctx, exptID, exptRunID, spaceID, ufields)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockIExptRunLogRepoMockRecorder) Update(ctx, exptID, exptRunID, ufields any) *gomock.Call {
+func (mr *MockIExptRunLogRepoMockRecorder) Update(ctx, exptID, exptRunID, spaceID, ufields any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockIExptRunLogRepo)(nil).Update), ctx, exptID, exptRunID, ufields)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockIExptRunLogRepo)(nil).Update), ctx, exptID, exptRunID, spaceID, ufields)
 }
 
 // MockIExptAggrResultRepo is a mock of IExptAggrResultRepo interface.
