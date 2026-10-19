@@ -306,7 +306,7 @@ func withRetryYieldExt(ext map[string]string, enabled bool) map[string]string {
 func (e *ExptMangerImpl) prepareRun(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session) (expt *entity.Experiment, err error) {
 	defer func() {
 		if err != nil {
-			e.cleanupUnscheduledRun(ctx, exptID, runID, err)
+			e.cleanupUnscheduledRun(ctx, exptID, runID, spaceID, err)
 		}
 	}()
 
@@ -319,7 +319,7 @@ func (e *ExptMangerImpl) prepareRun(ctx context.Context, exptID, runID, spaceID 
 	return expt, err
 }
 
-func (e *ExptMangerImpl) cleanupUnscheduledRun(ctx context.Context, exptID, runID int64, cause error) {
+func (e *ExptMangerImpl) cleanupUnscheduledRun(ctx context.Context, exptID, runID, spaceID int64, cause error) {
 	if runID <= 0 {
 		logs.CtxError(ctx, "[ExptEval][RunLock] invalid cleanup run [expt_id=%v run_id=%v]", exptID, runID)
 		return
@@ -329,7 +329,7 @@ func (e *ExptMangerImpl) cleanupUnscheduledRun(ctx context.Context, exptID, runI
 	// Attempt this bare DEL synchronously once; a delayed retry could delete a new run's lock.
 	ctx = context.WithoutCancel(ctx)
 	stateCtx, cancelState := context.WithTimeout(ctx, exptRunLogPersistTimeout)
-	stateErr := e.runLogRepo.Update(stateCtx, exptID, runID, map[string]any{
+	stateErr := e.runLogRepo.Update(stateCtx, exptID, runID, spaceID, map[string]any{
 		"status": int64(entity.ExptStatus_Failed), "status_message": []byte(cause.Error()),
 	})
 	cancelState()
@@ -1724,7 +1724,7 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 	ownedRunID := exptRunID
 	defer func(runID int64) {
 		if err != nil {
-			e.cleanupUnscheduledRun(ctx, exptID, runID, err)
+			e.cleanupUnscheduledRun(ctx, exptID, runID, spaceID, err)
 		}
 	}(ownedRunID)
 
@@ -1776,7 +1776,7 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 		ownedRunID := runID
 		defer func(runID int64) {
 			if err != nil {
-				e.cleanupUnscheduledRun(ctx, exptID, runID, err)
+				e.cleanupUnscheduledRun(ctx, exptID, runID, spaceID, err)
 			}
 		}(ownedRunID)
 	}
@@ -1850,7 +1850,7 @@ func (e *ExptMangerImpl) GetRunLog(ctx context.Context, exptID, exptRunID, space
 }
 
 func (e *ExptMangerImpl) SetExptTerminating(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
-	if err := e.runLogRepo.Update(ctx, exptID, exptRunID, map[string]any{"status": int64(entity.ExptStatus_Terminating)}); err != nil {
+	if err := e.runLogRepo.Update(ctx, exptID, exptRunID, spaceID, map[string]any{"status": int64(entity.ExptStatus_Terminating)}); err != nil {
 		return err
 	}
 	if err := e.exptRepo.Update(ctx, &entity.Experiment{
