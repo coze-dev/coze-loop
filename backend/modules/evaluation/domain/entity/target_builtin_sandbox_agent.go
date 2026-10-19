@@ -98,6 +98,10 @@ func (a *SandboxAgent) IsMacVMPlusSSH() bool {
 	return ResolveSandboxCountMode(a.SandboxCountMode) == SandboxCountModeMacVMPlusSSH
 }
 
+func (a *SandboxAgent) IsWindowsPlusSandbox() bool {
+	return a != nil && ResolveSandboxCountMode(a.SandboxCountMode) == SandboxCountModeWindowsPlusSandbox
+}
+
 type SandboxEnvVar struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`

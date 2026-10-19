@@ -87,7 +87,8 @@ const (
 	// SandboxResourceTypeSandbox = sandbox(0)，默认，Linux 沙箱；未显式设置即此值，保持原行为不变。
 	SandboxResourceTypeSandbox SandboxResourceType = 0
 	// SandboxResourceTypeMacVM = mac_vm(1)，从 warm pool 租借的 Mac VM。
-	SandboxResourceTypeMacVM SandboxResourceType = 1
+	SandboxResourceTypeMacVM   SandboxResourceType = 1
+	SandboxResourceTypeWindows SandboxResourceType = 3
 )
 
 // ---------- Domain ----------

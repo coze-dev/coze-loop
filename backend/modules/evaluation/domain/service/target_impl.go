@@ -90,8 +90,10 @@ const (
 // Destroy 收尾据此把 execution 分回各自 task。两者字面量相同但语义不同 (一个是 execute id 后缀、
 // 一个是 task id 后缀), 分开命名避免误当同一概念。
 const (
-	sandboxMacVMExecuteIDSuffix = "-macvm"
-	sandboxMacVMTaskIDSuffix    = "-macvm"
+	sandboxMacVMExecuteIDSuffix   = "-macvm"
+	sandboxMacVMTaskIDSuffix      = "-macvm"
+	sandboxWindowsExecuteIDSuffix = "-windows"
+	sandboxWindowsTaskIDSuffix    = "-windows"
 )
 
 func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
@@ -978,13 +980,15 @@ func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskI
 	if e.sandboxSchedulerAdapter == nil || len(executeIDs) == 0 {
 		return
 	}
-	// 按所属 task 分组: "-macvm" 后缀的 execution 属 mac_vm task, 其余属基础 sandbox task。
+	// 桌面 VM execution 按资源后缀分组，避免向基础 Linux task 销毁导致租约泄漏。
 	// 每组各自一个带重试的 destroy goroutine，避免单 taskID 只销一个、另一个泄漏。
 	byTask := make(map[string][]string, 2)
 	for _, id := range executeIDs {
 		t := taskID
 		if strings.HasSuffix(id, sandboxMacVMExecuteIDSuffix) {
 			t = taskID + sandboxMacVMTaskIDSuffix
+		} else if strings.HasSuffix(id, sandboxWindowsExecuteIDSuffix) {
+			t = taskID + sandboxWindowsTaskIDSuffix
 		}
 		byTask[t] = append(byTask[t], id)
 	}
@@ -1294,6 +1298,8 @@ func sideForExecuteID(id string, recordID int64) string {
 	switch {
 	case id == strconv.FormatInt(recordID, 10):
 		return "main"
+	case strings.HasSuffix(id, sandboxWindowsExecuteIDSuffix):
+		return "windows"
 	case strings.HasSuffix(id, "-macvm"):
 		return "mac_vm"
 	case strings.HasSuffix(id, "-orch"):

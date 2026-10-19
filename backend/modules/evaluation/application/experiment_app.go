@@ -92,6 +92,7 @@ type experimentApplication struct {
 const sandboxSchedulerInitTimeout = 5 * time.Second
 
 const sandboxMacVMTaskIDSuffix = "-macvm"
+const sandboxWindowsTaskIDSuffix = "-windows"
 
 // sandboxConcurrencyBuffer 是沙箱任务并发配额的余量系数（见 sandboxInitConcurrency）。
 //
@@ -772,10 +773,6 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 
 	cresp, err := e.CreateExperiment(ctx, createReq)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := validateSandboxExecutionMode(sandboxCountModeForExperimentDTO(cresp.GetExperiment())); err != nil {
 		return nil, err
 	}
 
@@ -1821,7 +1818,7 @@ func initSandboxTasks(ctx context.Context, adapter rpc.ISandboxSchedulerAdapter,
 }
 
 // initSandboxTasksByTaskID 同时服务实验 task 与固定的 sandbox_debug task，确保 Submit/Retry/Update/Debug
-// 对 Mac VM 拓扑使用完全相同的 task 划分。concurrency 已是 task 粒度的 execution 配额。
+// 对桌面 VM 拓扑使用完全相同的 task 划分。concurrency 已是 task 粒度的 execution 配额。
 func initSandboxTasksByTaskID(ctx context.Context, adapter rpc.ISandboxSchedulerAdapter, scene, taskID string, concurrency sandboxTaskConcurrency, workspaceID int64, tenant rpc.SandboxTenant) error {
 	if adapter == nil {
 		return nil
@@ -1830,50 +1827,32 @@ func initSandboxTasksByTaskID(ctx context.Context, adapter rpc.ISandboxScheduler
 	initCtx, cancel := context.WithTimeout(ctx, sandboxSchedulerInitTimeout)
 	defer cancel()
 
-	// mac_vm_plus_sandbox / mac_vm_plus_ssh 链路：一次实验 Init 两个 task，共用 GUI 租户，
-	// 靠 ResourceType 区分并使用各自的 execution 并发：
-	//   - sandbox task：TaskID=expt_id，ResourceType=Sandbox（orchestrator 落 Linux 沙箱）
-	//   - mac_vm task ：TaskID=expt_id+"-macvm"，ResourceType=MacVM（被测桌面 agent 落 Mac VM warm pool）
-	// taskID 后缀必须与 operator 侧 macVMTaskID 一致（target_source_sandbox_agent_impl.go）。
-	if tenant == rpc.SandboxTenantFornaxEvalGeneralGUI {
-		tasks := []struct {
-			taskID       string
-			resourceType rpc.SandboxResourceType
-		}{
-			{taskID, rpc.SandboxResourceTypeSandbox},
-			{taskID + sandboxMacVMTaskIDSuffix, rpc.SandboxResourceTypeMacVM},
-		}
-		for _, t := range tasks {
-			taskConcurrency := concurrency.sandbox
-			if t.resourceType == rpc.SandboxResourceTypeMacVM {
-				taskConcurrency = concurrency.macVM
-			}
-			if _, initErr := adapter.Init(initCtx, &rpc.SandboxInitRequest{
-				TaskID:       t.taskID,
-				Concurrency:  taskConcurrency,
-				WorkspaceID:  workspaceID,
-				Tenant:       tenant,
-				ResourceType: t.resourceType,
-			}); initErr != nil {
-				logs.CtxWarn(initCtx, "init mac_vm+sandbox task fail, scene=%s, task_id=%s, resource_type=%d, err=%v", scene, t.taskID, t.resourceType, initErr)
-				return errorx.Wrapf(initErr, "init mac_vm+sandbox task fail, scene=%s, task_id=%s", scene, t.taskID)
-			}
-		}
-		logs.CtxInfo(initCtx, "init mac_vm+sandbox tasks success, scene=%s, task_id=%s, workspace_id=%d, sandbox_concurrency=%d, mac_vm_concurrency=%d",
-			scene, taskID, workspaceID, concurrency.sandbox, concurrency.macVM)
-		return nil
+	type taskInit struct {
+		taskID       string
+		resourceType rpc.SandboxResourceType
+		concurrency  int32
 	}
-
-	if _, initErr := adapter.Init(initCtx, &rpc.SandboxInitRequest{
-		TaskID:      taskID,
-		Concurrency: concurrency.sandbox,
-		WorkspaceID: workspaceID,
-		Tenant:      tenant,
-	}); initErr != nil {
-		logs.CtxWarn(initCtx, "init sandbox task fail, scene=%s, task_id=%s, workspace_id=%d, tenant=%d, err=%v", scene, taskID, workspaceID, tenant, initErr)
-		return errorx.Wrapf(initErr, "init sandbox task fail, scene=%s, task_id=%s", scene, taskID)
+	tasks := []taskInit{{taskID, rpc.SandboxResourceTypeSandbox, concurrency.sandbox}}
+	if concurrency.mode == entity.SandboxCountModeWindowsPlusSandbox {
+		tenant = rpc.SandboxTenantFornaxEvalGeneral
+		tasks = append(tasks, taskInit{
+			taskID + sandboxWindowsTaskIDSuffix, rpc.SandboxResourceTypeWindows, concurrency.sandbox,
+		})
+	} else if tenant == rpc.SandboxTenantFornaxEvalGeneralGUI {
+		tasks = append(tasks, taskInit{
+			taskID + sandboxMacVMTaskIDSuffix, rpc.SandboxResourceTypeMacVM, concurrency.macVM,
+		})
 	}
-	logs.CtxInfo(initCtx, "init sandbox task success, scene=%s, task_id=%s, workspace_id=%d, tenant=%d", scene, taskID, workspaceID, tenant)
+	for _, task := range tasks {
+		if _, err := adapter.Init(initCtx, &rpc.SandboxInitRequest{
+			TaskID: task.taskID, Concurrency: task.concurrency, WorkspaceID: workspaceID,
+			Tenant: tenant, ResourceType: task.resourceType,
+		}); err != nil {
+			logs.CtxWarn(initCtx, "init sandbox task fail, scene=%s, task_id=%s, resource_type=%d, err=%v", scene, task.taskID, task.resourceType, err)
+			return errorx.Wrapf(err, "init sandbox task fail, scene=%s, task_id=%s", scene, task.taskID)
+		}
+	}
+	logs.CtxInfo(initCtx, "init sandbox tasks success, scene=%s, task_id=%s, workspace_id=%d, tenant=%d", scene, taskID, workspaceID, tenant)
 	return nil
 }
 
@@ -1892,9 +1871,6 @@ func reinitSandboxTaskForExperiment(
 		return nil
 	}
 	if err := ensureSandboxExperimentTarget(ctx, targetSvc, expt, workspaceID); err != nil {
-		return err
-	}
-	if err := validateSandboxExecutionMode(sandboxCountModeForExperimentEntity(expt)); err != nil {
 		return err
 	}
 	tenant := sandboxTenantForExperimentEntity(expt)
@@ -1948,10 +1924,11 @@ func isSandboxAgentExperiment(expt *entity.Experiment) bool {
 	return false
 }
 
-// sandboxTaskConcurrency 描述一次 Init 中两个独立 task 的 execution 配额。
-// 非 Mac VM 拓扑只使用 sandbox；Mac VM 拓扑必须分别计算，不能按 GUI tenant 整体翻倍：
+// sandboxTaskConcurrency 携带显式拓扑及各 task 的 execution 配额。
+// Windows 两个 task 各占一份；Mac VM 配额不能按 GUI tenant 整体翻倍：
 // mac_vm_plus_ssh 的基础 task 每 item 有 ssh+orch 两个 execution，而 -macvm task 只有一个。
 type sandboxTaskConcurrency struct {
+	mode    entity.SandboxCountMode
 	sandbox int32
 	macVM   int32
 }
@@ -1959,6 +1936,7 @@ type sandboxTaskConcurrency struct {
 // sandboxTaskConcurrencyForMode 按实际 execution 拓扑计算 task 粒度配额：
 //   - single: sandbox=1/item
 //   - dual: sandbox=2/item
+//   - windows_plus_sandbox: sandbox=1/item, windows=1/item
 //   - mac_vm_plus_sandbox: sandbox=1/item, mac_vm=1/item
 //   - mac_vm_plus_ssh: sandbox=2/item (ssh+orch), mac_vm=1/item
 //   - shared: sandbox=1/item —— **两个进程不是两个 execution**。共享拓扑省掉的正是第二个沙箱，
@@ -1967,6 +1945,7 @@ func sandboxTaskConcurrencyForMode(itemConcurNum *int, mode entity.SandboxCountM
 	mode = entity.ResolveSandboxCountMode(mode)
 	sandboxUsesTwoExecutions := mode == entity.SandboxCountModeDual || mode == entity.SandboxCountModeMacVMPlusSSH
 	return sandboxTaskConcurrency{
+		mode:    mode,
 		sandbox: sandboxInitConcurrency(itemConcurNum, sandboxUsesTwoExecutions),
 		macVM:   sandboxInitConcurrency(itemConcurNum, false),
 	}
@@ -2010,6 +1989,9 @@ func sandboxTenantForExperimentEntity(expt *entity.Experiment) rpc.SandboxTenant
 		return rpc.SandboxTenantDefault
 	}
 	countMode := sandboxCountModeForExperimentEntity(expt)
+	if countMode == entity.SandboxCountModeWindowsPlusSandbox {
+		return rpc.SandboxTenantFornaxEvalGeneral
+	}
 	// mac_vm_plus_sandbox / mac_vm_plus_ssh: 都要 Init 一对 task（sandbox + -macvm），
 	// 共用 GUI 专用租户、靠 ResourceType 区分。mac_vm_plus_ssh 的 orchestrator+SSH sandbox
 	// 共用 sandbox task（同 ResourceType=Sandbox），mac_vm 走 -macvm task，与本分支的两 task
@@ -2041,6 +2023,9 @@ func sandboxTenantForExperimentDTO(expt *domain_expt.Experiment) rpc.SandboxTena
 		return rpc.SandboxTenantDefault
 	}
 	countMode := sandboxCountModeForExperimentDTO(expt)
+	if countMode == entity.SandboxCountModeWindowsPlusSandbox {
+		return rpc.SandboxTenantFornaxEvalGeneral
+	}
 	// mac_vm_plus_sandbox / mac_vm_plus_ssh: 都要 Init 一对 task（sandbox + -macvm），
 	// 共用 GUI 专用租户、靠 ResourceType 区分（见 entity 版同处注释）。
 	if countMode == entity.SandboxCountModeMacVMPlusSandbox || countMode == entity.SandboxCountModeArmMacVMPlusSandbox || countMode == entity.SandboxCountModeMacVMPlusSSH {
@@ -3149,12 +3134,5 @@ func (e *experimentApplication) transformExtraOutputURIsToURLs(ctx context.Conte
 		}
 	}
 
-	return nil
-}
-
-func validateSandboxExecutionMode(mode entity.SandboxCountMode) error {
-	if mode == entity.SandboxCountModeWindowsPlusSandbox {
-		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("unsupported execution mode: windows_plus_sandbox"))
-	}
 	return nil
 }

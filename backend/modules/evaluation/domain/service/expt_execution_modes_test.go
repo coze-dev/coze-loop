@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	lwtMocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
 	rpcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -15,7 +16,7 @@ import (
 	"testing"
 )
 
-func TestWindowsRunRejectsBeforeQuota(t *testing.T) {
+func TestWindowsRunReachesQuota(t *testing.T) {
 	for _, retry := range []bool{false, true} {
 		t.Run(map[bool]string{false: "run", true: "retry"}[retry], func(t *testing.T) {
 			ctrl := gomock.NewController(t)
@@ -30,13 +31,14 @@ func TestWindowsRunRejectsBeforeQuota(t *testing.T) {
 			mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptStats{}, nil).AnyTimes()
 			mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).EXPECT().BatchGetExptAggrResultByExperimentIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptAggregateResult{}, nil).AnyTimes()
 			mgr.userProvider.(*rpcMocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{}, nil).AnyTimes()
+			mgr.quotaRepo.(*repoMocks.MockQuotaRepo).EXPECT().CreateOrUpdate(gomock.Any(), int64(2), gomock.Any(), gomock.Any()).Return(errors.New("quota reached"))
 			var err error
 			if retry {
 				err = mgr.RetryItems(context.Background(), 1, 0, 2, 0, nil, &entity.Session{}, nil)
 			} else {
 				err = mgr.Run(context.Background(), 1, 0, 2, 0, &entity.Session{}, entity.EvaluationModeFailRetry, nil)
 			}
-			assert.ErrorContains(t, err, "unsupported execution mode")
+			assert.ErrorContains(t, err, "quota reached")
 		})
 	}
 }

@@ -5,6 +5,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"github.com/bytedance/gg/gptr"
 	im "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	dt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
@@ -38,26 +39,40 @@ func TestARMModeUsesGUITenant(t *testing.T) {
 	assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneralGUI, sandboxTenantForAsyncDebug(mode))
 	assert.Equal(t, mode, sandboxCountModeForExperimentEntity(expt))
 	assert.Equal(t, mode, sandboxCountModeForExperimentDTO(dto))
-	assert.Equal(t, sandboxTaskConcurrencyForMode(gptr.Of(7), entity.SandboxCountModeMacVMPlusSandbox), sandboxTaskConcurrencyForMode(gptr.Of(7), mode))
+	assert.Equal(t, sandboxTaskConcurrencyForMode(gptr.Of(7), entity.SandboxCountModeMacVMPlusSandbox).sandbox, sandboxTaskConcurrencyForMode(gptr.Of(7), mode).sandbox)
 }
 
-func TestReinitWindowsRejectsBeforeResources(t *testing.T) {
+func TestReinitWindowsCreatesBothResources(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	adapter := rm.NewMockISandboxSchedulerAdapter(ctrl)
+	got := map[string]rpc.SandboxResourceType{}
+	adapter.EXPECT().Init(gomock.Any(), gomock.Any()).Times(2).DoAndReturn(func(_ context.Context, req *rpc.SandboxInitRequest) (*rpc.SandboxInitResponse, error) {
+		got[req.TaskID] = req.ResourceType
+		assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneral, req.Tenant)
+		return &rpc.SandboxInitResponse{}, nil
+	})
 	err := reinitSandboxTaskForExperiment(context.Background(), "retry", executionModeExperiment("windows_plus_sandbox"), nil, 123, nil, adapter)
-	assert.ErrorContains(t, err, "unsupported execution mode")
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]rpc.SandboxResourceType{"456": 0, "456-windows": 3}, got)
 }
 
-func TestAsyncDebugWindowsRejectsBeforeResources(t *testing.T) {
+func TestAsyncDebugWindowsCreatesResourcesBeforeProvider(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	auth := rm.NewMockIAuthProvider(ctrl)
 	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-	app := &EvalOpenAPIApplication{auth: auth, metric: &fakeOpenAPIMetric{}, sandboxSchedulerAdapter: rm.NewMockISandboxSchedulerAdapter(ctrl), targetSvc: sm.NewMockIEvalTargetService(ctrl)}
+	scheduler := rm.NewMockISandboxSchedulerAdapter(ctrl)
+	scheduler.EXPECT().Init(gomock.Any(), gomock.Any()).Times(2).DoAndReturn(func(_ context.Context, req *rpc.SandboxInitRequest) (*rpc.SandboxInitResponse, error) {
+		assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneral, req.Tenant)
+		return &rpc.SandboxInitResponse{}, nil
+	})
+	targetSvc := sm.NewMockIEvalTargetService(ctrl)
+	targetSvc.EXPECT().AsyncDebugTarget(gomock.Any(), gomock.Any()).Return(nil, "", errors.New("provider reached"))
+	app := &EvalOpenAPIApplication{auth: auth, metric: &fakeOpenAPIMetric{}, sandboxSchedulerAdapter: scheduler, targetSvc: targetSvc}
 	_, err := app.AsyncDebugEvalTargetOApi(context.Background(), &openapi.AsyncDebugEvalTargetOApiRequest{
 		WorkspaceID: gptr.Of(int64(123)), EvalTargetType: gptr.Of(ot.EvalTargetTypeSandboxAgent), Param: gptr.Of("{}"),
 		SandboxAgent: &ot.SandboxAgent{SandboxCountMode: gptr.Of(ot.SandboxCountMode("windows_plus_sandbox"))},
 	})
-	assert.ErrorContains(t, err, "unsupported execution mode")
+	assert.ErrorContains(t, err, "provider reached")
 }
 
 func TestARMReinitCreatesBothTasks(t *testing.T) {
@@ -77,7 +92,7 @@ func TestARMReinitCreatesBothTasks(t *testing.T) {
 	assert.Equal(t, entity.SandboxCountModeArmMacVMPlusSandbox, expt.Target.EvalTargetVersion.SandboxAgent.SandboxCountMode)
 }
 
-func TestSubmitWindowsRejectsBeforeResources(t *testing.T) {
+func TestSubmitWindowsInitializesResourcesBeforeRun(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	auth := rm.NewMockIAuthProvider(ctrl)
 	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -85,10 +100,16 @@ func TestSubmitWindowsRejectsBeforeResources(t *testing.T) {
 	expt := executionModeExperiment(entity.SandboxCountModeWindowsPlusSandbox)
 	expt.Target.EvalTargetType = entity.EvalTargetTypeSandboxAgent
 	mgr.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), gomock.Any()).Return(expt, nil)
-	app := &experimentApplication{auth: auth, manager: mgr, idgen: im.NewMockIIDGenerator(ctrl), sandboxSchedulerAdapter: rm.NewMockISandboxSchedulerAdapter(ctrl)}
+	scheduler := rm.NewMockISandboxSchedulerAdapter(ctrl)
+	scheduler.EXPECT().Init(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *rpc.SandboxInitRequest) (*rpc.SandboxInitResponse, error) {
+		assert.Equal(t, "456", req.TaskID)
+		assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneral, req.Tenant)
+		return nil, errors.New("scheduler reached")
+	})
+	app := &experimentApplication{auth: auth, manager: mgr, idgen: im.NewMockIIDGenerator(ctrl), sandboxSchedulerAdapter: scheduler}
 	_, err := app.SubmitExperiment(context.Background(), &ep.SubmitExperimentRequest{
 		WorkspaceID: 123, Name: gptr.Of("windows"), TargetFieldMapping: &de.TargetFieldMapping{},
 		CreateEvalTargetParam: &et.CreateEvalTargetParam{EvalTargetType: gptr.Of(dt.EvalTargetType_SandboxAgent)},
 	})
-	assert.ErrorContains(t, err, "unsupported execution mode")
+	assert.ErrorContains(t, err, "scheduler reached")
 }
