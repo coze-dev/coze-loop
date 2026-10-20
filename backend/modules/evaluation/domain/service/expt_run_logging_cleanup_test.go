@@ -70,7 +70,7 @@ func TestLogRunPersistenceFailureReleasesOwnedLock(t *testing.T) {
 					DoAndReturn(func(context.Context, string, string, time.Duration, time.Duration) (bool, string, error) {
 						return acquire(), "2", nil
 					}).Times(2)
-				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Save(ctx, gomock.Any()).DoAndReturn(persist).Times(2)
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Create(ctx, gomock.Any()).DoAndReturn(persist).Times(2)
 				mgr.mtr.(*metricsMocks.MockExptMetric).EXPECT().EmitExptExecRun(spaceID, int64(entity.EvaluationModeRetryItems))
 			} else {
 				mgr.mutex.(*lockMocks.MockILocker).EXPECT().LockBackoff(ctx, mgr.makeExptMutexLockKey(exptID), gomock.Any(), gomock.Any()).
@@ -154,13 +154,11 @@ func TestLogRetryItemsPersistenceFailurePreservesExistingRun(t *testing.T) {
 			mgr.mutex.(*lockMocks.MockILocker).EXPECT().BackoffLockWithValue(ctx, mgr.makeExptMutexLockKey(exptID), "3", gomock.Any(), gomock.Any()).Return(false, "2", nil)
 			mgr.mutex.(*lockMocks.MockILocker).EXPECT().Exists(ctx, gomock.Any()).Return(false, nil)
 			stored := &entity.ExptRunLog{ExptID: exptID, ExptRunID: existingRunID, Status: int64(entity.ExptStatus_Processing)}
-			loaded := *stored
-			mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Get(ctx, exptID, existingRunID).Return(&loaded, nil)
 			writeErr := errors.New("append failed")
-			mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Save(ctx, &loaded).
-				DoAndReturn(func(_ context.Context, run *entity.ExptRunLog) error {
+			mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().AppendRunItemIDs(ctx, exptID, existingRunID, spaceID, []int64{5}).
+				DoAndReturn(func(_ context.Context, _, _, _ int64, ids []int64) error {
 					if tc.committed {
-						*stored = *run
+						require.NoError(t, stored.AppendItemIDs(ids))
 					}
 					return writeErr
 				})
@@ -224,7 +222,7 @@ func TestLogRunLatestFailureDoesNotRollbackSupersededQuota(t *testing.T) {
 				if retryItems {
 					mgr.idgenerator.(*idgenMocks.MockIIDGenerator).EXPECT().GenID(ctx).Return(newRunID, nil)
 					mgr.mutex.(*lockMocks.MockILocker).EXPECT().BackoffLockWithValue(ctx, gomock.Any(), "3", gomock.Any(), gomock.Any()).Return(true, "", nil)
-					mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Save(ctx, gomock.Any()).Return(nil)
+					mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Create(ctx, gomock.Any()).Return(nil)
 				} else {
 					mgr.mutex.(*lockMocks.MockILocker).EXPECT().LockBackoff(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 					mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Create(ctx, gomock.Any()).Return(nil)
