@@ -12,6 +12,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	lockmocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	componentMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -705,4 +706,12 @@ func TestHandleCentralReservation_SkipsStatsOnDuplicateDelivery(t *testing.T) {
 		return nil
 	})
 	assert.NoError(t, handler(ctx, event))
+}
+
+func (f *fakeGuard) ReleaseTerminalReservation(context.Context, string, int64, int64, string) (component.TerminalReservationReleaseResult, error) {
+	return 0, errors.New("unexpected terminal reservation release")
+}
+
+func (f *recordingGuard) ReleaseTerminalReservation(context.Context, string, int64, int64, string) (component.TerminalReservationReleaseResult, error) {
+	return 0, errors.New("unexpected terminal reservation release")
 }

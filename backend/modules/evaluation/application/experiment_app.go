@@ -1760,6 +1760,25 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return nil, err
 	}
 
+	if req.ExpectedRunID != nil {
+		if req.GetExpectedRunID() <= 0 || req.GetRequestID() == "" {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid current run retry identity"))
+		}
+		receipt, err := e.manager.RetryInCurrentRun(ctx, &entity.RetryInCurrentRunRequest{SpaceID: req.GetWorkspaceID(), ExptID: req.GetExptID(), ExpectedRunID: req.GetExpectedRunID(), RequestID: req.GetRequestID(), Mode: runMode, ItemIDs: req.GetItemIds(), Ext: req.GetExt(), Session: session})
+		if err != nil {
+			return nil, err
+		}
+		rejected := make([]*expt.RetryRejectedItem, 0, len(receipt.RejectedItems))
+		for _, item := range receipt.RejectedItems {
+			rejected = append(rejected, &expt.RetryRejectedItem{ItemID: gptr.Of(item.ItemID), Reason: gptr.Of(item.Reason)})
+		}
+		return &expt.RetryExperimentResponse{RunID: req.ExpectedRunID, RequestID: gptr.Of(receipt.RequestID), AcceptedCount: gptr.Of(receipt.AcceptedCount), RejectedItems: rejected, SnapshotAtMs: gptr.Of(receipt.SnapshotAtMS), BaseResp: base.NewBaseResp()}, nil
+	}
+
+	if (got.Status == entity.ExptStatus_Processing || got.Status == entity.ExptStatus_Pending || entity.IsExptFinishing(got.Status)) && e.configer != nil && e.configer.GetExptExecConf(ctx, req.GetWorkspaceID()).IsRunningRetryEnabled() {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("current run retry identity required"))
+	}
+
 	// SandboxAgent 评测对象：重试前重新初始化沙箱任务。
 	// 首次运行结束后每条 execute 已被 destroy，沙箱侧任务不再持有可用 execute，Retry 必须重跑一次 Init 才能继续 SandboxRun。
 	// 与 Submit 保持一致：并发度先归一化，再按实际 task 的 execution 数分别计算。

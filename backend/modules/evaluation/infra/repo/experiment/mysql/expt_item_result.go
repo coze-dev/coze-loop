@@ -26,6 +26,9 @@ import (
 
 //go:generate  mockgen -destination=mocks/expt_item_result.go  -package mocks . IExptItemResultDAO
 type IExptItemResultDAO interface {
+	ScanCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, retryFirst bool) ([]*entity.ExptItemCurrentRequest, error)
+	GetCurrentRequest(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptItemCurrentRequest, error)
+	MarkProcessingIfCurrent(ctx context.Context, spaceID, exptID, runID, itemID int64, requestID string) (bool, error)
 	BatchGet(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) ([]*model.ExptItemResult, error)
 	BatchCreateNX(ctx context.Context, itemResults []*model.ExptItemResult, opts ...db.Option) error
 	ScanItemResults(ctx context.Context, exptID, cursor, limit int64, status []int32, spaceID int64, opts ...db.Option) (results []*model.ExptItemResult, ncursor int64, err error)
@@ -236,6 +239,9 @@ func (dao *exptItemResultDAOImpl) GetItemRunLog(ctx context.Context, exptID, exp
 
 func (dao *exptItemResultDAOImpl) MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, error) {
 	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	q := query.Use(db).ExptItemResultRunLog
 	found, err := q.WithContext(ctx).
 		Where(q.SpaceID.Eq(spaceID),
