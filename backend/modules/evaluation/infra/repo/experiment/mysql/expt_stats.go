@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -21,10 +20,10 @@ import (
 //go:generate  mockgen -destination=mocks/expt_stats.go  -package mocks . IExptStatsDAO
 type IExptStatsDAO interface {
 	Create(ctx context.Context, stats *model.ExptStats) error
-	Get(ctx context.Context, exptID, spaceID int64) (*model.ExptStats, error)
+	Get(ctx context.Context, exptID, spaceID int64, opts ...db.Option) (*model.ExptStats, error)
 	MGet(ctx context.Context, exptIDs []int64, spaceID int64) ([]*model.ExptStats, error)
-	UpdateByExptID(ctx context.Context, exptID, spaceID int64, stats *model.ExptStats) error
-	ArithOperateCount(ctx context.Context, exptID, spaceID int64, cntArithOp *entity.StatsCntArithOp) error
+	UpdateByExptID(ctx context.Context, exptID, spaceID int64, stats *model.ExptStats, opts ...db.Option) error
+	ArithOperateCount(ctx context.Context, exptID, spaceID int64, cntArithOp *entity.StatsCntArithOp, opts ...db.Option) error
 	Save(ctx context.Context, stats *model.ExptStats) error
 }
 
@@ -47,9 +46,10 @@ func (e *exptStatsDAOImpl) Create(ctx context.Context, stats *model.ExptStats) e
 	return nil
 }
 
-func (e *exptStatsDAOImpl) Get(ctx context.Context, exptID, spaceID int64) (*model.ExptStats, error) {
-	exptStats, err := e.query.ExptStats.WithContext(ctx).
-		Where(e.query.ExptStats.ExptID.Eq(exptID), e.query.ExptStats.SpaceID.Eq(spaceID)).
+func (e *exptStatsDAOImpl) Get(ctx context.Context, exptID, spaceID int64, opts ...db.Option) (*model.ExptStats, error) {
+	q := query.Use(e.db.NewSession(ctx, opts...)).ExptStats
+	exptStats, err := q.WithContext(ctx).
+		Where(q.ExptID.Eq(exptID), q.SpaceID.Eq(spaceID)).
 		First()
 	if err != nil {
 		return nil, errorx.Wrapf(err, "get ExptStats fail, exptID: %v, spaceID: %v", exptID, spaceID)
@@ -67,9 +67,10 @@ func (e *exptStatsDAOImpl) MGet(ctx context.Context, exptIDs []int64, spaceID in
 	return exptStats, nil
 }
 
-func (e *exptStatsDAOImpl) UpdateByExptID(ctx context.Context, exptID, spaceID int64, stats *model.ExptStats) error {
-	_, err := e.query.ExptStats.WithContext(ctx).
-		Where(e.query.ExptStats.ExptID.Eq(exptID), e.query.ExptStats.SpaceID.Eq(spaceID)).
+func (e *exptStatsDAOImpl) UpdateByExptID(ctx context.Context, exptID, spaceID int64, stats *model.ExptStats, opts ...db.Option) error {
+	q := query.Use(e.db.NewSession(ctx, opts...)).ExptStats
+	_, err := q.WithContext(ctx).
+		Where(q.ExptID.Eq(exptID), q.SpaceID.Eq(spaceID)).
 		Updates(map[string]interface{}{
 			"processing_cnt": stats.ProcessingCnt,
 			"pending_cnt":    stats.PendingCnt,
@@ -91,7 +92,7 @@ func (e *exptStatsDAOImpl) Save(ctx context.Context, stats *model.ExptStats) err
 	return nil
 }
 
-func (e *exptStatsDAOImpl) ArithOperateCount(ctx context.Context, exptID, spaceID int64, cntArithOp *entity.StatsCntArithOp) error {
+func (e *exptStatsDAOImpl) ArithOperateCount(ctx context.Context, exptID, spaceID int64, cntArithOp *entity.StatsCntArithOp, opts ...db.Option) error {
 	if cntArithOp == nil {
 		return nil
 	}
@@ -100,10 +101,7 @@ func (e *exptStatsDAOImpl) ArithOperateCount(ctx context.Context, exptID, spaceI
 		return nil
 	}
 
-	update := false
-	db := e.db.NewSession(ctx).
-		Model(&model.ExptStats{}).
-		Where("space_id = ? AND expt_id = ?", spaceID, exptID).Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
+	updates := make(map[string]any)
 
 	for status, opCnt := range cntArithOp.OpStatusCnt {
 		col := ItemRunStateStatsField(status)
@@ -111,18 +109,18 @@ func (e *exptStatsDAOImpl) ArithOperateCount(ctx context.Context, exptID, spaceI
 			continue
 		}
 
-		update = true
-		db.Update(col, gorm.Expr(col+" + ?", opCnt))
+		updates[col] = gorm.Expr(col+" + ?", opCnt)
 	}
 
-	if !update {
+	if len(updates) == 0 {
 		logs.CtxInfo(ctx, "ArithOperateCount without update, cntArithOp: %v", json.Jsonify(cntArithOp))
 		return nil
 	}
 
 	logs.CtxInfo(ctx, "[StatsCnt] ArithOperateCount expt_id: %v, op_cnt: %v", exptID, json.Jsonify(cntArithOp))
 
-	if err := db.Error; err != nil {
+	if err := e.db.NewSession(ctx, opts...).Model(&model.ExptStats{}).
+		Where("space_id = ? AND expt_id = ?", spaceID, exptID).Updates(updates).Error; err != nil {
 		return errorx.Wrapf(err, "update ExptStats cnt fail, expt_id: %v, ufields: %v", exptID, json.Jsonify(cntArithOp))
 	}
 	return nil

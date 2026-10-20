@@ -6,6 +6,8 @@ package experiment
 import (
 	"context"
 
+	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
@@ -34,7 +36,13 @@ func (e ExptItemResultRepoImpl) BatchGet(ctx context.Context, spaceID, exptID in
 
 	results := make([]*entity.ExptItemResult, 0)
 	for _, po := range pos {
-		results = append(results, convert.NewExptItemResultConvertor().PO2DO(po))
+		result := convert.NewExptItemResultConvertor().PO2DO(po)
+		ext, parseErr := entity.ParseExptItemResultExt(gptr.Indirect(po.Ext))
+		if parseErr != nil {
+			return nil, parseErr
+		}
+		result.Ext = ext
+		results = append(results, result)
 	}
 	return results, nil
 }
@@ -140,7 +148,13 @@ func (e ExptItemResultRepoImpl) ScanItemResults(ctx context.Context, exptID, cur
 		return nil, 0, errorx.Wrapf(err, "ScanItemResults fail, exptID=%d, cursor=%d", exptID, cursor)
 	}
 	for _, po := range pos {
-		results = append(results, convert.NewExptItemResultConvertor().PO2DO(po))
+		result := convert.NewExptItemResultConvertor().PO2DO(po)
+		ext, parseErr := entity.ParseExptItemResultExt(gptr.Indirect(po.Ext))
+		if parseErr != nil {
+			return nil, 0, parseErr
+		}
+		result.Ext = ext
+		results = append(results, result)
 	}
 	return results, ncursor, nil
 }
@@ -152,7 +166,13 @@ func (e ExptItemResultRepoImpl) MGetItemResults(ctx context.Context, exptID int6
 	}
 	results = make([]*entity.ExptItemResult, 0, len(pos))
 	for _, po := range pos {
-		results = append(results, convert.NewExptItemResultConvertor().PO2DO(po))
+		result := convert.NewExptItemResultConvertor().PO2DO(po)
+		ext, parseErr := entity.ParseExptItemResultExt(gptr.Indirect(po.Ext))
+		if parseErr != nil {
+			return nil, parseErr
+		}
+		result.Ext = ext
+		results = append(results, result)
 	}
 	return results, nil
 }
@@ -168,7 +188,13 @@ func (e ExptItemResultRepoImpl) ListItemResultsByExptID(ctx context.Context, exp
 	}
 	results := make([]*entity.ExptItemResult, 0)
 	for _, po := range pos {
-		results = append(results, convert.NewExptItemResultConvertor().PO2DO(po))
+		result := convert.NewExptItemResultConvertor().PO2DO(po)
+		ext, parseErr := entity.ParseExptItemResultExt(gptr.Indirect(po.Ext))
+		if parseErr != nil {
+			return nil, 0, parseErr
+		}
+		result.Ext = ext
+		results = append(results, result)
 	}
 	return results, total, nil
 }
