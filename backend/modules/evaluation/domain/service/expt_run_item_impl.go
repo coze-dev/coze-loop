@@ -15,6 +15,7 @@ import (
 	"github.com/jinzhu/copier"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
+	evalconsts "github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -123,6 +124,10 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 		if err != nil {
 			return false, err
 		}
+		if existing := etec.GetExistTurnResultRunLog(turn.ID); existing != nil && existing.Status == entity.TurnRunState_Success && !etec.Event.IgnoreExistedTargetResult() {
+			history = append(history, buildHistoryMessage(ctx, etec.ExptTurnRunResult)...)
+			continue
+		}
 
 		ctx = context.WithValue(ctx, consts.CtxKeyLogID, etec.GetTurnEvalLogID(ctx, turn.ID)) //nolint:staticcheck
 
@@ -218,11 +223,15 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 			logs.CtxWarn(ctx, "[ExptTurnEval] nil evaluator record, evaluator_version_id: %v", evID)
 			continue
 		}
-		clone.EvaluatorResultIds.Registered = append(clone.EvaluatorResultIds.Registered, &entity.RegisteredEvalResult{
-			VersionID: er.EvaluatorVersionID,
-			Alias:     er.Alias,
-			RecordID:  er.ID,
-		})
+		if er.SourceType == entity.EvaluatorRecordSourceTypeInline {
+			clone.EvaluatorResultIds.Inline = append(clone.EvaluatorResultIds.Inline, &entity.InlineEvalResult{InlineKey: er.InlineKey, RecordID: er.ID})
+		} else {
+			clone.EvaluatorResultIds.Registered = append(clone.EvaluatorResultIds.Registered, &entity.RegisteredEvalResult{
+				VersionID: er.EvaluatorVersionID,
+				Alias:     er.Alias,
+				RecordID:  er.ID,
+			})
+		}
 		if er.EvaluatorOutputData != nil && er.EvaluatorOutputData.EvaluatorRunError != nil && er.EvaluatorOutputData.EvaluatorRunError.Code > 0 {
 			evalErr = errno.NewEvaluatorResultErr(er.EvaluatorOutputData.EvaluatorRunError.Message)
 		}
@@ -390,14 +399,16 @@ func (e *ExptItemEvalCtxExecutor) SetItemRunProcessing(ctx context.Context, expt
 }
 
 func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn *entity.Turn, eiec *entity.ExptItemEvalCtx, history []*entity.Message) (*entity.ExptTurnEvalCtx, error) {
+	turnItemCtx := *eiec
+	turnItemCtx.Event = eiec.Event.CloneForTurn(turn.ID)
 	var (
 		spaceID            = eiec.Event.SpaceID
 		existTurnRunResult = eiec.GetExistTurnResultRunLog(turn.ID)
 		etec               = &entity.ExptTurnEvalCtx{
-			ExptItemEvalCtx:   eiec,
+			ExptItemEvalCtx:   &turnItemCtx,
 			Turn:              turn,
 			ExptTurnRunResult: &entity.ExptTurnRunResult{},
-			// History:           history,
+			History:           history,
 		}
 	)
 	etec.Ext = make(map[string]string)
@@ -487,6 +498,19 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 				return nil, err
 			}
 			etec.ExptTurnRunResult.EvaluatorResults = evaluatorRecords
+			if isTurnAsyncResume(etec, false) || isTurnAsyncResume(etec, true) || existTurnRunResult.Status == entity.TurnRunState_Success {
+				loaded := make(map[int64]bool, len(evaluatorRecords))
+				for _, record := range evaluatorRecords {
+					if record != nil {
+						loaded[record.ID] = true
+					}
+				}
+				for _, id := range recordIDs {
+					if !loaded[id] {
+						return nil, fmt.Errorf("turn evaluator record %d missing during resume", id)
+					}
+				}
+			}
 		}
 	}
 
@@ -709,6 +733,11 @@ func (e *ExptItemEvalCtxExecutor) evalErrNeedTerminateExpt(ctx context.Context, 
 }
 
 func buildHistoryMessage(ctx context.Context, turnRunResult *entity.ExptTurnRunResult) []*entity.Message {
+	if target := turnRunResult.GetTargetResult(); target != nil && target.EvalTargetOutputData != nil {
+		if output := target.EvalTargetOutputData.OutputFields[evalconsts.EvalTargetOutputFieldKeyActualOutput]; output != nil {
+			return []*entity.Message{{Role: entity.RoleAssistant, Content: output}}
+		}
+	}
 	return nil
 }
 

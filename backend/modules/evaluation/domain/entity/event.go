@@ -27,7 +27,7 @@ type ExptScheduleEvent struct {
 	InfraErrorRetryTimes int
 }
 
-type ctxTargetCalledCacheKey struct{}
+type ctxTargetCalledCacheKey struct{ event *ExptItemEvalEvent }
 
 type ctxForceNoRetryKey struct{}
 
@@ -93,6 +93,18 @@ func (e *ExptItemEvalEvent) CloneWithResumeSource(kind string, recordID, turnID 
 	return cloned
 }
 
+// CloneForTurn keeps callback flags on the original turn, including turn zero.
+// Events without source metadata retain the legacy callback contract.
+func (e *ExptItemEvalEvent) CloneForTurn(turnID int64) *ExptItemEvalEvent {
+	cloned := e.Clone()
+	if cloned != nil && cloned.ResumeSource != nil && cloned.ResumeSource.TurnID != turnID {
+		cloned.AsyncReportTrigger = false
+		cloned.AsyncEvaluatorReportTrigger = false
+		cloned.ResumeSource = nil
+	}
+	return cloned
+}
+
 func (e *ExptItemEvalEvent) WithCtxForceNoRetry(ctx context.Context) {
 	ctxcache.Store(ctx, ctxForceNoRetryKey{}, struct{}{})
 }
@@ -154,11 +166,11 @@ func (e *ExptItemEvalEvent) CtxCentralQuotaHeldScope(ctx context.Context) (strin
 }
 
 func (e *ExptItemEvalEvent) WithCtxTargetCalled(ctx context.Context) {
-	ctxcache.Store(ctx, ctxTargetCalledCacheKey{}, struct{}{})
+	ctxcache.Store(ctx, ctxTargetCalledCacheKey{event: e}, struct{}{})
 }
 
 func (e *ExptItemEvalEvent) CtxTargetCalled(ctx context.Context) bool {
-	_, ok := ctxcache.Get[struct{}](ctx, ctxTargetCalledCacheKey{})
+	_, ok := ctxcache.Get[struct{}](ctx, ctxTargetCalledCacheKey{event: e})
 	return ok
 }
 
@@ -170,6 +182,12 @@ func (e *ExptItemEvalEvent) IgnoreExistedEvaluatorResult(ctx context.Context) bo
 }
 
 func (e *ExptItemEvalEvent) ignoreExistedResult() bool {
+	if e == nil {
+		return false
+	}
+	if e.AsyncReportTrigger || e.AsyncEvaluatorReportTrigger {
+		return false
+	}
 	return (e.ExptRunMode == EvaluationModeRetryItems || e.ExptRunMode == EvaluationModeRetryAll) && e.RetryTimes == 0
 }
 
