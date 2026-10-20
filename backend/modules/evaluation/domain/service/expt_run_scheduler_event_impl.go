@@ -747,7 +747,7 @@ func (e *ExptSchedulerImpl) submitCurrentItem(ctx context.Context, event *entity
 			e.Metric.EmitItemExecEval(event.SpaceID, int64(source.Mode), 1)
 		}
 		if e.ResultSvc != nil {
-			if err := e.ResultSvc.UpsertExptTurnResultFilter(lockCtx, event.SpaceID, event.ExptID, []int64{source.ItemID}); err != nil {
+			if err := refreshFilterWithHeldItemLock(lockCtx, e.ResultSvc, event.SpaceID, event.ExptID, source.ItemID); err != nil {
 				logs.CtxWarn(ctx, "refresh dispatched item projection: %v", err)
 			}
 		}

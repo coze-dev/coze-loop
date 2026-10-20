@@ -6,6 +6,11 @@ package ck
 import (
 	"context"
 	"fmt"
+	"github.com/DATA-DOG/go-sqlmock"
+	ckprovidermocks "github.com/coze-dev/coze-loop/backend/infra/ck/mocks"
+	"github.com/stretchr/testify/require"
+	"gorm.io/driver/clickhouse"
+	"gorm.io/gorm"
 	"testing"
 	"time"
 
@@ -1248,4 +1253,24 @@ func TestExptTurnResultFilterDAOImpl_buildMainTableConditions_EvalSetIDs(t *test
 		assert.Contains(t, whereSQL, " AND etrf.eval_set_id IN ?")
 		assert.Contains(t, whereSQL, " AND etrf.eval_set_version_id = ?")
 	})
+}
+
+// Run the complete materialized SQL through the actual CK DAO; FINAL and map
+// preservation are boundary behavior, not helper-source string assertions.
+func TestMaterializedFilterDAO_ReadFullProjection(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	sqlDB, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlDB.Close() })
+	conn, err := gorm.Open(clickhouse.New(clickhouse.Config{Conn: sqlDB, SkipInitializeWithVersion: true}), &gorm.Config{DisableAutomaticPing: true})
+	require.NoError(t, err)
+	provider := ckprovidermocks.NewMockProvider(ctrl)
+	provider.EXPECT().NewSession(gomock.Any()).DoAndReturn(func(ctx context.Context) *gorm.DB { return conn.WithContext(ctx) })
+	mock.ExpectQuery("SELECT etrf\\.\\* FROM .*expt_turn_result_filter AS etrf FINAL WHERE etrf.space_id=\\? AND etrf.expt_id=\\? AND etrf.created_date=\\? AND etrf.item_id IN \\(\\?\\)").WithArgs("3", "1", "2026-10-20", "7384603622000000011").WillReturnRows(sqlmock.NewRows([]string{"space_id", "expt_id", "item_id", "item_version_id", "turn_id", "status", "eval_set_id", "eval_set_version_id"}).AddRow("3", "1", "7384603622000000011", "7384603622000000088", "0", 2, "55", "66"))
+	dao := NewExptTurnResultFilterDAO(provider, nil).(*exptTurnResultFilterDAOImpl)
+	rows, err := dao.GetMaterializedByExptIDItemIDs(context.Background(), "3", "1", "2026-10-20", []string{"7384603622000000011"})
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	require.Equal(t, "7384603622000000088", rows[0].ItemVersionID)
+	require.NoError(t, mock.ExpectationsWereMet())
 }

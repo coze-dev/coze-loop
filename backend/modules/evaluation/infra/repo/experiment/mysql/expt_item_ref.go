@@ -96,6 +96,9 @@ func (dao *exptItemRefDAOImpl) MGetByExptIDAndItemIDs(ctx context.Context, space
 		return nil, nil
 	}
 	dbConn := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		dbConn = dbConn.Clauses(dbresolver.Write)
+	}
 	q := query.Use(dbConn).ExptItemRef
 	items, err := q.WithContext(ctx).
 		Where(q.SpaceID.Eq(spaceID), q.ExptID.Eq(exptID), q.ItemID.In(itemIDs...), q.DeletedAt.IsNull()).

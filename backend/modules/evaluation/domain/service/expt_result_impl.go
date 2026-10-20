@@ -2899,13 +2899,33 @@ func (e ExptResultServiceImpl) ManualUpsertExptTurnResultFilter(ctx context.Cont
 		logs.CtxError(ctx, "Failed to send ExptTurnResultFilterEvent, err: %v", err)
 	}
 
+	if e.resultPublishLocker != nil {
+		return e.UpsertExptTurnResultFilter(ctx, spaceID, exptID, itemIDs)
+	}
+	if _, current := e.ExptItemResultRepo.(repo.IExptCurrentResultRepo); current {
+		return errno.NewMQRetryErr("manual filter independent item locker missing")
+	}
 	return nil
 }
 
-func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, spaceID, exptID int64, itemIDs []int64) error {
+func (e ExptResultServiceImpl) upsertExptTurnResultFilterLocked(ctx context.Context, space, expt int64, ids []int64) error {
+	filters, err := e.buildExptTurnResultFiltersLocked(ctx, space, expt, ids)
+	if err != nil {
+		return err
+	}
+	if len(filters) == 0 {
+		return nil
+	}
+	if err := ctx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	return e.exptTurnResultFilterRepo.Save(ctx, filters)
+}
+
+func (e ExptResultServiceImpl) buildExptTurnResultFiltersLocked(ctx context.Context, spaceID, exptID int64, itemIDs []int64) ([]*entity.ExptTurnResultFilterEntity, error) {
 	// 当前方法中space_id和expt_id必填，item_ids选填
 	if spaceID == 0 || exptID == 0 {
-		return fmt.Errorf("UpsertExptTurnResultFilter: invalid space_id or expt_id")
+		return nil, fmt.Errorf("UpsertExptTurnResultFilter: invalid space_id or expt_id")
 	}
 	ctx = contexts.WithCtxWriteDB(ctx) // 更新result时需要取最新的result
 
@@ -2916,11 +2936,11 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 	var allTurnResults []*entity.ExptTurnResult
 	for {
 		if loopCnt >= maxLoop {
-			return fmt.Errorf("UpsertExptTurnResultFilter: 超过最大循环次数，可能存在死循环，已查%d条", len(allTurnResults))
+			return nil, fmt.Errorf("UpsertExptTurnResultFilter: 超过最大循环次数，可能存在死循环，已查%d条", len(allTurnResults))
 		}
 		turnResults, total, err := e.ExptTurnResultRepo.ListTurnResultByItemIDs(ctx, spaceID, exptID, itemIDs, entity.NewPage(offset, limit), false)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if len(turnResults) == 0 {
 			break
@@ -2933,7 +2953,7 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 		loopCnt++
 	}
 	if len(allTurnResults) == 0 {
-		return nil
+		return nil, nil
 	}
 	itemIDMap := make(map[int64]bool)
 	for _, turnResult := range allTurnResults {
@@ -2944,11 +2964,11 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 	})
 	itemResults, err := e.ExptItemResultRepo.BatchGet(ctx, spaceID, exptID, itemIDs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	exptTurnResultFilterKeyMappings, err := e.exptTurnResultFilterRepo.GetExptTurnResultFilterKeyMappings(ctx, spaceID, exptID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	exptTurnResultFilterKeyMappingEvaluatorMap := make(map[string]*entity.ExptTurnResultFilterKeyMapping)
 	exptTurnResultFilterKeyMappingAnnotationMap := make(map[string]*entity.ExptTurnResultFilterKeyMapping)
@@ -2970,19 +2990,28 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 		e.ExptTurnResultRepo, e.ExptItemResultRepo, e.ExptAnnotateRepo, e.evalTargetRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.evaluationSetVersionService, e.evaluationSetService, e.analysisService, exptTurnResultFilterKeyMappingEvaluatorMap, exptTurnResultFilterKeyMappingAnnotationMap, make(map[int64]entity.ItemRunState), e.fileProvider, e.scoreCalculator)
 
 	// ★ 多评测集实验: 逐 item 取归属评测集(含版本), 供写 expt_turn_result_filter 时按行回填。
-	// 拿不到(老调用方未注入 repo / 查询失败)时只告警, 退化为按主集写, 不阻塞写入。
-	payloadBuilder.ItemID2EvalSetRef = e.loadItemEvalSetRefs(ctx, spaceID, exptID, itemIDs)
+	// 正式刷新在锁内读取，错误上抛；未注入 factory 的旧测试保留兼容路径。
+	if e.resultPublishLocker != nil && e.exptItemRefRepo != nil {
+		refs, err := e.exptItemRefRepo.MGetByExptIDAndItemIDs(ctx, spaceID, exptID, itemIDs)
+		if err != nil {
+			return nil, err
+		}
+		payloadBuilder.ItemID2EvalSetRef = make(map[int64]*entity.ExptItemRef, len(refs))
+		for _, ref := range refs {
+			if ref != nil {
+				payloadBuilder.ItemID2EvalSetRef[ref.ItemID] = ref
+			}
+		}
+	} else {
+		payloadBuilder.ItemID2EvalSetRef = e.loadItemEvalSetRefs(ctx, spaceID, exptID, itemIDs)
+	}
 
 	exptTurnResultFilters, err := payloadBuilder.BuildTurnResultFilter(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if err = e.exptTurnResultFilterRepo.Save(ctx, exptTurnResultFilters); err != nil {
-		return err
-	}
-
-	return nil
+	return exptTurnResultFilters, nil
 }
 
 // loadItemEvalSetRefs 取 item -> expt_item_ref 映射 (多评测集实验的评测集归属真值源)。
@@ -3276,7 +3305,7 @@ func (e ExptResultServiceImpl) InsertExptTurnResultFilterKeyMappings(ctx context
 	return e.exptTurnResultFilterRepo.InsertExptTurnResultFilterKeyMappings(ctx, mappings)
 }
 
-func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context, spaceID, exptID int64, itemIDs []int64, retryTimes int32) error {
+func (e ExptResultServiceImpl) compareExptTurnResultFiltersLegacy(ctx context.Context, spaceID, exptID int64, itemIDs []int64, retryTimes int32) error {
 	ctx = contexts.WithCtxWriteDB(ctx) // 更新result时需要取最新的result
 	exptDO, err := e.ExperimentRepo.MGetByID(ctx, []int64{exptID}, spaceID)
 	if err != nil {
