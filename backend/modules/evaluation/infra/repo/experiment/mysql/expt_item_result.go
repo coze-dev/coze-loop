@@ -357,6 +357,9 @@ func (dao *exptItemResultDAOImpl) MGetItemResults(ctx context.Context, spaceID, 
 
 func (dao *exptItemResultDAOImpl) ListItemResultsByExptID(ctx context.Context, exptID, spaceID int64, page entity.Page, desc bool) ([]*model.ExptItemResult, int64, error) {
 	db := dao.provider.NewSession(ctx)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	q := query.Use(db).ExptItemResult
 	conds := []gen.Condition{
 		q.SpaceID.Eq(spaceID),
