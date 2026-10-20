@@ -20,19 +20,19 @@ import (
 )
 
 type currentRequestRow struct {
-	ID, ItemID, ItemVersionID, CanonicalID, CanonicalRunID int64
-	Status, CanonicalStatus, RetryTimes                    int32
-	ResultState                                            *int32
-	QuotaReservationState                                  int32
-	Ext                                                    []byte
-	Mode                                                   *int32
-	RunStatus                                              *int64
-	UpdatedAt                                              time.Time
+	ID, ItemID, ItemVersionID, CanonicalID, CanonicalRunID, CanonicalItemVersionID int64
+	Status, CanonicalStatus, RetryTimes                                            int32
+	ResultState                                                                    *int32
+	QuotaReservationState                                                          int32
+	Ext                                                                            []byte
+	Mode                                                                           *int32
+	RunStatus                                                                      *int64
+	UpdatedAt                                                                      time.Time
 }
 
 func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, itemIDs []int64, retryFirst bool) ([]*entity.ExptItemCurrentRequest, error) {
 	session := dao.provider.NewSession(ctx, db.WithMaster()).Table("expt_item_result_run_log AS l").
-		Select("l.id,l.item_id,l.item_version_id,l.status,l.result_state,l.retry_times,l.quota_reservation_state,l.updated_at,c.id AS canonical_id,c.expt_run_id AS canonical_run_id,c.status AS canonical_status,c.ext,r.mode,r.status AS run_status").
+		Select("l.id,l.item_id,l.item_version_id,l.status,l.result_state,l.retry_times,l.quota_reservation_state,l.updated_at,c.id AS canonical_id,c.expt_run_id AS canonical_run_id,c.status AS canonical_status,c.item_version_id AS canonical_item_version_id,c.ext,r.mode,r.status AS run_status").
 		Joins("LEFT JOIN expt_item_result AS c ON c.space_id=l.space_id AND c.expt_id=l.expt_id AND c.item_id=l.item_id AND c.deleted_at IS NULL").
 		Joins("LEFT JOIN expt_run_log AS r ON r.space_id=l.space_id AND r.expt_id=l.expt_id AND r.expt_run_id=l.expt_run_id AND r.deleted_at IS NULL").
 		Where("l.space_id=? AND l.expt_id=? AND l.expt_run_id=? AND l.deleted_at IS NULL", spaceID, exptID, runID)
@@ -63,8 +63,8 @@ func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, space
 		if !validCurrentItemStatus(status) || !validCurrentItemStatus(entity.ItemRunState(row.CanonicalStatus)) || row.RetryTimes < 0 {
 			return nil, fmt.Errorf("invalid current item state")
 		}
-		if status != entity.ItemRunState(row.CanonicalStatus) {
-			return nil, fmt.Errorf("canonical/run-log status mismatch")
+		if row.ItemVersionID != row.CanonicalItemVersionID {
+			return nil, fmt.Errorf("canonical/run-log item version mismatch")
 		}
 		if row.RunStatus == nil {
 			return nil, fmt.Errorf("source run missing")
@@ -95,6 +95,14 @@ func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, space
 		if result < 0 || result > int32(entity.ExptItemResultStateLogged) {
 			return nil, fmt.Errorf("invalid item result state")
 		}
+		// The run log leads completion/yield/start; the canonical projection is synchronized later.
+		// A finished canonical item remains absorbing even if a late run-log write disagrees.
+		canonicalStatus := entity.ItemRunState(row.CanonicalStatus)
+		if entity.IsItemRunFinished(canonicalStatus) && canonicalStatus != status {
+			status = canonicalStatus
+			result = int32(entity.ExptItemResultStateDefault)
+		}
+
 		out = append(out, &entity.ExptItemCurrentRequest{SpaceID: spaceID, ExptID: exptID, RunID: runID, ItemID: row.ItemID, ItemVersionID: row.ItemVersionID, RequestID: request, Mode: mode, Status: status, ResultState: entity.ExptItemResultState(result), RetryTimes: row.RetryTimes, UpdatedAt: gptr.Of(row.UpdatedAt), QuotaReservationState: entity.QuotaReservationState(row.QuotaReservationState)})
 	}
 	return out, nil
