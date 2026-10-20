@@ -318,123 +318,19 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			return nil
 		}
 
-		// 把 run log 投影从 Queueing/reserved 兑现为 Processing/none。
-		//
-		// 为什么必须在这里而不是留给下游 handleEventExec：投影是调度器算并发占用的依据，
-		// 若 item 已开始执行而投影仍停在 Queueing/reserved，下一拍会把它当"已预占未消费"
-		// 继续计入占用（这没错），但一旦 reservation 因超时被清理，它就变成"既不 Processing
-		// 也无 reservation"的孤儿，对账要多绕一圈才能修。就地兑现让两侧同步收敛。
-		//
-		// CAS 未命中（started=false）不阻断执行：可能是重复投递（已 Processing）或
-		// 投影已被 repair 修正。此时 reservation 校验已通过，说明额度是真的，继续执行是安全的。
-		// 现在本层在 item 锁内，同一 item 不会有并发的第二个执行者，未命中只剩"已 Processing
-		// 的重复投递"与"被 repair 修正"两种，两者继续执行都由 item 锁 + 幂等写兜住。
+		// The DAO commits canonical/turn/log/stats together. Only a current
+		// nonterminal source can continue into the existing recovery path.
 		if e.dispatchRepo != nil {
-			started, err := e.dispatchRepo.StartReservedItem(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
+			started, err := e.dispatchRepo.StartReservedItem(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.RequestID)
 			if err != nil {
-				// 投影写失败：返回错误让 MQ 重试。额度已预占且 reservation 已转 Running，
-				// 丢弃消息会让这份额度占着直到超时清理。
 				return err
 			}
-			if !started {
-				logs.CtxInfo(ctx, "[CentralReservation] run log projection not claimed (duplicate delivery or repaired), continue, expt_run_id: %v, item_id: %v",
-					event.ExptRunID, event.EvalSetItemID)
+			if !started.CurrentRequest {
+				return nil
 			}
-
-			// 主表 expt_item_result 也要跟着推进到 Processing。
-			//
-			// run log 是执行真值，但**用户看到的是主表** —— MGetExperimentResult 走
-			// expt_item_result 构造 run_state。只写 run log 会让实验详情把正在执行的 item
-			// 一直显示成 Queueing（实测：5 个 item 已 Processing 14 小时，results 接口仍全部
-			// 报 queueing），现象是"实验看着没动"，而它其实跑得很正常。
-			//
-			// legacy 的 handleToSubmits 一直是成对写这两张表的
-			// （expt_run_scheduler_event_impl.go 的 UpdateItemRunLog + UpdateItemsResult），
-			// 中心调度这条新派发路径漏了后者 —— 平行实现漏字段的又一例。
-			//
-			// 失败只告警不阻断：主表是展示投影，写不进去不影响执行与额度正确性，
-			// 而这里返回错误会让已经拿到执行权的 item 被 MQ 重投一遍。
-			//
-			// ★ 记账与主表推进必须**同一个判据**，见下方 expt_stats 那段的论证。
-			// 所以这里先读主表当前状态，只有真的发生「非 Processing → Processing」才动两处。
-			prevState, prevKnown := entity.ItemRunState_Unknown, false
-			if e.exptItemResultRepo != nil {
-				if got, gerr := e.exptItemResultRepo.BatchGet(ctx, event.SpaceID, event.ExptID, []int64{event.EvalSetItemID}); gerr != nil {
-					logs.CtxWarn(ctx, "[CentralReservation] read main table state failed, skip advancing (display only), expt_id: %v, item_id: %v: %v",
-						event.ExptID, event.EvalSetItemID, gerr)
-				} else if len(got) > 0 && got[0] != nil {
-					prevState, prevKnown = got[0].Status, true
-				}
-			}
-
-			advanced := prevKnown && prevState != entity.ItemRunState_Processing
-			if advanced {
-				if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID,
-					[]int64{event.EvalSetItemID}, map[string]any{"status": int32(entity.ItemRunState_Processing)}); err != nil {
-					logs.CtxWarn(ctx, "[CentralReservation] advance main table to Processing failed (display only, execution unaffected), expt_id: %v, item_id: %v: %v",
-						event.ExptID, event.EvalSetItemID, err)
-					advanced = false
-				}
-			}
-
-			// expt_stats 的 Queueing→Processing 也要在此记账，否则计数单向下溢。
-			//
-			// 完成侧（expt_result_impl.go 的 statsCntOp）做的是「从 item 原状态减 1、往新状态加 1」，
-			// 它减的是 Processing 桶。legacy 在 handleToSubmits 里派发时就把 item 计入了 Processing，
-			// 两边配对；中心调度的派发只把 run log CAS 成 Queueing/reserved（**status 仍是 Queueing**），
-			// 从未有人往 Processing 桶加过 —— 于是完成时减一个从未加过的计数，
-			// 表现为 processing_turn_count 走负、pending_turn_count 永不下降。
-			// 实测：一个 14 题 enforce 实验 fail 累到 4 时 processing = -4，pending 恒 14。
-			//
-			// ★ 判据是**主表真的发生了状态迁移**，不是 run log 的 CAS。
-			//
-			// 原先绑在 started（run log CAS）上，而主表推进是无条件的 —— 两个判据一分叉，
-			// 计数行就与主表对不上。而完成侧 statsCntOp 恰恰是**按主表状态**做「-1」的
-			// （`statsCntOp[itemResult.Status] -= 1`，见 expt_result_impl.go），
-			// 于是它会去减一个计数行里从来没加过的桶。
-			// 实测代价：PPE 一个 900 题 enforce 实验，pending 虚高 281、success 少 249，
-			// 而同泳道的 legacy 实验分毫不差 —— legacy 的派发是四张表无条件一起写的。
-			//
-			// 用 prevState 而不是写死 Queueing：中心调度派发时主表可能停在 Queueing，
-			// 也可能因为 repair/重投停在别的状态，减错桶同样会让计数行歪掉。
-			//
-			// 与主表同为展示投影，失败只告警不阻断：返回错误会让已取得执行权的 item 被 MQ 重投，
-			// 而重投一次 Agent 执行的代价远大于一次计数偏差。**残留的偏差由调度器每拍的对账收敛**
-			// （ExptSchedulerImpl.reconcileExptStats）。
-			if advanced && e.exptStatsRepo != nil {
-				if err := e.exptStatsRepo.ArithOperateCount(ctx, event.ExptID, event.SpaceID, &entity.StatsCntArithOp{
-					OpStatusCnt: map[entity.ItemRunState]int{
-						entity.ItemRunState_Processing: 1,
-						prevState:                      -1,
-					},
-				}); err != nil {
-					logs.CtxWarn(ctx, "[CentralReservation] advance expt stats to Processing failed (display only, execution unaffected), expt_id: %v, item_id: %v: %v",
-						event.ExptID, event.EvalSetItemID, err)
-				}
-			}
-
-			// turn 主表与 CK 加速表同为展示投影，legacy 的 handleToSubmits 派发时是与
-			// run log / 主表 / stats 一起五写的，中心调度这条路径此前只写了前三项。
-			//
-			// 漏 CK 的后果最隐蔽：`item_run_state` 筛选打的是 etrf.status，且开启加速器时
-			// 结果里的 run_state 也从 CK 读（QueryItemIDStates），于是执行期间按「运行中」筛
-			// 恒为空、按「排队中」筛反而捞出正在跑的 item 并显示成排队中。完成时那次 upsert
-			// 会把它纠回来，所以事后对着终态数据看不出问题。
-			// 实测：PPE 一个 enforce 实验，主表已 status=1，CK 仍为 0。
-			//
-			// 必须在主表推进之后调：CK 行的 status 是 BuildTurnResultFilter 按主表状态回填的。
-			// 与上面两项同样只告警不阻断（返回错误会让已取得执行权的 item 被 MQ 重投）。
-			if advanced && e.exptTurnResultRepo != nil {
-				if err := e.exptTurnResultRepo.UpdateTurnResultsWithItemIDs(ctx, event.ExptID, []int64{event.EvalSetItemID}, event.SpaceID,
-					map[string]any{"status": int32(entity.TurnRunState_Processing)}); err != nil {
-					logs.CtxWarn(ctx, "[CentralReservation] advance turn results to Processing failed (display only, execution unaffected), expt_id: %v, item_id: %v: %v",
-						event.ExptID, event.EvalSetItemID, err)
-				}
-			}
-			if advanced && e.resultSvc != nil {
+			if started.Started && e.resultSvc != nil {
 				if err := refreshFilterWithHeldItemLock(ctx, e.resultSvc, event.SpaceID, event.ExptID, event.EvalSetItemID); err != nil {
-					logs.CtxWarn(ctx, "[CentralReservation] upsert turn result filter failed (display only, execution unaffected), expt_id: %v, item_id: %v: %v",
-						event.ExptID, event.EvalSetItemID, err)
+					logs.CtxWarn(ctx, "[CentralReservation] refresh committed Processing filter failed, expt_id: %v, item_id: %v: %v", event.ExptID, event.EvalSetItemID, err)
 				}
 			}
 		}
@@ -512,7 +408,7 @@ func (e *ExptItemEventEvalServiceImpl) requeueOrphanedItemOnReservationAbsent(ct
 	}
 
 	if state == entity.ItemRunState_Processing {
-		requeued, rerr := e.dispatchRepo.RequeueProcessingItem(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
+		requeued, rerr := e.dispatchRepo.RequeueProcessingItem(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.RequestID)
 		if rerr != nil {
 			logs.CtxError(ctx, "[CentralReservation] requeue orphaned processing item failed, item will occupy a concurrency slot until zombie timeout, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 				event.ExptID, event.ExptRunID, event.EvalSetItemID, rerr)
@@ -521,48 +417,6 @@ func (e *ExptItemEventEvalServiceImpl) requeueOrphanedItemOnReservationAbsent(ct
 		logs.CtxWarn(ctx, "[CentralReservation] orphaned item (Processing without reservation) requeued to Queueing, expt_id: %v, expt_run_id: %v, item_id: %v, requeued: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, requeued)
 
-		// stats 的 Processing 桶必须同步退回，否则 processing_turn_count 只增不减。
-		// 只在 CAS 真的命中时记账 —— 与 StartReservedItem 处 started 的用法同理，
-		// CAS 是这里唯一的"恰好一次"信号。
-		if requeued && e.exptStatsRepo != nil {
-			if serr := e.exptStatsRepo.ArithOperateCount(ctx, event.ExptID, event.SpaceID, &entity.StatsCntArithOp{
-				OpStatusCnt: map[entity.ItemRunState]int{
-					entity.ItemRunState_Processing: -1,
-					entity.ItemRunState_Queueing:   1,
-				},
-			}); serr != nil {
-				logs.CtxWarn(ctx, "[CentralReservation] rollback expt stats to Queueing failed (display only), expt_id: %v, item_id: %v: %v",
-					event.ExptID, event.EvalSetItemID, serr)
-			}
-		}
-
-		// 主表同为展示投影，跟着退回，避免详情页把已回队列的 item 一直显示成执行中。
-		//
-		// ★ 必须与 stats 一样绑定 requeued：主表 status 不是纯展示字段，而是 stats 的锚点 ——
-		// 完成侧 statsCntOp 读 items_result.Status 做「-1」（expt_result_impl.go），
-		// 若 CAS 未命中（并发 zombie / sandbox sweep 抢先落终态）却把主表改成 Queueing，
-		// stats 上那笔 Processing 就再也减不掉，processing_turn_count 永远归不了零。
-		// 同仓 expt_run_scheduler_event_impl.go 的 zombie 路径已就此写过警示、
-		// c4a6a953 也已就此修过一次，这里不能再踩。
-		if requeued && e.exptItemResultRepo != nil {
-			if uerr := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID,
-				[]int64{event.EvalSetItemID}, map[string]any{"status": int32(entity.ItemRunState_Queueing)}); uerr != nil {
-				logs.CtxWarn(ctx, "[CentralReservation] rollback main table to Queueing failed (display only), expt_id: %v, item_id: %v: %v",
-					event.ExptID, event.EvalSetItemID, uerr)
-			}
-		}
-
-		// turn 主表与 CK 加速表也要跟着退回：派发侧推进的是这五项，回退只做前三项就会留下
-		// 「item 已回队列、turn 与 CK 仍显示执行中」的错位。它不会自愈 —— 实验若以 Failed
-		// 收口，CompleteExpt 的 default 分支只销毁沙箱、不动 turn 状态。
-		// 同样绑定 requeued（判据与 stats、主表一致），失败只告警。
-		if requeued && e.exptTurnResultRepo != nil {
-			if uerr := e.exptTurnResultRepo.UpdateTurnResultsWithItemIDs(ctx, event.ExptID, []int64{event.EvalSetItemID}, event.SpaceID,
-				map[string]any{"status": int32(entity.TurnRunState_Queueing)}); uerr != nil {
-				logs.CtxWarn(ctx, "[CentralReservation] rollback turn results to Queueing failed (display only), expt_id: %v, item_id: %v: %v",
-					event.ExptID, event.EvalSetItemID, uerr)
-			}
-		}
 		if requeued && e.resultSvc != nil {
 			if uerr := refreshFilterWithHeldItemLock(ctx, e.resultSvc, event.SpaceID, event.ExptID, event.EvalSetItemID); uerr != nil {
 				logs.CtxWarn(ctx, "[CentralReservation] rollback turn result filter failed (display only), expt_id: %v, item_id: %v: %v",
@@ -574,7 +428,7 @@ func (e *ExptItemEventEvalServiceImpl) requeueOrphanedItemOnReservationAbsent(ct
 
 	// 剩下只有 Queueing：reserved 的清回 none 让它重新可授予；none 的本就在候选里，无需动作。
 	if obs[0].QuotaReservationState.IsQuotaReserved() {
-		reset, rerr := e.dispatchRepo.ResetQuotaReserved(ctx, event.SpaceID, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID})
+		reset, rerr := e.dispatchRepo.ResetQuotaReserved(ctx, event.SpaceID, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, map[int64]string{event.EvalSetItemID: event.RequestID})
 		if rerr != nil {
 			logs.CtxError(ctx, "[CentralReservation] reset stale reserved projection failed, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 				event.ExptID, event.ExptRunID, event.EvalSetItemID, rerr)

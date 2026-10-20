@@ -28,9 +28,9 @@ func TestScanTransitionMySQLSingleWriterWindows(t *testing.T) {
 				item = 13
 				status = entity.ItemRunState_Processing
 				require.NoError(t, dao.UpdateItemRunLog(ctx, f.expt, f.run, []int64{item}, map[string]any{"quota_reservation_state": int32(entity.QuotaReservationStateReserved)}, f.space))
-				changed, err := NewExptItemDispatchDAO(f.provider).StartReservedItem(ctx, f.space, f.expt, f.run, item)
+				changed, err := NewExptItemDispatchDAO(f.provider).StartReservedItem(ctx, f.space, f.expt, f.run, item, "")
 				require.NoError(t, err)
-				require.True(t, changed)
+				require.True(t, changed.Started)
 			case "terminate_log_first":
 				status = entity.ItemRunState_Terminal
 				require.NoError(t, dao.UpdateItemRunLog(ctx, f.expt, f.run, []int64{item}, map[string]any{"status": int32(entity.ItemRunState_Terminal), "result_state": int32(entity.ExptItemResultStateLogged)}, f.space))
