@@ -26,6 +26,9 @@ import (
 
 //go:generate  mockgen -destination=mocks/expt_item_result.go  -package mocks . IExptItemResultDAO
 type IExptItemResultDAO interface {
+	ScanCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, retryFirst bool) ([]*entity.ExptItemCurrentRequest, error)
+	GetCurrentRequest(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptItemCurrentRequest, error)
+	MarkProcessingIfCurrent(ctx context.Context, spaceID, exptID, runID, itemID int64, requestID string) (bool, error)
 	BatchGet(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) ([]*model.ExptItemResult, error)
 	BatchCreateNX(ctx context.Context, itemResults []*model.ExptItemResult, opts ...db.Option) error
 	ScanItemResults(ctx context.Context, exptID, cursor, limit int64, status []int32, spaceID int64, opts ...db.Option) (results []*model.ExptItemResult, ncursor int64, err error)

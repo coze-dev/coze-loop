@@ -239,3 +239,15 @@ func (e ExptItemResultRepoImpl) BatchCreateNXRunLogs(ctx context.Context, itemRe
 func (e ExptItemResultRepoImpl) GetMaxItemIdxByExptID(ctx context.Context, exptID, spaceID int64) (int32, error) {
 	return e.exptItemResultDAO.GetMaxItemIdxByExptID(ctx, exptID, spaceID)
 }
+
+func (e ExptItemResultRepoImpl) ScanCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, retryFirst bool) ([]*entity.ExptItemCurrentRequest, error) {
+	return e.exptItemResultDAO.ScanCurrentRequests(ctx, spaceID, exptID, runID, retryFirst)
+}
+
+func (e ExptItemResultRepoImpl) GetCurrentRequest(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptItemCurrentRequest, error) {
+	return e.exptItemResultDAO.GetCurrentRequest(ctx, spaceID, exptID, runID, itemID)
+}
+
+func (e ExptItemResultRepoImpl) MarkProcessingIfCurrent(ctx context.Context, spaceID, exptID, runID, itemID int64, requestID string) (bool, error) {
+	return e.exptItemResultDAO.MarkProcessingIfCurrent(ctx, spaceID, exptID, runID, itemID, requestID)
+}

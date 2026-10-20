@@ -569,22 +569,21 @@ func TestExptSubmitExec_ScanEvalItems(t *testing.T) {
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Return(&entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{ConcurNum: 3}}).Times(2)
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{
-					{ItemID: 1, Status: int32(entity.ItemRunState_Processing)},
-					{ItemID: 3, Status: int32(entity.ItemRunState_Success), ResultState: int32(entity.ExptItemResultStateLogged)},
-				}, int64(0), nil).Times(1)
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{
-					{ItemID: 2, Status: int32(entity.ItemRunState_Queueing)},
-				}, int64(1), nil).Times(1)
+				f.exptItemResultRepo.EXPECT().ScanCurrentRequests(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, false).Return([]*entity.ExptItemCurrentRequest{
+					{Mode: entity.EvaluationModeSubmit, ItemID: 1, Status: entity.ItemRunState_Processing},
+					{Mode: entity.EvaluationModeSubmit, ItemID: 3, Status: entity.ItemRunState_Success, ResultState: entity.ExptItemResultStateLogged},
+
+					{Mode: entity.EvaluationModeSubmit, ItemID: 2, Status: entity.ItemRunState_Queueing},
+				}, nil).Times(1)
 			},
 			wantToSubmit: []*entity.ExptEvalItem{
-				{ExptID: 1, EvalSetVersionID: 1, ItemID: 2, State: entity.ItemRunState_Queueing},
+				{Mode: entity.EvaluationModeSubmit, ExptID: 1, EvalSetVersionID: 1, ItemID: 2, State: entity.ItemRunState_Queueing},
 			},
 			wantIncomplete: []*entity.ExptEvalItem{
-				{ExptID: 1, EvalSetVersionID: 1, ItemID: 1, State: entity.ItemRunState_Processing},
+				{Mode: entity.EvaluationModeSubmit, ExptID: 1, EvalSetVersionID: 1, ItemID: 1, State: entity.ItemRunState_Processing},
 			},
 			wantComplete: []*entity.ExptEvalItem{
-				{ExptID: 1, EvalSetVersionID: 1, ItemID: 3, State: entity.ItemRunState_Success},
+				{Mode: entity.EvaluationModeSubmit, ExptID: 1, EvalSetVersionID: 1, ItemID: 3, State: entity.ItemRunState_Success},
 			},
 			wantErr: false,
 			assertErr: func(t *testing.T, err error) {
@@ -605,7 +604,7 @@ func TestExptSubmitExec_ScanEvalItems(t *testing.T) {
 				expt: mockExpt,
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("scan error")).Times(1)
+				f.exptItemResultRepo.EXPECT().ScanCurrentRequests(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, false).Return(nil, errors.New("scan error")).Times(1)
 			},
 			wantErr: true,
 			assertErr: func(t *testing.T, err error) {
@@ -628,15 +627,14 @@ func TestExptSubmitExec_ScanEvalItems(t *testing.T) {
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Return(&entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{ConcurNum: 3}}).Times(2)
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{}, int64(0), nil).Times(1)
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{
-					{ItemID: 1, Status: int32(entity.ItemRunState_Queueing)},
-					{ItemID: 2, Status: int32(entity.ItemRunState_Queueing)},
-				}, int64(1), nil).Times(1)
+				f.exptItemResultRepo.EXPECT().ScanCurrentRequests(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, false).Return([]*entity.ExptItemCurrentRequest{
+					{Mode: entity.EvaluationModeSubmit, ItemID: 1, Status: entity.ItemRunState_Queueing},
+					{Mode: entity.EvaluationModeSubmit, ItemID: 2, Status: entity.ItemRunState_Queueing},
+				}, nil).Times(1)
 			},
 			wantToSubmit: []*entity.ExptEvalItem{
-				{ExptID: 1, EvalSetVersionID: 1, ItemID: 1, State: entity.ItemRunState_Queueing},
-				{ExptID: 1, EvalSetVersionID: 1, ItemID: 2, State: entity.ItemRunState_Queueing},
+				{Mode: entity.EvaluationModeSubmit, ExptID: 1, EvalSetVersionID: 1, ItemID: 1, State: entity.ItemRunState_Queueing},
+				{Mode: entity.EvaluationModeSubmit, ExptID: 1, EvalSetVersionID: 1, ItemID: 2, State: entity.ItemRunState_Queueing},
 			},
 			wantIncomplete: []*entity.ExptEvalItem{},
 			wantComplete:   []*entity.ExptEvalItem{},
@@ -1026,22 +1024,21 @@ func TestExptFailRetryExec_ScanEvalItems(t *testing.T) {
 			},
 			prepareMock: func(f *exptFailRetryExecFields, ctrl *gomock.Controller, args args) {
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Return(&entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{ConcurNum: 3}}).Times(2)
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{
-					{ItemID: 1, Status: int32(entity.ItemRunState_Processing)},
-					{ItemID: 3, Status: int32(entity.ItemRunState_Success), ResultState: int32(entity.ExptItemResultStateLogged)},
-				}, int64(0), nil).Times(1)
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{
-					{ItemID: 2, Status: int32(entity.ItemRunState_Queueing)},
-				}, int64(1), nil).Times(1)
+				f.exptItemResultRepo.EXPECT().ScanCurrentRequests(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, false).Return([]*entity.ExptItemCurrentRequest{
+					{Mode: entity.EvaluationModeSubmit, ItemID: 1, Status: entity.ItemRunState_Processing},
+					{Mode: entity.EvaluationModeSubmit, ItemID: 3, Status: entity.ItemRunState_Success, ResultState: entity.ExptItemResultStateLogged},
+
+					{Mode: entity.EvaluationModeSubmit, ItemID: 2, Status: entity.ItemRunState_Queueing},
+				}, nil).Times(1)
 			},
 			wantToSubmit: []*entity.ExptEvalItem{
-				{ExptID: 1, EvalSetVersionID: 1, ItemID: 2, State: entity.ItemRunState_Queueing},
+				{Mode: entity.EvaluationModeSubmit, ExptID: 1, EvalSetVersionID: 1, ItemID: 2, State: entity.ItemRunState_Queueing},
 			},
 			wantIncomplete: []*entity.ExptEvalItem{
-				{ExptID: 1, EvalSetVersionID: 1, ItemID: 1, State: entity.ItemRunState_Processing},
+				{Mode: entity.EvaluationModeSubmit, ExptID: 1, EvalSetVersionID: 1, ItemID: 1, State: entity.ItemRunState_Processing},
 			},
 			wantComplete: []*entity.ExptEvalItem{
-				{ExptID: 1, EvalSetVersionID: 1, ItemID: 3, State: entity.ItemRunState_Success},
+				{Mode: entity.EvaluationModeSubmit, ExptID: 1, EvalSetVersionID: 1, ItemID: 3, State: entity.ItemRunState_Success},
 			},
 			wantErr: false,
 			assertErr: func(t *testing.T, err error) {
@@ -1062,7 +1059,7 @@ func TestExptFailRetryExec_ScanEvalItems(t *testing.T) {
 				expt: mockExpt,
 			},
 			prepareMock: func(f *exptFailRetryExecFields, ctrl *gomock.Controller, args args) {
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("scan error")).Times(1)
+				f.exptItemResultRepo.EXPECT().ScanCurrentRequests(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, false).Return(nil, errors.New("scan error")).Times(1)
 			},
 			wantErr: true,
 			assertErr: func(t *testing.T, err error) {
@@ -1637,22 +1634,21 @@ func TestExptAppendExec_ScanEvalItems(t *testing.T) {
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Return(&entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{ConcurNum: 3}}).Times(2)
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{
-					{ItemID: 1, Status: int32(entity.ItemRunState_Processing)},
-					{ItemID: 3, Status: int32(entity.ItemRunState_Success), ResultState: int32(entity.ExptItemResultStateLogged)},
-				}, int64(0), nil).Times(1)
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{
-					{ItemID: 2, Status: int32(entity.ItemRunState_Queueing)},
-				}, int64(1), nil).Times(1)
+				f.exptItemResultRepo.EXPECT().ScanCurrentRequests(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, false).Return([]*entity.ExptItemCurrentRequest{
+					{Mode: entity.EvaluationModeSubmit, ItemID: 1, Status: entity.ItemRunState_Processing},
+					{Mode: entity.EvaluationModeSubmit, ItemID: 3, Status: entity.ItemRunState_Success, ResultState: entity.ExptItemResultStateLogged},
+
+					{Mode: entity.EvaluationModeSubmit, ItemID: 2, Status: entity.ItemRunState_Queueing},
+				}, nil).Times(1)
 			},
 			wantToSubmit: []*entity.ExptEvalItem{
-				{ExptID: 1, EvalSetVersionID: 1, ItemID: 2, State: entity.ItemRunState_Queueing},
+				{Mode: entity.EvaluationModeSubmit, ExptID: 1, EvalSetVersionID: 1, ItemID: 2, State: entity.ItemRunState_Queueing},
 			},
 			wantIncomplete: []*entity.ExptEvalItem{
-				{ExptID: 1, EvalSetVersionID: 1, ItemID: 1, State: entity.ItemRunState_Processing},
+				{Mode: entity.EvaluationModeSubmit, ExptID: 1, EvalSetVersionID: 1, ItemID: 1, State: entity.ItemRunState_Processing},
 			},
 			wantComplete: []*entity.ExptEvalItem{
-				{ExptID: 1, EvalSetVersionID: 1, ItemID: 3, State: entity.ItemRunState_Success},
+				{Mode: entity.EvaluationModeSubmit, ExptID: 1, EvalSetVersionID: 1, ItemID: 3, State: entity.ItemRunState_Success},
 			},
 			wantErr: false,
 			assertErr: func(t *testing.T, err error) {
@@ -1673,7 +1669,7 @@ func TestExptAppendExec_ScanEvalItems(t *testing.T) {
 				expt: mockExpt,
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("scan error")).Times(1)
+				f.exptItemResultRepo.EXPECT().ScanCurrentRequests(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, false).Return(nil, errors.New("scan error")).Times(1)
 			},
 			wantErr: true,
 			assertErr: func(t *testing.T, err error) {
@@ -1785,8 +1781,7 @@ func TestExptAppendExec_ExptEnd(t *testing.T) {
 					ExptItemEvalConf:     &entity.ExptItemEvalConf{ConcurNum: 1},
 				}
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), args.event.SpaceID).Return(execConf).AnyTimes()
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), args.event.ExptID, args.event.ExptRunID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{}, int64(0), nil).Times(1)
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), args.event.ExptID, args.event.ExptRunID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{}, int64(0), nil).Times(1)
+				f.exptItemResultRepo.EXPECT().ScanCurrentRequests(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, false).Return([]*entity.ExptItemCurrentRequest{}, nil).Times(1)
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
 				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, gomock.Any(), args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
@@ -1810,12 +1805,11 @@ func TestExptAppendExec_ExptEnd(t *testing.T) {
 				f.mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).Times(1)
 				f.manager.EXPECT().GetDetail(gomock.Any(), args.event.ExptID, args.event.SpaceID, gomock.Any()).Return(mockExptWithEvalSet, nil).Times(1)
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), args.event.SpaceID).Return(&entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{ConcurNum: 2}}).AnyTimes()
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), args.event.ExptID, args.event.ExptRunID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{
-					{ItemID: 1, Status: int32(entity.ItemRunState_Processing)},
-				}, int64(0), nil).Times(1)
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), args.event.ExptID, args.event.ExptRunID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{
-					{ItemID: 2, Status: int32(entity.ItemRunState_Queueing)},
-				}, int64(1), nil).Times(1)
+				f.exptItemResultRepo.EXPECT().ScanCurrentRequests(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, false).Return([]*entity.ExptItemCurrentRequest{
+					{ItemID: 1, Status: entity.ItemRunState_Processing},
+
+					{ItemID: 2, Status: entity.ItemRunState_Queueing},
+				}, nil).Times(1)
 			},
 			wantNextTick: true,
 			wantErr:      false,
@@ -1836,8 +1830,7 @@ func TestExptAppendExec_ExptEnd(t *testing.T) {
 				f.mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).Times(1)
 				f.manager.EXPECT().GetDetail(gomock.Any(), args.event.ExptID, args.event.SpaceID, gomock.Any()).Return(mockExptWithEvalSet, nil).Times(1)
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), args.event.SpaceID).Return(&entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{ConcurNum: 1}}).AnyTimes()
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), args.event.ExptID, args.event.ExptRunID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{}, int64(0), nil).Times(1)
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), args.event.ExptID, args.event.ExptRunID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{}, int64(0), nil).Times(1)
+				f.exptItemResultRepo.EXPECT().ScanCurrentRequests(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, false).Return([]*entity.ExptItemCurrentRequest{}, nil).Times(1)
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(true, nil).Times(1)
 			},
 			wantNextTick: false,
@@ -3793,18 +3786,17 @@ func TestExptRetryAllExec_ScanEvalItems(t *testing.T) {
 			},
 			prepareMock: func(f *exptRetryAllExecFields, args args) {
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Return(&entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{ConcurNum: 3}}).Times(2)
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{
-					{ItemID: 1, Status: int32(entity.ItemRunState_Processing)},
-				}, int64(0), nil).Times(1)
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{
-					{ItemID: 2, Status: int32(entity.ItemRunState_Queueing)},
-				}, int64(1), nil).Times(1)
+				f.exptItemResultRepo.EXPECT().ScanCurrentRequests(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, false).Return([]*entity.ExptItemCurrentRequest{
+					{Mode: entity.EvaluationModeSubmit, ItemID: 1, Status: entity.ItemRunState_Processing},
+
+					{Mode: entity.EvaluationModeSubmit, ItemID: 2, Status: entity.ItemRunState_Queueing},
+				}, nil).Times(1)
 			},
 			wantToSubmit: []*entity.ExptEvalItem{
-				{ExptID: 1, EvalSetVersionID: 1, ItemID: 2, State: entity.ItemRunState_Queueing},
+				{Mode: entity.EvaluationModeSubmit, ExptID: 1, EvalSetVersionID: 1, ItemID: 2, State: entity.ItemRunState_Queueing},
 			},
 			wantIncomplete: []*entity.ExptEvalItem{
-				{ExptID: 1, EvalSetVersionID: 1, ItemID: 1, State: entity.ItemRunState_Processing},
+				{Mode: entity.EvaluationModeSubmit, ExptID: 1, EvalSetVersionID: 1, ItemID: 1, State: entity.ItemRunState_Processing},
 			},
 			wantComplete: []*entity.ExptEvalItem{},
 			wantErr:      false,
@@ -3824,7 +3816,7 @@ func TestExptRetryAllExec_ScanEvalItems(t *testing.T) {
 				expt: mockExpt,
 			},
 			prepareMock: func(f *exptRetryAllExecFields, args args) {
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("scan error")).Times(1)
+				f.exptItemResultRepo.EXPECT().ScanCurrentRequests(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, false).Return(nil, errors.New("scan error")).Times(1)
 			},
 			wantErr: true,
 			assertErr: func(t *testing.T, err error) {
@@ -4768,18 +4760,17 @@ func TestExptRetryItemsExec_ScanEvalItems(t *testing.T) {
 			},
 			prepareMock: func(f *exptRetryItemsExecFields, args args) {
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Return(&entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{ConcurNum: 3}}).Times(2)
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{
-					{ItemID: 1, Status: int32(entity.ItemRunState_Processing)},
-				}, int64(0), nil).Times(1)
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{
-					{ItemID: 2, Status: int32(entity.ItemRunState_Queueing)},
-				}, int64(1), nil).Times(1)
+				f.exptItemResultRepo.EXPECT().ScanCurrentRequests(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, false).Return([]*entity.ExptItemCurrentRequest{
+					{Mode: entity.EvaluationModeSubmit, ItemID: 1, Status: entity.ItemRunState_Processing},
+
+					{Mode: entity.EvaluationModeSubmit, ItemID: 2, Status: entity.ItemRunState_Queueing},
+				}, nil).Times(1)
 			},
 			wantToSubmit: []*entity.ExptEvalItem{
-				{ExptID: 1, EvalSetVersionID: 1, ItemID: 2, State: entity.ItemRunState_Queueing},
+				{Mode: entity.EvaluationModeSubmit, ExptID: 1, EvalSetVersionID: 1, ItemID: 2, State: entity.ItemRunState_Queueing},
 			},
 			wantIncomplete: []*entity.ExptEvalItem{
-				{ExptID: 1, EvalSetVersionID: 1, ItemID: 1, State: entity.ItemRunState_Processing},
+				{Mode: entity.EvaluationModeSubmit, ExptID: 1, EvalSetVersionID: 1, ItemID: 1, State: entity.ItemRunState_Processing},
 			},
 			wantComplete: []*entity.ExptEvalItem{},
 			wantErr:      false,
@@ -4799,7 +4790,7 @@ func TestExptRetryItemsExec_ScanEvalItems(t *testing.T) {
 				expt: mockExpt,
 			},
 			prepareMock: func(f *exptRetryItemsExecFields, args args) {
-				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("scan error")).Times(1)
+				f.exptItemResultRepo.EXPECT().ScanCurrentRequests(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, false).Return(nil, errors.New("scan error")).Times(1)
 			},
 			wantErr: true,
 			assertErr: func(t *testing.T, err error) {

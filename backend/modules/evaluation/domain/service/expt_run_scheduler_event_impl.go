@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"time"
@@ -47,6 +48,7 @@ type ExptSchedulerImpl struct {
 	Configer                 component.IConfiger
 	QuotaRepo                repo.QuotaRepo
 	Mutex                    lock.ILocker
+	itemLocker               ManualRetryLockerFactory
 	AuditClient              audit.IAuditService
 	Metric                   metrics.ExptMetric
 	Endpoints                SchedulerEndPoint
@@ -134,6 +136,9 @@ func NewExptSchedulerSvc(
 		itemCompletePublisher:    itemCompletePublisher,
 		exptItemRefRepo:          exptItemRefRepo,
 		sandboxAgentMetrics:      sandboxAgentMetrics,
+	}
+	if manager, ok := manager.(*ExptMangerImpl); ok {
+		i.itemLocker = manager.manualRetryLocker
 	}
 	if len(sandboxAgentNotifier) > 0 {
 		i.sandboxAgentNotifier = sandboxAgentNotifier[0]
@@ -279,6 +284,9 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 			return next(ctx, event)
 		}(ctx, event)
 
+		if errno.NeedMQRetry(nextErr) {
+			return nextErr
+		}
 		if nextErr == nil {
 			logs.CtxInfo(ctx, "[ExptEval] handle event success, event: %v", json.Jsonify(event))
 			return nil
@@ -659,74 +667,72 @@ func (e *ExptSchedulerImpl) sendItemComplete(ctx context.Context, event *entity.
 }
 
 func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.ExptScheduleEvent, toSubmits []*entity.ExptEvalItem) error {
-	if len(toSubmits) == 0 {
-		return nil
-	}
-
-	now := time.Now().Unix()
-	itemIDs := make([]int64, 0, len(toSubmits))
-	itemEvalEvents := make([]*entity.ExptItemEvalEvent, 0, len(toSubmits))
-	for _, ts := range toSubmits {
-		if entity.IsItemRunFinished(ts.State) {
+	for _, candidate := range toSubmits {
+		if candidate == nil || candidate.State != entity.ItemRunState_Queueing {
 			continue
 		}
-		itemIDs = append(itemIDs, ts.ItemID)
-		itemEvalEvents = append(itemEvalEvents, &entity.ExptItemEvalEvent{
-			SpaceID:       event.SpaceID,
-			ExptID:        event.ExptID,
-			ExptRunID:     event.ExptRunID,
-			ExptRunMode:   event.ExptRunMode,
-			EvalSetItemID: ts.ItemID,
-			CreateAt:      now,
-			RetryTimes:    int(ts.RetryTimes), // ★ 回填持久重试次数: 让位后由调度器新建的事件据此判收敛(需重试→让位, 达上限→落 Fail)
-			MaxRetryTimes: event.ItemRetryTimes,
-			Ext:           event.Ext,
-			Session:       event.Session,
-		})
+		if e.itemLocker == nil {
+			return fmt.Errorf("item locker factory unavailable")
+		}
+		mutex := e.itemLocker()
+		if err := e.submitCurrentItem(ctx, event, candidate, mutex); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
 	}
+	return nil
+}
 
-	logs.CtxInfo(ctx, "submit item eval events: %v", json.Jsonify(itemEvalEvents))
-
-	interval := e.Configer.GetExptExecConf(ctx, event.SpaceID).GetExptItemEvalConf().GetInterval()
-	if err := e.Publisher.BatchPublishExptRecordEvalEvent(ctx, itemEvalEvents, gptr.Of(interval)); err != nil {
-		return err
-	}
-
-	defer e.Metric.EmitItemExecEval(event.SpaceID, int64(event.ExptRunMode), len(toSubmits))
-
-	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, itemIDs, map[string]any{"status": int32(entity.ItemRunState_Processing)},
-		event.SpaceID); err != nil {
-		return err
-	}
-
-	if err := e.ExptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, itemIDs, map[string]any{"status": int32(entity.ItemRunState_Processing)}); err != nil {
-		return err
-	}
-
-	err := e.ResultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, itemIDs)
-	if err != nil {
-		logs.CtxError(ctx, "ExptSubmitExec.ExptStart UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
-	}
-	logs.CtxInfo(ctx, "ExptSchedulerImpl handleToSubmits UpsertExptTurnResultFilter success, expt_id: %v", event.ExptID)
-
-	if err := e.ExptTurnResultRepo.UpdateTurnResultsWithItemIDs(ctx, event.ExptID, itemIDs, event.SpaceID, map[string]any{"status": int32(entity.TurnRunState_Processing)}); err != nil {
-		return err
-	}
-
-	itemResults, err := e.ExptItemResultRepo.BatchGet(ctx, event.SpaceID, event.ExptID, itemIDs)
+func (e *ExptSchedulerImpl) submitCurrentItem(ctx context.Context, event *entity.ExptScheduleEvent, candidate *entity.ExptEvalItem, mutex lock.ILocker) error {
+	key := fmt.Sprintf("expt_item_eval_run_lock:%d:%d", event.ExptID, candidate.ItemID)
+	locked, lockCtx, cancel, err := mutex.LockWithRenew(ctx, key, 5*time.Second, 5*time.Minute)
 	if err != nil {
 		return err
 	}
-
-	if err := e.ExptStatsRepo.ArithOperateCount(ctx, event.ExptID, event.SpaceID, &entity.StatsCntArithOp{
-		OpStatusCnt: map[entity.ItemRunState]int{
-			entity.ItemRunState_Processing: len(itemResults),
-			entity.ItemRunState_Queueing:   0 - len(itemResults),
-		},
-	}); err != nil {
+	if !locked {
+		return nil
+	}
+	defer func() {
+		cancel()
+		if _, err := mutex.Unlock(key); err != nil {
+			logs.CtxWarn(ctx, "unlock producer item: %v", err)
+		}
+	}()
+	source, err := e.ExptItemResultRepo.GetCurrentRequest(lockCtx, event.SpaceID, event.ExptID, event.ExptRunID, candidate.ItemID)
+	if err != nil {
 		return err
 	}
-
+	if !source.Matches(event.ExptRunID, candidate.RequestID) || source.Status != entity.ItemRunState_Queueing {
+		return nil
+	}
+	if source.Mode == entity.EvaluationModeUnknown {
+		return fmt.Errorf("current item mode unavailable")
+	}
+	itemEvent := &entity.ExptItemEvalEvent{RequestID: source.RequestID, SpaceID: event.SpaceID, ExptID: event.ExptID, ExptRunID: event.ExptRunID, ExptRunMode: source.Mode, EvalSetItemID: source.ItemID, CreateAt: time.Now().Unix(), RetryTimes: int(source.RetryTimes), MaxRetryTimes: event.ItemRetryTimes, Ext: maps.Clone(event.Ext)}
+	if event.Session != nil {
+		session := *event.Session
+		itemEvent.Session = &session
+	}
+	interval := e.Configer.GetExptExecConf(lockCtx, event.SpaceID).GetExptItemEvalConf().GetInterval()
+	if err := lockCtx.Err(); err != nil {
+		return err
+	}
+	if err := e.Publisher.BatchPublishExptRecordEvalEvent(lockCtx, []*entity.ExptItemEvalEvent{itemEvent}, gptr.Of(interval)); err != nil {
+		return err
+	}
+	changed, err := e.ExptItemResultRepo.MarkProcessingIfCurrent(lockCtx, event.SpaceID, event.ExptID, event.ExptRunID, source.ItemID, source.RequestID)
+	if err != nil {
+		return err
+	}
+	if changed {
+		if e.Metric != nil {
+			e.Metric.EmitItemExecEval(event.SpaceID, int64(source.Mode), 1)
+		}
+		if e.ResultSvc != nil {
+			if err := e.ResultSvc.UpsertExptTurnResultFilter(lockCtx, event.SpaceID, event.ExptID, []int64{source.ItemID}); err != nil {
+				logs.CtxWarn(ctx, "refresh dispatched item projection: %v", err)
+			}
+		}
+	}
 	return nil
 }
 
