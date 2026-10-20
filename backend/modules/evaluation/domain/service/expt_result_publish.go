@@ -316,7 +316,7 @@ func (e *ExptSchedulerImpl) recordCurrentItemResults(ctx context.Context, event 
 			current := *item
 			current.State = entity.ItemRunState(source.ItemLog.Status)
 			current.RequestID = source.Source.Current.RequestID
-			return e.sendItemComplete(lockCtx, event, expt, &current, itemMeta[item.ItemID], itemVer[item.ItemID])
+			return e.sendItemComplete(lockCtx, event, expt, &current, itemMeta[item.ItemID], itemVer[item.ItemID], publication)
 		})
 		if err != nil {
 			return err
