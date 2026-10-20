@@ -42,3 +42,14 @@ type RequeueTerminalItemsRequest struct {
 	Items         []*PreparedRetryItem
 	RejectedItems []*ManualRetryRejectedItem
 }
+
+type RetryInCurrentRunRequest struct {
+	SpaceID       int64
+	ExptID        int64
+	ExpectedRunID int64
+	RequestID     string
+	Mode          ExptRunMode
+	ItemIDs       []int64
+	Ext           map[string]string
+	Session       *Session
+}

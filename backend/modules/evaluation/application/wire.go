@@ -81,6 +81,7 @@ var (
 		notifyrpc.NotifyRPCSet,
 		userinfo.NewUserInfoServiceImpl,
 		NewLock,
+		NewManualRetryLockerFactory,
 		flagSet,
 		domainservice.NewDefaultURLProcessor,
 		storage.StorageSet,

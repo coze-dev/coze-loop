@@ -28,3 +28,7 @@ func (r *ExptManualRetryRepoImpl) FindReceipt(ctx context.Context, spaceID, expt
 func (r *ExptManualRetryRepoImpl) RequeueTerminalItems(ctx context.Context, request *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryReceipt, error) {
 	return r.dao.RequeueTerminalItems(ctx, request)
 }
+
+func (r *ExptManualRetryRepoImpl) PreflightTerminalItems(ctx context.Context, request *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryPreparation, error) {
+	return r.dao.PreflightTerminalItems(ctx, request)
+}

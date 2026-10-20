@@ -5,12 +5,20 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"maps"
 	"sort"
 	"time"
 
+	"github.com/google/uuid"
+
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 func (m *ExptMangerImpl) prepareTerminalCandidatesAndReusableRefs(ctx context.Context, expt *entity.Experiment, runID int64, mode entity.ExptRunMode, itemIDs []int64, records EvaluatorRecordService) (*entity.ManualRetryPreparation, error) {
@@ -291,4 +299,239 @@ func (r *manualRetryTargetReader) GetRecordByID(ctx context.Context, spaceID, re
 		}
 	}
 	return record, nil
+}
+
+func normalizeCurrentRunRetry(req *entity.RetryInCurrentRunRequest) (*entity.RetryInCurrentRunRequest, string, error) {
+	if req == nil {
+		return nil, "", fmt.Errorf("invalid manual retry request")
+	}
+	normalized := *req
+	normalized.Ext = maps.Clone(req.Ext)
+	selected := make(map[int64]bool, len(req.ItemIDs))
+	for _, id := range req.ItemIDs {
+		selected[id] = true
+	}
+	normalized.ItemIDs = make([]int64, 0, len(selected))
+	for id := range selected {
+		normalized.ItemIDs = append(normalized.ItemIDs, id)
+	}
+	sort.Slice(normalized.ItemIDs, func(i, j int) bool { return normalized.ItemIDs[i] < normalized.ItemIDs[j] })
+	operator := ""
+	if req.Session != nil {
+		operator = req.Session.UserID
+	}
+	payload := struct {
+		SpaceID  int64              `json:"space_id"`
+		ExptID   int64              `json:"expt_id"`
+		RunID    int64              `json:"run_id"`
+		Operator string             `json:"operator"`
+		Mode     entity.ExptRunMode `json:"mode"`
+		ItemIDs  []int64            `json:"item_ids"`
+		Ext      map[string]string  `json:"ext,omitempty"`
+	}{normalized.SpaceID, normalized.ExptID, normalized.ExpectedRunID, operator, normalized.Mode, normalized.ItemIDs, normalized.Ext}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return nil, "", err
+	}
+	hash := sha256.Sum256(raw)
+	return &normalized, hex.EncodeToString(hash[:]), nil
+}
+
+func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.RetryInCurrentRunRequest) (*entity.ManualRetryReceipt, error) {
+	normalized, hash, err := normalizeCurrentRunRetry(req)
+	if err != nil {
+		return nil, err
+	}
+	if m.manualRetryRepo == nil {
+		return nil, fmt.Errorf("manual retry repository unavailable")
+	}
+	receipt, err := m.manualRetryRepo.FindReceipt(ctx, normalized.SpaceID, normalized.ExptID, normalized.ExpectedRunID, normalized.RequestID, hash)
+	if err != nil || receipt != nil {
+		return receipt, err
+	}
+	if err := validateCurrentRunRetry(normalized); err != nil {
+		return nil, err
+	}
+	if m.configer == nil || !m.configer.GetExptExecConf(ctx, normalized.SpaceID).IsRunningRetryEnabled() {
+		return nil, fmt.Errorf("running retry disabled")
+	}
+	ctx = contexts.WithCtxWriteDB(ctx)
+	expt, err := m.exptRepo.GetByID(ctx, normalized.ExptID, normalized.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateCurrentRetryExperiment(expt, normalized); err != nil {
+		return nil, err
+	}
+	plan, err := m.prepareTerminalCandidatesAndReusableRefs(ctx, expt, normalized.ExpectedRunID, normalized.Mode, normalized.ItemIDs, m.evaluatorRecords)
+	if err != nil {
+		return nil, err
+	}
+	if m.manualRetryLocker == nil {
+		return nil, fmt.Errorf("manual retry locker unavailable")
+	}
+	locker := m.manualRetryLocker()
+	if locker == nil {
+		return nil, fmt.Errorf("manual retry locker unavailable")
+	}
+	locked, lockCtx, cancel, err := locker.LockWithRenew(ctx, fmt.Sprintf("expt_run_exec_lock:%d:%d", expt.ID, normalized.ExpectedRunID), 5*time.Second, time.Minute)
+	if err != nil {
+		return nil, err
+	}
+	if !locked {
+		return nil, fmt.Errorf("retry_busy")
+	}
+	defer cancel()
+	if err := lockCtx.Err(); err != nil {
+		return nil, err
+	}
+	receipt, err = m.manualRetryRepo.FindReceipt(lockCtx, normalized.SpaceID, normalized.ExptID, normalized.ExpectedRunID, normalized.RequestID, hash)
+	if err != nil || receipt != nil {
+		return receipt, err
+	}
+	expt, err = m.exptRepo.GetByID(lockCtx, normalized.ExptID, normalized.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateCurrentRetryExperiment(expt, normalized); err != nil {
+		return nil, err
+	}
+	run, err := m.runLogRepo.Get(lockCtx, expt.ID, normalized.ExpectedRunID)
+	if err != nil {
+		return nil, err
+	}
+	if run == nil || run.SpaceID != expt.SpaceID || run.ExptID != expt.ID || run.ExptRunID != normalized.ExpectedRunID || run.Status != int64(entity.ExptStatus_Processing) {
+		return nil, fmt.Errorf("run_finished")
+	}
+	opCtx, stop := context.WithCancel(lockCtx)
+	defer stop()
+	held := make([]context.Context, 0, len(plan.Items))
+	candidates := make([]*entity.PreparedRetryItem, 0, len(plan.Items))
+	for _, item := range plan.Items {
+		if err := opCtx.Err(); err != nil {
+			return nil, err
+		}
+		acquired, itemCtx, itemCancel, err := locker.LockWithRenew(opCtx, fmt.Sprintf("expt_item_eval_run_lock:%d:%d", expt.ID, item.SourceItem.ItemID), 5*time.Second, time.Minute)
+		if err != nil {
+			return nil, err
+		}
+		if !acquired {
+			plan.RejectedItems = append(plan.RejectedItems, &entity.ManualRetryRejectedItem{ItemID: item.SourceItem.ItemID, Reason: "busy"})
+			continue
+		}
+		defer itemCancel()
+		unregister := context.AfterFunc(itemCtx, stop)
+		defer unregister()
+		held = append(held, itemCtx)
+		if err := itemCtx.Err(); err != nil {
+			return nil, err
+		}
+		candidates = append(candidates, item)
+	}
+	checkLocks := func() error {
+		if err := opCtx.Err(); err != nil {
+			return err
+		}
+		for _, ctx := range held {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := checkLocks(); err != nil {
+		return nil, err
+	}
+	operator := ""
+	if normalized.Session != nil {
+		operator = normalized.Session.UserID
+	}
+	commit := &entity.RequeueTerminalItemsRequest{SpaceID: expt.SpaceID, ExptID: expt.ID, RunID: normalized.ExpectedRunID, RequestID: normalized.RequestID, PayloadHash: hash, Operator: operator, Mode: normalized.Mode, SnapshotAtMS: plan.SnapshotAtMS, Items: candidates, RejectedItems: plan.RejectedItems}
+	checked, err := m.manualRetryRepo.PreflightTerminalItems(opCtx, commit)
+	if err != nil {
+		return nil, err
+	}
+	commit.Items = nil
+	commit.RejectedItems = checked.RejectedItems
+	for _, item := range checked.Items {
+		if err := checkLocks(); err != nil {
+			return nil, err
+		}
+		if expt.ExptDispatchMode == entity.ExptDispatchModeEnforce {
+			if m.centralGuard == nil || expt.SchedulerScope == "" {
+				return nil, fmt.Errorf("terminal reservation release unavailable")
+			}
+			released, err := m.centralGuard.ReleaseTerminalReservation(opCtx, expt.SchedulerScope, item.PreviousRunID, item.SourceItem.ItemID, item.PreviousRequestID)
+			if err != nil {
+				return nil, err
+			}
+			switch released {
+			case component.TerminalReservationReleased, component.TerminalReservationAbsent:
+			case component.TerminalReservationMismatch:
+				commit.RejectedItems = append(commit.RejectedItems, &entity.ManualRetryRejectedItem{ItemID: item.SourceItem.ItemID, Reason: "reservation_mismatch"})
+				continue
+			default:
+				return nil, fmt.Errorf("invalid terminal reservation release result")
+			}
+		}
+		commit.Items = append(commit.Items, item)
+	}
+	if err := checkLocks(); err != nil {
+		return nil, err
+	}
+	receipt, err = m.manualRetryRepo.RequeueTerminalItems(opCtx, commit)
+	if err != nil {
+		return nil, err
+	}
+	cancel()
+	stop()
+	if err := m.wakeCurrentRetryRun(ctx, expt, run); err != nil {
+		logs.CtxWarn(ctx, "wake current retry run failed, expt_id=%d, run_id=%d, err=%v", expt.ID, run.ExptRunID, err)
+	}
+	return receipt, nil
+}
+
+func validateCurrentRunRetry(req *entity.RetryInCurrentRunRequest) error {
+	if req.SpaceID <= 0 || req.ExptID <= 0 || req.ExpectedRunID <= 0 || len(req.RequestID) != 36 {
+		return fmt.Errorf("invalid manual retry identity")
+	}
+	if _, err := uuid.Parse(req.RequestID); err != nil {
+		return fmt.Errorf("invalid manual retry request UUID")
+	}
+	if req.Mode != entity.EvaluationModeFailRetry && req.Mode != entity.EvaluationModeRetryItems {
+		return fmt.Errorf("unsupported manual retry mode")
+	}
+	if (req.Mode == entity.EvaluationModeFailRetry && len(req.ItemIDs) != 0) || (req.Mode == entity.EvaluationModeRetryItems && len(req.ItemIDs) == 0) {
+		return fmt.Errorf("invalid manual retry selection")
+	}
+	for _, id := range req.ItemIDs {
+		if id <= 0 {
+			return fmt.Errorf("invalid retry item id")
+		}
+	}
+	if _, exists := req.Ext[entity.ManualRetryExtKey]; exists {
+		return fmt.Errorf("manual retry ext is internal")
+	}
+	return nil
+}
+
+func validateCurrentRetryExperiment(expt *entity.Experiment, req *entity.RetryInCurrentRunRequest) error {
+	if expt == nil || expt.ID != req.ExptID || expt.SpaceID != req.SpaceID || expt.LatestRunID != req.ExpectedRunID {
+		return fmt.Errorf("run_conflict")
+	}
+	if expt.Status != entity.ExptStatus_Processing || expt.ExptType != entity.ExptType_Offline {
+		return fmt.Errorf("run_finished")
+	}
+	return nil
+}
+
+func (m *ExptMangerImpl) wakeCurrentRetryRun(ctx context.Context, expt *entity.Experiment, _ *entity.ExptRunLog) error {
+	if expt.ExptDispatchMode == entity.ExptDispatchModeEnforce {
+		if m.currentRunWaker == nil {
+			return fmt.Errorf("central current run wake unavailable")
+		}
+		return m.currentRunWaker.WakeCurrentRun(ctx, expt.SchedulerScope)
+	}
+	// The original periodic tick retains the frozen Ext and Session.
+	return fmt.Errorf("original schedule event snapshot unavailable")
 }

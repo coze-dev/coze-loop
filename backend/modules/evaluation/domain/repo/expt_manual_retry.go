@@ -11,6 +11,7 @@ import (
 
 //go:generate mockgen -destination=mocks/expt_manual_retry.go -package=mocks . IExptManualRetryRepo
 type IExptManualRetryRepo interface {
+	PreflightTerminalItems(context.Context, *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryPreparation, error)
 	FindReceipt(context.Context, int64, int64, int64, string, string) (*entity.ManualRetryReceipt, error)
 	RequeueTerminalItems(context.Context, *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryReceipt, error)
 }

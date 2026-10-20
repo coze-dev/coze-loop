@@ -429,6 +429,9 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 		}
 		var logDO *entity.ExptTurnResultRunLog
 		if currentLog != nil {
+			if err := validateManualRetryTurnExt(currentLog.Ext); err != nil {
+				return "", err
+			}
 			logDO, err = convert.NewExptTurnResultRunLogConvertor().PO2DO(currentLog)
 		} else {
 			err = nil
@@ -476,6 +479,9 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 		if err := d.provider.NewSession(ctx, opts...).Where("space_id=? AND expt_id=? AND expt_run_id=? AND id=?", r.SpaceID, r.ExptID, source.ExptRunID, source.ID).First(&row).Error; err != nil {
 			return "", err
 		}
+		if err := validateManualRetryTurnExt(row.Ext); err != nil {
+			return "", err
+		}
 		got, err := convert.NewExptTurnResultRunLogConvertor().PO2DO(&row)
 		if err != nil {
 			return "", err
@@ -496,6 +502,9 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 			}
 			if source.ItemVersionID != item.prepared.ItemVersionID {
 				return "source_changed", nil
+			}
+			if err := validateManualRetryTurnExt(source.Ext); err != nil {
+				return "", err
 			}
 			if _, err := convert.NewExptTurnResultRunLogConvertor().PO2DO(&source); err != nil {
 				return "", err
@@ -577,6 +586,147 @@ func (d *ExptManualRetryDAOImpl) writeManualRetryItem(ctx context.Context, r *en
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+// Preflight reuses final source validation without allocating IDs or writing rows.
+func (d *ExptManualRetryDAOImpl) PreflightTerminalItems(ctx context.Context, request *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryPreparation, error) {
+	if request == nil {
+		return nil, fmt.Errorf("invalid manual retry request")
+	}
+	plan := &entity.ManualRetryPreparation{SnapshotAtMS: request.SnapshotAtMS, RejectedItems: append([]*entity.ManualRetryRejectedItem(nil), request.RejectedItems...)}
+	err := d.provider.Transaction(ctx, func(tx *gorm.DB) error {
+		opts := []db.Option{db.WithTransaction(tx), db.WithMaster(), db.WithSelectForUpdate()}
+		expt, err := NewExptDAO(d.provider).GetByID(ctx, request.ExptID, opts...)
+		if err != nil {
+			return err
+		}
+		run, err := NewExptRunLogDAO(d.provider).Get(ctx, request.ExptID, request.RunID, opts...)
+		if err != nil {
+			return err
+		}
+		if expt.SpaceID != request.SpaceID || run.SpaceID != request.SpaceID || expt.LatestRunID != request.RunID {
+			return fmt.Errorf("run_conflict")
+		}
+		if expt.Status != int32(entity.ExptStatus_Processing) || expt.ExptType != int32(entity.ExptType_Offline) || gptr.Indirect(run.Status) != int64(entity.ExptStatus_Processing) {
+			return fmt.Errorf("run_finished")
+		}
+		chunks, err := decodeManualRetryRunItems(run)
+		if err != nil {
+			return err
+		}
+		receipt, err := findManualRetryReceipt(chunks, request.RequestID, request.PayloadHash)
+		if err != nil {
+			return err
+		}
+		if receipt != nil {
+			return fmt.Errorf("manual retry receipt appeared during preflight")
+		}
+		items := append([]*entity.PreparedRetryItem(nil), request.Items...)
+		for _, item := range items {
+			if item == nil || item.SourceItem == nil {
+				return fmt.Errorf("invalid prepared retry item")
+			}
+		}
+		sort.Slice(items, func(i, j int) bool { return items[i].SourceItem.ItemID < items[j].SourceItem.ItemID })
+		accepted := make([]*lockedManualRetryItem, 0, len(items))
+		for i, item := range items {
+			if i > 0 && item.SourceItem.ItemID == items[i-1].SourceItem.ItemID {
+				return fmt.Errorf("duplicate prepared retry item")
+			}
+			current, reason, err := d.lockManualRetryItem(ctx, request, item, opts)
+			if err != nil {
+				return err
+			}
+			if reason == "" {
+				reason, err = d.lockManualRetryTurns(ctx, request, current, opts)
+				if err != nil {
+					return err
+				}
+			}
+			if reason != "" {
+				plan.RejectedItems = append(plan.RejectedItems, &entity.ManualRetryRejectedItem{ItemID: item.SourceItem.ItemID, Reason: reason})
+				continue
+			}
+			for _, turn := range current.turns {
+				raw, err := turn.prepared.EvaluatorResults.Serialize()
+				if err != nil {
+					return err
+				}
+				if len(raw) > 65535 {
+					return fmt.Errorf("manual retry evaluator results exceeds blob capacity")
+				}
+				if turn.sourceLog != nil && len(turn.sourceLog.Ext) > 65535 {
+					return fmt.Errorf("manual retry turn ext exceeds blob capacity")
+				}
+			}
+			plan.Items = append(plan.Items, item)
+			accepted = append(accepted, current)
+		}
+		if len(accepted) > 0 {
+			stats, err := NewExptStatsDAO(d.provider).Get(ctx, request.ExptID, request.SpaceID, opts...)
+			if err != nil {
+				return err
+			}
+			if stats == nil {
+				return fmt.Errorf("manual retry stats missing")
+			}
+			deltas := map[entity.ItemRunState]int{}
+			for _, item := range accepted {
+				deltas[entity.ItemRunState(item.item.Status)]--
+			}
+			counts := map[entity.ItemRunState]int32{entity.ItemRunState_Success: stats.SuccessCnt, entity.ItemRunState_Fail: stats.FailCnt, entity.ItemRunState_Terminal: stats.TerminatedCnt}
+			for status, delta := range deltas {
+				if int(counts[status])+delta < 0 {
+					return fmt.Errorf("manual retry stats underflow")
+				}
+			}
+		}
+		// Reserve both the maximum business append and a rejection for every candidate.
+		contained := map[int64]bool{}
+		for _, id := range (&entity.ExptRunLog{ItemIds: chunks}).GetItemIDs() {
+			contained[id] = true
+		}
+		var added []int64
+		worstRejected := append([]*entity.ManualRetryRejectedItem(nil), plan.RejectedItems...)
+		for _, item := range plan.Items {
+			id := item.SourceItem.ItemID
+			if item.CurrentItemLog == nil && !contained[id] {
+				added = append(added, id)
+				contained[id] = true
+			}
+			worstRejected = append(worstRejected, &entity.ManualRetryRejectedItem{ItemID: id, Reason: "reservation_mismatch"})
+		}
+		if len(added) > 0 {
+			chunks = append(chunks, entity.ExptRunLogItems{ItemIDs: added, CreateAt: gptr.Of(time.Now().Unix())})
+		}
+		chunks = append(chunks, entity.ExptRunLogItems{CreateAt: gptr.Of(time.Now().Unix()), ManualRetryReceipt: &entity.ManualRetryReceipt{RequestID: request.RequestID, PayloadHash: request.PayloadHash, SnapshotAtMS: request.SnapshotAtMS, AcceptedCount: 2147483647, RejectedItems: worstRejected}})
+		_, err = entity.EncodeExptRunLogItems(chunks)
+		return err
+	}, db.WithMaster())
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(plan.RejectedItems, func(i, j int) bool { return plan.RejectedItems[i].ItemID < plan.RejectedItems[j].ItemID })
+	return plan, nil
+}
+
+func validateManualRetryTurnExt(raw []byte) error {
+	if len(raw) == 0 {
+		return nil
+	}
+	var fields map[string]*string
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return err
+	}
+	for key, value := range fields {
+		if value == nil {
+			return fmt.Errorf("retry turn ext %q must be a string", key)
+		}
+	}
+	if len(raw) > 65535 {
+		return fmt.Errorf("retry turn ext exceeds blob capacity")
 	}
 	return nil
 }

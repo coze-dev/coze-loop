@@ -56,6 +56,21 @@ func (mr *MockIExptManualRetryRepoMockRecorder) FindReceipt(arg0, arg1, arg2, ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindReceipt", reflect.TypeOf((*MockIExptManualRetryRepo)(nil).FindReceipt), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
+// PreflightTerminalItems mocks base method.
+func (m *MockIExptManualRetryRepo) PreflightTerminalItems(arg0 context.Context, arg1 *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryPreparation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PreflightTerminalItems", arg0, arg1)
+	ret0, _ := ret[0].(*entity.ManualRetryPreparation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PreflightTerminalItems indicates an expected call of PreflightTerminalItems.
+func (mr *MockIExptManualRetryRepoMockRecorder) PreflightTerminalItems(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreflightTerminalItems", reflect.TypeOf((*MockIExptManualRetryRepo)(nil).PreflightTerminalItems), arg0, arg1)
+}
+
 // RequeueTerminalItems mocks base method.
 func (m *MockIExptManualRetryRepo) RequeueTerminalItems(arg0 context.Context, arg1 *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryReceipt, error) {
 	m.ctrl.T.Helper()
