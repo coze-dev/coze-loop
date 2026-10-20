@@ -4503,6 +4503,7 @@ type Experiment struct {
 	ExpectedQuotaConsumption *ExpectedQuotaConsumption `thrift:"expected_quota_consumption,118,optional" frugal:"118,optional,ExpectedQuotaConsumption" form:"expected_quota_consumption" json:"expected_quota_consumption,omitempty" query:"expected_quota_consumption"`
 	// 从 experiment.eval_conf 回显；缺省表示普通评测。
 	VerificationConfig *VerificationConfig `thrift:"verification_config,119,optional" frugal:"119,optional,VerificationConfig" form:"verification_config" json:"verification_config,omitempty" query:"verification_config"`
+	LatestRunID        *int64              `thrift:"latest_run_id,120,optional" frugal:"120,optional,i64" json:"latest_run_id,omitempty" form:"latest_run_id" query:"latest_run_id"`
 }
 
 func NewExperiment() *Experiment {
@@ -5123,6 +5124,18 @@ func (p *Experiment) GetVerificationConfig() (v *VerificationConfig) {
 	}
 	return p.VerificationConfig
 }
+
+var Experiment_LatestRunID_DEFAULT int64
+
+func (p *Experiment) GetLatestRunID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLatestRunID() {
+		return Experiment_LatestRunID_DEFAULT
+	}
+	return *p.LatestRunID
+}
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
 }
@@ -5276,6 +5289,9 @@ func (p *Experiment) SetExpectedQuotaConsumption(val *ExpectedQuotaConsumption) 
 func (p *Experiment) SetVerificationConfig(val *VerificationConfig) {
 	p.VerificationConfig = val
 }
+func (p *Experiment) SetLatestRunID(val *int64) {
+	p.LatestRunID = val
+}
 
 var fieldIDToName_Experiment = map[int16]string{
 	1:   "id",
@@ -5329,6 +5345,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	117: "scheduler_mode",
 	118: "expected_quota_consumption",
 	119: "verification_config",
+	120: "latest_run_id",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -5533,6 +5550,10 @@ func (p *Experiment) IsSetExpectedQuotaConsumption() bool {
 
 func (p *Experiment) IsSetVerificationConfig() bool {
 	return p.VerificationConfig != nil
+}
+
+func (p *Experiment) IsSetLatestRunID() bool {
+	return p.LatestRunID != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -5956,6 +5977,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 119:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField119(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 120:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField120(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6607,6 +6636,17 @@ func (p *Experiment) ReadField119(iprot thrift.TProtocol) error {
 	p.VerificationConfig = _field
 	return nil
 }
+func (p *Experiment) ReadField120(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LatestRunID = _field
+	return nil
+}
 
 func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6816,6 +6856,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField119(oprot); err != nil {
 			fieldId = 119
+			goto WriteFieldError
+		}
+		if err = p.writeField120(oprot); err != nil {
+			fieldId = 120
 			goto WriteFieldError
 		}
 	}
@@ -7813,6 +7857,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 119 end error: ", p), err)
 }
+func (p *Experiment) writeField120(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLatestRunID() {
+		if err = oprot.WriteFieldBegin("latest_run_id", thrift.I64, 120); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.LatestRunID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 120 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 120 end error: ", p), err)
+}
 
 func (p *Experiment) String() string {
 	if p == nil {
@@ -7979,6 +8041,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field119DeepEqual(ano.VerificationConfig) {
+		return false
+	}
+	if !p.Field120DeepEqual(ano.LatestRunID) {
 		return false
 	}
 	return true
@@ -8534,6 +8599,18 @@ func (p *Experiment) Field118DeepEqual(src *ExpectedQuotaConsumption) bool {
 func (p *Experiment) Field119DeepEqual(src *VerificationConfig) bool {
 
 	if !p.VerificationConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field120DeepEqual(src *int64) bool {
+
+	if p.LatestRunID == src {
+		return true
+	} else if p.LatestRunID == nil || src == nil {
+		return false
+	}
+	if *p.LatestRunID != *src {
 		return false
 	}
 	return true
