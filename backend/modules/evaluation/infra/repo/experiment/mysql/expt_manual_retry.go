@@ -12,6 +12,9 @@ import (
 	"sort"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+
 	"github.com/bytedance/gg/gptr"
 	"gorm.io/gorm"
 
@@ -40,7 +43,7 @@ func (d *ExptManualRetryDAOImpl) FindReceipt(ctx context.Context, spaceID, exptI
 		return nil, err
 	}
 	if run.SpaceID != spaceID {
-		return nil, fmt.Errorf("run_conflict")
+		return nil, errorx.NewByCode(errno.ManualRetryRunConflictCode)
 	}
 	chunks, err := decodeManualRetryRunItems(run)
 	if err != nil {
@@ -67,7 +70,7 @@ func findManualRetryReceipt(chunks []entity.ExptRunLogItems, requestID, hash str
 			continue
 		}
 		if receipt.PayloadHash != hash {
-			return nil, fmt.Errorf("request_conflict")
+			return nil, errorx.NewByCode(errno.ManualRetryRequestConflictCode)
 		}
 		if found != nil {
 			return nil, fmt.Errorf("duplicate manual retry receipt")
@@ -164,7 +167,7 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 			return err
 		}
 		if expt.SpaceID != request.SpaceID || run.SpaceID != request.SpaceID {
-			return fmt.Errorf("run_conflict")
+			return errorx.NewByCode(errno.ManualRetryRunConflictCode)
 		}
 		chunks, err := decodeManualRetryRunItems(run)
 		if err != nil {
@@ -175,10 +178,10 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 			return err
 		}
 		if expt.LatestRunID != request.RunID {
-			return fmt.Errorf("run_conflict")
+			return errorx.NewByCode(errno.ManualRetryRunConflictCode)
 		}
 		if expt.Status != int32(entity.ExptStatus_Processing) || gptr.Indirect(run.Status) != int64(entity.ExptStatus_Processing) || expt.ExptType != int32(entity.ExptType_Offline) {
-			return fmt.Errorf("run_finished")
+			return errorx.NewByCode(errno.ManualRetryRunFinishedCode)
 		}
 		receipt = &entity.ManualRetryReceipt{RequestID: request.RequestID, PayloadHash: request.PayloadHash, SnapshotAtMS: request.SnapshotAtMS, RejectedItems: append([]*entity.ManualRetryRejectedItem(nil), request.RejectedItems...)}
 		prepared := append([]*entity.PreparedRetryItem(nil), request.Items...)
@@ -607,10 +610,10 @@ func (d *ExptManualRetryDAOImpl) PreflightTerminalItems(ctx context.Context, req
 			return err
 		}
 		if expt.SpaceID != request.SpaceID || run.SpaceID != request.SpaceID || expt.LatestRunID != request.RunID {
-			return fmt.Errorf("run_conflict")
+			return errorx.NewByCode(errno.ManualRetryRunConflictCode)
 		}
 		if expt.Status != int32(entity.ExptStatus_Processing) || expt.ExptType != int32(entity.ExptType_Offline) || gptr.Indirect(run.Status) != int64(entity.ExptStatus_Processing) {
-			return fmt.Errorf("run_finished")
+			return errorx.NewByCode(errno.ManualRetryRunFinishedCode)
 		}
 		chunks, err := decodeManualRetryRunItems(run)
 		if err != nil {
@@ -621,7 +624,7 @@ func (d *ExptManualRetryDAOImpl) PreflightTerminalItems(ctx context.Context, req
 			return err
 		}
 		if receipt != nil {
-			return fmt.Errorf("manual retry receipt appeared during preflight")
+			return errorx.NewByCode(errno.ManualRetryBusyCode, errorx.WithExtraMsg("manual retry receipt appeared during preflight"))
 		}
 		items := append([]*entity.PreparedRetryItem(nil), request.Items...)
 		for _, item := range items {
@@ -655,10 +658,10 @@ func (d *ExptManualRetryDAOImpl) PreflightTerminalItems(ctx context.Context, req
 					return err
 				}
 				if len(raw) > 65535 {
-					return fmt.Errorf("manual retry evaluator results exceeds blob capacity")
+					return errorx.NewByCode(errno.ManualRetryCapacityCode, errorx.WithExtraMsg("manual retry evaluator results exceeds blob capacity"))
 				}
 				if turn.sourceLog != nil && len(turn.sourceLog.Ext) > 65535 {
-					return fmt.Errorf("manual retry turn ext exceeds blob capacity")
+					return errorx.NewByCode(errno.ManualRetryCapacityCode, errorx.WithExtraMsg("manual retry turn ext exceeds blob capacity"))
 				}
 			}
 			plan.Items = append(plan.Items, item)
@@ -726,7 +729,7 @@ func validateManualRetryTurnExt(raw []byte) error {
 		}
 	}
 	if len(raw) > 65535 {
-		return fmt.Errorf("retry turn ext exceeds blob capacity")
+		return errorx.NewByCode(errno.ManualRetryCapacityCode, errorx.WithExtraMsg("retry turn ext exceeds blob capacity"))
 	}
 	return nil
 }

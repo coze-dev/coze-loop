@@ -8,6 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 const ManualRetryExtKey = "manual_retry"
@@ -92,7 +95,7 @@ func MergeManualRetryContext(raw []byte, retry *ManualRetryContext) ([]byte, err
 	ext[ManualRetryExtKey] = string(encoded)
 	encoded, err = json.Marshal(ext)
 	if err == nil && len(encoded) > 65535 {
-		return nil, fmt.Errorf("manual retry ext exceeds blob capacity")
+		return nil, errorx.NewByCode(errno.ManualRetryCapacityCode, errorx.WithExtraMsg("manual retry ext exceeds blob capacity"))
 	}
 	return encoded, err
 }
@@ -106,7 +109,7 @@ func WithoutManualRetryExt(ext map[string]string) map[string]string {
 func EncodeExptRunLogItems(items []ExptRunLogItems) ([]byte, error) {
 	encoded, err := json.Marshal(items)
 	if err == nil && len(encoded) > 65535 {
-		return nil, fmt.Errorf("manual retry receipt exceeds blob capacity")
+		return nil, errorx.NewByCode(errno.ManualRetryCapacityCode, errorx.WithExtraMsg("manual retry receipt exceeds blob capacity"))
 	}
 	return encoded, err
 }

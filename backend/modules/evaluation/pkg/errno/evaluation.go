@@ -523,6 +523,30 @@ const (
 	SandboxAgentUnknownErrorCode              = 601206205 // sandbox agent target unknown error: 未能归类到上述阶段的兜底错误
 	sandboxAgentUnknownErrorMessage           = "sandbox agent: unknown error"
 	sandboxAgentUnknownErrorNoAffectStability = false
+
+	ManualRetryRunConflictCode              = 601204101 // same-run manual retry run_conflict
+	manualRetryRunConflictMessage           = "run_conflict"
+	manualRetryRunConflictNoAffectStability = true
+
+	ManualRetryRunFinishedCode              = 601204102 // same-run manual retry run_finished
+	manualRetryRunFinishedMessage           = "run_finished"
+	manualRetryRunFinishedNoAffectStability = true
+
+	ManualRetryRequestConflictCode              = 601204103 // same-run manual retry request_conflict
+	manualRetryRequestConflictMessage           = "request_conflict"
+	manualRetryRequestConflictNoAffectStability = true
+
+	ManualRetryCapacityCode              = 601204104 // same-run manual retry receipt_capacity
+	manualRetryCapacityMessage           = "receipt_capacity"
+	manualRetryCapacityNoAffectStability = true
+
+	ManualRetryBusyCode              = 601204105 // same-run manual retry retry_busy
+	manualRetryBusyMessage           = "retry_busy"
+	manualRetryBusyNoAffectStability = true
+
+	ManualRetryDisabledCode              = 601204106 // same-run manual retry running retry disabled
+	manualRetryDisabledMessage           = "running retry disabled"
+	manualRetryDisabledNoAffectStability = true
 )
 
 func init() {
@@ -1287,6 +1311,42 @@ func init() {
 		SandboxAgentUnknownErrorCode,
 		sandboxAgentUnknownErrorMessage,
 		code.WithAffectStability(!sandboxAgentUnknownErrorNoAffectStability),
+	)
+
+	code.Register(
+		ManualRetryRunConflictCode,
+		manualRetryRunConflictMessage,
+		code.WithAffectStability(!manualRetryRunConflictNoAffectStability),
+	)
+
+	code.Register(
+		ManualRetryRunFinishedCode,
+		manualRetryRunFinishedMessage,
+		code.WithAffectStability(!manualRetryRunFinishedNoAffectStability),
+	)
+
+	code.Register(
+		ManualRetryRequestConflictCode,
+		manualRetryRequestConflictMessage,
+		code.WithAffectStability(!manualRetryRequestConflictNoAffectStability),
+	)
+
+	code.Register(
+		ManualRetryCapacityCode,
+		manualRetryCapacityMessage,
+		code.WithAffectStability(!manualRetryCapacityNoAffectStability),
+	)
+
+	code.Register(
+		ManualRetryBusyCode,
+		manualRetryBusyMessage,
+		code.WithAffectStability(!manualRetryBusyNoAffectStability),
+	)
+
+	code.Register(
+		ManualRetryDisabledCode,
+		manualRetryDisabledMessage,
+		code.WithAffectStability(!manualRetryDisabledNoAffectStability),
 	)
 
 }

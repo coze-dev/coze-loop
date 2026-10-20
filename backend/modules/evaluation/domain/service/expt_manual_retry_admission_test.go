@@ -11,13 +11,15 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/cloudwego/kitex/pkg/kerrors"
+	"go.uber.org/mock/gomock"
+
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	lockmocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
-	"go.uber.org/mock/gomock"
 
 	"github.com/stretchr/testify/require"
 
@@ -63,7 +65,7 @@ func admissionRequest() *entity.RetryInCurrentRunRequest {
 }
 
 func TestManualRetryAdmissionGuards(t *testing.T) {
-	for _, kind := range []string{"disabled", "bad_uuid", "failure_selection", "empty_selection", "retry_all", "negative_item", "foreign_run", "pending", "terminating", "draining", "online", "run_busy", "lost_run_lock"} {
+	for _, kind := range []string{"disabled", "bad_uuid", "malformed_uuid", "internal_ext", "failure_selection", "empty_selection", "retry_all", "negative_item", "foreign_run", "pending", "terminating", "draining", "online", "run_busy", "lost_run_lock"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			config := componentmocks.NewMockIConfiger(ctrl)
@@ -78,6 +80,12 @@ func TestManualRetryAdmissionGuards(t *testing.T) {
 			switch kind {
 			case "bad_uuid":
 				req.RequestID = "not-uuid"
+				shape = true
+			case "malformed_uuid":
+				req.RequestID = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+				shape = true
+			case "internal_ext":
+				req.Ext = map[string]string{entity.ManualRetryExtKey: "forged"}
 				shape = true
 			case "failure_selection":
 				req.Mode = entity.EvaluationModeFailRetry
@@ -128,6 +136,22 @@ func TestManualRetryAdmissionGuards(t *testing.T) {
 			}
 			if kind == "lost_run_lock" {
 				require.ErrorIs(t, err, context.Canceled)
+			}
+			if kind != "lost_run_lock" {
+				biz, ok := kerrors.FromBizStatusError(err)
+				require.True(t, ok, "admission error must survive the PacketAdapter BizStatus boundary")
+				expected := int32(601204102)
+				switch {
+				case shape:
+					expected = 601200202
+				case kind == "disabled":
+					expected = 601204106
+				case kind == "foreign_run":
+					expected = 601204101
+				case kind == "run_busy":
+					expected = 601204105
+				}
+				require.Equal(t, expected, biz.BizStatusCode())
 			}
 		})
 	}
@@ -457,4 +481,23 @@ func TestManualRetryLegacyWakePreservesPeriodicTick(t *testing.T) {
 	after, err := json.Marshal(event)
 	require.NoError(t, err)
 	require.Equal(t, before, after)
+}
+
+func TestManualRetryDependencyErrorRetainsCause(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	config := componentmocks.NewMockIConfiger(ctrl)
+	expts := repomocks.NewMockIExperimentRepo(ctrl)
+	config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)}).Times(2)
+	cause := errors.New("RPC read unavailable")
+	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(nil, cause)
+	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(nil, nil)
+	manager := &ExptMangerImpl{manualRetryRepo: &admissionReceiptRepo{}, configer: config, exptRepo: expts}
+	_, err := manager.RetryInCurrentRun(context.Background(), admissionRequest())
+	require.Same(t, cause, err)
+	_, ok := kerrors.FromBizStatusError(err)
+	require.False(t, ok)
+	_, err = manager.RetryInCurrentRun(context.Background(), admissionRequest())
+	require.ErrorContains(t, err, "experiment missing")
+	_, ok = kerrors.FromBizStatusError(err)
+	require.False(t, ok)
 }

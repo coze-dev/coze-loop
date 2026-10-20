@@ -18,6 +18,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -51,7 +53,7 @@ func (m *ExptMangerImpl) prepareTerminalCandidatesAndReusableRefs(ctx context.Co
 		selected := make(map[int64]bool, len(itemIDs))
 		for _, id := range itemIDs {
 			if id <= 0 {
-				return nil, fmt.Errorf("invalid retry item id")
+				return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid retry item id"))
 			}
 			selected[id] = true
 		}
@@ -303,7 +305,7 @@ func (r *manualRetryTargetReader) GetRecordByID(ctx context.Context, spaceID, re
 
 func normalizeCurrentRunRetry(req *entity.RetryInCurrentRunRequest) (*entity.RetryInCurrentRunRequest, string, error) {
 	if req == nil {
-		return nil, "", fmt.Errorf("invalid manual retry request")
+		return nil, "", errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid manual retry request"))
 	}
 	normalized := *req
 	normalized.Ext = maps.Clone(req.Ext)
@@ -352,8 +354,11 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	if err := validateCurrentRunRetry(normalized); err != nil {
 		return nil, err
 	}
-	if m.configer == nil || !m.configer.GetExptExecConf(ctx, normalized.SpaceID).IsRunningRetryEnabled() {
-		return nil, fmt.Errorf("running retry disabled")
+	if m.configer == nil {
+		return nil, fmt.Errorf("manual retry configer unavailable")
+	}
+	if !m.configer.GetExptExecConf(ctx, normalized.SpaceID).IsRunningRetryEnabled() {
+		return nil, errorx.NewByCode(errno.ManualRetryDisabledCode)
 	}
 	ctx = contexts.WithCtxWriteDB(ctx)
 	expt, err := m.exptRepo.GetByID(ctx, normalized.ExptID, normalized.SpaceID)
@@ -379,7 +384,7 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 		return nil, err
 	}
 	if !locked {
-		return nil, fmt.Errorf("retry_busy")
+		return nil, errorx.NewByCode(errno.ManualRetryBusyCode)
 	}
 	defer cancel()
 	if err := lockCtx.Err(); err != nil {
@@ -400,8 +405,14 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	if err != nil {
 		return nil, err
 	}
-	if run == nil || run.SpaceID != expt.SpaceID || run.ExptID != expt.ID || run.ExptRunID != normalized.ExpectedRunID || run.Status != int64(entity.ExptStatus_Processing) {
-		return nil, fmt.Errorf("run_finished")
+	if run == nil {
+		return nil, fmt.Errorf("manual retry run missing")
+	}
+	if run.SpaceID != expt.SpaceID || run.ExptID != expt.ID || run.ExptRunID != normalized.ExpectedRunID {
+		return nil, errorx.NewByCode(errno.ManualRetryRunConflictCode)
+	}
+	if run.Status != int64(entity.ExptStatus_Processing) {
+		return nil, errorx.NewByCode(errno.ManualRetryRunFinishedCode)
 	}
 	opCtx, stop := context.WithCancel(lockCtx)
 	defer stop()
@@ -493,34 +504,37 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 
 func validateCurrentRunRetry(req *entity.RetryInCurrentRunRequest) error {
 	if req.SpaceID <= 0 || req.ExptID <= 0 || req.ExpectedRunID <= 0 || len(req.RequestID) != 36 {
-		return fmt.Errorf("invalid manual retry identity")
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid manual retry identity"))
 	}
 	if _, err := uuid.Parse(req.RequestID); err != nil {
-		return fmt.Errorf("invalid manual retry request UUID")
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid manual retry request UUID"))
 	}
 	if req.Mode != entity.EvaluationModeFailRetry && req.Mode != entity.EvaluationModeRetryItems {
-		return fmt.Errorf("unsupported manual retry mode")
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("unsupported manual retry mode"))
 	}
 	if (req.Mode == entity.EvaluationModeFailRetry && len(req.ItemIDs) != 0) || (req.Mode == entity.EvaluationModeRetryItems && len(req.ItemIDs) == 0) {
-		return fmt.Errorf("invalid manual retry selection")
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid manual retry selection"))
 	}
 	for _, id := range req.ItemIDs {
 		if id <= 0 {
-			return fmt.Errorf("invalid retry item id")
+			return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid retry item id"))
 		}
 	}
 	if _, exists := req.Ext[entity.ManualRetryExtKey]; exists {
-		return fmt.Errorf("manual retry ext is internal")
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("manual retry ext is internal"))
 	}
 	return nil
 }
 
 func validateCurrentRetryExperiment(expt *entity.Experiment, req *entity.RetryInCurrentRunRequest) error {
-	if expt == nil || expt.ID != req.ExptID || expt.SpaceID != req.SpaceID || expt.LatestRunID != req.ExpectedRunID {
-		return fmt.Errorf("run_conflict")
+	if expt == nil {
+		return fmt.Errorf("manual retry experiment missing")
+	}
+	if expt.ID != req.ExptID || expt.SpaceID != req.SpaceID || expt.LatestRunID != req.ExpectedRunID {
+		return errorx.NewByCode(errno.ManualRetryRunConflictCode)
 	}
 	if expt.Status != entity.ExptStatus_Processing || expt.ExptType != entity.ExptType_Offline {
-		return fmt.Errorf("run_finished")
+		return errorx.NewByCode(errno.ManualRetryRunFinishedCode)
 	}
 	return nil
 }
