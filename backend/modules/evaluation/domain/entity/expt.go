@@ -965,8 +965,10 @@ type InvokeExptReq struct {
 }
 
 type ExptRunLogItems struct {
-	ItemIDs  []int64
-	CreateAt *int64
+	ItemIDs            []int64
+	CreateAt           *int64
+	ManualRetryReceipt *ManualRetryReceipt `json:"manual_retry_receipt,omitempty"`
+	unknownFields      map[string]stdjson.RawMessage
 }
 
 // =====================================================================================

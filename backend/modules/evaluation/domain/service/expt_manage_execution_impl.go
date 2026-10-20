@@ -508,10 +508,6 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 		return err
 	}
 
-	if _, err := e.mutex.UnlockForce(ctx, e.makeExptMutexLockKey(exptID)); err != nil {
-		return err
-	}
-
 	if opt.Status > 0 {
 		runLog.Status = int64(opt.Status)
 	}
@@ -521,7 +517,10 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 
 	logs.CtxInfo(ctx, "[ExptEval] CompleteRun, expt_id: %v, expt_run_id: %v, status: %v, msg: %v", exptID, exptRunID, runLog.Status, opt.StatusMessage)
 
-	if err := e.runLogRepo.Save(ctx, runLog); err != nil {
+	if err := e.runLogRepo.Update(ctx, exptID, exptRunID, spaceID, runLogMutableFields(runLog)); err != nil {
+		return err
+	}
+	if _, err := e.mutex.UnlockForce(ctx, e.makeExptMutexLockKey(exptID)); err != nil {
 		return err
 	}
 
@@ -532,6 +531,16 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 	}
 
 	return nil
+}
+
+func runLogMutableFields(run *entity.ExptRunLog) map[string]any {
+	return map[string]any{
+		"status": run.Status, "status_message": run.StatusMessage,
+		"pending_cnt": run.PendingCnt, "processing_cnt": run.ProcessingCnt,
+		"success_cnt": run.SuccessCnt, "fail_cnt": run.FailCnt,
+		"terminated_cnt": run.TerminatedCnt, "credit_cost": run.CreditCost,
+		"token_cost": run.TokenCost,
+	}
 }
 
 func (e *ExptMangerImpl) calculateRunLogStats(ctx context.Context, exptID, exptRunID int64, runLog *entity.ExptRunLog, spaceID int64, session *entity.Session) error {
@@ -1673,10 +1682,6 @@ func (e *ExptMangerImpl) RecordExptData(ctx context.Context, exptID, exptRunID, 
 	runLog.Status = int64(entity.ExptStatus_Processing)
 	logs.CtxInfo(ctx, "[ExptEval] RecordExptData run_log, expt_id: %v, expt_run_id: %v, status: %v", exptID, exptRunID, runLog.Status)
 
-	if err := e.runLogRepo.Save(ctx, runLog); err != nil {
-		return err
-	}
-
 	stats, err := e.exptResultService.CalculateStats(ctx, exptID, spaceID, session)
 	if err != nil {
 		return err
@@ -1690,11 +1695,8 @@ func (e *ExptMangerImpl) RecordExptData(ctx context.Context, exptID, exptRunID, 
 		TerminatedItemCnt: int32(stats.TerminatedItemCnt),
 	}
 
-	if err := e.statsRepo.UpdateByExptID(ctx, exptID, spaceID, exptStats); err != nil {
-		return err
-	}
-
-	return nil
+	// The online scheduler holds the run tick lock throughout calibration.
+	return e.runLogRepo.UpdateRunStats(ctx, exptID, exptRunID, spaceID, runLog, exptStats)
 }
 
 func (e *ExptMangerImpl) ExistCompletingRunLock(ctx context.Context, exptID, exptRunID, spaceID int64) (bool, error) {
@@ -1814,16 +1816,7 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 			return 0, false, errorx.NewByCode(errno.ExperimentIsCompletingCode)
 		}
 
-		rl, err = e.runLogRepo.Get(ctx, exptID, runID)
-		if err != nil {
-			return 0, false, err
-		}
-
-		if rl == nil {
-			return 0, false, errorx.New("target runlog %v not found, expt_id: %v", runID, exptID)
-		}
-
-		if err := rl.AppendItemIDs(itemIDs); err != nil {
+		if err := e.runLogRepo.AppendRunItemIDs(ctx, exptID, runID, spaceID, itemIDs); err != nil {
 			return 0, false, err
 		}
 	} else {
@@ -1839,10 +1832,9 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 		if len(itemIDs) > 0 {
 			rl.ItemIds = []entity.ExptRunLogItems{{ItemIDs: itemIDs, CreateAt: gptr.Of(time.Now().Unix())}}
 		}
-	}
-
-	if err := e.runLogRepo.Save(ctx, rl); err != nil {
-		return 0, false, err
+		if err := e.runLogRepo.Create(ctx, rl); err != nil {
+			return 0, false, err
+		}
 	}
 
 	// retried 分支刻意不释放：那说明锁被一个**活着的 run** 持有，runID 是它的号、
