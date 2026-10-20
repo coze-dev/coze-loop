@@ -212,13 +212,7 @@ func (m *ExptMangerImpl) prepareManualRetryTurns(ctx context.Context, expt *enti
 					targetSpace = cfg.TargetSourceSpaceID
 				}
 				targetVersion := expt.TargetVersionID
-				if cfg := item.FrozenItemRef.ItemConfig; cfg != nil && cfg.EvalTargetConf != nil {
-					targetVersion = cfg.EvalTargetConf.TargetVersionID
-				}
 				targetRequired := !shouldSkipTargetNode(expt)
-				if cfg := item.FrozenItemRef.ItemConfig; cfg != nil && cfg.EvalTargetConf != nil {
-					targetRequired = targetVersion > 0
-				}
 				targetReader := &manualRetryTargetReader{IEvalTargetService: m.evalTargetService, versionID: targetVersion, source: source, turn: turn}
 				prepared.TargetResultID, prepared.EvaluatorResults, err = failRetrySelectTurnRunLogRefs(ctx, resolveLoadSpaceID(expt.SpaceID, targetSpace), targetRequired, turn, targetReader, records, prepared.SourceRefs, source)
 				if err != nil {
