@@ -24,6 +24,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
@@ -1382,7 +1383,7 @@ func newExptBaseExec(
 func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (toSubmit, incomplete, complete []*entity.ExptEvalItem, err error) {
 	rows, err := e.exptItemResultRepo.ScanCurrentRequests(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.Ext[entity.RetryYieldExtKey] == "true")
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errno.WrapMQRetryErr(err)
 	}
 	candidates := make([]*entity.ExptEvalItem, 0)
 	toSubmit = make([]*entity.ExptEvalItem, 0)
@@ -1390,7 +1391,7 @@ func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptSche
 	complete = make([]*entity.ExptEvalItem, 0)
 	for _, source := range rows {
 		if source == nil {
-			return nil, nil, nil, fmt.Errorf("nil current item source")
+			return nil, nil, nil, errno.NewMQRetryErr("nil current item source")
 		}
 		item := &entity.ExptEvalItem{ExptID: event.ExptID, EvalSetVersionID: expt.EvalSet.EvaluationSetVersion.ID, ItemID: source.ItemID, State: source.Status, RequestID: source.RequestID, Mode: source.Mode, RetryTimes: source.RetryTimes, UpdatedAt: source.UpdatedAt}
 		if source.Status == entity.ItemRunState_Processing || source.QuotaReservationState.IsQuotaReserved() {
