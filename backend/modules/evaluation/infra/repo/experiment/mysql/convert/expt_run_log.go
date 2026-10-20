@@ -96,7 +96,7 @@ func (ExptRunLogConvertor) DO2PO(log *entity.ExptRunLog) (*model.ExptRunLog, err
 	if log == nil {
 		return nil, nil
 	}
-	itemIDsBytes, err := json.Marshal(log.ItemIds)
+	itemIDsBytes, err := entity.EncodeExptRunLogItems(log.ItemIds)
 	if err != nil {
 		return nil, errorx.Wrapf(err, "ExptRunLogItems list json marshal fail")
 	}

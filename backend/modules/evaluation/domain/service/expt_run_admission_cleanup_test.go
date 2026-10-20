@@ -91,7 +91,7 @@ func TestRunAdmissionCleanup(t *testing.T) {
 						locked = true
 						return true, "", nil
 					}).Times(logCalls)
-				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Save(gomock.Any(), gomock.Any()).
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Create(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(_ context.Context, got *entity.ExptRunLog) error { runLog = got; return nil }).Times(logCalls)
 			} else {
 				mgr.mutex.(*lockMocks.MockILocker).EXPECT().LockBackoff(ctx, lockKey, gomock.Any(), gomock.Any()).
