@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	db "github.com/coze-dev/coze-loop/backend/infra/db"
 	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	model "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	gomock "go.uber.org/mock/gomock"
@@ -22,6 +23,7 @@ import (
 type MockIExptDAO struct {
 	ctrl     *gomock.Controller
 	recorder *MockIExptDAOMockRecorder
+	isgomock struct{}
 }
 
 // MockIExptDAOMockRecorder is the mock recorder for MockIExptDAO.
@@ -42,97 +44,87 @@ func (m *MockIExptDAO) EXPECT() *MockIExptDAOMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockIExptDAO) Create(arg0 context.Context, arg1 *model.Experiment) error {
+func (m *MockIExptDAO) Create(ctx context.Context, expt *model.Experiment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0, arg1)
+	ret := m.ctrl.Call(m, "Create", ctx, expt)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockIExptDAOMockRecorder) Create(arg0, arg1 any) *gomock.Call {
+func (mr *MockIExptDAOMockRecorder) Create(ctx, expt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockIExptDAO)(nil).Create), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockIExptDAO)(nil).Create), ctx, expt)
 }
 
 // Delete mocks base method.
-func (m *MockIExptDAO) Delete(arg0 context.Context, arg1 int64) error {
+func (m *MockIExptDAO) Delete(ctx context.Context, id int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
+	ret := m.ctrl.Call(m, "Delete", ctx, id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockIExptDAOMockRecorder) Delete(arg0, arg1 any) *gomock.Call {
+func (mr *MockIExptDAOMockRecorder) Delete(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockIExptDAO)(nil).Delete), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockIExptDAO)(nil).Delete), ctx, id)
 }
 
 // ExistGroupKey mocks base method.
-func (m *MockIExptDAO) ExistGroupKey(arg0 context.Context, arg1 string, arg2 int64) (bool, error) {
+func (m *MockIExptDAO) ExistGroupKey(ctx context.Context, groupKey string, spaceID int64) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExistGroupKey", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "ExistGroupKey", ctx, groupKey, spaceID)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ExistGroupKey indicates an expected call of ExistGroupKey.
-func (mr *MockIExptDAOMockRecorder) ExistGroupKey(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockIExptDAOMockRecorder) ExistGroupKey(ctx, groupKey, spaceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistGroupKey", reflect.TypeOf((*MockIExptDAO)(nil).ExistGroupKey), arg0, arg1, arg2)
-}
-
-// ScanSchedulerQueue mocks base method.
-func (m *MockIExptDAO) ScanSchedulerQueue(arg0 context.Context, arg1 *entity.SchedulerQueueScanParam) ([]*model.Experiment, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ScanSchedulerQueue", arg0, arg1)
-	ret0, _ := ret[0].([]*model.Experiment)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ScanSchedulerQueue indicates an expected call of ScanSchedulerQueue.
-func (mr *MockIExptDAOMockRecorder) ScanSchedulerQueue(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScanSchedulerQueue", reflect.TypeOf((*MockIExptDAO)(nil).ScanSchedulerQueue), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistGroupKey", reflect.TypeOf((*MockIExptDAO)(nil).ExistGroupKey), ctx, groupKey, spaceID)
 }
 
 // GetByID mocks base method.
-func (m *MockIExptDAO) GetByID(arg0 context.Context, arg1 int64) (*model.Experiment, error) {
+func (m *MockIExptDAO) GetByID(ctx context.Context, id int64, opts ...db.Option) (*model.Experiment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", arg0, arg1)
+	varargs := []any{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetByID", varargs...)
 	ret0, _ := ret[0].(*model.Experiment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByID indicates an expected call of GetByID.
-func (mr *MockIExptDAOMockRecorder) GetByID(arg0, arg1 any) *gomock.Call {
+func (mr *MockIExptDAOMockRecorder) GetByID(ctx, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockIExptDAO)(nil).GetByID), arg0, arg1)
+	varargs := append([]any{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockIExptDAO)(nil).GetByID), varargs...)
 }
 
 // GetByName mocks base method.
-func (m *MockIExptDAO) GetByName(arg0 context.Context, arg1 string, arg2 int64) (*model.Experiment, error) {
+func (m *MockIExptDAO) GetByName(ctx context.Context, name string, spaceID int64) (*model.Experiment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByName", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetByName", ctx, name, spaceID)
 	ret0, _ := ret[0].(*model.Experiment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByName indicates an expected call of GetByName.
-func (mr *MockIExptDAOMockRecorder) GetByName(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockIExptDAOMockRecorder) GetByName(ctx, name, spaceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByName", reflect.TypeOf((*MockIExptDAO)(nil).GetByName), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByName", reflect.TypeOf((*MockIExptDAO)(nil).GetByName), ctx, name, spaceID)
 }
 
 // GetIDsByGroupKey mocks base method.
-func (m *MockIExptDAO) GetIDsByGroupKey(arg0 context.Context, arg1 int64, arg2 string, arg3, arg4 int32) ([]int64, int64, error) {
+func (m *MockIExptDAO) GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string, page, pageSize int32) ([]int64, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetIDsByGroupKey", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "GetIDsByGroupKey", ctx, spaceID, groupKey, page, pageSize)
 	ret0, _ := ret[0].([]int64)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -140,15 +132,15 @@ func (m *MockIExptDAO) GetIDsByGroupKey(arg0 context.Context, arg1 int64, arg2 s
 }
 
 // GetIDsByGroupKey indicates an expected call of GetIDsByGroupKey.
-func (mr *MockIExptDAOMockRecorder) GetIDsByGroupKey(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockIExptDAOMockRecorder) GetIDsByGroupKey(ctx, spaceID, groupKey, page, pageSize any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIDsByGroupKey", reflect.TypeOf((*MockIExptDAO)(nil).GetIDsByGroupKey), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIDsByGroupKey", reflect.TypeOf((*MockIExptDAO)(nil).GetIDsByGroupKey), ctx, spaceID, groupKey, page, pageSize)
 }
 
 // List mocks base method.
-func (m *MockIExptDAO) List(arg0 context.Context, arg1, arg2 int32, arg3 *entity.ExptListFilter, arg4 []*entity.OrderBy, arg5 int64) ([]*model.Experiment, int64, error) {
+func (m *MockIExptDAO) List(ctx context.Context, page, size int32, filter *entity.ExptListFilter, orders []*entity.OrderBy, spaceID int64) ([]*model.Experiment, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret := m.ctrl.Call(m, "List", ctx, page, size, filter, orders, spaceID)
 	ret0, _ := ret[0].([]*model.Experiment)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -156,64 +148,84 @@ func (m *MockIExptDAO) List(arg0 context.Context, arg1, arg2 int32, arg3 *entity
 }
 
 // List indicates an expected call of List.
-func (mr *MockIExptDAOMockRecorder) List(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
+func (mr *MockIExptDAOMockRecorder) List(ctx, page, size, filter, orders, spaceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockIExptDAO)(nil).List), arg0, arg1, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockIExptDAO)(nil).List), ctx, page, size, filter, orders, spaceID)
 }
 
 // MDelete mocks base method.
-func (m *MockIExptDAO) MDelete(arg0 context.Context, arg1 []int64) error {
+func (m *MockIExptDAO) MDelete(ctx context.Context, ids []int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MDelete", arg0, arg1)
+	ret := m.ctrl.Call(m, "MDelete", ctx, ids)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // MDelete indicates an expected call of MDelete.
-func (mr *MockIExptDAOMockRecorder) MDelete(arg0, arg1 any) *gomock.Call {
+func (mr *MockIExptDAOMockRecorder) MDelete(ctx, ids any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MDelete", reflect.TypeOf((*MockIExptDAO)(nil).MDelete), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MDelete", reflect.TypeOf((*MockIExptDAO)(nil).MDelete), ctx, ids)
 }
 
 // MGetByID mocks base method.
-func (m *MockIExptDAO) MGetByID(arg0 context.Context, arg1 []int64) ([]*model.Experiment, error) {
+func (m *MockIExptDAO) MGetByID(ctx context.Context, ids []int64) ([]*model.Experiment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MGetByID", arg0, arg1)
+	ret := m.ctrl.Call(m, "MGetByID", ctx, ids)
 	ret0, _ := ret[0].([]*model.Experiment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MGetByID indicates an expected call of MGetByID.
-func (mr *MockIExptDAOMockRecorder) MGetByID(arg0, arg1 any) *gomock.Call {
+func (mr *MockIExptDAOMockRecorder) MGetByID(ctx, ids any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetByID", reflect.TypeOf((*MockIExptDAO)(nil).MGetByID), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetByID", reflect.TypeOf((*MockIExptDAO)(nil).MGetByID), ctx, ids)
+}
+
+// ScanSchedulerQueue mocks base method.
+func (m *MockIExptDAO) ScanSchedulerQueue(ctx context.Context, param *entity.SchedulerQueueScanParam) ([]*model.Experiment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScanSchedulerQueue", ctx, param)
+	ret0, _ := ret[0].([]*model.Experiment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ScanSchedulerQueue indicates an expected call of ScanSchedulerQueue.
+func (mr *MockIExptDAOMockRecorder) ScanSchedulerQueue(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScanSchedulerQueue", reflect.TypeOf((*MockIExptDAO)(nil).ScanSchedulerQueue), ctx, param)
 }
 
 // Update mocks base method.
-func (m *MockIExptDAO) Update(arg0 context.Context, arg1 *model.Experiment) error {
+func (m *MockIExptDAO) Update(ctx context.Context, expt *model.Experiment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", arg0, arg1)
+	ret := m.ctrl.Call(m, "Update", ctx, expt)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockIExptDAOMockRecorder) Update(arg0, arg1 any) *gomock.Call {
+func (mr *MockIExptDAOMockRecorder) Update(ctx, expt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockIExptDAO)(nil).Update), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockIExptDAO)(nil).Update), ctx, expt)
 }
 
 // UpdateFields mocks base method.
-func (m *MockIExptDAO) UpdateFields(arg0 context.Context, arg1 int64, arg2 map[string]any) error {
+func (m *MockIExptDAO) UpdateFields(ctx context.Context, id int64, ufields map[string]any, opts ...db.Option) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateFields", arg0, arg1, arg2)
+	varargs := []any{ctx, id, ufields}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateFields", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateFields indicates an expected call of UpdateFields.
-func (mr *MockIExptDAOMockRecorder) UpdateFields(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockIExptDAOMockRecorder) UpdateFields(ctx, id, ufields any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFields", reflect.TypeOf((*MockIExptDAO)(nil).UpdateFields), arg0, arg1, arg2)
+	varargs := append([]any{ctx, id, ufields}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFields", reflect.TypeOf((*MockIExptDAO)(nil).UpdateFields), varargs...)
 }
