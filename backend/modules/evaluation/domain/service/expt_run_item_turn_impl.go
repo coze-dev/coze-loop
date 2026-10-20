@@ -23,6 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/mem"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -365,8 +366,16 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	if etec.Expt.EvalConf != nil {
 		etc.EnableExtractTrajectory = etec.Expt.EvalConf.EnableExtractTrajectory
 	}
+	// Provider record storage clips input Content in place; keep prior turn
+	// history independent of each invocation's persisted input.
+	var historyMessages []*entity.Message
+	if history != nil {
+		if err := mem.DeepCopy(history, &historyMessages); err != nil {
+			return nil, errorx.Wrapf(err, "copy target history")
+		}
+	}
 	etid := &entity.EvalTargetInputData{
-		HistoryMessages: history,
+		HistoryMessages: historyMessages,
 		InputFields:     inputFields,
 		Ext:             ext,
 	}

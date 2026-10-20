@@ -4,8 +4,10 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -18,12 +20,16 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	benefitmocks "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
+	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
+	fsmocks "github.com/coze-dev/coze-loop/backend/infra/fileserver/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	configmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	evalstorage "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/pkg/ctxcache"
 )
 
@@ -737,3 +743,204 @@ func TestRunningRetryHistoryOutput_FreshFinalTurnDoesNotLoadUnusedHistory(t *tes
 	assert.False(t, abort)
 	assert.Equal(t, int64(1), f.evalCalls.Load())
 }
+
+func TestRunningRetryHistoryIsolation_ThreeTurnsSurviveActualRecordStorage(t *testing.T) {
+	for _, reused := range []bool{true, false} {
+		t.Run(map[bool]string{true: "reused success", false: "fresh output"}[reused], func(t *testing.T) {
+			f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, 0, 20, 30)
+			f.item.Expt.TargetSpaceID = 9
+			f.item.Expt.EvalConf.ConnectorConf.EvaluatorsConf = nil
+			f.config.EXPECT().GetEvaluationRecordStorage(gomock.Any()).Return(&component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 204800}}}).AnyTimes()
+			full := strings.Repeat("complete first answer ", 11000)
+			require.Greater(t, len(full), 204800)
+			firstTarget := resumeTarget(201, 0)
+			firstTarget.SpaceID = 9
+			firstTarget.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey] = &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of(full)}
+			blobs := map[string][]byte{"initial-full-output": []byte(full)}
+			blob := fsmocks.NewMockBatchObjectStorage(gomock.NewController(t))
+			uploadCount := 3
+			executeCount := 3
+			if reused {
+				uploadCount = 2
+				executeCount = 2
+			}
+			blob.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, key string, body io.Reader, _ ...fileserver.UploadOpt) error {
+				data, err := io.ReadAll(body)
+				require.NoError(t, err)
+				blobs[key] = data
+				return nil
+			}).Times(uploadCount)
+			blob.EXPECT().Read(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, key string, _ ...fileserver.DownloadOpt) (fileserver.Reader, error) {
+				data, exists := blobs[key]
+				require.True(t, exists)
+				return &historyIsolationReader{Reader: bytes.NewReader(data)}, nil
+			}).Times(1)
+			storage := evalstorage.NewRecordDataStorage(blob, f.config)
+			firstLog := f.item.ExistItemEvalResult.TurnResultRunLogs[0]
+			if reused {
+				firstLog.Status = entity.TurnRunState_Success
+				firstLog.TargetResultID = 201
+				firstLog.EvaluatorResultIds = &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{{VersionID: 401, RecordID: 301}, {VersionID: 402, RecordID: 302}}}
+				output := firstTarget.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey]
+				output.Text = gptr.Of("preview...")
+				output.ContentOmitted = gptr.Of(true)
+				output.FullContent = &entity.ObjectStorage{URI: gptr.Of("initial-full-output")}
+				output.FullContentBytes = gptr.Of(int32(len(full)))
+				f.target.EXPECT().GetRecordByID(gomock.Any(), int64(9), int64(201)).Return(firstTarget, nil)
+				e1 := resumeEvaluator(301, 401, 0, "")
+				e1.EvaluatorOutputData = &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(float64(0))}}
+				f.records.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{301, 302}, false, false).Return([]*entity.EvaluatorRecord{e1, resumeEvaluator(302, 402, 0, "")}, nil)
+			}
+			f.target.EXPECT().LoadRecordOutputFields(gomock.Any(), gomock.Any(), []string{consts.OutputSchemaKey}).DoAndReturn(func(ctx context.Context, record *entity.EvalTargetRecord, keys []string) error {
+				require.Same(t, firstTarget, record)
+				return storage.LoadEvalTargetOutputFields(ctx, record, keys)
+			}).Times(1)
+			f.benefit.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil).Times(executeCount)
+			var called []int64
+			f.target.EXPECT().ExecuteTarget(gomock.Any(), int64(9), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, _ int64, _ int64, _ int64, exec *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
+				called = append(called, exec.TurnID)
+				var record *entity.EvalTargetRecord
+				if exec.TurnID == 0 {
+					assert.Empty(t, input.HistoryMessages)
+					record = firstTarget
+				} else {
+					if exec.TurnID == 20 {
+						require.Len(t, input.HistoryMessages, 1)
+					} else {
+						require.Len(t, input.HistoryMessages, 2)
+						assert.Equal(t, "previous answer", input.HistoryMessages[1].Content.GetText())
+					}
+					original := firstTarget.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey]
+					assert.NotSame(t, original, input.HistoryMessages[0].Content, "invocation storage must receive independent Content")
+					assert.True(t, full == input.HistoryMessages[0].Content.GetText(), "later target must see complete first output bytes")
+					assert.False(t, input.HistoryMessages[0].Content.IsContentOmitted())
+					record = resumeTarget(201+exec.TurnID, exec.TurnID)
+					record.SpaceID = 9
+				}
+				record.EvalTargetInputData = input
+				// Actual storage traverses and clips invocation input history before the
+				// provider returns its record, matching ExecuteTarget's deferred save.
+				require.NoError(t, storage.SaveEvalTargetRecordData(ctx, record, nil))
+				if exec.TurnID != 0 {
+					assert.True(t, input.HistoryMessages[0].Content.IsContentOmitted(), "actual invocation storage clipped its copy")
+					assert.True(t, full == firstTarget.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey].GetText(), "shared first output remains full after provider save")
+					assert.False(t, firstTarget.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey].IsContentOmitted())
+				}
+				return record, nil
+			}).Times(executeCount)
+			f.turns.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rows []*entity.ExptTurnResultRunLog) error {
+				require.Len(t, rows, 1)
+				if reused {
+					assert.NotEqual(t, int64(0), rows[0].TurnID)
+				}
+				return nil
+			}).Times(executeCount)
+			abort, err := f.executor.EvalTurns(ctxcache.Init(context.Background()), f.item)
+			require.NoError(t, err)
+			assert.False(t, abort)
+			assert.Equal(t, int64(executeCount), f.evalCalls.Load())
+			if reused {
+				assert.Equal(t, []int64{20, 30}, called)
+				assert.Equal(t, int64(201), firstLog.TargetResultID)
+				assert.Equal(t, entity.TurnRunState_Success, firstLog.Status)
+				assert.Equal(t, []*entity.RegisteredEvalResult{{VersionID: 401, RecordID: 301}, {VersionID: 402, RecordID: 302}}, firstLog.EvaluatorResultIds.Registered)
+			} else {
+				assert.Equal(t, []int64{0, 20, 30}, called)
+			}
+			assert.True(t, full == firstTarget.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey].GetText())
+		})
+	}
+}
+
+func TestRunningRetryHistoryIsolation_TargetInputCopiesNestedContent(t *testing.T) {
+	f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, 20)
+	content := &entity.Content{ContentType: gptr.Of(entity.ContentTypeMultipart), Format: gptr.Of(entity.FieldDisplayFormat_JSON), Text: gptr.Of("root"), Image: &entity.Image{Name: gptr.Of("image"), URI: gptr.Of("image-uri"), URL: gptr.Of("image-url"), ThumbURL: gptr.Of("image-thumb"), StorageProvider: entity.StorageProviderPtr(entity.StorageProvider_S3)}, Audio: &entity.Audio{Format: gptr.Of("wav"), URI: gptr.Of("audio-uri"), Name: gptr.Of("audio"), URL: gptr.Of("audio-url"), StorageProvider: entity.StorageProviderPtr(entity.StorageProvider_S3)}, Video: &entity.Video{Name: gptr.Of("video"), URI: gptr.Of("video-uri"), URL: gptr.Of("video-url"), ThumbURL: gptr.Of("video-thumb"), StorageProvider: entity.StorageProviderPtr(entity.StorageProvider_S3)}, FullContent: &entity.ObjectStorage{Name: gptr.Of("full"), URI: gptr.Of("full-uri"), URL: gptr.Of("full-url"), ThumbURL: gptr.Of("full-thumb"), Provider: entity.StorageProviderPtr(entity.StorageProvider_S3)}, ContentOmitted: gptr.Of(true), FullContentBytes: gptr.Of(int32(240000)), MultiPart: []*entity.Content{{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("nested"), MultiPart: []*entity.Content{{Text: gptr.Of("deep")}}}}}
+	history := []*entity.Message{{Role: entity.RoleAssistant, Content: content, Ext: map[string]string{"metadata": "frozen"}}, nil, {Role: entity.RoleTool}}
+	etec := &entity.ExptTurnEvalCtx{ExptItemEvalCtx: f.item, Turn: f.item.EvalSetItem.Turns[0], History: history, Ext: map[string]string{}, ExptTurnRunResult: &entity.ExptTurnRunResult{}}
+	f.benefit.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+	f.target.EXPECT().ExecuteTarget(gomock.Any(), int64(3), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, _ int64, _ int64, _ *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
+		assert.Equal(t, history, input.HistoryMessages, "all nested input fields and nil messages are preserved")
+		c := input.HistoryMessages[0].Content
+		assert.NotSame(t, content, c)
+		assert.NotSame(t, content.MultiPart[0], c.MultiPart[0])
+		assert.NotSame(t, content.MultiPart[0].MultiPart[0], c.MultiPart[0].MultiPart[0])
+		assert.NotSame(t, content.Image, c.Image)
+		assert.NotSame(t, content.Audio, c.Audio)
+		assert.NotSame(t, content.Video, c.Video)
+		assert.NotSame(t, content.FullContent, c.FullContent)
+		*c.Text = "changed"
+		*c.Format = entity.FieldDisplayFormat_Markdown
+		*c.ContentType = entity.ContentTypeText
+		*c.ContentOmitted = false
+		*c.FullContentBytes = 1
+		*c.MultiPart[0].Text = "nested changed"
+		*c.MultiPart[0].MultiPart[0].Text = "deep changed"
+		*c.Image.URI = "image changed"
+		*c.Image.StorageProvider = entity.StorageProvider(99)
+		*c.Audio.URI = "audio changed"
+		*c.Audio.Format = "mp3"
+		*c.Video.URI = "video changed"
+		*c.Video.ThumbURL = "thumb changed"
+		*c.FullContent.URI = "full changed"
+		*c.FullContent.Provider = entity.StorageProvider(99)
+		input.HistoryMessages[0].Ext["metadata"] = "changed"
+		input.HistoryMessages[0].Role = entity.RoleUser
+		return resumeTarget(201, 20), nil
+	})
+	svc := &DefaultExptTurnEvaluationImpl{metric: f.executor.Metric, evalTargetService: f.target, benefitService: f.benefit}
+	_, err := svc.CallTarget(ctxcache.Init(context.Background()), etec)
+	require.NoError(t, err)
+	assert.Equal(t, "root", content.GetText())
+	assert.Equal(t, entity.ContentTypeMultipart, *content.ContentType)
+	assert.Equal(t, entity.FieldDisplayFormat_JSON, *content.Format)
+	assert.True(t, *content.ContentOmitted)
+	assert.Equal(t, int32(240000), *content.FullContentBytes)
+	assert.Equal(t, "nested", content.MultiPart[0].GetText())
+	assert.Equal(t, "deep", content.MultiPart[0].MultiPart[0].GetText())
+	assert.Equal(t, "image-uri", *content.Image.URI)
+	assert.Equal(t, entity.StorageProvider_S3, *content.Image.StorageProvider)
+	assert.Equal(t, "audio-uri", *content.Audio.URI)
+	assert.Equal(t, "wav", *content.Audio.Format)
+	assert.Equal(t, "video-uri", *content.Video.URI)
+	assert.Equal(t, "video-thumb", *content.Video.ThumbURL)
+	assert.Equal(t, "full-uri", *content.FullContent.URI)
+	assert.Equal(t, entity.StorageProvider_S3, *content.FullContent.Provider)
+	assert.Equal(t, "frozen", history[0].Ext["metadata"])
+	assert.Equal(t, entity.RoleAssistant, history[0].Role)
+}
+
+func TestRunningRetryHistoryIsolation_LastSuccessDoesNotLoadUnusedHistory(t *testing.T) {
+	for _, hasPrior := range []bool{false, true} {
+		t.Run(map[bool]string{false: "single turn zero", true: "last of two successes"}[hasPrior], func(t *testing.T) {
+			ids := []int64{0}
+			if hasPrior {
+				ids = []int64{0, 20}
+			}
+			f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, ids...)
+			for _, id := range ids {
+				log := f.item.ExistItemEvalResult.TurnResultRunLogs[id]
+				log.Status = entity.TurnRunState_Success
+				log.TargetResultID = 201 + id
+				target := resumeTarget(201+id, id)
+				if id == ids[len(ids)-1] {
+					target.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey] = &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("preview..."), ContentOmitted: gptr.Of(true), FullContent: &entity.ObjectStorage{URI: gptr.Of("unused-final-history")}, FullContentBytes: gptr.Of(int32(240000))}
+				}
+				f.target.EXPECT().GetRecordByID(gomock.Any(), int64(3), 201+id).Return(target, nil)
+			}
+			// No load is expected; lack of a history consumer must not create an
+			// object-storage dependency, while nonzero target record reads still run.
+			abort, err := f.executor.EvalTurns(ctxcache.Init(context.Background()), f.item)
+			require.NoError(t, err)
+			assert.False(t, abort)
+			assert.Zero(t, f.evalCalls.Load())
+			for _, id := range ids {
+				assert.Equal(t, entity.TurnRunState_Success, f.item.ExistItemEvalResult.TurnResultRunLogs[id].Status)
+			}
+		})
+	}
+}
+
+// A test-only object-storage reader retains ReadAt required by the real boundary.
+type historyIsolationReader struct{ *bytes.Reader }
+
+func (r *historyIsolationReader) Close() error { return nil }

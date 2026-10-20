@@ -129,8 +129,10 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 			if existing.TargetResultID > 0 && target == nil {
 				return false, fmt.Errorf("success turn target record %d missing during history resume", existing.TargetResultID)
 			}
-			if err := e.loadTargetHistoryOutput(ctx, target); err != nil {
-				return false, err
+			if turnIndex+1 < len(eiec.EvalSetItem.Turns) {
+				if err := e.loadTargetHistoryOutput(ctx, target); err != nil {
+					return false, err
+				}
 			}
 			history = append(history, buildHistoryMessage(ctx, etec.ExptTurnRunResult)...)
 			continue
