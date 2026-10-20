@@ -5,6 +5,7 @@ package experiment
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bytedance/gg/gptr"
 
@@ -260,4 +261,12 @@ func (e ExptItemResultRepoImpl) StoreCurrentTurnRunResult(ctx context.Context, s
 }
 func (e ExptItemResultRepoImpl) CompleteCurrentItemRun(ctx context.Context, source *entity.ExptCurrentItemRunSource, write *entity.ExptCurrentItemRunWrite) (bool, error) {
 	return e.exptItemResultDAO.(repo.IExptCurrentResultRepo).CompleteCurrentItemRun(ctx, source, write)
+}
+
+func (e ExptItemResultRepoImpl) ScanManualRetryFilterItems(ctx context.Context, space, expt, run, cursor int64, limit int) ([]int64, int64, error) {
+	scanner, ok := e.exptItemResultDAO.(repo.IExptManualRetryFilterRepo)
+	if !ok {
+		return nil, 0, fmt.Errorf("manual retry filter DAO enumeration missing")
+	}
+	return scanner.ScanManualRetryFilterItems(ctx, space, expt, run, cursor, limit)
 }
