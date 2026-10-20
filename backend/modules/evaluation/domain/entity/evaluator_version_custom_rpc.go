@@ -120,6 +120,9 @@ func (do *CustomRPCEvaluatorVersion) ValidateInput(input *EvaluatorInputData) er
 	}
 	inputSchemaMap := make(map[string]*ArgsSchema)
 	for _, argsSchema := range do.InputSchemas {
+		if argsSchema == nil {
+			return errorx.NewByCode(errno.InvalidEvaluatorConfigurationCode, errorx.WithExtraMsg("input schema is nil"))
+		}
 		inputSchemaMap[gptr.Indirect(argsSchema.Key)] = argsSchema
 	}
 	for fieldKey, content := range input.InputFields {
