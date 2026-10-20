@@ -5,6 +5,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -541,4 +543,197 @@ func TestRunningRetryTurnResume_EventCopiesConcurrentCache(t *testing.T) {
 	wg.Wait()
 	assert.False(t, original.CtxTargetCalled(ctx))
 	assert.Nil(t, original.Ext)
+}
+
+// Storage boundaries return the same preview record that MySQL returns; the
+// item/turn execution and history construction remain real.
+func TestRunningRetryHistoryOutput_LoadsFullSuccessOutputBeforeNextTarget(t *testing.T) {
+	for _, source := range []string{"same space", "frozen target space", "frozen item target space"} {
+		t.Run(source, func(t *testing.T) {
+			f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, 0, 20)
+			spaceID := int64(3)
+			switch source {
+			case "frozen target space":
+				f.item.Expt.TargetSpaceID = 9
+				spaceID = 9
+			case "frozen item target space":
+				f.item.Expt.TargetSpaceID = 8
+				f.item.ItemConfig = &entity.ExptItemConfig{TargetSourceSpaceID: 9}
+				spaceID = 9
+			}
+			first := f.item.ExistItemEvalResult.TurnResultRunLogs[0]
+			first.Status = entity.TurnRunState_Success
+			first.TargetResultID = 201
+			first.EvaluatorResultIds = &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{{VersionID: 401, RecordID: 301}, {VersionID: 402, RecordID: 302}}}
+			full := strings.Repeat("complete previous answer ", 10000)
+			target := resumeTarget(201, 0)
+			target.SpaceID = spaceID
+			target.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey] = &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("preview..."), ContentOmitted: gptr.Of(true), FullContent: &entity.ObjectStorage{URI: gptr.Of("eval_record/history-output")}, FullContentBytes: gptr.Of(int32(len(full)))}
+			preview := target.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey]
+			require.True(t, preview.IsContentOmitted())
+			require.Greater(t, len(full), 204800)
+			e1 := resumeEvaluator(301, 401, 0, "")
+			e1.EvaluatorOutputData = &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(float64(0))}}
+			e2 := resumeEvaluator(302, 402, 0, "") // Successful without a score stays reusable.
+			f.target.EXPECT().GetRecordByID(gomock.Any(), spaceID, int64(201)).Return(target, nil)
+			f.records.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{301, 302}, false, false).Return([]*entity.EvaluatorRecord{e1, e2}, nil)
+			var loaded bool
+			f.target.EXPECT().LoadRecordOutputFields(gomock.Any(), gomock.Any(), []string{consts.OutputSchemaKey}).DoAndReturn(func(_ context.Context, got *entity.EvalTargetRecord, _ []string) error {
+				require.Same(t, target, got)
+				assert.Equal(t, spaceID, got.SpaceID)
+				require.Equal(t, "eval_record/history-output", gptr.Indirect(got.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey].FullContent.URI))
+				got.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey].Text = gptr.Of(full)
+				loaded = true
+				return nil
+			}).Times(1)
+			f.benefit.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ *benefit.CheckAndDeductEvalBenefitParams) (*benefit.CheckAndDeductEvalBenefitResult, error) {
+				assert.True(t, loaded, "success history loads before next turn spends benefit")
+				return &benefit.CheckAndDeductEvalBenefitResult{}, nil
+			}).Times(2)
+			f.target.EXPECT().ExecuteTarget(gomock.Any(), spaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, _ int64, _ int64, exec *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
+				assert.True(t, loaded)
+				assert.Equal(t, int64(20), exec.TurnID)
+				require.Len(t, input.HistoryMessages, 1)
+				assert.Equal(t, entity.RoleAssistant, input.HistoryMessages[0].Role)
+				assert.Equal(t, full, input.HistoryMessages[0].Content.GetText())
+				assert.False(t, input.HistoryMessages[0].Content.IsContentOmitted())
+				return resumeTarget(202, 20), nil
+			}).Times(1)
+			f.evaluator.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil).Times(2)
+			f.evaluator.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+				assert.Equal(t, int64(20), r.TurnID)
+				return resumeEvaluator(1000+r.EvaluatorVersionID, r.EvaluatorVersionID, 20, ""), nil
+			}).Times(2)
+			f.turns.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rows []*entity.ExptTurnResultRunLog) error {
+				require.Len(t, rows, 1)
+				assert.Equal(t, int64(20), rows[0].TurnID)
+				return nil
+			}).Times(1)
+			abort, err := f.executor.EvalTurns(ctxcache.Init(context.Background()), f.item)
+			require.NoError(t, err)
+			assert.False(t, abort)
+			assert.Equal(t, int64(1), f.evalCalls.Load(), "reused success turn never enters Eval")
+			assert.Equal(t, int64(201), first.TargetResultID)
+			assert.Equal(t, entity.TurnRunState_Success, first.Status)
+			assert.Equal(t, []*entity.RegisteredEvalResult{{VersionID: 401, RecordID: 301}, {VersionID: 402, RecordID: 302}}, first.EvaluatorResultIds.Registered)
+		})
+	}
+}
+
+func TestRunningRetryHistoryOutput_IncompleteSuccessStopsBeforeNextTurn(t *testing.T) {
+	for _, failure := range []string{"missing target record", "storage read error", "still omitted", "field removed", "nil field", "nil output data"} {
+		t.Run(failure, func(t *testing.T) {
+			f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, 0, 20)
+			first := f.item.ExistItemEvalResult.TurnResultRunLogs[0]
+			first.Status = entity.TurnRunState_Success
+			first.TargetResultID = 201
+			target := resumeTarget(201, 0)
+			cause := errors.New("object storage read failed")
+			if failure == "missing target record" {
+				target = nil
+			} else {
+				target.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey] = &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("preview..."), ContentOmitted: gptr.Of(true), FullContent: &entity.ObjectStorage{URI: gptr.Of("eval_record/history-output")}, FullContentBytes: gptr.Of(int32(240000))}
+				f.target.EXPECT().LoadRecordOutputFields(gomock.Any(), gomock.Any(), []string{consts.OutputSchemaKey}).DoAndReturn(func(_ context.Context, got *entity.EvalTargetRecord, _ []string) error {
+					require.Same(t, target, got)
+					switch failure {
+					case "storage read error":
+						return cause
+					case "field removed":
+						delete(got.EvalTargetOutputData.OutputFields, consts.OutputSchemaKey)
+					case "nil field":
+						got.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey] = nil
+					case "nil output data":
+						got.EvalTargetOutputData = nil
+					}
+					return nil
+				}).Times(1)
+			}
+			f.target.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(201)).Return(target, nil)
+			// No expected Eval/store/target/evaluator/benefit calls: a missing or
+			// incomplete old success must stop, rather than refill it with a new invoke.
+			abort, err := f.executor.EvalTurns(ctxcache.Init(context.Background()), f.item)
+			require.Error(t, err)
+			assert.False(t, abort)
+			if failure == "storage read error" {
+				assert.ErrorIs(t, err, cause)
+			}
+			assert.Zero(t, f.evalCalls.Load())
+			assert.Equal(t, int64(201), first.TargetResultID)
+			assert.Equal(t, entity.TurnRunState_Success, first.Status)
+		})
+	}
+}
+
+func TestRunningRetryHistoryOutput_ShortNontextAndTargetFreeRemainCompatible(t *testing.T) {
+	for _, shape := range []string{"short text", "nontext", "target-free zero record"} {
+		t.Run(shape, func(t *testing.T) {
+			f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, 0)
+			first := f.item.ExistItemEvalResult.TurnResultRunLogs[0]
+			first.Status = entity.TurnRunState_Success
+			switch shape {
+			case "target-free zero record":
+				f.item.Expt.TargetVersionID = 0
+			default:
+				first.TargetResultID = 201
+				target := resumeTarget(201, 0)
+				if shape == "nontext" {
+					target.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey] = &entity.Content{ContentType: gptr.Of(entity.ContentTypeImage), Image: &entity.Image{URL: gptr.Of("image-ref")}, ContentOmitted: gptr.Of(true)}
+				}
+				f.target.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(201)).Return(target, nil)
+			}
+			abort, err := f.executor.EvalTurns(ctxcache.Init(context.Background()), f.item)
+			require.NoError(t, err)
+			assert.False(t, abort)
+			assert.Zero(t, f.evalCalls.Load())
+			assert.Equal(t, entity.TurnRunState_Success, first.Status)
+		})
+	}
+}
+
+func TestRunningRetryHistoryOutput_FreshOmittedTurnLoadsBeforeNextTarget(t *testing.T) {
+	f := newTurnResumeFixture(t, entity.EvaluationModeSubmit, 0, 20)
+	// ExecuteTarget persists before returning; storage mutates the returned
+	// Content to a preview. With no evaluators, nothing else hydrates it.
+	f.item.Expt.EvalConf.ConnectorConf.EvaluatorsConf = nil
+	full := strings.Repeat("complete fresh answer ", 11000)
+	first := resumeTarget(201, 0)
+	first.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey] = &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("preview..."), ContentOmitted: gptr.Of(true), FullContent: &entity.ObjectStorage{URI: gptr.Of("eval_record/fresh-history")}, FullContentBytes: gptr.Of(int32(len(full)))}
+	require.True(t, first.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey].IsContentOmitted())
+	f.benefit.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil).Times(2)
+	f.target.EXPECT().ExecuteTarget(gomock.Any(), int64(3), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, _ int64, _ int64, exec *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
+		if exec.TurnID == 0 {
+			assert.Empty(t, input.HistoryMessages)
+			return first, nil
+		}
+		require.Len(t, input.HistoryMessages, 1)
+		assert.Equal(t, full, input.HistoryMessages[0].Content.GetText())
+		assert.False(t, input.HistoryMessages[0].Content.IsContentOmitted())
+		return resumeTarget(202, 20), nil
+	}).Times(2)
+	f.target.EXPECT().LoadRecordOutputFields(gomock.Any(), gomock.Any(), []string{consts.OutputSchemaKey}).DoAndReturn(func(_ context.Context, got *entity.EvalTargetRecord, _ []string) error {
+		require.Same(t, first, got)
+		got.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey].Text = gptr.Of(full)
+		return nil
+	}).Times(1)
+	f.turns.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+	abort, err := f.executor.EvalTurns(ctxcache.Init(context.Background()), f.item)
+	require.NoError(t, err)
+	assert.False(t, abort)
+	assert.Equal(t, int64(2), f.evalCalls.Load())
+}
+
+func TestRunningRetryHistoryOutput_FreshFinalTurnDoesNotLoadUnusedHistory(t *testing.T) {
+	f := newTurnResumeFixture(t, entity.EvaluationModeSubmit, 0)
+	f.item.Expt.EvalConf.ConnectorConf.EvaluatorsConf = nil
+	target := resumeTarget(201, 0)
+	target.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey] = &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("preview..."), ContentOmitted: gptr.Of(true), FullContent: &entity.ObjectStorage{URI: gptr.Of("eval_record/final-output")}, FullContentBytes: gptr.Of(int32(240000))}
+	f.benefit.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+	f.target.EXPECT().ExecuteTarget(gomock.Any(), int64(3), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(target, nil)
+	f.turns.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil)
+	// No subsequent turn consumes history, so successful single-turn execution
+	// must not add an object-storage dependency after persisting its result.
+	abort, err := f.executor.EvalTurns(ctxcache.Init(context.Background()), f.item)
+	require.NoError(t, err)
+	assert.False(t, abort)
+	assert.Equal(t, int64(1), f.evalCalls.Load())
 }
