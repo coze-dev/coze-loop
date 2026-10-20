@@ -38,8 +38,10 @@ import (
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	confmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	loadermocks "github.com/coze-dev/coze-loop/backend/pkg/conf/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
@@ -9127,7 +9129,7 @@ func TestEvaluatorHandlerImpl_AsyncDebugEvaluator(t *testing.T) {
 			setupMocks: func() {
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockEvaluatorService.EXPECT().AsyncDebugEvaluator(gomock.Any(), gomock.Any()).Return(&entity.AsyncDebugEvaluatorResponse{InvokeID: 888}, nil)
-				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:888", gomock.Any()).Return(nil)
+				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantErr: false,
 		},
@@ -9143,15 +9145,6 @@ func TestEvaluatorHandlerImpl_AsyncDebugEvaluator(t *testing.T) {
 			setupMocks: func() {
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockEvaluatorService.EXPECT().AsyncDebugEvaluator(gomock.Any(), gomock.Any()).Return(nil, errors.New("debug failed"))
-			},
-			wantErr: true,
-		},
-		{
-			name: "失败 - SetEvalAsyncCtx失败",
-			setupMocks: func() {
-				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				mockEvaluatorService.EXPECT().AsyncDebugEvaluator(gomock.Any(), gomock.Any()).Return(&entity.AsyncDebugEvaluatorResponse{InvokeID: 888}, nil)
-				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:888", gomock.Any()).Return(errors.New("set ctx failed"))
 			},
 			wantErr: true,
 		},
@@ -9175,7 +9168,7 @@ func TestEvaluatorHandlerImpl_AsyncDebugEvaluator(t *testing.T) {
 
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockEvaluatorService.EXPECT().AsyncDebugEvaluator(gomock.Any(), gomock.Any()).Return(&entity.AsyncDebugEvaluatorResponse{InvokeID: 888}, nil)
-				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:888", gomock.Any()).Return(nil)
+				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantErr: false,
 		},
@@ -9498,12 +9491,14 @@ func TestAsyncDebugEvaluator_ErrorBranches(t *testing.T) {
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
 	mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
 
 	handler := &EvaluatorHandlerImpl{
 		evaluatorService: mockEvaluatorService,
 		auth:             mockAuth,
 		evalAsyncRepo:    mockEvalAsyncRepo,
 		fileProvider:     mockFileProvider,
+		configer:         mockConfiger,
 	}
 
 	ctx := context.Background()
@@ -9539,6 +9534,7 @@ func TestAsyncDebugEvaluator_ErrorBranches(t *testing.T) {
 	})
 
 	t.Run("失败 - ConvertEvaluatorDTO2DO出错(CustomRPC无效RateLimit)", func(t *testing.T) {
+		mockConfiger.EXPECT().CheckCustomRPCEvaluatorWritable(gomock.Any(), "1", nil).Return(true, nil)
 		req := &evaluatorservice.AsyncDebugEvaluatorRequest{
 			WorkspaceID:   1,
 			EvaluatorType: evaluatordto.EvaluatorType_CustomRPC,
@@ -9590,11 +9586,189 @@ func TestAsyncDebugEvaluator_ErrorBranches(t *testing.T) {
 				assert.Equal(t, rpJSON, gptr.Indirect(req.EvaluatorRunConf.EvaluatorRuntimeParam.JSONValue))
 				return &entity.AsyncDebugEvaluatorResponse{InvokeID: 777}, nil
 			})
-		mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:777", gomock.Any()).Return(nil)
+		mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
 		resp, err := handler.AsyncDebugEvaluator(ctx, req)
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
 		assert.Equal(t, int64(777), resp.GetInvokeID())
 	})
+}
+
+func TestEvaluatorHandlerImpl_AsyncDebugEvaluator_CustomRPCInputsAndContextOwnership(t *testing.T) {
+	for _, failURI := range []string{"", "dataset-uri", "target-uri"} {
+		t.Run("file error "+failURI, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+			mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+			mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+			mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
+			mockConfiger := confmocks.NewMockIConfiger(ctrl)
+			mockConfiger.EXPECT().CheckCustomRPCEvaluatorWritable(gomock.Any(), "2", nil).Return(true, nil)
+			handler := &EvaluatorHandlerImpl{evaluatorService: mockEvaluatorService, auth: mockAuth, evalAsyncRepo: mockEvalAsyncRepo, fileProvider: mockFileProvider, configer: mockConfiger}
+			imageContent := func(uri string) *common.Content {
+				return &common.Content{ContentType: gptr.Of(common.ContentType(common.ContentTypeImage)), Image: &common.Image{URI: gptr.Of(uri)}}
+			}
+			req := &evaluatorservice.AsyncDebugEvaluatorRequest{
+				WorkspaceID: 2, EvaluatorType: evaluatordto.EvaluatorType_CustomRPC,
+				EvaluatorContent: &evaluatordto.EvaluatorContent{CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
+					IsAsync: gptr.Of(true), AccessProtocol: "rpc", ServiceName: gptr.Of("test.custom.evaluator"),
+				}},
+				InputData: &evaluatordto.EvaluatorInputData{
+					InputFields:                map[string]*common.Content{"input": imageContent("input-uri")},
+					EvaluateDatasetFields:      map[string]*common.Content{"dataset": imageContent("dataset-uri")},
+					EvaluateTargetOutputFields: map[string]*common.Content{"target": imageContent("target-uri")},
+				},
+				EvaluatorRunConf: &evaluatordto.EvaluatorRunConfig{EvaluatorRuntimeParam: &common.RuntimeParam{JSONValue: gptr.Of(`{"mode":"fast"}`)}},
+			}
+			mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			for _, uri := range []string{"input-uri", "dataset-uri", "target-uri"} {
+				if uri == failURI {
+					mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), []string{uri}).Return(nil, errors.New("file unavailable"))
+					break
+				}
+				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), []string{uri}).Return(map[string]string{uri: "https://example.com/" + uri}, nil)
+			}
+			if failURI == "" {
+				mockEvaluatorService.EXPECT().AsyncDebugEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, got *entity.AsyncDebugEvaluatorRequest) (*entity.AsyncDebugEvaluatorResponse, error) {
+					assert.Equal(t, "https://example.com/input-uri", gptr.Indirect(got.InputData.InputFields["input"].Image.URL))
+					assert.Equal(t, "https://example.com/dataset-uri", gptr.Indirect(got.InputData.EvaluateDatasetFields["dataset"].Image.URL))
+					assert.Equal(t, "https://example.com/target-uri", gptr.Indirect(got.InputData.EvaluateTargetOutputFields["target"].Image.URL))
+					assert.Equal(t, `{"mode":"fast"}`, got.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+					assert.Equal(t, `{"mode":"fast"}`, gptr.Indirect(got.EvaluatorRunConf.EvaluatorRuntimeParam.JSONValue))
+					assert.True(t, got.EvaluatorDO.CustomRPCEvaluatorVersion.IsAsync)
+					assert.Zero(t, got.EvaluatorDO.GetEvaluatorVersionID())
+					return &entity.AsyncDebugEvaluatorResponse{InvokeID: 999}, nil
+				})
+			}
+			// The service owns the context; a second write could overwrite a fast callback's state.
+			mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			resp, err := handler.AsyncDebugEvaluator(context.Background(), req)
+			if failURI != "" {
+				require.Error(t, err)
+				assert.Nil(t, resp)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				assert.Equal(t, int64(999), resp.GetInvokeID())
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_AsyncDebugEvaluator_CustomRPCWritablePolicy(t *testing.T) {
+	for _, policyErr := range []error{nil, errors.New("policy unavailable")} {
+		t.Run(fmt.Sprintf("policy_error_%v", policyErr), func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			configer := confmocks.NewMockIConfiger(ctrl)
+			handler := &EvaluatorHandlerImpl{
+				auth: auth, configer: configer,
+				fileProvider:     rpcmocks.NewMockIFileProvider(ctrl),
+				evaluatorService: mocks.NewMockEvaluatorService(ctrl),
+			}
+			auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			configer.EXPECT().CheckCustomRPCEvaluatorWritable(gomock.Any(), "2", nil).Return(false, policyErr)
+			req := &evaluatorservice.AsyncDebugEvaluatorRequest{
+				WorkspaceID: 2, EvaluatorType: evaluatordto.EvaluatorType_CustomRPC,
+				EvaluatorContent: &evaluatordto.EvaluatorContent{CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{IsAsync: gptr.Of(true), AccessProtocol: "rpc", ServiceName: gptr.Of("test.custom.evaluator")}},
+				InputData: &evaluatordto.EvaluatorInputData{InputFields: map[string]*common.Content{
+					"image": {ContentType: gptr.Of(common.ContentType(common.ContentTypeImage)), Image: &common.Image{URI: gptr.Of("must-not-resolve")}},
+				}},
+			}
+			resp, err := handler.AsyncDebugEvaluator(context.Background(), req)
+			require.Nil(t, resp)
+			if policyErr != nil {
+				require.ErrorIs(t, err, policyErr)
+			} else {
+				require.Error(t, err)
+				statusErr, ok := errorx.FromStatusError(err)
+				require.True(t, ok)
+				require.Equal(t, int32(errno.CommonInvalidParamCode), statusErr.Code())
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_GetEvaluatorRecordAuthorizesDraftRecordSpace(t *testing.T) {
+	for _, allowed := range []bool{true, false} {
+		t.Run(fmt.Sprintf("allowed_%v", allowed), func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			records := mocks.NewMockEvaluatorRecordService(ctrl)
+			users := userinfomocks.NewMockUserInfoService(ctrl)
+			handler := &EvaluatorHandlerImpl{auth: auth, evaluatorRecordService: records, userInfoService: users}
+			records.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(10), false).Return(&entity.EvaluatorRecord{ID: 10, SpaceID: 1001, EvaluatorVersionID: 0}, nil)
+			auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *rpc.AuthorizationParam) error {
+				require.Equal(t, int64(1001), param.SpaceID)
+				require.Equal(t, "1001", param.ObjectID)
+				require.Len(t, param.ActionObjects, 1)
+				require.Equal(t, "listLoopEvaluator", gptr.Indirect(param.ActionObjects[0].Action))
+				if !allowed {
+					return errorx.NewByCode(errno.CommonNoPermissionCode)
+				}
+				return nil
+			})
+			if allowed {
+				users.EXPECT().PackUserInfo(gomock.Any(), gomock.Any())
+			}
+			resp, err := handler.GetEvaluatorRecord(context.Background(), &evaluatorservice.GetEvaluatorRecordRequest{EvaluatorRecordID: 10})
+			if allowed {
+				require.NoError(t, err)
+				require.Equal(t, int64(10), resp.Record.GetID())
+			} else {
+				require.Error(t, err)
+				require.Nil(t, resp)
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_StockOSSRejectsCustomRPCAsyncDebug(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	factory := loadermocks.NewMockIConfigLoaderFactory(ctrl)
+	factory.EXPECT().NewConfigLoader("evaluation.yaml").Return(nil, nil)
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	handler := &EvaluatorHandlerImpl{
+		auth: auth, configer: evalconf.NewEvaluatorConfiger(factory),
+		evaluatorService: mocks.NewMockEvaluatorService(ctrl),
+		fileProvider:     rpcmocks.NewMockIFileProvider(ctrl),
+	}
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	resp, err := handler.AsyncDebugEvaluator(context.Background(), &evaluatorservice.AsyncDebugEvaluatorRequest{
+		WorkspaceID: 99, EvaluatorType: evaluatordto.EvaluatorType_CustomRPC,
+		EvaluatorContent: &evaluatordto.EvaluatorContent{CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{IsAsync: gptr.Of(true), AccessProtocol: "rpc", ServiceName: gptr.Of("test.custom.evaluator")}},
+		InputData:        &evaluatordto.EvaluatorInputData{},
+	})
+	require.ErrorContains(t, err, "current app does not support async custom RPC evaluator")
+	require.Nil(t, resp)
+}
+
+func TestEvaluatorHandlerImpl_AsyncDebugEvaluator_ContextOwnedByService(t *testing.T) {
+	for _, evaluatorType := range []evaluatordto.EvaluatorType{evaluatordto.EvaluatorType_Agent, evaluatordto.EvaluatorType_CustomRPC} {
+		t.Run(fmt.Sprint(evaluatorType), func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			svc := mocks.NewMockEvaluatorService(ctrl)
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+			configer := confmocks.NewMockIConfiger(ctrl)
+			if evaluatorType == evaluatordto.EvaluatorType_CustomRPC {
+				configer.EXPECT().CheckCustomRPCEvaluatorWritable(gomock.Any(), "2", nil).Return(true, nil)
+			}
+			auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			svc.EXPECT().AsyncDebugEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *entity.AsyncDebugEvaluatorRequest) (*entity.AsyncDebugEvaluatorResponse, error) {
+				assert.Zero(t, req.EvaluatorDO.GetEvaluatorVersionID())
+				return &entity.AsyncDebugEvaluatorResponse{InvokeID: 999}, nil
+			})
+			asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			handler := &EvaluatorHandlerImpl{evaluatorService: svc, auth: auth, evalAsyncRepo: asyncRepo, configer: configer}
+			response, err := handler.AsyncDebugEvaluator(context.Background(), &evaluatorservice.AsyncDebugEvaluatorRequest{
+				WorkspaceID: 2, EvaluatorType: evaluatorType,
+				EvaluatorContent: &evaluatordto.EvaluatorContent{AgentEvaluator: &evaluatordto.AgentEvaluator{}, CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{}},
+				InputData:        &evaluatordto.EvaluatorInputData{},
+			})
+			require.NoError(t, err)
+			assert.Equal(t, int64(999), response.GetInvokeID())
+		})
+	}
 }

@@ -106,8 +106,8 @@ func TestRunAdmissionCleanup(t *testing.T) {
 					DoAndReturn(func(_ context.Context, got *entity.ExptRunLog) error { runLog = got; return nil }).Times(logCalls)
 			}
 			if !tc.publishFail {
-				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), exptID, runID, gomock.Any()).
-					DoAndReturn(func(_ context.Context, _, _ int64, fields map[string]any) error {
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), exptID, runID, spaceID, gomock.Any()).
+					DoAndReturn(func(_ context.Context, _, _, _ int64, fields map[string]any) error {
 						runLog.Status = fields["status"].(int64)
 						runLog.StatusMessage = fields["status_message"].([]byte)
 						return nil
@@ -187,8 +187,8 @@ func TestRunPreparationReadFailure(t *testing.T) {
 			runLog := &entity.ExptRunLog{ExptID: exptID, ExptRunID: runID, Status: int64(entity.ExptStatus_Pending)}
 			locked := tc.lockPresent
 			var updateCtx context.Context
-			mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), exptID, runID, gomock.Any()).
-				DoAndReturn(func(cleanupCtx context.Context, _, _ int64, fields map[string]any) error {
+			mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), exptID, runID, spaceID, gomock.Any()).
+				DoAndReturn(func(cleanupCtx context.Context, _, _, _ int64, fields map[string]any) error {
 					updateCtx = cleanupCtx
 					require.NoError(t, cleanupCtx.Err())
 					deadline, ok := cleanupCtx.Deadline()

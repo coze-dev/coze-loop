@@ -101,9 +101,9 @@ func (mr *MockIExptRunLogDAOMockRecorder) Save(ctx, exptRunLog any, opts ...any)
 }
 
 // Update mocks base method.
-func (m *MockIExptRunLogDAO) Update(ctx context.Context, exptID, exptRunID int64, ufields map[string]any, opts ...db.Option) error {
+func (m *MockIExptRunLogDAO) Update(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any, opts ...db.Option) error {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, exptID, exptRunID, ufields}
+	varargs := []any{ctx, exptID, exptRunID, spaceID, ufields}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -113,8 +113,8 @@ func (m *MockIExptRunLogDAO) Update(ctx context.Context, exptID, exptRunID int64
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockIExptRunLogDAOMockRecorder) Update(ctx, exptID, exptRunID, ufields any, opts ...any) *gomock.Call {
+func (mr *MockIExptRunLogDAOMockRecorder) Update(ctx, exptID, exptRunID, spaceID, ufields any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, exptID, exptRunID, ufields}, opts...)
+	varargs := append([]any{ctx, exptID, exptRunID, spaceID, ufields}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockIExptRunLogDAO)(nil).Update), varargs...)
 }

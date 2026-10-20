@@ -58,9 +58,9 @@ func (e *ExptRunLogImpl) Save(ctx context.Context, exptRunLog *entity.ExptRunLog
 	return nil
 }
 
-func (e *ExptRunLogImpl) Update(ctx context.Context, exptID, exptRunID int64, ufields map[string]any) error {
+func (e *ExptRunLogImpl) Update(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any) error {
 	ufields["updated_at"] = time.Now()
-	err := e.exptRunLogDAO.Update(ctx, exptID, exptRunID, ufields)
+	err := e.exptRunLogDAO.Update(ctx, exptID, exptRunID, spaceID, ufields)
 	if err != nil {
 		return err
 	}
