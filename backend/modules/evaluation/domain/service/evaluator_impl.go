@@ -1374,7 +1374,10 @@ func (e *EvaluatorServiceImpl) ArmEvaluatorResume(ctx context.Context, recordID 
 	if record.Status == entity.EvaluatorRunStatusAsyncInvoking {
 		return nil
 	}
-	return e.publishEvaluatorResumeEvent(ctx, actx.Event)
+	if record.ID != recordID || record.TurnID <= 0 {
+		return errorx.New("evaluator resume source unavailable, invoke_id: %v", recordID)
+	}
+	return e.publishEvaluatorResumeEvent(ctx, actx.Event.CloneWithResumeSource("evaluator", record.ID, record.TurnID))
 }
 
 func (e *EvaluatorServiceImpl) publishEvaluatorResumeEvent(ctx context.Context, event *entity.ExptItemEvalEvent) error {
@@ -1393,7 +1396,7 @@ func (e *EvaluatorServiceImpl) publishEvaluatorResumeEvent(ctx context.Context, 
 			case <-timer.C:
 			}
 		}
-		lastErr = e.exptEventPublisher.PublishExptRecordEvalEvent(ctx, event, gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
+		lastErr = e.exptEventPublisher.PublishExptRecordEvalEvent(ctx, event.Clone(), gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
 			event.AsyncEvaluatorReportTrigger = true
 		})
 		if lastErr == nil {

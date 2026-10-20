@@ -5,6 +5,8 @@ package entity
 
 import (
 	"context"
+	"maps"
+	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/ctxcache"
 )
@@ -35,12 +37,21 @@ type ctxCentralQuotaHeldKey struct{}
 // ctxCentralAdmittedExptKey 见 WithCtxCentralAdmittedExpt。
 type ctxCentralAdmittedExptKey struct{}
 
+// ExptResumeSource identifies the original invocation, independently of scheduling retries.
+type ExptResumeSource struct {
+	Kind     string
+	TurnID   int64
+	InvokeID string
+	RecordID int64
+}
+
 type ExptItemEvalEvent struct {
-	RequestID   string `json:",omitempty"`
-	SpaceID     int64
-	ExptID      int64
-	ExptRunID   int64
-	ExptRunMode ExptRunMode
+	RequestID    string            `json:",omitempty"`
+	ResumeSource *ExptResumeSource `json:",omitempty"`
+	SpaceID      int64
+	ExptID       int64
+	ExptRunID    int64
+	ExptRunMode  ExptRunMode
 
 	EvalSetItemID               int64
 	AsyncReportTrigger          bool
@@ -51,6 +62,35 @@ type ExptItemEvalEvent struct {
 	MaxRetryTimes int
 	Ext           map[string]string
 	Session       *Session
+}
+
+// Clone preserves the event contract and copies every mutable field. Session and
+// ResumeSource contain only scalar values; Ext is the event's only collection.
+func (e *ExptItemEvalEvent) Clone() *ExptItemEvalEvent {
+	if e == nil {
+		return nil
+	}
+	cloned := *e
+	cloned.Ext = maps.Clone(e.Ext)
+	if e.Session != nil {
+		session := *e.Session
+		cloned.Session = &session
+	}
+	if e.ResumeSource != nil {
+		source := *e.ResumeSource
+		cloned.ResumeSource = &source
+	}
+	return &cloned
+}
+
+func (e *ExptItemEvalEvent) CloneWithResumeSource(kind string, recordID, turnID int64) *ExptItemEvalEvent {
+	cloned := e.Clone()
+	if cloned != nil {
+		cloned.ResumeSource = &ExptResumeSource{
+			Kind: kind, TurnID: turnID, InvokeID: strconv.FormatInt(recordID, 10), RecordID: recordID,
+		}
+	}
+	return cloned
 }
 
 func (e *ExptItemEvalEvent) WithCtxForceNoRetry(ctx context.Context) {

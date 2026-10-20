@@ -781,6 +781,25 @@ type EvalAsyncCtx struct {
 	ApplicationID string
 }
 
+// Clone isolates the saved event, reporting session and optional trajectory flag
+// without serializing away any of the existing AsyncCtx fields.
+func (e *EvalAsyncCtx) Clone() *EvalAsyncCtx {
+	if e == nil {
+		return nil
+	}
+	cloned := *e
+	cloned.Event = e.Event.Clone()
+	if e.Session != nil {
+		session := *e.Session
+		cloned.Session = &session
+	}
+	if e.EnableExtractTrajectory != nil {
+		enabled := *e.EnableExtractTrajectory
+		cloned.EnableExtractTrajectory = &enabled
+	}
+	return &cloned
+}
+
 func (e *ExptExecConf) IsRunningRetryEnabled() bool {
 	return e != nil && e.RunningRetryEnabled != nil && *e.RunningRetryEnabled
 }

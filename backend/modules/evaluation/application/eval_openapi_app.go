@@ -39,6 +39,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -1361,7 +1362,15 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	e.emitSandboxAgentInvokeFinished(ctx, req, actx)
 
 	if actx.Event != nil {
-		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(req.GetWorkspaceID())+time.Second*35),
+		record, err := e.targetSvc.GetRecordByID(contexts.WithCtxWriteDB(ctx), req.GetWorkspaceID(), req.GetInvokeID())
+		if err != nil {
+			return nil, err
+		}
+		if record == nil || record.ID != req.GetInvokeID() || record.TurnID <= 0 {
+			return nil, errorx.New("target resume source unavailable, invoke_id: %v", req.GetInvokeID())
+		}
+		event := actx.Event.CloneWithResumeSource("target", record.ID, record.TurnID)
+		if err := e.publisher.PublishExptRecordEvalEvent(ctx, event, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(req.GetWorkspaceID())+time.Second*35),
 			func(event *entity.ExptItemEvalEvent) {
 				event.AsyncReportTrigger = true
 			}); err != nil {
@@ -3793,6 +3802,8 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	}
 	var resumeErr error
 	if actx.Event != nil {
+		// The reread below refreshes readiness, never the invocation's scheduling identity.
+		resumeEvent := actx.Event.Clone()
 		if !actx.ResumeReady {
 			latestCtx, ctxErr := e.asyncRepo.GetEvalAsyncCtxStrong(ctx, asyncCtxKey)
 			if ctxErr != nil {
@@ -3805,7 +3816,18 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 		if !actx.ResumeReady {
 			resumeErr = errorx.New("evaluator resume is not ready, invoke_id: %v", req.GetInvokeID())
 		} else {
-			if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
+			record, err := e.evaluatorRecordService.GetEvaluatorRecord(contexts.WithCtxWriteDB(ctx), req.GetInvokeID(), false)
+			if err != nil {
+				return nil, err
+			}
+			if record == nil || record.ID != req.GetInvokeID() || record.TurnID <= 0 {
+				return nil, errorx.New("evaluator resume source unavailable, invoke_id: %v", req.GetInvokeID())
+			}
+			if record.Status == entity.EvaluatorRunStatusAsyncInvoking {
+				return nil, errorx.New("evaluator record is still invoking, invoke_id: %v", req.GetInvokeID())
+			}
+			event := resumeEvent.CloneWithResumeSource("evaluator", record.ID, record.TurnID)
+			if err := e.publisher.PublishExptRecordEvalEvent(ctx, event, gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
 				event.AsyncEvaluatorReportTrigger = true
 			}); err != nil {
 				return nil, err

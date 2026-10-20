@@ -359,7 +359,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		return nil, err
 	}
 
-	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(targetRecord.ID, 10), &entity.EvalAsyncCtx{
+	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(targetRecord.ID, 10), (&entity.EvalAsyncCtx{
 		Event:                   etec.Event,
 		RecordID:                targetRecord.ID,
 		AsyncUnixMS:             ts.UnixMilli(),
@@ -373,7 +373,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		DatasetKey:              pickDatasetKey(etec),
 		AgentName:               pickAgentName(etec),
 		ApplicationID:           pickApplicationID(etec),
-	}); err != nil {
+	}).Clone()); err != nil {
 		return nil, err
 	}
 
@@ -997,12 +997,12 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluatorWithAlias(
 		EvaluatorRunConf:   runConf,
 		Alias:              alias,
 		SourceType:         entity.EvaluatorRecordSourceTypeBuiltin,
-		AsyncCtx: &entity.EvalAsyncCtx{
+		AsyncCtx: (&entity.EvalAsyncCtx{
 			Event:              etec.Event,
 			Session:            etec.Event.Session,
 			EvaluatorVersionID: ev.GetEvaluatorVersionID(),
 			ResumeReady:        false,
-		},
+		}).Clone(),
 	})
 	if evaluatorRecord != nil {
 		collector.store(evaluatorRecord)
@@ -1034,12 +1034,12 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 		TurnID:             etec.Turn.ID,
 		Ext:                etec.Ext,
 		EvaluatorRunConf:   ec.RunConf,
-		AsyncCtx: &entity.EvalAsyncCtx{
+		AsyncCtx: (&entity.EvalAsyncCtx{
 			Event:              etec.Event,
 			Session:            etec.Event.Session,
 			EvaluatorVersionID: ev.GetEvaluatorVersionID(),
 			ResumeReady:        false,
-		},
+		}).Clone(),
 	}
 	evaluatorRecord, err := e.evaluatorService.AsyncRunEvaluator(ctx, asyncReq)
 	if evaluatorRecord != nil {
