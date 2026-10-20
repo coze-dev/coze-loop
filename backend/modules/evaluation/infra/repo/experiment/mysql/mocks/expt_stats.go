@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	db "github.com/coze-dev/coze-loop/backend/infra/db"
 	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	model "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	gomock "go.uber.org/mock/gomock"
@@ -43,17 +44,22 @@ func (m *MockIExptStatsDAO) EXPECT() *MockIExptStatsDAOMockRecorder {
 }
 
 // ArithOperateCount mocks base method.
-func (m *MockIExptStatsDAO) ArithOperateCount(ctx context.Context, exptID, spaceID int64, cntArithOp *entity.StatsCntArithOp) error {
+func (m *MockIExptStatsDAO) ArithOperateCount(ctx context.Context, exptID, spaceID int64, cntArithOp *entity.StatsCntArithOp, opts ...db.Option) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ArithOperateCount", ctx, exptID, spaceID, cntArithOp)
+	varargs := []any{ctx, exptID, spaceID, cntArithOp}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ArithOperateCount", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ArithOperateCount indicates an expected call of ArithOperateCount.
-func (mr *MockIExptStatsDAOMockRecorder) ArithOperateCount(ctx, exptID, spaceID, cntArithOp any) *gomock.Call {
+func (mr *MockIExptStatsDAOMockRecorder) ArithOperateCount(ctx, exptID, spaceID, cntArithOp any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArithOperateCount", reflect.TypeOf((*MockIExptStatsDAO)(nil).ArithOperateCount), ctx, exptID, spaceID, cntArithOp)
+	varargs := append([]any{ctx, exptID, spaceID, cntArithOp}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArithOperateCount", reflect.TypeOf((*MockIExptStatsDAO)(nil).ArithOperateCount), varargs...)
 }
 
 // Create mocks base method.
@@ -71,18 +77,23 @@ func (mr *MockIExptStatsDAOMockRecorder) Create(ctx, stats any) *gomock.Call {
 }
 
 // Get mocks base method.
-func (m *MockIExptStatsDAO) Get(ctx context.Context, exptID, spaceID int64) (*model.ExptStats, error) {
+func (m *MockIExptStatsDAO) Get(ctx context.Context, exptID, spaceID int64, opts ...db.Option) (*model.ExptStats, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, exptID, spaceID)
+	varargs := []any{ctx, exptID, spaceID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Get", varargs...)
 	ret0, _ := ret[0].(*model.ExptStats)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockIExptStatsDAOMockRecorder) Get(ctx, exptID, spaceID any) *gomock.Call {
+func (mr *MockIExptStatsDAOMockRecorder) Get(ctx, exptID, spaceID any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIExptStatsDAO)(nil).Get), ctx, exptID, spaceID)
+	varargs := append([]any{ctx, exptID, spaceID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIExptStatsDAO)(nil).Get), varargs...)
 }
 
 // MGet mocks base method.
@@ -115,15 +126,20 @@ func (mr *MockIExptStatsDAOMockRecorder) Save(ctx, stats any) *gomock.Call {
 }
 
 // UpdateByExptID mocks base method.
-func (m *MockIExptStatsDAO) UpdateByExptID(ctx context.Context, exptID, spaceID int64, stats *model.ExptStats) error {
+func (m *MockIExptStatsDAO) UpdateByExptID(ctx context.Context, exptID, spaceID int64, stats *model.ExptStats, opts ...db.Option) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateByExptID", ctx, exptID, spaceID, stats)
+	varargs := []any{ctx, exptID, spaceID, stats}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateByExptID", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateByExptID indicates an expected call of UpdateByExptID.
-func (mr *MockIExptStatsDAOMockRecorder) UpdateByExptID(ctx, exptID, spaceID, stats any) *gomock.Call {
+func (mr *MockIExptStatsDAOMockRecorder) UpdateByExptID(ctx, exptID, spaceID, stats any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateByExptID", reflect.TypeOf((*MockIExptStatsDAO)(nil).UpdateByExptID), ctx, exptID, spaceID, stats)
+	varargs := append([]any{ctx, exptID, spaceID, stats}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateByExptID", reflect.TypeOf((*MockIExptStatsDAO)(nil).UpdateByExptID), varargs...)
 }

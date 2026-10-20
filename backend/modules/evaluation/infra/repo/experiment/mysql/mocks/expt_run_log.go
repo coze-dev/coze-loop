@@ -42,6 +42,20 @@ func (m *MockIExptRunLogDAO) EXPECT() *MockIExptRunLogDAOMockRecorder {
 	return m.recorder
 }
 
+// AppendRunItemIDs mocks base method.
+func (m *MockIExptRunLogDAO) AppendRunItemIDs(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDs []int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AppendRunItemIDs", ctx, exptID, exptRunID, spaceID, itemIDs)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AppendRunItemIDs indicates an expected call of AppendRunItemIDs.
+func (mr *MockIExptRunLogDAOMockRecorder) AppendRunItemIDs(ctx, exptID, exptRunID, spaceID, itemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendRunItemIDs", reflect.TypeOf((*MockIExptRunLogDAO)(nil).AppendRunItemIDs), ctx, exptID, exptRunID, spaceID, itemIDs)
+}
+
 // Create mocks base method.
 func (m *MockIExptRunLogDAO) Create(ctx context.Context, exptRunLog *model.ExptRunLog, opts ...db.Option) error {
 	m.ctrl.T.Helper()
@@ -117,4 +131,18 @@ func (mr *MockIExptRunLogDAOMockRecorder) Update(ctx, exptID, exptRunID, spaceID
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, exptID, exptRunID, spaceID, ufields}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockIExptRunLogDAO)(nil).Update), varargs...)
+}
+
+// UpdateRunStats mocks base method.
+func (m *MockIExptRunLogDAO) UpdateRunStats(ctx context.Context, exptID, exptRunID, spaceID int64, fields map[string]any, stats *model.ExptStats) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateRunStats", ctx, exptID, exptRunID, spaceID, fields, stats)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateRunStats indicates an expected call of UpdateRunStats.
+func (mr *MockIExptRunLogDAOMockRecorder) UpdateRunStats(ctx, exptID, exptRunID, spaceID, fields, stats any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRunStats", reflect.TypeOf((*MockIExptRunLogDAO)(nil).UpdateRunStats), ctx, exptID, exptRunID, spaceID, fields, stats)
 }

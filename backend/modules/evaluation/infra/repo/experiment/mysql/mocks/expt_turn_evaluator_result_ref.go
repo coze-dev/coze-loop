@@ -62,6 +62,25 @@ func (mr *MockIExptTurnEvaluatorResultRefDAOMockRecorder) BatchGet(ctx, spaceID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGet", reflect.TypeOf((*MockIExptTurnEvaluatorResultRefDAO)(nil).BatchGet), varargs...)
 }
 
+// DeleteByTurnResultIDs mocks base method.
+func (m *MockIExptTurnEvaluatorResultRefDAO) DeleteByTurnResultIDs(ctx context.Context, spaceID, exptID int64, turnResultIDs, keepRefIDs []int64, opts ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, spaceID, exptID, turnResultIDs, keepRefIDs}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteByTurnResultIDs", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteByTurnResultIDs indicates an expected call of DeleteByTurnResultIDs.
+func (mr *MockIExptTurnEvaluatorResultRefDAOMockRecorder) DeleteByTurnResultIDs(ctx, spaceID, exptID, turnResultIDs, keepRefIDs any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, spaceID, exptID, turnResultIDs, keepRefIDs}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByTurnResultIDs", reflect.TypeOf((*MockIExptTurnEvaluatorResultRefDAO)(nil).DeleteByTurnResultIDs), varargs...)
+}
+
 // GetByExptEvaluatorVersionID mocks base method.
 func (m *MockIExptTurnEvaluatorResultRefDAO) GetByExptEvaluatorVersionID(ctx context.Context, spaceID, exptID, evaluatorVersionID int64, opts ...db.Option) ([]*model.ExptTurnEvaluatorResultRef, error) {
 	m.ctrl.T.Helper()
