@@ -4,6 +4,7 @@ package mysql
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -15,6 +16,9 @@ import (
 
 	dbmock "github.com/coze-dev/coze-loop/backend/infra/db/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	loopjson "github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
 func TestManualRetryReceiptBizBoundary(t *testing.T) {
@@ -47,4 +51,77 @@ func TestManualRetryReceiptDBErrorRetainsCause(t *testing.T) {
 	_, ok := kerrors.FromBizStatusError(err)
 	require.False(t, ok)
 	require.NoError(t, source.ExpectationsWereMet())
+}
+
+func TestOrdinaryRunLogConversionCapacity(t *testing.T) {
+	ids := make([]int64, 4000)
+	for i := range ids {
+		ids[i] = 9223372036854700000 + int64(i)
+	}
+	_, err := convert.NewExptRunLogConvertor().DO2PO(&entity.ExptRunLog{ItemIds: []entity.ExptRunLogItems{{ItemIDs: ids}}})
+	require.Error(t, err)
+	_, ok := kerrors.FromBizStatusError(err)
+	require.False(t, ok, "ordinary Create/Save conversion must not produce a manual retry business error")
+}
+
+func TestRunLogCapacityMySQLBoundaries(t *testing.T) {
+	for _, operation := range []string{"preflight", "requeue", "ordinary_append"} {
+		for _, kind := range []string{"capacity", "corrupt"} {
+			t.Run(operation+"/"+kind, func(t *testing.T) {
+				f := newManualRetryFixture(t)
+				req := f.request(entity.EvaluationModeRetryItems)
+				raw := []byte(`[{"ItemIDs":[11],"padding":"` + strings.Repeat("x", 65420) + `","future_id":9223372036854775806}]`)
+				if kind == "corrupt" {
+					raw = []byte(`{`)
+				}
+				require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("id=?", f.run).Update("item_ids", raw).Error)
+				before := f.snapshot()
+				var err error
+				switch operation {
+				case "preflight":
+					plan, callErr := f.port.PreflightTerminalItems(context.Background(), req)
+					err = callErr
+					require.Nil(t, plan)
+				case "requeue":
+					receipt, callErr := f.port.RequeueTerminalItems(context.Background(), req)
+					err = callErr
+					require.Nil(t, receipt)
+				case "ordinary_append":
+					ids := make([]int64, 20)
+					for i := range ids {
+						ids[i] = 9223372036854700000 + int64(i)
+					}
+					err = NewExptRunLogDAO(f.provider).AppendRunItemIDs(context.Background(), f.expt, f.run, f.space, ids)
+				}
+				require.Error(t, err)
+				require.Equal(t, before, f.snapshot(), "capacity/corruption must leave all fixture tables unchanged")
+				biz, ok := kerrors.FromBizStatusError(err)
+				if kind == "capacity" && operation != "ordinary_append" {
+					require.True(t, ok)
+					require.Equal(t, int32(601204104), biz.BizStatusCode())
+				} else {
+					require.False(t, ok)
+				}
+				if kind == "capacity" {
+					require.ErrorIs(t, err, entity.ErrExptRunLogItemsCapacity)
+				}
+				if kind == "corrupt" {
+					require.NotErrorIs(t, err, entity.ErrExptRunLogItemsCapacity)
+					if operation == "ordinary_append" {
+						var chunks []entity.ExptRunLogItems
+						expected := loopjson.Unmarshal(raw, &chunks)
+						cause := err
+						for errors.Unwrap(cause) != nil {
+							cause = errors.Unwrap(cause)
+						}
+						require.IsType(t, expected, cause)
+						require.Equal(t, expected.Error(), cause.Error())
+					} else {
+						var cause *json.SyntaxError
+						require.ErrorAs(t, err, &cause)
+					}
+				}
+			})
+		}
+	}
 }

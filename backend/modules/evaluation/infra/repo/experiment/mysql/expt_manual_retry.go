@@ -242,6 +242,9 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 		}
 		chunks = append(chunks, entity.ExptRunLogItems{CreateAt: gptr.Of(time.Now().Unix()), ManualRetryReceipt: receipt})
 		encoded, err := entity.EncodeExptRunLogItems(chunks)
+		if errors.Is(err, entity.ErrExptRunLogItemsCapacity) {
+			return errorx.WrapByCode(err, errno.ManualRetryCapacityCode, errorx.WithExtraMsg(err.Error()))
+		}
 		if err != nil {
 			return err
 		}
@@ -706,6 +709,9 @@ func (d *ExptManualRetryDAOImpl) PreflightTerminalItems(ctx context.Context, req
 		}
 		chunks = append(chunks, entity.ExptRunLogItems{CreateAt: gptr.Of(time.Now().Unix()), ManualRetryReceipt: &entity.ManualRetryReceipt{RequestID: request.RequestID, PayloadHash: request.PayloadHash, SnapshotAtMS: request.SnapshotAtMS, AcceptedCount: 2147483647, RejectedItems: worstRejected}})
 		_, err = entity.EncodeExptRunLogItems(chunks)
+		if errors.Is(err, entity.ErrExptRunLogItemsCapacity) {
+			return errorx.WrapByCode(err, errno.ManualRetryCapacityCode, errorx.WithExtraMsg(err.Error()))
+		}
 		return err
 	}, db.WithMaster())
 	if err != nil {
