@@ -93,6 +93,8 @@ func NewExptResultService(
 }
 
 type ExptResultServiceImpl struct {
+	resultPublishRepo        repo.IExptResultPublishRepo
+	resultPublishLocker      ManualRetryLockerFactory
 	ExptItemResultRepo       repo.IExptItemResultRepo
 	ExptTurnResultRepo       repo.IExptTurnResultRepo
 	ExptStatsRepo            repo.IExptStatsRepo
@@ -156,6 +158,27 @@ func (e ExptResultServiceImpl) GetExptItemTurnResults(ctx context.Context, exptI
 }
 
 func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expt *entity.Experiment) ([]*entity.ExptTurnEvaluatorResultRef, error) {
+	if e.resultPublishRepo != nil {
+		source, err := e.GetItemResultPublishSource(ctx, spaceID, exptID, exptRunID, itemID)
+		if err != nil {
+			return nil, err
+		}
+		if !publicationReady(source) {
+			return nil, nil
+		}
+		publication, err := e.PrepareItemResultPublication(ctx, source, expt)
+		if err != nil {
+			return nil, err
+		}
+		applied, err := e.PublishPreparedItemResult(ctx, publication, nil)
+		if err != nil || !applied {
+			return nil, err
+		}
+		return publication.Refs, nil
+	}
+	if _, actual := e.ExptItemResultRepo.(repo.IExptCurrentResultRepo); actual {
+		return nil, errno.NewMQRetryErr("real result repository missing atomic publication wiring")
+	}
 	itemRunLog, err := e.ExptItemResultRepo.GetItemRunLog(ctx, exptID, exptRunID, itemID, spaceID)
 	if err != nil {
 		return nil, err

@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/infra/lock"
+
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 
 	"github.com/stretchr/testify/assert"
@@ -362,6 +364,7 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 		publisher          *eventmocks.MockExptEventPublisher
 		metric             *metricsmocks.MockExptMetric
 		resultSvc          *svcmocks.MockExptResultService
+		mutex              *lockmocks.MockILocker
 	}
 
 	type args struct {
@@ -402,9 +405,10 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 				},
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) { // Modification: add ctrl parameter
-				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				f.exptItemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{}, nil).AnyTimes()
+				f.mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, args.ctx, func() {}, nil)
+				f.mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				f.exptItemResultRepo.EXPECT().GetCurrentRequest(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, int64(3)).Return(&entity.ExptItemCurrentRequest{RunID: args.event.ExptRunID, ItemID: 3, Status: entity.ItemRunState_Queueing, Mode: entity.EvaluationModeSubmit}, nil)
+				f.exptItemResultRepo.EXPECT().MarkProcessingIfCurrent(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, int64(3), "").Return(true, nil)
 				f.exptTurnResultRepo.EXPECT().UpdateTurnResultsWithItemIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.exptTurnResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{}, nil).AnyTimes()
 				f.publisher.EXPECT().BatchPublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -439,6 +443,7 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 				publisher:          eventmocks.NewMockExptEventPublisher(ctrl),
 				metric:             metricsmocks.NewMockExptMetric(ctrl),
 				resultSvc:          svcmocks.NewMockExptResultService(ctrl),
+				mutex:              lockmocks.NewMockILocker(ctrl),
 			}
 
 			if tt.prepareMock != nil {
@@ -453,6 +458,7 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 				Publisher:          f.publisher,
 				Metric:             f.metric,
 				ResultSvc:          f.resultSvc,
+				itemLocker:         func() lock.ILocker { return f.mutex },
 			}
 
 			err := svc.handleToSubmits(tt.args.ctx, tt.args.event, tt.args.toSubmits)
@@ -2906,7 +2912,11 @@ func TestExptSchedulerImpl_handleToSubmits_BackfillRetryTimes(t *testing.T) {
 	metric := metricsmocks.NewMockExptMetric(ctrl)
 	resultSvc := svcmocks.NewMockExptResultService(ctrl)
 
+	mutex := lockmocks.NewMockILocker(ctrl)
+	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil).Times(2)
+	mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).Times(2)
 	svc := &ExptSchedulerImpl{
+		itemLocker:         func() lock.ILocker { return mutex },
 		ExptItemResultRepo: itemRepo,
 		ExptTurnResultRepo: turnRepo,
 		ExptStatsRepo:      statsRepo,
@@ -2923,19 +2933,18 @@ func TestExptSchedulerImpl_handleToSubmits_BackfillRetryTimes(t *testing.T) {
 	var captured []*entity.ExptItemEvalEvent
 	publisher.EXPECT().BatchPublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, events []*entity.ExptItemEvalEvent, _ *time.Duration) error {
-			captured = events
+			captured = append(captured, events...)
 			return nil
-		})
-	itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	itemRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{}, nil)
-	turnRepo.EXPECT().UpdateTurnResultsWithItemIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	statsRepo.EXPECT().ArithOperateCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	metric.EXPECT().EmitItemExecEval(gomock.Any(), gomock.Any(), gomock.Any())
+		}).Times(2)
+	for _, source := range []*entity.ExptItemCurrentRequest{{RunID: 2, ItemID: 10, Mode: entity.EvaluationModeSubmit, Status: entity.ItemRunState_Queueing, RetryTimes: 0}, {RunID: 2, ItemID: 11, Mode: entity.EvaluationModeSubmit, Status: entity.ItemRunState_Queueing, RetryTimes: 3}} {
+		itemRepo.EXPECT().GetCurrentRequest(gomock.Any(), int64(3), int64(1), int64(2), source.ItemID).Return(source, nil)
+		itemRepo.EXPECT().MarkProcessingIfCurrent(gomock.Any(), int64(3), int64(1), int64(2), source.ItemID, "").Return(true, nil)
+	}
+	resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+	metric.EXPECT().EmitItemExecEval(gomock.Any(), gomock.Any(), gomock.Any()).Times(2)
 
 	event := &entity.ExptScheduleEvent{
-		ExptID: 1, ExptRunID: 2, SpaceID: 3, ItemRetryTimes: 5,
+		ExptID: 1, ExptRunID: 2, SpaceID: 3, ItemRetryTimes: 5, ExptRunMode: entity.EvaluationModeSubmit,
 		Ext: map[string]string{entity.RetryYieldExtKey: "true"},
 	}
 	toSubmits := []*entity.ExptEvalItem{

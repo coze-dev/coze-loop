@@ -377,7 +377,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventLock(t *testing.T) {
 					Return(false, nil, nil, nil)
 			},
 			event:   &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3},
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "Acquire lock failed - error",

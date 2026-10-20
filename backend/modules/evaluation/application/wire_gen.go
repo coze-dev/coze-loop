@@ -157,10 +157,12 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	evaluationSetItemService := service.NewEvaluationSetItemServiceImpl(iDatasetRPCAdapter)
 	iEvaluationAnalysisService := service.NewEvaluationAnalysisService()
 	iFileProvider := foundation.NewFileRPCProvider(fileClient)
+	iExptResultPublishRepo := experiment.NewExptResultPublishRepo(db2)
+	manualRetryLockerFactory := NewManualRetryLockerFactory(cmdable)
 	iExptItemRefDAO := mysql.NewExptItemRefDAO(db2)
 	iExptItemRefRepo := experiment.NewExptItemRefRepo(iExptItemRefDAO)
 	v3 := service.ProvideExptItemRefRepos(iExptItemRefRepo)
-	exptResultService := service.NewExptResultService(iExptItemResultRepo, iExptTurnResultRepo, iExptAnnotateRepo, iExptStatsRepo, iExperimentRepo, exptMetric, iLatestWriteTracker, idgen2, iExptTurnResultFilterRepo, serviceEvaluatorService, iEvalTargetService, iEvalTargetRepo, evaluationSetVersionService, iEvaluationSetService, evaluatorRecordService, evaluationSetItemService, exptEventPublisher, iTagRPCAdapter, iEvaluationAnalysisService, iFileProvider, iEvaluatorScoreCalculator, v3...)
+	exptResultService := service.NewExptResultServiceWithPublication(iExptItemResultRepo, iExptTurnResultRepo, iExptAnnotateRepo, iExptStatsRepo, iExperimentRepo, exptMetric, iLatestWriteTracker, idgen2, iExptTurnResultFilterRepo, serviceEvaluatorService, iEvalTargetService, iEvalTargetRepo, evaluationSetVersionService, iEvaluationSetService, evaluatorRecordService, evaluationSetItemService, exptEventPublisher, iTagRPCAdapter, iEvaluationAnalysisService, iFileProvider, iEvaluatorScoreCalculator, iExptResultPublishRepo, manualRetryLockerFactory, v3...)
 	iQuotaDAO := dao.NewQuotaDAO(cmdable)
 	quotaRepo := experiment.NewQuotaService(iQuotaDAO, iLocker)
 	iExptTemplateDAO := mysql.NewExptTemplateDAO(db2)
@@ -179,7 +181,9 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	iCentralSchedulerScopeProvider := component.NewNoopCentralSchedulerScopeProvider()
 	iCentralAdmissionPolicy := component.NewNoopCentralAdmissionPolicy()
 	iCentralReservationGuard := component.NewNoopCentralReservationGuard()
-	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, componentIConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, serviceEvaluatorService, benefitSvc, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics, iCentralSchedulerScopeProvider, iCentralAdmissionPolicy, iCentralReservationGuard)
+	iExptManualRetryRepo := experiment.NewExptManualRetryRepo(db2, idgen2)
+	iCurrentRunSchedulerWaker := component.NewNoopCurrentRunSchedulerWaker()
+	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, componentIConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, serviceEvaluatorService, benefitSvc, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics, iCentralSchedulerScopeProvider, iCentralAdmissionPolicy, iCentralReservationGuard, iExptManualRetryRepo, evaluatorRecordService, iCurrentRunSchedulerWaker, manualRetryLockerFactory)
 	v4 := service.ProvideNoSandboxAgentNotifiers()
 	schedulerModeFactory := service.NewSchedulerModeFactory(iExptManager, iExptItemResultRepo, iExptStatsRepo, iExptTurnResultRepo, idgen2, evaluationSetItemService, iExperimentRepo, iExptItemRefRepo, idempotentService, componentIConfiger, exptEventPublisher, evaluatorRecordService, exptResultService, iExptTemplateManager, iExptRunLogRepo, iLocker, v4...)
 	iItemCompletePublisher := service.ProvideNilItemCompletePublisher()
@@ -290,10 +294,12 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	evaluationSetItemService := service.NewEvaluationSetItemServiceImpl(iDatasetRPCAdapter)
 	iTagRPCAdapter := tag.NewTagRPCProvider(tagClient)
 	iEvaluationAnalysisService := service.NewEvaluationAnalysisService()
+	iExptResultPublishRepo := experiment.NewExptResultPublishRepo(db2)
+	manualRetryLockerFactory := NewManualRetryLockerFactory(cmdable)
 	iExptItemRefDAO := mysql.NewExptItemRefDAO(db2)
 	iExptItemRefRepo := experiment.NewExptItemRefRepo(iExptItemRefDAO)
 	v3 := service.ProvideExptItemRefRepos(iExptItemRefRepo)
-	exptResultService := service.NewExptResultService(iExptItemResultRepo, iExptTurnResultRepo, iExptAnnotateRepo, iExptStatsRepo, iExperimentRepo, exptMetric, iLatestWriteTracker, idgen2, iExptTurnResultFilterRepo, evaluatorService, iEvalTargetService, iEvalTargetRepo, evaluationSetVersionService, iEvaluationSetService, evaluatorRecordService, evaluationSetItemService, exptEventPublisher, iTagRPCAdapter, iEvaluationAnalysisService, iFileProvider, iEvaluatorScoreCalculator, v3...)
+	exptResultService := service.NewExptResultServiceWithPublication(iExptItemResultRepo, iExptTurnResultRepo, iExptAnnotateRepo, iExptStatsRepo, iExperimentRepo, exptMetric, iLatestWriteTracker, idgen2, iExptTurnResultFilterRepo, evaluatorService, iEvalTargetService, iEvalTargetRepo, evaluationSetVersionService, iEvaluationSetService, evaluatorRecordService, evaluationSetItemService, exptEventPublisher, iTagRPCAdapter, iEvaluationAnalysisService, iFileProvider, iEvaluatorScoreCalculator, iExptResultPublishRepo, manualRetryLockerFactory, v3...)
 	evaluationEvaluatorService := NewEvaluatorHandlerImpl(idgen2, iConfiger, iAuthProvider, evaluatorService, evaluatorRecordService, evaluatorTemplateService, evaluatorExecMetrics, userInfoService, auditClient, benefitSvc, iFileProvider, v, exptResultService, iEvalAsyncRepo)
 	return evaluationEvaluatorService, nil
 }
@@ -348,7 +354,7 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	return evalTargetService, nil
 }
 
-func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, dataClient datasetservice.Client, userClient userservice.Client, llmClient llmruntimeservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, auditClient audit.IAuditService, benefitService benefit.IBenefitService, ckProvider ck.Provider, plainLimiterFactory limiter.IPlainRateLimiterFactory, trajectoryAdapter rpc.ITrajectoryAdapter, fileClient fileservice.Client, taskClientFactory func() taskservice.Client, scheduleAdapter rpc.IExptScheduleAdapter) (evaluation.EvalOpenAPIService, error) {
+func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, dataClient datasetservice.Client, userClient userservice.Client, llmClient llmruntimeservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, auditClient audit.IAuditService, benefitService benefit.IBenefitService, ckProvider ck.Provider, plainLimiterFactory limiter.IPlainRateLimiterFactory, trajectoryAdapter rpc.ITrajectoryAdapter, fileClient fileservice.Client, taskClientFactory func() taskservice.Client, scheduleAdapter rpc.IExptScheduleAdapter) (IEvalOpenAPIApplication, error) {
 	iConfiger, err := conf2.NewConfiger(configFactory)
 	if err != nil {
 		return nil, err
@@ -435,10 +441,12 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	iExptTurnResultFilterRepo := experiment.NewExptTurnResultFilterRepo(iExptTurnResultFilterDAO, iExptTurnResultFilterKeyMappingDAO)
 	iEvaluationAnalysisService := service.NewEvaluationAnalysisService()
 	iFileProvider := foundation.NewFileRPCProvider(fileClient)
+	iExptResultPublishRepo := experiment.NewExptResultPublishRepo(db2)
+	manualRetryLockerFactory := NewManualRetryLockerFactory(cmdable)
 	iExptItemRefDAO := mysql.NewExptItemRefDAO(db2)
 	iExptItemRefRepo := experiment.NewExptItemRefRepo(iExptItemRefDAO)
 	v3 := service.ProvideExptItemRefRepos(iExptItemRefRepo)
-	exptResultService := service.NewExptResultService(iExptItemResultRepo, iExptTurnResultRepo, iExptAnnotateRepo, iExptStatsRepo, iExperimentRepo, exptMetric, iLatestWriteTracker, idgen2, iExptTurnResultFilterRepo, evaluatorService, iEvalTargetService, iEvalTargetRepo, evaluationSetVersionService, iEvaluationSetService, evaluatorRecordService, evaluationSetItemService, exptEventPublisher, iTagRPCAdapter, iEvaluationAnalysisService, iFileProvider, iEvaluatorScoreCalculator, v3...)
+	exptResultService := service.NewExptResultServiceWithPublication(iExptItemResultRepo, iExptTurnResultRepo, iExptAnnotateRepo, iExptStatsRepo, iExperimentRepo, exptMetric, iLatestWriteTracker, idgen2, iExptTurnResultFilterRepo, evaluatorService, iEvalTargetService, iEvalTargetRepo, evaluationSetVersionService, iEvaluationSetService, evaluatorRecordService, evaluationSetItemService, exptEventPublisher, iTagRPCAdapter, iEvaluationAnalysisService, iFileProvider, iEvaluatorScoreCalculator, iExptResultPublishRepo, manualRetryLockerFactory, v3...)
 	iQuotaDAO := dao.NewQuotaDAO(cmdable)
 	quotaRepo := experiment.NewQuotaService(iQuotaDAO, iLocker)
 	iExptTemplateDAO := mysql.NewExptTemplateDAO(db2)
@@ -456,7 +464,9 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	iCentralSchedulerScopeProvider := component.NewNoopCentralSchedulerScopeProvider()
 	iCentralAdmissionPolicy := component.NewNoopCentralAdmissionPolicy()
 	iCentralReservationGuard := component.NewNoopCentralReservationGuard()
-	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, iConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, evaluatorService, benefitService, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics, iCentralSchedulerScopeProvider, iCentralAdmissionPolicy, iCentralReservationGuard)
+	iExptManualRetryRepo := experiment.NewExptManualRetryRepo(db2, idgen2)
+	iCurrentRunSchedulerWaker := component.NewNoopCurrentRunSchedulerWaker()
+	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, iConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, evaluatorService, benefitService, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics, iCentralSchedulerScopeProvider, iCentralAdmissionPolicy, iCentralReservationGuard, iExptManualRetryRepo, evaluatorRecordService, iCurrentRunSchedulerWaker, manualRetryLockerFactory)
 	v4 := service.ProvideNoSandboxAgentNotifiers()
 	schedulerModeFactory := service.NewSchedulerModeFactory(iExptManager, iExptItemResultRepo, iExptStatsRepo, iExptTurnResultRepo, idgen2, evaluationSetItemService, iExperimentRepo, iExptItemRefRepo, idempotentService, iConfiger, exptEventPublisher, evaluatorRecordService, exptResultService, iExptTemplateManager, iExptRunLogRepo, iLocker, v4...)
 	iItemCompletePublisher := service.ProvideNilItemCompletePublisher()
@@ -481,8 +491,8 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	exptLifecycleEventHandler := service.NewExptLifecycleEventHandler(iExperimentRepo, iNotifyRPCAdapter, iUserProvider, webhookDispatcher)
 	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, iConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, evaluatorService, iExptTemplateManager, iFileProvider, exptLifecycleEventHandler, sandboxSchedulerAdapter, sandboxAgentMetrics)
 	evaluatorCallbackDispatcher := service.NewEvaluatorCallbackDispatcher(noopWebhookSecretProvider)
-	evalOpenAPIService := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iEvalTargetRepo, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, sandboxAgentMetrics, userInfoService, iExperimentApplication, iExptManager, exptResultService, exptAggrResultService, evaluatorService, evaluatorRecordService, iExptTemplateManager, iConfiger, sandboxSchedulerAdapter, iFileProvider, evaluatorCallbackDispatcher, resourceAccessAuthorizer)
-	return evalOpenAPIService, nil
+	v5 := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iEvalTargetRepo, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, sandboxAgentMetrics, userInfoService, iExperimentApplication, iExptManager, exptResultService, exptAggrResultService, evaluatorService, evaluatorRecordService, iExptTemplateManager, iConfiger, sandboxSchedulerAdapter, iFileProvider, evaluatorCallbackDispatcher, resourceAccessAuthorizer)
+	return v5, nil
 }
 
 // wire.go:
@@ -492,11 +502,12 @@ var (
 
 	experimentSet = wire.NewSet(
 		NewExperimentApplication, service.ExperimentDomainServiceSet, service.EvaluationSetDomainServiceSet, service.TargetDomainServiceSet, service.EvaluatorDomainServiceSet, conf2.NewSharedResourceConfigProvider, service.NewResourceAccessAuthorizer, metrics2.ExperimentMetricsSet, metrics3.EvalTargetMetricsSet, sandbox_agent.SandboxAgentMetricsSet, http.NewHTTPClient, foundation.FoundationRPCSet, tag.TagRPCSet, agent.AgentRPCSet, notify.NotifyRPCSet, userinfo.NewUserInfoServiceImpl, NewLock,
+		NewManualRetryLockerFactory,
 		flagSet, service.NewDefaultURLProcessor, storage.StorageSet,
 	)
 
 	evaluatorSet = wire.NewSet(
-		NewEvaluatorHandlerImpl, service.EvaluatorDomainServiceSet, service.EvaluationSetDomainServiceSet, service.TargetDomainServiceSet, service.NewExptResultService, service.ProvideExptItemRefRepos, service.NewEvaluationAnalysisService, http.NewHTTPClient, foundation.FoundationRPCSet, tag.TagRPCSet, trajectory.TrajectoryRPCSet, userinfo.NewUserInfoServiceImpl, experiment.ExperimentRepoSet, metrics2.ExperimentMetricsSet, metrics3.EvalTargetMetricsSet, sandbox_agent.SandboxAgentMetricsSet, conf2.NewConfiger, flagSet, storage.StorageSet,
+		NewEvaluatorHandlerImpl, service.EvaluatorDomainServiceSet, service.EvaluationSetDomainServiceSet, service.TargetDomainServiceSet, service.NewExptResultServiceWithPublication, service.ProvideExptItemRefRepos, NewManualRetryLockerFactory, service.NewEvaluationAnalysisService, http.NewHTTPClient, foundation.FoundationRPCSet, tag.TagRPCSet, trajectory.TrajectoryRPCSet, userinfo.NewUserInfoServiceImpl, experiment.ExperimentRepoSet, metrics2.ExperimentMetricsSet, metrics3.EvalTargetMetricsSet, sandbox_agent.SandboxAgentMetricsSet, conf2.NewConfiger, flagSet, storage.StorageSet,
 	)
 
 	evaluationSetSet = wire.NewSet(

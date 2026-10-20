@@ -703,15 +703,15 @@ func TestCompleteItemRunOnUnretriableErr_TerminalNotOverwritten(t *testing.T) {
 // 该行已 Terminal → 返回 nil 且 **不进入** next（对应「排队中的行被终止后不再被调度」）。
 // 闸门优先级：实验级终态判定 > item 级 Terminal 判定 > 正常执行。
 func TestHandleEventCheck_ItemLevelTerminalGate(t *testing.T) {
-	event := &entity.ExptItemEvalEvent{SpaceID: 7, ExptID: 1001, ExptRunID: 2002, EvalSetItemID: 3003}
+	event := &entity.ExptItemEvalEvent{SpaceID: 7, ExptID: 1001, ExptRunID: 2002, EvalSetItemID: 3003, ExptRunMode: entity.EvaluationModeSubmit}
 
 	newSvc := func(ctrl *gomock.Controller, itemState entity.ItemRunState) (*ExptItemEventEvalServiceImpl, *bool) {
 		manager := svcMocks.NewMockIExptManager(ctrl)
 		manager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Processing)}, nil)
 		itemRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
-		itemRepo.EXPECT().GetItemRunLog(gomock.Any(), int64(1001), int64(2002), int64(3003), int64(7)).
-			Return(&entity.ExptItemResultRunLog{Status: int32(itemState)}, nil)
+		itemRepo.EXPECT().GetCurrentRequest(gomock.Any(), int64(7), int64(1001), int64(2002), int64(3003)).
+			Return(&entity.ExptItemCurrentRequest{RunID: 2002, Status: itemState, Mode: entity.EvaluationModeSubmit}, nil)
 		reached := false
 		return &ExptItemEventEvalServiceImpl{manager: manager, exptItemResultRepo: itemRepo}, &reached
 	}
@@ -721,7 +721,7 @@ func TestHandleEventCheck_ItemLevelTerminalGate(t *testing.T) {
 		defer ctrl.Finish()
 		svc, reached := newSvc(ctrl, entity.ItemRunState_Terminal)
 
-		err := svc.HandleEventCheck(func(context.Context, *entity.ExptItemEvalEvent) error {
+		err := RecordEvalChain(svc.HandleEventCheck, svc.HandleCurrentSource)(func(context.Context, *entity.ExptItemEvalEvent) error {
 			*reached = true
 			return nil
 		})(context.Background(), event)
@@ -735,7 +735,7 @@ func TestHandleEventCheck_ItemLevelTerminalGate(t *testing.T) {
 		defer ctrl.Finish()
 		svc, reached := newSvc(ctrl, entity.ItemRunState_Processing)
 
-		err := svc.HandleEventCheck(func(context.Context, *entity.ExptItemEvalEvent) error {
+		err := RecordEvalChain(svc.HandleEventCheck, svc.HandleCurrentSource)(func(context.Context, *entity.ExptItemEvalEvent) error {
 			*reached = true
 			return nil
 		})(context.Background(), event)

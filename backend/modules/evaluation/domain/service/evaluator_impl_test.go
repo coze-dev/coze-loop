@@ -4975,12 +4975,15 @@ func TestEvaluatorServiceImpl_ArmEvaluatorResume(t *testing.T) {
 			if tt.withEvent {
 				recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).DoAndReturn(func(ctx context.Context, _ int64, _ bool, _ ...entity.GetEvaluatorRecordOptionFn) (*entity.EvaluatorRecord, error) {
 					assert.True(t, contexts.CtxWriteDB(ctx))
-					return &entity.EvaluatorRecord{ID: 100, Status: tt.recordStatus}, nil
+					return &entity.EvaluatorRecord{ID: 100, TurnID: 909, Status: tt.recordStatus}, nil
 				})
 			}
 			if tt.wantPublished {
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).DoAndReturn(
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 					func(_ context.Context, ev *entity.ExptItemEvalEvent, _ *time.Duration, modify func(*entity.ExptItemEvalEvent)) error {
+						assert.NotSame(t, event, ev)
+						require.NotNil(t, ev.ResumeSource)
+						assert.Equal(t, int64(909), ev.ResumeSource.TurnID)
 						modify(ev)
 						assert.True(t, ev.AsyncEvaluatorReportTrigger)
 						return nil
@@ -5001,10 +5004,10 @@ func TestEvaluatorServiceImpl_ArmEvaluatorResume_RetriesPublish(t *testing.T) {
 	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
 	event := &entity.ExptItemEvalEvent{ExptID: 1}
 	asyncRepo.EXPECT().MarkEvalAsyncResumeReady(gomock.Any(), "evaluator:100").Return(&entity.EvalAsyncCtx{Event: event, ResumeReady: true}, nil)
-	recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(&entity.EvaluatorRecord{ID: 100, Status: entity.EvaluatorRunStatusSuccess}, nil)
+	recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(&entity.EvaluatorRecord{ID: 100, TurnID: 909, Status: entity.EvaluatorRunStatusSuccess}, nil)
 	gomock.InOrder(
-		publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).Return(errors.New("mq unavailable")),
-		publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).Return(nil),
+		publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("mq unavailable")),
+		publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
 	)
 	s := &EvaluatorServiceImpl{evalAsyncRepo: asyncRepo, evaluatorRecordRepo: recordRepo, exptEventPublisher: publisher}
 	require.NoError(t, s.ArmEvaluatorResume(context.Background(), 100))
