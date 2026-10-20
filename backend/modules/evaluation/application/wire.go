@@ -81,6 +81,7 @@ var (
 		notifyrpc.NotifyRPCSet,
 		userinfo.NewUserInfoServiceImpl,
 		NewLock,
+		NewManualRetryLockerFactory,
 		flagSet,
 		domainservice.NewDefaultURLProcessor,
 		storage.StorageSet,
@@ -92,8 +93,9 @@ var (
 		domainservice.EvaluatorDomainServiceSet,
 		domainservice.EvaluationSetDomainServiceSet,
 		domainservice.TargetDomainServiceSet,
-		domainservice.NewExptResultService,
+		domainservice.NewExptResultServiceWithPublication,
 		domainservice.ProvideExptItemRefRepos,
+		NewManualRetryLockerFactory,
 		domainservice.NewEvaluationAnalysisService,
 		// Infrastructure Sets
 		infrahttp.NewHTTPClient,

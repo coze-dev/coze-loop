@@ -51,6 +51,7 @@ type IExptConfigManager interface {
 
 // IExptExecutionManager 实验执行控制接口（负责实验的运行、监控和状态管理）
 type IExptExecutionManager interface {
+	RetryInCurrentRun(context.Context, *entity.RetryInCurrentRunRequest) (*entity.ManualRetryReceipt, error)
 	CheckRun(ctx context.Context, expt *entity.Experiment, spaceID int64, session *entity.Session, opts ...entity.ExptRunCheckOptionFn) error
 	Run(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error
 	RetryItems(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, itemIDs []int64, session *entity.Session, ext map[string]string) error

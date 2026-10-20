@@ -69,3 +69,13 @@ func TestExptRunLogReceiptConvertRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	require.JSONEq(t, string(raw), string(*po.ItemIds))
 }
+
+func TestManualRetryTurnLogTraceSnapshot(t *testing.T) {
+	converter := NewExptTurnResultRunLogConvertor()
+	got, err := converter.PO2DO(&model.ExptTurnResultRunLog{TraceID: 55})
+	require.NoError(t, err)
+	require.Equal(t, int64(55), got.TraceID, "retry source must include the stored trace identity")
+	po, err := converter.DO2PO(got)
+	require.NoError(t, err)
+	require.Equal(t, int64(55), po.TraceID)
+}
