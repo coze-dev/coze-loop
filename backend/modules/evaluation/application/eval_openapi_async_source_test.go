@@ -16,14 +16,19 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	datasetdto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset"
+	datasetentity "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 	configmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	datasetadapter "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
+	datasetmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data/mocks"
 )
 
 // Removing the real entrypoint's record-derived source or Event copy must fail these assertions.
@@ -47,8 +52,228 @@ func assertCallbackResumeSource(t *testing.T, event *entity.ExptItemEvalEvent, k
 	assert.Equal(t, turnID, wire.ResumeSource.TurnID)
 }
 
+func callbackDatasetTurn0(t *testing.T, ctrl *gomock.Controller) *entity.Turn {
+	t.Helper()
+	client := datasetmocks.NewMockClient(ctrl)
+	client.EXPECT().BatchGetDatasetItems(gomock.Any(), gomock.Any()).Return(&datasetdto.BatchGetDatasetItemsResponse{Items: []*datasetentity.DatasetItem{{
+		ItemID: gptr.Of(int64(4)), DatasetID: gptr.Of(int64(9)), Data: []*datasetentity.FieldData{{Name: gptr.Of("input"), Content: gptr.Of("single turn")}},
+	}}}, nil)
+	items, err := datasetadapter.NewDatasetRPCAdapter(client).BatchGetDatasetItems(context.Background(), &rpc.BatchGetDatasetItemsParam{})
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	require.Len(t, items[0].Turns, 1)
+	require.Zero(t, items[0].Turns[0].ID, "production dataset conversion supplies the legitimate single-turn identity")
+	return items[0].Turns[0]
+}
+
+func TestAsyncSourceFixTargetTurn0(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	turn := callbackDatasetTurn0(t, ctrl)
+	asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	targetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	configer := configmocks.NewMockIConfiger(ctrl)
+	original := &entity.ExptItemEvalEvent{ExptID: 2, ExptRunID: 3, EvalSetItemID: turn.ItemID, RequestID: "original-rq"}
+	asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "100").Return(&entity.EvalAsyncCtx{Event: original}, nil)
+	targetSvc.EXPECT().GetRecordByID(gomock.Any(), int64(1), int64(100)).Return(&entity.EvalTargetRecord{ID: 100, TurnID: turn.ID}, nil)
+	written, published := 0, 0
+	targetSvc.EXPECT().ReportInvokeRecords(gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, *entity.ReportTargetRecordParam) error { written++; return nil }).MaxTimes(1)
+	configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(&entity.TargetTrajectoryConf{}).MaxTimes(1)
+	publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, event *entity.ExptItemEvalEvent, _ *time.Duration, _ func(*entity.ExptItemEvalEvent)) error {
+		assert.Equal(t, 1, written)
+		assertCallbackResumeSource(t, event, "target", 100, turn.ID)
+		assert.Equal(t, original.RequestID, event.RequestID)
+		published++
+		return nil
+	}).MaxTimes(1)
+	app := &EvalOpenAPIApplication{asyncRepo: asyncRepo, targetSvc: targetSvc, publisher: publisher, configer: configer}
+	_, err := app.ReportEvalTargetInvokeResult_(context.Background(), newSuccessInvokeResultReq(1, 100))
+	require.NoError(t, err)
+	assert.Equal(t, 1, published)
+}
+
+func TestAsyncSourceFixEvaluatorTurn0(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	turn := callbackDatasetTurn0(t, ctrl)
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	svc := servicemocks.NewMockEvaluatorService(ctrl)
+	recordSvc := servicemocks.NewMockEvaluatorRecordService(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	original := &entity.ExptItemEvalEvent{ExptID: 2, ExptRunID: 3, EvalSetItemID: turn.ItemID, RequestID: "original-rq"}
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:100").Return(&entity.EvalAsyncCtx{Event: original, ResumeReady: true}, nil)
+	svc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(entity.ReportEvaluatorResultApplied, nil)
+	recordSvc.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(&entity.EvaluatorRecord{ID: 100, TurnID: turn.ID, Status: entity.EvaluatorRunStatusSuccess}, nil)
+	published := 0
+	publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, event *entity.ExptItemEvalEvent, _ *time.Duration, _ func(*entity.ExptItemEvalEvent)) error {
+		assertCallbackResumeSource(t, event, "evaluator", 100, turn.ID)
+		assert.Equal(t, original.RequestID, event.RequestID)
+		published++
+		return nil
+	}).MaxTimes(1)
+	app := &EvalOpenAPIApplication{auth: auth, asyncRepo: asyncRepo, evaluatorService: svc, evaluatorRecordService: recordSvc, publisher: publisher}
+	_, err := app.ReportEvaluatorInvokeResult_(context.Background(), sourceFixEvaluatorRequest())
+	require.NoError(t, err)
+	assert.Equal(t, 1, published)
+}
+
+func sourceFixEvaluatorRequest() *openapi.ReportEvaluatorInvokeResultRequest {
+	return &openapi.ReportEvaluatorInvokeResultRequest{WorkspaceID: gptr.Of(int64(1)), InvokeID: gptr.Of(int64(100)), Status: gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS), Output: &spi.InvokeEvaluatorOutputData{EvaluatorResult_: &spi.InvokeEvaluatorResult_{}}}
+}
+
+func TestAsyncSourceFixAppliedReadFailurePreservesCallback(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	svc := servicemocks.NewMockEvaluatorService(ctrl)
+	recordSvc := servicemocks.NewMockEvaluatorRecordService(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	dispatcher := servicemocks.NewMockIEvaluatorCallbackDispatcher(ctrl)
+	original := &entity.EvalAsyncCtx{Event: &entity.ExptItemEvalEvent{RequestID: "original-rq"}, ResumeReady: true, CallbackURL: "https://original.example/callback", EvaluatorVersionID: 9, AsyncUnixMS: time.Now().UnixMilli() - 1000}
+	cause := errors.New("source read failed")
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+	asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:100").Return(original, nil).Times(2)
+	gomock.InOrder(
+		svc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(entity.ReportEvaluatorResultApplied, nil),
+		svc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(entity.ReportEvaluatorResultDuplicate, nil),
+	)
+	recordSvc.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(nil, cause).Times(2)
+	dispatched := 0
+	dispatcher.EXPECT().Dispatch(gomock.Any(), int64(1), original.CallbackURL, gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, _ string, payload *openapi.EvaluatorCallbackPayloadOApi) error {
+		assert.Equal(t, original.EvaluatorVersionID, payload.GetEvaluatorVersionID())
+		dispatched++
+		return errors.New("best-effort notification failed")
+	}).MaxTimes(1)
+	app := &EvalOpenAPIApplication{auth: auth, asyncRepo: asyncRepo, evaluatorService: svc, evaluatorRecordService: recordSvc, publisher: publisher, callbackDispatcher: dispatcher}
+	for i := 0; i < 2; i++ {
+		_, err := app.ReportEvaluatorInvokeResult_(context.Background(), sourceFixEvaluatorRequest())
+		assert.Same(t, cause, err, "resume failure must retain its original cause")
+		assert.Equal(t, 1, dispatched, "Applied notifies once before returning source failure; Duplicate never notifies again")
+	}
+}
+
+func TestAsyncSourceFixReadinessFreezesNotification(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	svc := servicemocks.NewMockEvaluatorService(ctrl)
+	recordSvc := servicemocks.NewMockEvaluatorRecordService(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	dispatcher := servicemocks.NewMockIEvaluatorCallbackDispatcher(ctrl)
+	original := &entity.EvalAsyncCtx{Event: &entity.ExptItemEvalEvent{ExptID: 2, ExptRunID: 3, EvalSetItemID: 4, RequestID: "original-rq"}, CallbackURL: "https://original.example/callback", EvaluatorVersionID: 9, AsyncUnixMS: time.Now().UnixMilli() - 1000, Session: &entity.Session{UserID: "original"}}
+	latest := &entity.EvalAsyncCtx{Event: &entity.ExptItemEvalEvent{ExptID: 20, ExptRunID: 30, EvalSetItemID: 40, RequestID: "other-rq"}, ResumeReady: true, CallbackURL: "https://other.example/callback", EvaluatorVersionID: 99, AsyncUnixMS: time.Now().UnixMilli() + 100000, Session: &entity.Session{UserID: "other"}}
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	gomock.InOrder(
+		asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:100").Return(original, nil),
+		svc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(entity.ReportEvaluatorResultApplied, nil),
+		asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:100").Return(latest, nil),
+	)
+	recordSvc.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(&entity.EvaluatorRecord{ID: 100, TurnID: 5, Status: entity.EvaluatorRunStatusSuccess}, nil)
+	publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, event *entity.ExptItemEvalEvent, _ *time.Duration, _ func(*entity.ExptItemEvalEvent)) error {
+		assert.Equal(t, original.Event.RequestID, event.RequestID)
+		assert.Equal(t, original.Event.ExptRunID, event.ExptRunID)
+		return nil
+	})
+	dispatched := 0
+	dispatcher.EXPECT().Dispatch(gomock.Any(), int64(1), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, url string, payload *openapi.EvaluatorCallbackPayloadOApi) error {
+		assert.Equal(t, original.CallbackURL, url)
+		assert.Equal(t, original.EvaluatorVersionID, payload.GetEvaluatorVersionID())
+		assert.GreaterOrEqual(t, payload.GetTimeConsumingMs(), int64(1000))
+		dispatched++
+		return nil
+	})
+	app := &EvalOpenAPIApplication{auth: auth, asyncRepo: asyncRepo, evaluatorService: svc, evaluatorRecordService: recordSvc, publisher: publisher, callbackDispatcher: dispatcher}
+	_, err := app.ReportEvaluatorInvokeResult_(context.Background(), sourceFixEvaluatorRequest())
+	require.NoError(t, err)
+	assert.Equal(t, 1, dispatched)
+	assert.False(t, original.ResumeReady, "readiness refresh must not mutate cached original context")
+}
+
+func TestAsyncSourceFixTargetReadFailureBeforeRecordWrite(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	targetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	configer := configmocks.NewMockIConfiger(ctrl)
+	asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "100").Return(&entity.EvalAsyncCtx{Event: &entity.ExptItemEvalEvent{RequestID: "original-rq", ExptRunID: 3}}, nil).Times(2)
+	cause := errors.New("source DB read failed")
+	gomock.InOrder(
+		targetSvc.EXPECT().GetRecordByID(gomock.Any(), int64(1), int64(100)).Return(nil, cause),
+		targetSvc.EXPECT().GetRecordByID(gomock.Any(), int64(1), int64(100)).Return(&entity.EvalTargetRecord{ID: 100, TurnID: 5}, nil),
+	)
+	written, published := 0, 0
+	targetSvc.EXPECT().ReportInvokeRecords(gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, *entity.ReportTargetRecordParam) error { written++; return nil }).AnyTimes()
+	configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(&entity.TargetTrajectoryConf{}).AnyTimes()
+	publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, event *entity.ExptItemEvalEvent, _ *time.Duration, _ func(*entity.ExptItemEvalEvent)) error {
+		assert.Equal(t, 1, written, "record write still precedes Publish after a retryable source read")
+		assertCallbackResumeSource(t, event, "target", 100, 5)
+		published++
+		return nil
+	}).AnyTimes()
+	app := &EvalOpenAPIApplication{asyncRepo: asyncRepo, targetSvc: targetSvc, publisher: publisher, configer: configer}
+	_, err := app.ReportEvalTargetInvokeResult_(context.Background(), newSuccessInvokeResultReq(1, 100))
+	assert.Same(t, cause, err)
+	assert.Zero(t, written, "source read failure must not make the old record terminal")
+	assert.Zero(t, published)
+	_, err = app.ReportEvalTargetInvokeResult_(context.Background(), newSuccessInvokeResultReq(1, 100))
+	require.NoError(t, err)
+	assert.Equal(t, 1, written)
+	assert.Equal(t, 1, published)
+}
+
+func TestAsyncSourceFixAppliedRecoveryErrorsNotify(t *testing.T) {
+	for _, sourceCase := range []string{"missing record", "negative turn", "wrong record", "still invoking", "readiness read failure", "publish failure"} {
+		t.Run(sourceCase, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+			svc := servicemocks.NewMockEvaluatorService(ctrl)
+			recordSvc := servicemocks.NewMockEvaluatorRecordService(ctrl)
+			publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+			dispatcher := servicemocks.NewMockIEvaluatorCallbackDispatcher(ctrl)
+			original := &entity.EvalAsyncCtx{Event: &entity.ExptItemEvalEvent{RequestID: "original-rq"}, ResumeReady: sourceCase != "readiness read failure", CallbackURL: "https://original.example/callback"}
+			cause := errors.New("recovery failed")
+			auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:100").Return(original, nil)
+			svc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(entity.ReportEvaluatorResultApplied, nil)
+			record := &entity.EvaluatorRecord{ID: 100, TurnID: 0, Status: entity.EvaluatorRunStatusSuccess}
+			switch sourceCase {
+			case "missing record":
+				record = nil
+			case "negative turn":
+				record.TurnID = -1
+			case "wrong record":
+				record.ID = 200
+			case "still invoking":
+				record.Status = entity.EvaluatorRunStatusAsyncInvoking
+			}
+			if sourceCase == "readiness read failure" {
+				asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:100").Return(nil, cause)
+			} else {
+				recordSvc.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(record, nil)
+			}
+			if sourceCase == "publish failure" {
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(cause)
+			}
+			dispatched := 0
+			dispatcher.EXPECT().Dispatch(gomock.Any(), int64(1), original.CallbackURL, gomock.Any()).DoAndReturn(func(context.Context, int64, string, *openapi.EvaluatorCallbackPayloadOApi) error {
+				dispatched++
+				return nil
+			})
+			app := &EvalOpenAPIApplication{auth: auth, asyncRepo: asyncRepo, evaluatorService: svc, evaluatorRecordService: recordSvc, publisher: publisher, callbackDispatcher: dispatcher}
+			_, err := app.ReportEvaluatorInvokeResult_(context.Background(), sourceFixEvaluatorRequest())
+			require.Error(t, err)
+			if sourceCase == "readiness read failure" || sourceCase == "publish failure" {
+				assert.Same(t, cause, err)
+			}
+			assert.Equal(t, 1, dispatched)
+		})
+	}
+}
+
 func TestAsyncSourceTargetCallback(t *testing.T) {
-	for _, readCase := range []string{"success", "legacy empty request", "read failure", "missing record", "missing turn", "wrong record"} {
+	for _, readCase := range []string{"success", "legacy empty request", "read failure", "missing record", "negative turn", "wrong record"} {
 		t.Run(readCase, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
@@ -67,7 +292,7 @@ func TestAsyncSourceTargetCallback(t *testing.T) {
 				assert.Equal(t, recordID, p.RecordID)
 				written++
 				return nil
-			}).Times(2)
+			}).MaxTimes(2)
 			record := &entity.EvalTargetRecord{ID: recordID, TurnID: turnID, ExperimentRunID: 3, ItemID: 4}
 			var readErr error
 			if readCase == "read failure" {
@@ -76,8 +301,8 @@ func TestAsyncSourceTargetCallback(t *testing.T) {
 			if readCase == "missing record" {
 				record = nil
 			}
-			if readCase == "missing turn" {
-				record.TurnID = 0
+			if readCase == "negative turn" {
+				record.TurnID = -1
 			}
 			if readCase == "wrong record" {
 				record.ID++
@@ -111,7 +336,11 @@ func TestAsyncSourceTargetCallback(t *testing.T) {
 					require.Error(t, err)
 				}
 			}
-			assert.Equal(t, 2, written, "old records remain writable")
+			if readCase == "success" || readCase == "legacy empty request" {
+				assert.Equal(t, 2, written, "valid source allows the original record write")
+			} else {
+				assert.Zero(t, written, "invalid or unreadable source leaves the original record retryable")
+			}
 			assert.False(t, original.AsyncReportTrigger)
 			assert.Equal(t, "original", original.Ext["inputExpr"])
 			assert.Equal(t, "owner", original.Session.UserID)
@@ -201,7 +430,7 @@ func TestAsyncSourceEvaluatorReadinessKeepsOriginalEvent(t *testing.T) {
 }
 
 func TestAsyncSourceEvaluatorReadFailures(t *testing.T) {
-	for _, sourceCase := range []string{"read failure", "missing", "missing turn", "wrong record", "still invoking"} {
+	for _, sourceCase := range []string{"read failure", "missing", "negative turn", "wrong record", "still invoking"} {
 		t.Run(sourceCase, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			auth := rpcmocks.NewMockIAuthProvider(ctrl)
@@ -219,8 +448,8 @@ func TestAsyncSourceEvaluatorReadFailures(t *testing.T) {
 				readErr = errors.New("source storage unavailable")
 			case "missing":
 				record = nil
-			case "missing turn":
-				record.TurnID = 0
+			case "negative turn":
+				record.TurnID = -1
 			case "wrong record":
 				record.ID = 200
 			case "still invoking":

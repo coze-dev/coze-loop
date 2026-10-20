@@ -92,7 +92,8 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_Verification(t *testing.T) {
 				asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "15", gomock.Any()).DoAndReturn(
 					func(_ context.Context, _ string, saved *entity.EvalAsyncCtx) error {
 						require.Equal(t, "sandbox", saved.Callee)
-						require.Same(t, etec.Event, saved.Event)
+						require.Equal(t, etec.Event, saved.Event)
+						require.NotSame(t, etec.Event, saved.Event)
 						return nil
 					})
 			}

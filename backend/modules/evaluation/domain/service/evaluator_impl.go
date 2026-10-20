@@ -1371,11 +1371,11 @@ func (e *EvaluatorServiceImpl) ArmEvaluatorResume(ctx context.Context, recordID 
 	if record == nil {
 		return errorx.NewByCode(errno.EvaluatorRecordNotFoundCode, errorx.WithExtraMsg("evaluator record not found"))
 	}
+	if record.ID != recordID || record.TurnID < 0 {
+		return errorx.New("evaluator resume source unavailable, invoke_id: %v", recordID)
+	}
 	if record.Status == entity.EvaluatorRunStatusAsyncInvoking {
 		return nil
-	}
-	if record.ID != recordID || record.TurnID <= 0 {
-		return errorx.New("evaluator resume source unavailable, invoke_id: %v", recordID)
 	}
 	return e.publishEvaluatorResumeEvent(ctx, actx.Event.CloneWithResumeSource("evaluator", record.ID, record.TurnID))
 }

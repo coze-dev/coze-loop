@@ -12,16 +12,81 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	datasetdto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset"
+	datasetentity "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	datasetadapter "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
+	datasetmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data/mocks"
 )
+
+func TestAsyncSourceFixArmTurn0(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	client := datasetmocks.NewMockClient(ctrl)
+	client.EXPECT().BatchGetDatasetItems(gomock.Any(), gomock.Any()).Return(&datasetdto.BatchGetDatasetItemsResponse{Items: []*datasetentity.DatasetItem{{ItemID: gptr.Of(int64(4)), Data: []*datasetentity.FieldData{{Name: gptr.Of("input"), Content: gptr.Of("single turn")}}}}}, nil)
+	items, err := datasetadapter.NewDatasetRPCAdapter(client).BatchGetDatasetItems(context.Background(), &rpc.BatchGetDatasetItemsParam{})
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	require.Len(t, items[0].Turns, 1)
+	turn := items[0].Turns[0]
+	require.Zero(t, turn.ID)
+	asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	original := &entity.ExptItemEvalEvent{ExptID: 2, ExptRunID: 3, EvalSetItemID: turn.ItemID, RequestID: "original-rq"}
+	asyncRepo.EXPECT().MarkEvalAsyncResumeReady(gomock.Any(), "evaluator:100").Return(&entity.EvalAsyncCtx{Event: original, ResumeReady: true}, nil)
+	recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(&entity.EvaluatorRecord{ID: 100, TurnID: turn.ID, Status: entity.EvaluatorRunStatusSuccess}, nil)
+	published := 0
+	publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, event *entity.ExptItemEvalEvent, _ *time.Duration, _ func(*entity.ExptItemEvalEvent)) error {
+		require.NotNil(t, event.ResumeSource)
+		assert.Zero(t, event.ResumeSource.TurnID)
+		assert.Equal(t, int64(100), event.ResumeSource.RecordID)
+		assert.Equal(t, "100", event.ResumeSource.InvokeID)
+		assert.Equal(t, "evaluator", event.ResumeSource.Kind)
+		assert.Equal(t, original.RequestID, event.RequestID)
+		bytes, err := json.Marshal(event)
+		require.NoError(t, err)
+		var roundtrip entity.ExptItemEvalEvent
+		require.NoError(t, json.Unmarshal(bytes, &roundtrip))
+		require.NotNil(t, roundtrip.ResumeSource)
+		assert.Zero(t, roundtrip.ResumeSource.TurnID)
+		published++
+		return nil
+	}).MaxTimes(1)
+	svc := &EvaluatorServiceImpl{evalAsyncRepo: asyncRepo, evaluatorRecordRepo: recordRepo, exptEventPublisher: publisher}
+	require.NoError(t, svc.ArmEvaluatorResume(context.Background(), 100))
+	assert.Equal(t, 1, published)
+}
+
+func TestAsyncSourceFixArmInvalidSource(t *testing.T) {
+	for _, source := range []string{"negative turn", "wrong record"} {
+		t.Run(source, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+			recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+			publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+			asyncRepo.EXPECT().MarkEvalAsyncResumeReady(gomock.Any(), "evaluator:100").Return(&entity.EvalAsyncCtx{Event: &entity.ExptItemEvalEvent{RequestID: "original-rq"}, ResumeReady: true}, nil)
+			record := &entity.EvaluatorRecord{ID: 100, TurnID: 0, Status: entity.EvaluatorRunStatusSuccess}
+			if source == "negative turn" {
+				record.TurnID = -1
+			} else {
+				record.ID = 200
+			}
+			recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(record, nil)
+			svc := &EvaluatorServiceImpl{evalAsyncRepo: asyncRepo, evaluatorRecordRepo: recordRepo, exptEventPublisher: publisher}
+			require.Error(t, svc.ArmEvaluatorResume(context.Background(), 100))
+		})
+	}
+}
 
 func TestAsyncSourceArmEvaluatorResume(t *testing.T) {
 	ctrl := gomock.NewController(t)
