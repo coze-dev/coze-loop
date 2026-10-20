@@ -5,6 +5,7 @@ package experiment
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -273,4 +274,20 @@ func (e *ExptTurnResultFilterRepoImpl) GetByExptIDItemIDs(ctx context.Context, s
 		dos = append(dos, do)
 	}
 	return dos, nil
+}
+
+func (e *ExptTurnResultFilterRepoImpl) GetMaterializedByExptIDItemIDs(ctx context.Context, space, expt, date string, ids []string) ([]*entity.ExptTurnResultFilterEntity, error) {
+	reader, ok := e.exptTurnResultFilterDAO.(ck.IExptMaterializedFilterDAO)
+	if !ok {
+		return nil, fmt.Errorf("materialized filter DAO missing")
+	}
+	rows, err := reader.GetMaterializedByExptIDItemIDs(ctx, space, expt, date, ids)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*entity.ExptTurnResultFilterEntity, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, convertor.ExptTurnResultFilterPO2Entity(row))
+	}
+	return result, nil
 }
