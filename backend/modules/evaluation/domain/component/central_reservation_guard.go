@@ -5,6 +5,7 @@ package component
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
@@ -21,6 +22,7 @@ import (
 // reservation 就执行，那么迟到的、重复的、账本已重建过的消息都会变成"无额度执行"，全局额度
 // 保护即失效。
 type ICentralReservationGuard interface {
+	ReleaseTerminalReservation(ctx context.Context, schedulerScope string, previousRunID, itemID int64, previousRequestID string) (TerminalReservationReleaseResult, error)
 	// ConfirmRunning 确认该 item 持有额度，取得执行资格。
 	//
 	// 注意它是**幂等**的而非"一次性"：实现只校验 reservation 存在、并把状态推进到 Running，
@@ -250,4 +252,30 @@ type noopCentralAdmissionPolicy struct{}
 // AllowCentralScheduling 放行，且不指定缺省优先级（DefaultPriority=0 → 调用方按 1 处理）。
 func (noopCentralAdmissionPolicy) AllowCentralScheduling(ctx context.Context, subject CentralAdmissionSubject) (CentralAdmissionDecision, error) {
 	return CentralAdmissionDecision{Admitted: true}, nil
+}
+
+type TerminalReservationReleaseResult int
+
+const (
+	TerminalReservationReleased TerminalReservationReleaseResult = iota + 1
+	TerminalReservationAbsent
+	TerminalReservationMismatch
+)
+
+func (noopCentralReservationGuard) ReleaseTerminalReservation(context.Context, string, int64, int64, string) (TerminalReservationReleaseResult, error) {
+	return 0, fmt.Errorf("terminal reservation release unsupported without token ledger")
+}
+
+type ICurrentRunSchedulerWaker interface {
+	WakeCurrentRun(context.Context, string) error
+}
+
+type noopCurrentRunSchedulerWaker struct{}
+
+func NewNoopCurrentRunSchedulerWaker() ICurrentRunSchedulerWaker {
+	return noopCurrentRunSchedulerWaker{}
+}
+
+func (noopCurrentRunSchedulerWaker) WakeCurrentRun(context.Context, string) error {
+	return fmt.Errorf("central current run wake unsupported")
 }
