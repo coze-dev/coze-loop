@@ -1347,21 +1347,9 @@ func (s *retryEvaluatorSourceLogs) matches(ctx context.Context, tr *entity.ExptT
 		record.ItemID != s.event.EvalSetItemID || tr.ItemID != s.event.EvalSetItemID || record.TurnID != tr.TurnID {
 		return false, nil
 	}
-	byTurn, loaded := s.logsByRun[record.ExperimentRunID]
-	if !loaded {
-		// Shared evaluator records can live in a resource space; run logs belong to the experiment's space.
-		runLogs, err := s.repo.MGetItemTurnRunLogs(ctx, s.event.ExptID, record.ExperimentRunID, []int64{s.event.EvalSetItemID}, s.event.SpaceID)
-		if err != nil {
-			return false, err
-		}
-		byTurn = make(map[int64]*entity.ExptTurnResultRunLog, len(runLogs))
-		for _, runLog := range runLogs {
-			if runLog != nil && runLog.SpaceID == s.event.SpaceID && runLog.ExptID == s.event.ExptID &&
-				runLog.ExptRunID == record.ExperimentRunID && runLog.ItemID == s.event.EvalSetItemID {
-				byTurn[runLog.TurnID] = runLog
-			}
-		}
-		s.logsByRun[record.ExperimentRunID] = byTurn
+	byTurn, err := s.loadRun(ctx, record.ExperimentRunID)
+	if err != nil {
+		return false, err
 	}
 	origin := byTurn[tr.TurnID]
 	if origin == nil || origin.TargetResultID != tr.TargetResultID || origin.EvaluatorResultIds == nil {
@@ -1379,6 +1367,26 @@ func (s *retryEvaluatorSourceLogs) matches(ctx context.Context, tr *entity.ExptT
 		}
 	}
 	return record.SourceType != entity.EvaluatorRecordSourceTypeInline && record.Alias == "" && refs.EvalVerIDToResID[record.EvaluatorVersionID] == record.ID, nil
+}
+
+func (s *retryEvaluatorSourceLogs) loadRun(ctx context.Context, runID int64) (map[int64]*entity.ExptTurnResultRunLog, error) {
+	byTurn, loaded := s.logsByRun[runID]
+	if !loaded {
+		// Shared evaluator records can live in a resource space; run logs belong to the experiment's space.
+		runLogs, err := s.repo.MGetItemTurnRunLogs(ctx, s.event.ExptID, runID, []int64{s.event.EvalSetItemID}, s.event.SpaceID)
+		if err != nil {
+			return nil, err
+		}
+		byTurn = make(map[int64]*entity.ExptTurnResultRunLog, len(runLogs))
+		for _, runLog := range runLogs {
+			if runLog != nil && runLog.SpaceID == s.event.SpaceID && runLog.ExptID == s.event.ExptID &&
+				runLog.ExptRunID == runID && runLog.ItemID == s.event.EvalSetItemID {
+				byTurn[runLog.TurnID] = runLog
+			}
+		}
+		s.logsByRun[runID] = byTurn
+	}
+	return byTurn, nil
 }
 
 func retryEvaluatorResultsFromRefs(turnResultID int64, refs []*entity.ExptTurnEvaluatorResultRef) *entity.EvaluatorResults {
