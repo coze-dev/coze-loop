@@ -21,7 +21,7 @@ import (
 
 // Removing the source check would let the endpoint confirm quota or call providers.
 func TestLateWriteConsumerOriginalResume(t *testing.T) {
-	for _, kind := range []string{"target_stale", "evaluator_stale", "reader_failure", "turn0", "builtin0", "inline_stale", "alias_stale", "oldmap_stale", "missing_legacy"} {
+	for _, kind := range []string{"target_stale", "evaluator_stale", "reader_failure", "turn0", "builtin0", "inline_stale", "alias_stale", "oldmap_stale", "missing_legacy", "incomplete_record", "unknown_record"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			items := repomocks.NewMockIExptItemResultRepo(ctrl)
@@ -62,6 +62,10 @@ func TestLateWriteConsumerOriginalResume(t *testing.T) {
 				log.EvaluatorResultIds = &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{51: 62}}
 			case "reader_failure":
 				readErr = errors.New("primary source unavailable")
+			case "incomplete_record":
+				record.ExperimentRunID = 0
+			case "unknown_record":
+				record.Status = entity.EvaluatorRunStatusUnknown
 			case "missing_legacy":
 				event.ResumeSource = nil
 				event.RequestID = ""
@@ -73,7 +77,7 @@ func TestLateWriteConsumerOriginalResume(t *testing.T) {
 			called := false
 			err := svc.HandleCurrentSource(func(context.Context, *entity.ExptItemEvalEvent) error { called = true; return nil })(context.Background(), event)
 			require.Equal(t, kind == "turn0" || kind == "builtin0", called, "noncurrent original invocation must have zero downstream side effects")
-			if kind == "reader_failure" || kind == "missing_legacy" {
+			if kind == "reader_failure" || kind == "missing_legacy" || kind == "incomplete_record" || kind == "unknown_record" {
 				require.True(t, errno.NeedMQRetry(err))
 			} else {
 				require.NoError(t, err)

@@ -186,7 +186,7 @@ func currentSourceMatches(expected, actual *entity.ExptCurrentItemRunSource) boo
 	}
 	for id, turn := range expected.Turns {
 		other := actual.Turns[id]
-		if turn == nil || other == nil || turn.ID != other.ID || turn.TargetResultID != other.TargetResultID || turn.ItemVersionID != other.ItemVersionID || !reflect.DeepEqual(turn.EvaluatorResultIds, other.EvaluatorResultIds) {
+		if turn == nil || other == nil || turn.ID != other.ID || turn.TargetResultID != other.TargetResultID || turn.ItemVersionID != other.ItemVersionID || !entity.SameCurrentEvaluatorRefs(turn.EvaluatorResultIds, other.EvaluatorResultIds) {
 			return false
 		}
 	}

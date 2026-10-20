@@ -706,10 +706,13 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 		if execution.LockLost {
 			return errno.NewMQRetryErr("item execution lock lost")
 		}
-		if nextErr == nil {
-			return nil
-		}
 		if port, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+			if nextErr == nil {
+				if e.metric != nil {
+					e.metric.EmitItemExecResult(event.SpaceID, int64(event.ExptRunMode), false, false, false, 0, event.CreateAt)
+				}
+				return nil
+			}
 			return e.handleCurrentEventErr(ctx, event, nextErr, port, execution)
 		}
 		retryConf := e.configer.GetErrRetryConf(ctx, event.SpaceID, nextErr)

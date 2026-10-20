@@ -164,6 +164,7 @@ func TestLateWriteMySQLStartThenAdmission(t *testing.T) {
 			executor := &ExptItemEvalCtxExecutor{ItemResultRepo: f.itemRepo(), TurnResultRepo: f.turnRepo(), Configer: config}
 			svc := &ExptItemEventEvalServiceImpl{exptItemResultRepo: f.itemRepo(), exptTurnResultRepo: f.turnRepo(), configer: config, itemLocker: lateWriteLocker(t, ctrl)}
 			if path == "source_read_error" {
+				before := f.snapshot()
 				fault := errors.New("source DB unavailable")
 				hook := "late_write_primary_read_failure"
 				require.NoError(t, f.conn.Callback().Query().Before("gorm:query").Register(hook, func(tx *gorm.DB) { _ = tx.AddError(fault) }))
@@ -173,6 +174,7 @@ func TestLateWriteMySQLStartThenAdmission(t *testing.T) {
 				})(context.Background(), event)
 				require.NoError(t, f.conn.Callback().Query().Remove(hook))
 				require.True(t, errno.NeedMQRetry(err))
+				require.Equal(t, before, f.snapshot())
 				return
 			}
 			f.token("rq2")
@@ -288,4 +290,23 @@ func TestLateWriteMySQLManualBudget(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestLateWriteMySQLStoreThenCompleteEmptyRefs(t *testing.T) {
+	f := newLateWriteFixture(t, "")
+	source := f.source()
+	event := f.event()
+	event.RequestID = ""
+	event.ExptRunMode = entity.EvaluationModeSubmit
+	ctx := context.WithValue(context.Background(), currentItemSourceKey{}, &currentItemExecution{Source: source})
+	executor := &ExptItemEvalCtxExecutor{ItemResultRepo: f.itemRepo(), TurnResultRepo: f.turnRepo()}
+	for _, id := range []int64{0, f.base + 22} {
+		etec := &entity.ExptTurnEvalCtx{Turn: &entity.Turn{ID: id}, ExptItemEvalCtx: &entity.ExptItemEvalCtx{Event: event, Expt: &entity.Experiment{ID: f.expt, SpaceID: f.space}, EvalSetItem: &entity.EvaluationSetItem{ItemID: f.item}, ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: source.Turns}}}
+		require.NoError(t, executor.storeTurnRunResult(ctx, etec, &entity.ExptTurnRunResult{}))
+	}
+	require.NoError(t, executor.CompleteItemRun(ctx, &entity.ExptItemEvalCtx{Event: event}, nil))
+	var log model.ExptItemResultRunLog
+	require.NoError(t, f.conn.Where("space_id=? AND item_id=?", f.space, f.item).Take(&log).Error)
+	require.Equal(t, int32(entity.ItemRunState_Success), log.Status)
+	require.Equal(t, int32(entity.ExptItemResultStateLogged), gptr.Indirect(log.ResultState))
 }

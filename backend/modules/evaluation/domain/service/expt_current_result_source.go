@@ -7,11 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/bytedance/gg/gptr"
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"reflect"
 	"strconv"
 	"time"
+
+	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -107,6 +108,9 @@ func (e *ExptItemEventEvalServiceImpl) validateResumeSource(ctx context.Context,
 		if record == nil {
 			return false, errno.NewMQRetryErr("original target record missing")
 		}
+		if record.ID <= 0 || record.SpaceID <= 0 || record.ExperimentRunID <= 0 || record.ItemID <= 0 || record.TurnID < 0 || record.Status == nil || *record.Status < entity.EvalTargetRunStatusSuccess || *record.Status > entity.EvalTargetRunStatusAsyncInvoking {
+			return false, errno.NewMQRetryErr("incomplete original target record")
+		}
 		return record.ID == source.RecordID && record.ExperimentRunID == event.ExptRunID && record.ItemID == event.EvalSetItemID && record.ItemVersionID == current.ItemVersionID && record.TurnID == source.TurnID, nil
 	}
 	if e.evaluatorRecordService == nil {
@@ -118,6 +122,9 @@ func (e *ExptItemEventEvalServiceImpl) validateResumeSource(ctx context.Context,
 	}
 	if record == nil {
 		return false, errno.NewMQRetryErr("original evaluator record missing")
+	}
+	if record.ID <= 0 || record.SpaceID <= 0 || record.ExperimentID <= 0 || record.ExperimentRunID <= 0 || record.ItemID <= 0 || record.TurnID < 0 || record.Status < entity.EvaluatorRunStatusSuccess || record.Status > entity.EvaluatorRunStatusSkipped || record.SourceType < 0 || record.SourceType > entity.EvaluatorRecordSourceTypeInline {
+		return false, errno.NewMQRetryErr("incomplete original evaluator record")
 	}
 	if record.ID != source.RecordID || record.ExperimentID != event.ExptID || record.ExperimentRunID != event.ExptRunID || record.ItemID != event.EvalSetItemID || record.ItemVersionID != current.ItemVersionID || record.TurnID != source.TurnID {
 		return false, nil
@@ -316,7 +323,7 @@ func sameExecutionIdentity(expected, actual *entity.ExptCurrentItemRunSource) bo
 	}
 	for id, turn := range expected.Turns {
 		other := actual.Turns[id]
-		if turn == nil || other == nil || turn.ID != other.ID || turn.TargetResultID != other.TargetResultID || !reflect.DeepEqual(turn.EvaluatorResultIds, other.EvaluatorResultIds) {
+		if turn == nil || other == nil || turn.ID != other.ID || turn.TargetResultID != other.TargetResultID || !entity.SameCurrentEvaluatorRefs(turn.EvaluatorResultIds, other.EvaluatorResultIds) {
 			return false
 		}
 	}

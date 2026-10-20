@@ -41,3 +41,47 @@ type ExptCurrentItemRunWrite struct {
 	FailPendingTurns bool
 	MissingTurnLogs  []*ExptTurnResultRunLog
 }
+
+// SameCurrentEvaluatorRefs compares invocation identity across JSON round trips.
+// JSON omitempty makes an empty slice/map and nil the same persisted source.
+func SameCurrentEvaluatorRefs(a, b *EvaluatorResults) bool {
+	if a == nil {
+		a = &EvaluatorResults{}
+	}
+	if b == nil {
+		b = &EvaluatorResults{}
+	}
+	if len(a.EvalVerIDToResID) != len(b.EvalVerIDToResID) || len(a.Registered) != len(b.Registered) || len(a.Inline) != len(b.Inline) {
+		return false
+	}
+	for version, id := range a.EvalVerIDToResID {
+		if b.EvalVerIDToResID[version] != id {
+			return false
+		}
+	}
+	for index, ref := range a.Registered {
+		other := b.Registered[index]
+		if ref == nil || other == nil {
+			if ref != other {
+				return false
+			}
+			continue
+		}
+		if *ref != *other {
+			return false
+		}
+	}
+	for index, ref := range a.Inline {
+		other := b.Inline[index]
+		if ref == nil || other == nil {
+			if ref != other {
+				return false
+			}
+			continue
+		}
+		if *ref != *other {
+			return false
+		}
+	}
+	return true
+}
