@@ -320,13 +320,26 @@ struct RetryExperimentRequest {
     3: optional i64 expt_id (api.path = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
     4: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
 
+    5: optional i64 expected_run_id (api.body = 'expected_run_id', api.js_conv = 'true', go.tag = 'json:"expected_run_id,omitempty"')
+    6: optional string request_id (api.body = 'request_id')
+
     100: optional map<string, string> ext (api.body = 'ext')
 
     255: optional base.Base Base
 }
 
+struct RetryRejectedItem {
+    1: optional i64 item_id (api.js_conv = 'true', go.tag = 'json:"item_id,omitempty"')
+    2: optional string reason
+}
+
 struct RetryExperimentResponse {
     1: optional i64 run_id (api.body = 'run_id', api.js_conv = 'true', go.tag = 'json:"run_id"')
+
+    2: optional string request_id
+    3: optional i32 accepted_count
+    4: optional list<RetryRejectedItem> rejected_items
+    5: optional i64 snapshot_at_ms (api.js_conv = 'true', go.tag = 'json:"snapshot_at_ms,omitempty"')
 
     255: base.BaseResp BaseResp
 }
