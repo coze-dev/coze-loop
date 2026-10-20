@@ -121,6 +121,16 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 			return err
 		}
 		for _, row := range rows {
+			if row.ResultState == entity.ExptItemResultStateLogged {
+				row.PublicationObserved = true
+				publication, err := readItemResultPublishSource(tx, spaceID, exptID, runID, row.ItemID)
+				if err != nil {
+					return err
+				}
+				if publication != nil && publication.Source.Current.RequestID == row.RequestID && publication.ItemLog.Status == int32(row.Status) && publication.ItemLog.ResultState == int32(row.ResultState) && publication.ItemLog.RetryTimes == row.RetryTimes && publication.ItemLog.UpdatedAt != nil && row.UpdatedAt != nil && publication.ItemLog.UpdatedAt.Equal(*row.UpdatedAt) {
+					row.Publication = publication
+				}
+			}
 			// Freeze rows that can be swept. Queueing and completed rows retain the
 			// existing scan contract and do not need invocation identity here.
 			if row.Status != entity.ItemRunState_Processing {

@@ -10,6 +10,8 @@ import (
 
 // ExptItemCurrentRequest is one primary database observation of the canonical item and run log.
 type ExptItemCurrentRequest struct {
+	PublicationObserved                           bool
+	Publication                                   *ExptItemResultPublishSource
 	Source                                        *ExptCurrentItemRunSource
 	SpaceID, ExptID, RunID, ItemID, ItemVersionID int64
 	RequestID                                     string

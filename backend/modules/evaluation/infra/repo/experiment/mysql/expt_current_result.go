@@ -30,6 +30,12 @@ func (dao *exptItemResultDAOImpl) GetCurrentItemRunSource(ctx context.Context, s
 }
 
 func loadCurrentRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64) (*entity.ExptCurrentItemRunSource, error) {
+	return loadItemRunSource(tx, spaceID, exptID, runID, itemID, false)
+}
+
+// Publication uses the same primary row/source validation, with a separate run
+// lifecycle rule. Execution remains active-only through loadCurrentRunSource.
+func loadItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, publication bool) (*entity.ExptCurrentItemRunSource, error) {
 	var item model.ExptItemResult
 	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id=? AND expt_id=? AND item_id=?", spaceID, exptID, itemID).Take(&item).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -64,11 +70,15 @@ func loadCurrentRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64) (*e
 		return nil, fmt.Errorf("source run status missing")
 	}
 	runStatus := entity.ExptStatus(*run.Status)
-	if entity.IsExptFinished(runStatus) || entity.IsExptFinishing(runStatus) {
-		return nil, nil
-	}
-	if runStatus != entity.ExptStatus_Processing && runStatus != entity.ExptStatus_Pending {
-		return nil, fmt.Errorf("invalid source run status")
+	if !publication {
+		if entity.IsExptFinished(runStatus) || entity.IsExptFinishing(runStatus) {
+			return nil, nil
+		}
+		if runStatus != entity.ExptStatus_Processing && runStatus != entity.ExptStatus_Pending {
+			return nil, fmt.Errorf("invalid source run status")
+		}
+	} else if runStatus != entity.ExptStatus_Processing && runStatus != entity.ExptStatus_Pending && !entity.IsExptFinished(runStatus) && !entity.IsExptFinishing(runStatus) {
+		return nil, fmt.Errorf("invalid publication run status")
 	}
 	mode := entity.ExptRunMode(gptr.Indirect(run.Mode))
 	if manual != nil {

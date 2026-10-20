@@ -332,6 +332,7 @@ func TestLateCompatSweepMissingRawLogs(t *testing.T) {
 			target := svcmocks.NewMockIEvalTargetService(ctrl)
 			records := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
 			records.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).Return(nil, nil).AnyTimes()
+			target.EXPECT().GetRecordByID(gomock.Any(), f.space, f.base+41).Return(&entity.EvalTargetRecord{ID: f.base + 41, SpaceID: f.space, ExperimentRunID: f.run, ItemID: f.item, TurnID: 0, Status: gptr.Of(entity.EvalTargetRunStatusFail)}, nil).AnyTimes()
 			target.EXPECT().TerminateAsyncRecordsAndDestroySandbox(gomock.Any(), f.space, []int64{f.base + 41}, gomock.Any(), gomock.Any(), gomock.Any()).Times(map[bool]int{true: 0, false: 1}[kind == "idgen_error" || kind == "idgen_cancel"])
 			if kind == "sandbox_all" || kind == "sandbox_partial" {
 				target.EXPECT().CheckSandboxTerminated(gomock.Any(), f.space, []int64{f.base + 41}).Return([]int64{f.base + 41}, map[int64]string{f.base + 41: "Failed"})
@@ -340,6 +341,8 @@ func TestLateCompatSweepMissingRawLogs(t *testing.T) {
 			old := time.Now().Add(-time.Hour)
 			source.Current.UpdatedAt = &old
 			require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("updated_at", old).Error)
+			require.NoError(t, f.conn.Model(&model.ExptTurnResult{}).Where("space_id=? AND turn_id<>0", f.space).Update("target_result_id", 0).Error)
+			require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND turn_id<>0", f.space).Update("target_result_id", 0).Error)
 			source = f.source()
 			before := f.snapshot()
 			event := &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run}
@@ -392,7 +395,7 @@ func TestLateCompatSweepMissingRawLogs(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, int32(1), stats.FailItemCnt)
 			require.Equal(t, int32(1), stats.ProcessingItemCnt)
-			archive := &ExptResultServiceImpl{ExptItemResultRepo: f.itemRepo(), ExptTurnResultRepo: f.turnRepo(), ExptStatsRepo: experimentrepo.NewExptStatsRepo(experimentmysql.NewExptStatsDAO(f.provider))}
+			archive := &ExptResultServiceImpl{ExptItemResultRepo: f.itemRepo(), ExptTurnResultRepo: f.turnRepo(), ExptStatsRepo: experimentrepo.NewExptStatsRepo(experimentmysql.NewExptStatsDAO(f.provider)), resultPublishRepo: experimentrepo.NewExptResultPublishRepo(f.provider), resultPublishLocker: lateWriteLocker(t, ctrl), evalTargetService: target}
 			expt := &entity.Experiment{ID: f.expt, SpaceID: f.space, EvalConf: &entity.EvaluationConfiguration{}}
 			_, err = archive.RecordItemRunLogs(context.Background(), f.expt, f.run, f.item, f.space, expt)
 			require.NoError(t, err)

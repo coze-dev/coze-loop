@@ -490,6 +490,9 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 }
 
 func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *entity.ExptScheduleEvent, completeItems []*entity.ExptEvalItem, mode entity.ExptSchedulerMode, expt *entity.Experiment) error {
+	if publicationSvc, ok := e.ResultSvc.(ExptResultPublicationService); ok {
+		return e.recordCurrentItemResults(ctx, event, completeItems, mode, expt, publicationSvc)
+	}
 	time.Sleep(time.Millisecond * 1000) // avoid master-slave delay caused by asynchronous and other factors
 
 	// 循环外批量补齐 item-complete 事件组装所需的 per-item 归属集/版本/ItemKey(供循环内 sendItemComplete 用)。

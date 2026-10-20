@@ -46,6 +46,7 @@ func TestScanTransitionMySQLCompleteThenArchive(t *testing.T) {
 			base := int64(870000000000000000) + time.Now().UnixNano()%1000000000000
 			space, expt, run, item, turn := base+1, base+2, base+3, int64(11), int64(21)
 			t.Cleanup(func() {
+				require.NoError(t, conn.Exec("DELETE FROM experiment WHERE space_id=? AND id=?", space, expt).Error)
 				for _, table := range []string{"expt_turn_evaluator_result_ref", "expt_turn_result_run_log", "expt_turn_result", "expt_item_result_run_log", "expt_item_result", "expt_stats", "expt_run_log"} {
 					require.NoError(t, conn.Exec("DELETE FROM "+table+" WHERE space_id=? AND expt_id=?", space, expt).Error)
 				}
@@ -53,6 +54,7 @@ func TestScanTransitionMySQLCompleteThenArchive(t *testing.T) {
 				require.NoError(t, err)
 				require.NoError(t, sqlDB.Close())
 			})
+			require.NoError(t, conn.Exec("INSERT INTO experiment(id,space_id,latest_run_id,status,expt_type) VALUES(?,?,?,?,?)", expt, space, run, entity.ExptStatus_Processing, entity.ExptType_Offline).Error)
 			require.NoError(t, conn.Create(&model.ExptRunLog{ID: run, SpaceID: space, ExptID: expt, ExptRunID: run, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(entity.EvaluationModeSubmit))}).Error)
 			require.NoError(t, conn.Create(&model.ExptItemResult{ID: base + 4, SpaceID: space, ExptID: expt, ExptRunID: run, ItemID: item, ItemVersionID: 31, Status: int32(entity.ItemRunState_Processing)}).Error)
 			require.NoError(t, conn.Create(&model.ExptItemResultRunLog{ID: base + 5, SpaceID: space, ExptID: expt, ExptRunID: run, ItemID: item, ItemVersionID: 31, Status: int32(entity.ItemRunState_Processing), ResultState: gptr.Of(int32(entity.ExptItemResultStateDefault)), RetryTimes: 3}).Error)
@@ -111,7 +113,7 @@ func TestScanTransitionMySQLCompleteThenArchive(t *testing.T) {
 			require.NoError(t, consumer.HandleCurrentSource(func(context.Context, *entity.ExptItemEvalEvent) error { invoked = true; return nil })(ctx, event))
 			require.False(t, invoked, "completed log blocks PreEval and invocation before canonical archival")
 
-			archive := &ExptResultServiceImpl{ExptItemResultRepo: itemRepo, ExptTurnResultRepo: turnRepo, ExptStatsRepo: statsRepo}
+			archive := &ExptResultServiceImpl{ExptItemResultRepo: itemRepo, ExptTurnResultRepo: turnRepo, ExptStatsRepo: statsRepo, resultPublishRepo: experimentrepo.NewExptResultPublishRepo(provider), resultPublishLocker: lateWriteLocker(t, ctrl)}
 			_, err = archive.RecordItemRunLogs(ctx, expt, run, item, space, exptDO)
 			require.NoError(t, err)
 			canonical, err = itemRepo.BatchGet(ctx, space, expt, []int64{item})
@@ -142,7 +144,7 @@ func TestScanTransitionMySQLCompleteThenArchive(t *testing.T) {
 			require.Equal(t, before, *stats)
 			turns, err := itemRepo.GetItemTurnResults(ctx, space, expt, item)
 			require.NoError(t, err)
-			require.Equal(t, 0.0, gptr.Indirect(turns[0].WeightedScore))
+			require.Nil(t, turns[0].WeightedScore, "no score record writes NULL instead of retaining old0")
 			readFailure := errors.New("injected primary query unavailable")
 			callbackName := "scan_transition_read_failure"
 			require.NoError(t, conn.Callback().Query().Before("gorm:query").Register(callbackName, func(tx *gorm.DB) { _ = tx.AddError(readFailure) }))

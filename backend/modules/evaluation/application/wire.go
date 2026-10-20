@@ -93,8 +93,9 @@ var (
 		domainservice.EvaluatorDomainServiceSet,
 		domainservice.EvaluationSetDomainServiceSet,
 		domainservice.TargetDomainServiceSet,
-		domainservice.NewExptResultService,
+		domainservice.NewExptResultServiceWithPublication,
 		domainservice.ProvideExptItemRefRepos,
+		NewManualRetryLockerFactory,
 		domainservice.NewEvaluationAnalysisService,
 		// Infrastructure Sets
 		infrahttp.NewHTTPClient,
