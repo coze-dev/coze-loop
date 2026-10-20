@@ -95,6 +95,9 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 	if spaceID == 0 || exptID == 0 {
 		return fmt.Errorf("UpsertExptTurnResultFilter: invalid space_id or expt_id")
 	}
+	if err := ctx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
 	if e.resultPublishLocker == nil {
 		if _, current := e.ExptItemResultRepo.(repo.IExptCurrentResultRepo); !current {
 			return e.upsertExptTurnResultFilterLocked(ctx, spaceID, exptID, ids)
@@ -104,16 +107,29 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 	if err != nil {
 		return err
 	}
+	var firstErr error
 	for _, item := range ids {
+		if err := ctx.Err(); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
 		if err := e.withFilterItemLock(ctx, exptID, item, func(ctx context.Context) error {
 			return e.upsertExptTurnResultFilterLocked(ctx, spaceID, exptID, []int64{item})
 		}); err != nil {
-			return err
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return errno.WrapMQRetryErr(ctxErr)
+			}
+			if firstErr == nil {
+				firstErr = err
+				logs.CtxWarn(ctx, "UpsertExptTurnResultFilter item failed, continuing batch, expt_id: %d, item_id: %d, err: %v", exptID, item, err)
+			}
 		}
 	}
-	return nil
+	return firstErr
 }
 func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context, spaceID, exptID int64, ids []int64, retry int32) error {
+	if err := ctx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
 	if e.resultPublishLocker == nil {
 		if _, current := e.ExptItemResultRepo.(repo.IExptCurrentResultRepo); !current {
 			return e.compareExptTurnResultFiltersLegacy(ctx, spaceID, exptID, ids, retry)
@@ -123,14 +139,24 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 	if err != nil {
 		return err
 	}
+	var firstErr error
 	for _, item := range ids {
+		if err := ctx.Err(); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
 		if err := e.withFilterItemLock(ctx, exptID, item, func(ctx context.Context) error {
 			return e.compareCurrentItemFilterLocked(ctx, spaceID, exptID, item, retry)
 		}); err != nil {
-			return err
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return errno.WrapMQRetryErr(ctxErr)
+			}
+			if firstErr == nil {
+				firstErr = err
+				logs.CtxWarn(ctx, "CompareExptTurnResultFilters item failed, continuing batch, expt_id: %d, item_id: %d, err: %v", exptID, item, err)
+			}
 		}
 	}
-	return nil
+	return firstErr
 }
 func (e ExptResultServiceImpl) ReconcileManualRetryFilterBeforeFinish(ctx context.Context, space, expt, run int64) (bool, error) {
 	scanner, ok := e.ExptItemResultRepo.(repo.IExptManualRetryFilterRepo)
