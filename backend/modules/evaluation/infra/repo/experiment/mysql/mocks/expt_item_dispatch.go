@@ -42,18 +42,18 @@ func (m *MockIExptItemDispatchDAO) EXPECT() *MockIExptItemDispatchDAOMockRecorde
 }
 
 // ClaimQuotaReserved mocks base method.
-func (m *MockIExptItemDispatchDAO) ClaimQuotaReserved(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64) ([]int64, error) {
+func (m *MockIExptItemDispatchDAO) ClaimQuotaReserved(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, itemRequestIDs map[int64]string) ([]repo.ClaimedDispatchItem, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClaimQuotaReserved", ctx, spaceID, exptID, exptRunID, itemIDs)
-	ret0, _ := ret[0].([]int64)
+	ret := m.ctrl.Call(m, "ClaimQuotaReserved", ctx, spaceID, exptID, exptRunID, itemIDs, itemRequestIDs)
+	ret0, _ := ret[0].([]repo.ClaimedDispatchItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ClaimQuotaReserved indicates an expected call of ClaimQuotaReserved.
-func (mr *MockIExptItemDispatchDAOMockRecorder) ClaimQuotaReserved(ctx, spaceID, exptID, exptRunID, itemIDs any) *gomock.Call {
+func (mr *MockIExptItemDispatchDAOMockRecorder) ClaimQuotaReserved(ctx, spaceID, exptID, exptRunID, itemIDs, itemRequestIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClaimQuotaReserved", reflect.TypeOf((*MockIExptItemDispatchDAO)(nil).ClaimQuotaReserved), ctx, spaceID, exptID, exptRunID, itemIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClaimQuotaReserved", reflect.TypeOf((*MockIExptItemDispatchDAO)(nil).ClaimQuotaReserved), ctx, spaceID, exptID, exptRunID, itemIDs, itemRequestIDs)
 }
 
 // LoadDispatchRuntime mocks base method.
@@ -87,46 +87,46 @@ func (mr *MockIExptItemDispatchDAOMockRecorder) MGetDispatchObservations(ctx, sp
 }
 
 // RequeueProcessingItem mocks base method.
-func (m *MockIExptItemDispatchDAO) RequeueProcessingItem(ctx context.Context, spaceID, exptID, exptRunID, itemID int64) (bool, error) {
+func (m *MockIExptItemDispatchDAO) RequeueProcessingItem(ctx context.Context, spaceID, exptID, exptRunID, itemID int64, expectedRequestID string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RequeueProcessingItem", ctx, spaceID, exptID, exptRunID, itemID)
+	ret := m.ctrl.Call(m, "RequeueProcessingItem", ctx, spaceID, exptID, exptRunID, itemID, expectedRequestID)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RequeueProcessingItem indicates an expected call of RequeueProcessingItem.
-func (mr *MockIExptItemDispatchDAOMockRecorder) RequeueProcessingItem(ctx, spaceID, exptID, exptRunID, itemID any) *gomock.Call {
+func (mr *MockIExptItemDispatchDAOMockRecorder) RequeueProcessingItem(ctx, spaceID, exptID, exptRunID, itemID, expectedRequestID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequeueProcessingItem", reflect.TypeOf((*MockIExptItemDispatchDAO)(nil).RequeueProcessingItem), ctx, spaceID, exptID, exptRunID, itemID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequeueProcessingItem", reflect.TypeOf((*MockIExptItemDispatchDAO)(nil).RequeueProcessingItem), ctx, spaceID, exptID, exptRunID, itemID, expectedRequestID)
 }
 
 // ResetQuotaReserved mocks base method.
-func (m *MockIExptItemDispatchDAO) ResetQuotaReserved(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64) ([]int64, error) {
+func (m *MockIExptItemDispatchDAO) ResetQuotaReserved(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, itemRequestIDs map[int64]string) ([]int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResetQuotaReserved", ctx, spaceID, exptID, exptRunID, itemIDs)
+	ret := m.ctrl.Call(m, "ResetQuotaReserved", ctx, spaceID, exptID, exptRunID, itemIDs, itemRequestIDs)
 	ret0, _ := ret[0].([]int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ResetQuotaReserved indicates an expected call of ResetQuotaReserved.
-func (mr *MockIExptItemDispatchDAOMockRecorder) ResetQuotaReserved(ctx, spaceID, exptID, exptRunID, itemIDs any) *gomock.Call {
+func (mr *MockIExptItemDispatchDAOMockRecorder) ResetQuotaReserved(ctx, spaceID, exptID, exptRunID, itemIDs, itemRequestIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetQuotaReserved", reflect.TypeOf((*MockIExptItemDispatchDAO)(nil).ResetQuotaReserved), ctx, spaceID, exptID, exptRunID, itemIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetQuotaReserved", reflect.TypeOf((*MockIExptItemDispatchDAO)(nil).ResetQuotaReserved), ctx, spaceID, exptID, exptRunID, itemIDs, itemRequestIDs)
 }
 
 // StartReservedItem mocks base method.
-func (m *MockIExptItemDispatchDAO) StartReservedItem(ctx context.Context, spaceID, exptID, exptRunID, itemID int64) (bool, error) {
+func (m *MockIExptItemDispatchDAO) StartReservedItem(ctx context.Context, spaceID, exptID, exptRunID, itemID int64, expectedRequestID string) (repo.StartReservedItemResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartReservedItem", ctx, spaceID, exptID, exptRunID, itemID)
-	ret0, _ := ret[0].(bool)
+	ret := m.ctrl.Call(m, "StartReservedItem", ctx, spaceID, exptID, exptRunID, itemID, expectedRequestID)
+	ret0, _ := ret[0].(repo.StartReservedItemResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // StartReservedItem indicates an expected call of StartReservedItem.
-func (mr *MockIExptItemDispatchDAOMockRecorder) StartReservedItem(ctx, spaceID, exptID, exptRunID, itemID any) *gomock.Call {
+func (mr *MockIExptItemDispatchDAOMockRecorder) StartReservedItem(ctx, spaceID, exptID, exptRunID, itemID, expectedRequestID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartReservedItem", reflect.TypeOf((*MockIExptItemDispatchDAO)(nil).StartReservedItem), ctx, spaceID, exptID, exptRunID, itemID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartReservedItem", reflect.TypeOf((*MockIExptItemDispatchDAO)(nil).StartReservedItem), ctx, spaceID, exptID, exptRunID, itemID, expectedRequestID)
 }

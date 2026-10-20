@@ -5,9 +5,11 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -34,119 +36,31 @@ func admittedEnforceCtx(event *entity.ExptItemEvalEvent) context.Context {
 	return ctx
 }
 
-// TestReservationAbsent_RequeuesOrphanedProcessingItem 主场景：Processing 且账本无 reservation
-// ⇒ 必须退回 Queueing，并把 stats 的 Processing 计数与主表状态一起退回。
-func TestReservationAbsent_RequeuesOrphanedProcessingItem(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	dispatchRepo := repoMocks.NewMockIExptItemDispatchRepo(ctrl)
-	dispatchRepo.EXPECT().MGetDispatchObservations(gomock.Any(), int64(3), int64(1), int64(2), []int64{4}).
-		Return([]*repo.ExptDispatchObservation{
-			{ItemID: 4, Status: int32(entity.ItemRunState_Processing), QuotaReservationState: entity.QuotaReservationStateNone},
-		}, nil)
-	// ★ 核心断言：退回动作真的发生在这个 item 上。
-	dispatchRepo.EXPECT().RequeueProcessingItem(gomock.Any(), int64(3), int64(1), int64(2), int64(4)).
-		Return(true, nil)
-
-	var gotStatsOp *entity.StatsCntArithOp
-	statsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
-	statsRepo.EXPECT().ArithOperateCount(gomock.Any(), int64(1), int64(3), gomock.Any()).
-		DoAndReturn(func(_ context.Context, _, _ int64, op *entity.StatsCntArithOp) error {
-			gotStatsOp = op
-			return nil
+// Requeue owns canonical/turn/log/stats atomically. The consumer refreshes
+// only the committed filter and never repeats the database writes.
+func TestReservationAbsent_RequeueAtomicAndFilter(t *testing.T) {
+	for _, changed := range []bool{false, true} {
+		t.Run(fmt.Sprint(changed), func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			dispatch := repoMocks.NewMockIExptItemDispatchRepo(ctrl)
+			dispatch.EXPECT().MGetDispatchObservations(gomock.Any(), int64(3), int64(1), int64(2), []int64{4}).Return([]*repo.ExptDispatchObservation{{ItemID: 4, Status: int32(entity.ItemRunState_Processing), RequestID: "rq2"}}, nil)
+			// Deliberately observe RQ2 while the event is RQ1: never substitute latest.
+			dispatch.EXPECT().RequeueProcessingItem(gomock.Any(), int64(3), int64(1), int64(2), int64(4), "rq1").Return(changed, nil)
+			result := svcMocks.NewMockExptResultService(ctrl)
+			if changed {
+				result.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), int64(3), int64(1), []int64{4}).Return(nil)
+			}
+			svc := &ExptItemEventEvalServiceImpl{
+				centralGuard: &fakeGuard{confirmResult: false}, dispatchRepo: dispatch, resultSvc: result,
+				exptItemResultRepo: repoMocks.NewMockIExptItemResultRepo(ctrl), exptTurnResultRepo: repoMocks.NewMockIExptTurnResultRepo(ctrl), exptStatsRepo: repoMocks.NewMockIExptStatsRepo(ctrl),
+			}
+			event := &entity.ExptItemEvalEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2, EvalSetItemID: 4, RequestID: "rq1"}
+			require.NoError(t, svc.HandleCentralReservation(func(context.Context, *entity.ExptItemEvalEvent) error {
+				t.Fatal("absent reservation must stop")
+				return nil
+			})(admittedEnforceCtx(event), event))
 		})
-
-	var gotFields map[string]any
-	itemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
-	itemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), int64(3), int64(1), []int64{4}, gomock.Any()).
-		DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any) error {
-			gotFields = ufields
-			return nil
-		})
-
-	svc := &ExptItemEventEvalServiceImpl{
-		centralGuard:       &fakeGuard{confirmResult: false},
-		dispatchRepo:       dispatchRepo,
-		exptStatsRepo:      statsRepo,
-		exptItemResultRepo: itemResultRepo,
 	}
-
-	event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 4}
-	ctx := admittedEnforceCtx(event)
-
-	nextCalled := false
-	err := svc.HandleCentralReservation(func(context.Context, *entity.ExptItemEvalEvent) error {
-		nextCalled = true
-		return nil
-	})(ctx, event)
-
-	assert.NoError(t, err, "这条消息注定不执行，返回 error 只会让 MQ 无休止重投")
-	assert.False(t, nextCalled, "reservation 不存在时不得执行 item")
-
-	assert.Equal(t, -1, gotStatsOp.OpStatusCnt[entity.ItemRunState_Processing],
-		"Processing 桶必须减 1，否则 processing_turn_count 只增不减")
-	assert.Equal(t, 1, gotStatsOp.OpStatusCnt[entity.ItemRunState_Queueing],
-		"item 回到队列，Queueing 桶要加回来")
-	assert.Equal(t, int32(entity.ItemRunState_Queueing), gotFields["status"],
-		"主表是详情页的数据源，不退回会一直显示成执行中")
-}
-
-// TestReservationAbsent_RollsBackTurnTableAndFilter 派发侧推进五项（run log / 主表 / stats /
-// turn 主表 / CK 加速表），回退必须同样是五项。只退前三项会留下「item 已回队列、turn 与 CK
-// 仍显示执行中」的错位，而且不自愈 —— 实验若以 Failed 收口，CompleteExpt 的 default 分支
-// 只销毁沙箱、不动 turn 状态。
-func TestReservationAbsent_RollsBackTurnTableAndFilter(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	dispatchRepo := repoMocks.NewMockIExptItemDispatchRepo(ctrl)
-	dispatchRepo.EXPECT().MGetDispatchObservations(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return([]*repo.ExptDispatchObservation{
-			{ItemID: 4, Status: int32(entity.ItemRunState_Processing), QuotaReservationState: entity.QuotaReservationStateNone},
-		}, nil)
-	dispatchRepo.EXPECT().RequeueProcessingItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(true, nil)
-
-	statsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
-	statsRepo.EXPECT().ArithOperateCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	itemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
-	itemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-
-	var gotTurnFields map[string]any
-	turnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
-	turnResultRepo.EXPECT().UpdateTurnResultsWithItemIDs(gomock.Any(), int64(1), []int64{4}, int64(3), gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ int64, _ []int64, _ int64, ufields map[string]any) error {
-			gotTurnFields = ufields
-			return nil
-		})
-
-	var gotFilterItemIDs []int64
-	resultSvc := svcMocks.NewMockExptResultService(ctrl)
-	resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), int64(3), int64(1), gomock.Any()).
-		DoAndReturn(func(_ context.Context, _, _ int64, itemIDs []int64) error {
-			gotFilterItemIDs = itemIDs
-			return nil
-		})
-
-	svc := &ExptItemEventEvalServiceImpl{
-		centralGuard:       &fakeGuard{confirmResult: false},
-		dispatchRepo:       dispatchRepo,
-		exptStatsRepo:      statsRepo,
-		exptItemResultRepo: itemResultRepo,
-		exptTurnResultRepo: turnResultRepo,
-		resultSvc:          resultSvc,
-	}
-
-	event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 4}
-	assert.NoError(t, svc.HandleCentralReservation(func(context.Context, *entity.ExptItemEvalEvent) error {
-		return nil
-	})(admittedEnforceCtx(event), event))
-
-	assert.Equal(t, int32(entity.TurnRunState_Queueing), gotTurnFields["status"],
-		"turn 主表不退回，详情页 turn 会一直显示运行中而 item 显示排队中")
-	assert.Equal(t, []int64{4}, gotFilterItemIDs,
-		"CK 不刷新，开加速器时按「运行中」筛会筛出实际在排队的 item")
 }
 
 // TestReservationAbsent_LeavesTerminalItemUntouched 迟到消息：item 已终态，
@@ -187,14 +101,14 @@ func TestReservationAbsent_ResetsStaleQueueingReserved(t *testing.T) {
 		Return([]*repo.ExptDispatchObservation{
 			{ItemID: 4, Status: int32(entity.ItemRunState_Queueing), QuotaReservationState: entity.QuotaReservationStateReserved},
 		}, nil)
-	dispatchRepo.EXPECT().ResetQuotaReserved(gomock.Any(), int64(3), int64(1), int64(2), []int64{4}).
+	dispatchRepo.EXPECT().ResetQuotaReserved(gomock.Any(), int64(3), int64(1), int64(2), []int64{4}, map[int64]string{4: "rq1"}).
 		Return([]int64{4}, nil)
 
 	svc := &ExptItemEventEvalServiceImpl{
 		centralGuard: &fakeGuard{confirmResult: false},
 		dispatchRepo: dispatchRepo,
 	}
-	event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 4}
+	event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 4, RequestID: "rq1"}
 	assert.NoError(t, svc.HandleCentralReservation(func(context.Context, *entity.ExptItemEvalEvent) error {
 		t.Fatal("Queueing/reserved 的 item 本轮不得执行")
 		return nil
@@ -241,7 +155,7 @@ func TestReservationAbsent_CASMissLeavesStatsAndMainTableUntouched(t *testing.T)
 			{ItemID: 4, Status: int32(entity.ItemRunState_Processing), QuotaReservationState: entity.QuotaReservationStateNone},
 		}, nil)
 	// CAS 未命中：并发路径已经把这条 run log 改走了。
-	dispatchRepo.EXPECT().RequeueProcessingItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+	dispatchRepo.EXPECT().RequeueProcessingItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), "").
 		Return(false, nil)
 
 	// 两个 mock 都不 EXPECT 任何调用 —— gomock 会让意外调用直接失败，这正是本用例的断言。

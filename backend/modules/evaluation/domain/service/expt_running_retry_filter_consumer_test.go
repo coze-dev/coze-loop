@@ -45,14 +45,24 @@ func testRunningRetryFilterConsumer(t *testing.T, reservation, saveFails bool) {
 	ctx := context.Background()
 	event := &entity.ExptItemEvalEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, EvalSetItemID: f.item, RequestID: "rq2", ExptRunMode: entity.EvaluationModeFailRetry}
 	initialState, finalState := entity.ItemRunState_Processing, entity.ItemRunState_Queueing
+	initialTurn, finalTurn := entity.TurnRunState_Processing, entity.TurnRunState_Queueing
 	reservationState := entity.QuotaReservationStateNone
 	if reservation {
 		initialState, finalState = entity.ItemRunState_Queueing, entity.ItemRunState_Processing
+		initialTurn, finalTurn = entity.TurnRunState_Queueing, entity.TurnRunState_Processing
 		reservationState = entity.QuotaReservationStateReserved
 	}
 	require.NoError(t, f.conn.Model(&mysqlmodel.ExptItemResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", initialState).Error)
 	require.NoError(t, f.conn.Model(&mysqlmodel.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Updates(map[string]any{"status": int32(initialState), "quota_reservation_state": int32(reservationState)}).Error)
-	require.NoError(t, f.conn.Model(&mysqlmodel.ExptTurnResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", initialState).Error)
+	require.NoError(t, f.conn.Model(&mysqlmodel.ExptTurnResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", initialTurn).Error)
+	require.NoError(t, f.conn.Model(&mysqlmodel.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", initialTurn).Error)
+	require.NoError(t, f.conn.Model(&mysqlmodel.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("result_state", entity.ExptItemResultStateDefault).Error)
+	// Counts follow the actual canonical old bucket before atomic Start/Requeue.
+	pending, processing := int32(1), int32(2)
+	if reservation {
+		pending, processing = 2, 1
+	}
+	require.NoError(t, f.conn.Model(&mysqlmodel.ExptStats{}).Where("space_id=? AND expt_id=?", f.space, f.expt).Updates(map[string]any{"pending_cnt": pending, "processing_cnt": processing}).Error)
 
 	// The ID-only work was queued before the source changed. A separate requeue
 	// holder publishes the new snapshot before the consumer acquires its lock.
@@ -63,6 +73,9 @@ func testRunningRetryFilterConsumer(t *testing.T, reservation, saveFails bool) {
 	f.token("rq2")
 	require.NoError(t, f.conn.Model(&mysqlmodel.ExptTurnResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Updates(map[string]any{"target_result_id": f.base + 91, "item_version_id": f.version + 1}).Error)
 	require.NoError(t, f.conn.Model(&mysqlmodel.ExptItemResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("item_version_id", f.version+1).Error)
+	// The new DB source contract requires both frozen log versions to match.
+	require.NoError(t, f.conn.Model(&mysqlmodel.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("item_version_id", f.version+1).Error)
+	require.NoError(t, f.conn.Model(&mysqlmodel.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Updates(map[string]any{"item_version_id": f.version + 1, "target_result_id": f.base + 91}).Error)
 	require.NoError(t, f.conn.Model(&mysqlmodel.ExptItemRef{}).Where("space_id=? AND item_id=?", f.space, f.item).Updates(map[string]any{"item_version_id": f.version + 1, "eval_set_id": f.base + 92, "eval_set_version_id": f.base + 93}).Error)
 	_, err = holder.Unlock(f.key())
 	require.NoError(t, err)
@@ -145,6 +158,19 @@ func testRunningRetryFilterConsumer(t *testing.T, reservation, saveFails bool) {
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 	require.Equal(t, finalState, items[0].Status)
+	var stats mysqlmodel.ExptStats
+	require.NoError(t, f.conn.Where("space_id=? AND expt_id=?", f.space, f.expt).Take(&stats).Error)
+	if reservation {
+		require.Equal(t, int32(1), stats.PendingCnt)
+		require.Equal(t, int32(2), stats.ProcessingCnt)
+	} else {
+		require.Equal(t, int32(2), stats.PendingCnt)
+		require.Equal(t, int32(1), stats.ProcessingCnt)
+	}
+	var turn mysqlmodel.ExptTurnResult
+	require.NoError(t, f.conn.Where("space_id=? AND expt_id=? AND item_id=?", f.space, f.expt, f.item).Take(&turn).Error)
+	require.Equal(t, int32(finalTurn), turn.Status)
+	require.Equal(t, f.base+91, turn.TargetResultID)
 	observations, err := consumer.dispatchRepo.MGetDispatchObservations(ctx, f.space, f.expt, f.run, []int64{f.item})
 	require.NoError(t, err)
 	require.Len(t, observations, 1)
