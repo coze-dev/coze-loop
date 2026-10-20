@@ -23,6 +23,19 @@ type ExptRunLogImpl struct {
 	exptRunLogDAO mysql.IExptRunLogDAO
 }
 
+func (e *ExptRunLogImpl) AppendRunItemIDs(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDs []int64) error {
+	return e.exptRunLogDAO.AppendRunItemIDs(ctx, exptID, exptRunID, spaceID, itemIDs)
+}
+
+func (e *ExptRunLogImpl) UpdateRunStats(ctx context.Context, exptID, exptRunID, spaceID int64, run *entity.ExptRunLog, stats *entity.ExptStats) error {
+	fields := map[string]any{
+		"status": run.Status, "pending_cnt": run.PendingCnt, "processing_cnt": run.ProcessingCnt,
+		"success_cnt": run.SuccessCnt, "fail_cnt": run.FailCnt, "terminated_cnt": run.TerminatedCnt,
+		"credit_cost": run.CreditCost, "token_cost": run.TokenCost, "updated_at": time.Now(),
+	}
+	return e.exptRunLogDAO.UpdateRunStats(ctx, exptID, exptRunID, spaceID, fields, convert.NewExptStatsConverter().DO2PO(stats))
+}
+
 func (e *ExptRunLogImpl) Get(ctx context.Context, exptID, exptRunID int64) (*entity.ExptRunLog, error) {
 	po, err := e.exptRunLogDAO.Get(ctx, exptID, exptRunID)
 	if err != nil {

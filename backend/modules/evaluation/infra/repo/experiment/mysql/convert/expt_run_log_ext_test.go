@@ -6,6 +6,9 @@ package convert
 import (
 	"testing"
 
+	"github.com/bytedance/gg/gptr"
+	"github.com/stretchr/testify/require"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -54,4 +57,15 @@ func TestExptTurnResultRunLogConvertor_Ext(t *testing.T) {
 		_, err := c.PO2DO(po)
 		assert.Error(t, err)
 	})
+}
+
+func TestExptRunLogReceiptConvertRoundTrip(t *testing.T) {
+	raw := []byte(`[{"ItemIDs":[11],"CreateAt":1700000000},{"ItemIDs":null,"CreateAt":1700000001,"manual_retry_receipt":{"request_id":"rq1","payload_hash":"hash","accepted_count":1,"rejected_items":[{"item_id":12,"reason":"busy"}],"snapshot_at_ms":1700000000123},"unknown":[1,2,3]}]`)
+	converter := NewExptRunLogConvertor()
+	do, err := converter.PO2DO(&model.ExptRunLog{ID: 7, ExptID: 8, SpaceID: 9, ItemIds: gptr.Of(raw)})
+	require.NoError(t, err)
+	require.Equal(t, []int64{11}, do.GetItemIDs())
+	po, err := converter.DO2PO(do)
+	require.NoError(t, err)
+	require.JSONEq(t, string(raw), string(*po.ItemIds))
 }
