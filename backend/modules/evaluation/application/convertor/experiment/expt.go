@@ -346,6 +346,7 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 
 	res := &domain_expt.Experiment{
 		ID:                        gptr.Of(experiment.ID),
+		LatestRunID:               gptr.Of(experiment.LatestRunID),
 		Name:                      gptr.Of(experiment.Name),
 		Desc:                      gptr.Of(experiment.Description),
 		ExperimentGroupKey:        gptr.Of(experiment.ExperimentGroupKey),

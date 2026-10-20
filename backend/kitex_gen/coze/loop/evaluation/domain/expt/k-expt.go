@@ -2961,6 +2961,20 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 120:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField120(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -3760,6 +3774,20 @@ func (p *Experiment) FastReadField119(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField120(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.LatestRunID = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -3783,6 +3811,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField113(buf[offset:], w)
 		offset += p.fastWriteField114(buf[offset:], w)
 		offset += p.fastWriteField116(buf[offset:], w)
+		offset += p.fastWriteField120(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
@@ -3877,6 +3906,7 @@ func (p *Experiment) BLength() int {
 		l += p.field117Length()
 		l += p.field118Length()
 		l += p.field119Length()
+		l += p.field120Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -4391,6 +4421,15 @@ func (p *Experiment) fastWriteField119(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *Experiment) fastWriteField120(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetLatestRunID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 120)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.LatestRunID)
+	}
+	return offset
+}
+
 func (p *Experiment) field1Length() int {
 	l := 0
 	if p.IsSetID() {
@@ -4878,6 +4917,15 @@ func (p *Experiment) field119Length() int {
 	return l
 }
 
+func (p *Experiment) field120Length() int {
+	l := 0
+	if p.IsSetLatestRunID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
 func (p *Experiment) DeepCopy(s interface{}) error {
 	src, ok := s.(*Experiment)
 	if !ok {
@@ -5280,6 +5328,11 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		}
 	}
 	p.VerificationConfig = _verificationConfig
+
+	if src.LatestRunID != nil {
+		tmp := *src.LatestRunID
+		p.LatestRunID = &tmp
+	}
 
 	return nil
 }

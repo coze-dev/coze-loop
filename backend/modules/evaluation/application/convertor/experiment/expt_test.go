@@ -4,6 +4,8 @@
 package experiment
 
 import (
+	stdjson "encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -2711,5 +2713,78 @@ func TestToExptDTO_EvalSetByNilCheck(t *testing.T) {
 		result := ToExptDTO(experiment)
 		assert.NotNil(t, result)
 		assert.Nil(t, result.EvalSet)
+	})
+}
+
+func TestToExptDTO_LatestRunID(t *testing.T) {
+	t.Run("old read response leaves latest run absent", func(t *testing.T) {
+		var experiment domain_expt.Experiment
+		require.NoError(t, stdjson.Unmarshal([]byte(`{"id":42}`), &experiment))
+		assert.Nil(t, experiment.LatestRunID)
+		assert.Zero(t, experiment.GetLatestRunID())
+	})
+
+	for _, runID := range []int64{0, 9007199254740993} {
+		t.Run(fmt.Sprint(runID), func(t *testing.T) {
+			result := ToExptDTO(&entity.Experiment{ID: 42, LatestRunID: runID})
+			field := reflect.ValueOf(result).Elem().FieldByName("LatestRunID")
+			require.True(t, field.IsValid(), "Experiment DTO must expose the authoritative latest_run_id")
+			require.False(t, field.IsNil(), "zero must remain zero instead of inferring another run")
+			assert.Equal(t, runID, field.Elem().Int())
+		})
+	}
+}
+
+func TestRetryExperimentContractRoundTrip(t *testing.T) {
+	t.Run("current run request survives JSON and Thrift", func(t *testing.T) {
+		input := `{"retry_mode":3,"workspace_id":7,"expt_id":42,"item_ids":[701],"expected_run_id":9007199254740993,"request_id":"72cc8921-40f4-4a43-b772-aaf2b5dcdf05"}`
+		var request expt.RetryExperimentRequest
+		require.NoError(t, stdjson.Unmarshal([]byte(input), &request))
+		buf := make([]byte, request.BLength())
+		require.Equal(t, len(buf), request.FastWrite(buf))
+		var decoded expt.RetryExperimentRequest
+		_, err := decoded.FastRead(buf)
+		require.NoError(t, err)
+		body, err := stdjson.Marshal(&decoded)
+		require.NoError(t, err)
+		assert.JSONEq(t, input, string(body))
+		assert.Contains(t, string(body), `"expected_run_id":9007199254740993`)
+	})
+
+	t.Run("legacy request keeps new fields absent", func(t *testing.T) {
+		input := `{"retry_mode":2,"workspace_id":7,"expt_id":42,"item_ids":null}`
+		var request expt.RetryExperimentRequest
+		require.NoError(t, stdjson.Unmarshal([]byte(input), &request))
+		body, err := stdjson.Marshal(&request)
+		require.NoError(t, err)
+		assert.JSONEq(t, input, string(body))
+	})
+
+	t.Run("legacy response keeps new fields absent", func(t *testing.T) {
+		input := `{"run_id":7,"BaseResp":{"StatusCode":0,"StatusMessage":""}}`
+		var response expt.RetryExperimentResponse
+		require.NoError(t, stdjson.Unmarshal([]byte(input), &response))
+		buf := make([]byte, response.BLength())
+		require.Equal(t, len(buf), response.FastWrite(buf))
+		var decoded expt.RetryExperimentResponse
+		_, err := decoded.FastRead(buf)
+		require.NoError(t, err)
+		body, err := stdjson.Marshal(&decoded)
+		require.NoError(t, err)
+		assert.JSONEq(t, input, string(body))
+	})
+
+	t.Run("receipt preserves zero acceptance and rejected items", func(t *testing.T) {
+		input := `{"run_id":9007199254740993,"request_id":"72cc8921-40f4-4a43-b772-aaf2b5dcdf05","accepted_count":0,"rejected_items":[{"item_id":701,"reason":"busy"}],"snapshot_at_ms":1792497600000,"BaseResp":{"StatusCode":0,"StatusMessage":""}}`
+		var response expt.RetryExperimentResponse
+		require.NoError(t, stdjson.Unmarshal([]byte(input), &response))
+		buf := make([]byte, response.BLength())
+		require.Equal(t, len(buf), response.FastWrite(buf))
+		var decoded expt.RetryExperimentResponse
+		_, err := decoded.FastRead(buf)
+		require.NoError(t, err)
+		body, err := stdjson.Marshal(&decoded)
+		require.NoError(t, err)
+		assert.JSONEq(t, input, string(body))
 	})
 }

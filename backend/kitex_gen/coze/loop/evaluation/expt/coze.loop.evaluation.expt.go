@@ -13601,12 +13601,14 @@ func (p *RunExperimentResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type RetryExperimentRequest struct {
-	RetryMode   *expt.ExptRetryMode `thrift:"retry_mode,1,optional" frugal:"1,optional,ExptRetryMode" form:"retry_mode" json:"retry_mode,omitempty"`
-	WorkspaceID *int64              `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
-	ExptID      *int64              `thrift:"expt_id,3,optional" frugal:"3,optional,i64" json:"expt_id" path:"expt_id" `
-	ItemIds     []int64             `thrift:"item_ids,4,optional" frugal:"4,optional,list<i64>" json:"item_ids" form:"item_ids" `
-	Ext         map[string]string   `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	Base        *base.Base          `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	RetryMode     *expt.ExptRetryMode `thrift:"retry_mode,1,optional" frugal:"1,optional,ExptRetryMode" form:"retry_mode" json:"retry_mode,omitempty"`
+	WorkspaceID   *int64              `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
+	ExptID        *int64              `thrift:"expt_id,3,optional" frugal:"3,optional,i64" json:"expt_id" path:"expt_id" `
+	ItemIds       []int64             `thrift:"item_ids,4,optional" frugal:"4,optional,list<i64>" json:"item_ids" form:"item_ids" `
+	ExpectedRunID *int64              `thrift:"expected_run_id,5,optional" frugal:"5,optional,i64" json:"expected_run_id,omitempty" form:"expected_run_id" `
+	RequestID     *string             `thrift:"request_id,6,optional" frugal:"6,optional,string" form:"request_id" json:"request_id,omitempty"`
+	Ext           map[string]string   `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	Base          *base.Base          `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewRetryExperimentRequest() *RetryExperimentRequest {
@@ -13664,6 +13666,30 @@ func (p *RetryExperimentRequest) GetItemIds() (v []int64) {
 	return p.ItemIds
 }
 
+var RetryExperimentRequest_ExpectedRunID_DEFAULT int64
+
+func (p *RetryExperimentRequest) GetExpectedRunID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExpectedRunID() {
+		return RetryExperimentRequest_ExpectedRunID_DEFAULT
+	}
+	return *p.ExpectedRunID
+}
+
+var RetryExperimentRequest_RequestID_DEFAULT string
+
+func (p *RetryExperimentRequest) GetRequestID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRequestID() {
+		return RetryExperimentRequest_RequestID_DEFAULT
+	}
+	return *p.RequestID
+}
+
 var RetryExperimentRequest_Ext_DEFAULT map[string]string
 
 func (p *RetryExperimentRequest) GetExt() (v map[string]string) {
@@ -13699,6 +13725,12 @@ func (p *RetryExperimentRequest) SetExptID(val *int64) {
 func (p *RetryExperimentRequest) SetItemIds(val []int64) {
 	p.ItemIds = val
 }
+func (p *RetryExperimentRequest) SetExpectedRunID(val *int64) {
+	p.ExpectedRunID = val
+}
+func (p *RetryExperimentRequest) SetRequestID(val *string) {
+	p.RequestID = val
+}
 func (p *RetryExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -13711,6 +13743,8 @@ var fieldIDToName_RetryExperimentRequest = map[int16]string{
 	2:   "workspace_id",
 	3:   "expt_id",
 	4:   "item_ids",
+	5:   "expected_run_id",
+	6:   "request_id",
 	100: "ext",
 	255: "Base",
 }
@@ -13729,6 +13763,14 @@ func (p *RetryExperimentRequest) IsSetExptID() bool {
 
 func (p *RetryExperimentRequest) IsSetItemIds() bool {
 	return p.ItemIds != nil
+}
+
+func (p *RetryExperimentRequest) IsSetExpectedRunID() bool {
+	return p.ExpectedRunID != nil
+}
+
+func (p *RetryExperimentRequest) IsSetRequestID() bool {
+	return p.RequestID != nil
 }
 
 func (p *RetryExperimentRequest) IsSetExt() bool {
@@ -13784,6 +13826,22 @@ func (p *RetryExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -13891,6 +13949,28 @@ func (p *RetryExperimentRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.ItemIds = _field
 	return nil
 }
+func (p *RetryExperimentRequest) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExpectedRunID = _field
+	return nil
+}
+func (p *RetryExperimentRequest) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RequestID = _field
+	return nil
+}
 func (p *RetryExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -13949,6 +14029,14 @@ func (p *RetryExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -14057,6 +14145,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *RetryExperimentRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExpectedRunID() {
+		if err = oprot.WriteFieldBegin("expected_run_id", thrift.I64, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ExpectedRunID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *RetryExperimentRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRequestID() {
+		if err = oprot.WriteFieldBegin("request_id", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.RequestID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *RetryExperimentRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -14131,6 +14255,12 @@ func (p *RetryExperimentRequest) DeepEqual(ano *RetryExperimentRequest) bool {
 	if !p.Field4DeepEqual(ano.ItemIds) {
 		return false
 	}
+	if !p.Field5DeepEqual(ano.ExpectedRunID) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.RequestID) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.Ext) {
 		return false
 	}
@@ -14189,6 +14319,30 @@ func (p *RetryExperimentRequest) Field4DeepEqual(src []int64) bool {
 	}
 	return true
 }
+func (p *RetryExperimentRequest) Field5DeepEqual(src *int64) bool {
+
+	if p.ExpectedRunID == src {
+		return true
+	} else if p.ExpectedRunID == nil || src == nil {
+		return false
+	}
+	if *p.ExpectedRunID != *src {
+		return false
+	}
+	return true
+}
+func (p *RetryExperimentRequest) Field6DeepEqual(src *string) bool {
+
+	if p.RequestID == src {
+		return true
+	} else if p.RequestID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.RequestID, *src) != 0 {
+		return false
+	}
+	return true
+}
 func (p *RetryExperimentRequest) Field100DeepEqual(src map[string]string) bool {
 
 	if len(p.Ext) != len(src) {
@@ -14210,9 +14364,271 @@ func (p *RetryExperimentRequest) Field255DeepEqual(src *base.Base) bool {
 	return true
 }
 
+type RetryRejectedItem struct {
+	ItemID *int64  `thrift:"item_id,1,optional" frugal:"1,optional,i64" json:"item_id,omitempty" form:"item_id" query:"item_id"`
+	Reason *string `thrift:"reason,2,optional" frugal:"2,optional,string" form:"reason" json:"reason,omitempty" query:"reason"`
+}
+
+func NewRetryRejectedItem() *RetryRejectedItem {
+	return &RetryRejectedItem{}
+}
+
+func (p *RetryRejectedItem) InitDefault() {
+}
+
+var RetryRejectedItem_ItemID_DEFAULT int64
+
+func (p *RetryRejectedItem) GetItemID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemID() {
+		return RetryRejectedItem_ItemID_DEFAULT
+	}
+	return *p.ItemID
+}
+
+var RetryRejectedItem_Reason_DEFAULT string
+
+func (p *RetryRejectedItem) GetReason() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReason() {
+		return RetryRejectedItem_Reason_DEFAULT
+	}
+	return *p.Reason
+}
+func (p *RetryRejectedItem) SetItemID(val *int64) {
+	p.ItemID = val
+}
+func (p *RetryRejectedItem) SetReason(val *string) {
+	p.Reason = val
+}
+
+var fieldIDToName_RetryRejectedItem = map[int16]string{
+	1: "item_id",
+	2: "reason",
+}
+
+func (p *RetryRejectedItem) IsSetItemID() bool {
+	return p.ItemID != nil
+}
+
+func (p *RetryRejectedItem) IsSetReason() bool {
+	return p.Reason != nil
+}
+
+func (p *RetryRejectedItem) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RetryRejectedItem[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *RetryRejectedItem) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemID = _field
+	return nil
+}
+func (p *RetryRejectedItem) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Reason = _field
+	return nil
+}
+
+func (p *RetryRejectedItem) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("RetryRejectedItem"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *RetryRejectedItem) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemID() {
+		if err = oprot.WriteFieldBegin("item_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ItemID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *RetryRejectedItem) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetReason() {
+		if err = oprot.WriteFieldBegin("reason", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Reason); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *RetryRejectedItem) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RetryRejectedItem(%+v)", *p)
+
+}
+
+func (p *RetryRejectedItem) DeepEqual(ano *RetryRejectedItem) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ItemID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Reason) {
+		return false
+	}
+	return true
+}
+
+func (p *RetryRejectedItem) Field1DeepEqual(src *int64) bool {
+
+	if p.ItemID == src {
+		return true
+	} else if p.ItemID == nil || src == nil {
+		return false
+	}
+	if *p.ItemID != *src {
+		return false
+	}
+	return true
+}
+func (p *RetryRejectedItem) Field2DeepEqual(src *string) bool {
+
+	if p.Reason == src {
+		return true
+	} else if p.Reason == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Reason, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 type RetryExperimentResponse struct {
-	RunID    *int64         `thrift:"run_id,1,optional" frugal:"1,optional,i64" json:"run_id" form:"run_id" `
-	BaseResp *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	RunID         *int64               `thrift:"run_id,1,optional" frugal:"1,optional,i64" json:"run_id" form:"run_id" `
+	RequestID     *string              `thrift:"request_id,2,optional" frugal:"2,optional,string" form:"request_id" json:"request_id,omitempty" query:"request_id"`
+	AcceptedCount *int32               `thrift:"accepted_count,3,optional" frugal:"3,optional,i32" form:"accepted_count" json:"accepted_count,omitempty" query:"accepted_count"`
+	RejectedItems []*RetryRejectedItem `thrift:"rejected_items,4,optional" frugal:"4,optional,list<RetryRejectedItem>" form:"rejected_items" json:"rejected_items,omitempty" query:"rejected_items"`
+	SnapshotAtMs  *int64               `thrift:"snapshot_at_ms,5,optional" frugal:"5,optional,i64" json:"snapshot_at_ms,omitempty" form:"snapshot_at_ms" query:"snapshot_at_ms"`
+	BaseResp      *base.BaseResp       `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewRetryExperimentResponse() *RetryExperimentResponse {
@@ -14234,6 +14650,54 @@ func (p *RetryExperimentResponse) GetRunID() (v int64) {
 	return *p.RunID
 }
 
+var RetryExperimentResponse_RequestID_DEFAULT string
+
+func (p *RetryExperimentResponse) GetRequestID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRequestID() {
+		return RetryExperimentResponse_RequestID_DEFAULT
+	}
+	return *p.RequestID
+}
+
+var RetryExperimentResponse_AcceptedCount_DEFAULT int32
+
+func (p *RetryExperimentResponse) GetAcceptedCount() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAcceptedCount() {
+		return RetryExperimentResponse_AcceptedCount_DEFAULT
+	}
+	return *p.AcceptedCount
+}
+
+var RetryExperimentResponse_RejectedItems_DEFAULT []*RetryRejectedItem
+
+func (p *RetryExperimentResponse) GetRejectedItems() (v []*RetryRejectedItem) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRejectedItems() {
+		return RetryExperimentResponse_RejectedItems_DEFAULT
+	}
+	return p.RejectedItems
+}
+
+var RetryExperimentResponse_SnapshotAtMs_DEFAULT int64
+
+func (p *RetryExperimentResponse) GetSnapshotAtMs() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSnapshotAtMs() {
+		return RetryExperimentResponse_SnapshotAtMs_DEFAULT
+	}
+	return *p.SnapshotAtMs
+}
+
 var RetryExperimentResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *RetryExperimentResponse) GetBaseResp() (v *base.BaseResp) {
@@ -14248,17 +14712,49 @@ func (p *RetryExperimentResponse) GetBaseResp() (v *base.BaseResp) {
 func (p *RetryExperimentResponse) SetRunID(val *int64) {
 	p.RunID = val
 }
+func (p *RetryExperimentResponse) SetRequestID(val *string) {
+	p.RequestID = val
+}
+func (p *RetryExperimentResponse) SetAcceptedCount(val *int32) {
+	p.AcceptedCount = val
+}
+func (p *RetryExperimentResponse) SetRejectedItems(val []*RetryRejectedItem) {
+	p.RejectedItems = val
+}
+func (p *RetryExperimentResponse) SetSnapshotAtMs(val *int64) {
+	p.SnapshotAtMs = val
+}
 func (p *RetryExperimentResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_RetryExperimentResponse = map[int16]string{
 	1:   "run_id",
+	2:   "request_id",
+	3:   "accepted_count",
+	4:   "rejected_items",
+	5:   "snapshot_at_ms",
 	255: "BaseResp",
 }
 
 func (p *RetryExperimentResponse) IsSetRunID() bool {
 	return p.RunID != nil
+}
+
+func (p *RetryExperimentResponse) IsSetRequestID() bool {
+	return p.RequestID != nil
+}
+
+func (p *RetryExperimentResponse) IsSetAcceptedCount() bool {
+	return p.AcceptedCount != nil
+}
+
+func (p *RetryExperimentResponse) IsSetRejectedItems() bool {
+	return p.RejectedItems != nil
+}
+
+func (p *RetryExperimentResponse) IsSetSnapshotAtMs() bool {
+	return p.SnapshotAtMs != nil
 }
 
 func (p *RetryExperimentResponse) IsSetBaseResp() bool {
@@ -14286,6 +14782,38 @@ func (p *RetryExperimentResponse) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -14339,6 +14867,62 @@ func (p *RetryExperimentResponse) ReadField1(iprot thrift.TProtocol) error {
 	p.RunID = _field
 	return nil
 }
+func (p *RetryExperimentResponse) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RequestID = _field
+	return nil
+}
+func (p *RetryExperimentResponse) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AcceptedCount = _field
+	return nil
+}
+func (p *RetryExperimentResponse) ReadField4(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*RetryRejectedItem, 0, size)
+	values := make([]RetryRejectedItem, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.RejectedItems = _field
+	return nil
+}
+func (p *RetryExperimentResponse) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SnapshotAtMs = _field
+	return nil
+}
 func (p *RetryExperimentResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -14356,6 +14940,22 @@ func (p *RetryExperimentResponse) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -14398,6 +14998,86 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *RetryExperimentResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRequestID() {
+		if err = oprot.WriteFieldBegin("request_id", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.RequestID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *RetryExperimentResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAcceptedCount() {
+		if err = oprot.WriteFieldBegin("accepted_count", thrift.I32, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.AcceptedCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *RetryExperimentResponse) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRejectedItems() {
+		if err = oprot.WriteFieldBegin("rejected_items", thrift.LIST, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.RejectedItems)); err != nil {
+			return err
+		}
+		for _, v := range p.RejectedItems {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *RetryExperimentResponse) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSnapshotAtMs() {
+		if err = oprot.WriteFieldBegin("snapshot_at_ms", thrift.I64, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.SnapshotAtMs); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 func (p *RetryExperimentResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
@@ -14432,6 +15112,18 @@ func (p *RetryExperimentResponse) DeepEqual(ano *RetryExperimentResponse) bool {
 	if !p.Field1DeepEqual(ano.RunID) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.RequestID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.AcceptedCount) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.RejectedItems) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.SnapshotAtMs) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
 		return false
 	}
@@ -14446,6 +15138,55 @@ func (p *RetryExperimentResponse) Field1DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.RunID != *src {
+		return false
+	}
+	return true
+}
+func (p *RetryExperimentResponse) Field2DeepEqual(src *string) bool {
+
+	if p.RequestID == src {
+		return true
+	} else if p.RequestID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.RequestID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *RetryExperimentResponse) Field3DeepEqual(src *int32) bool {
+
+	if p.AcceptedCount == src {
+		return true
+	} else if p.AcceptedCount == nil || src == nil {
+		return false
+	}
+	if *p.AcceptedCount != *src {
+		return false
+	}
+	return true
+}
+func (p *RetryExperimentResponse) Field4DeepEqual(src []*RetryRejectedItem) bool {
+
+	if len(p.RejectedItems) != len(src) {
+		return false
+	}
+	for i, v := range p.RejectedItems {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *RetryExperimentResponse) Field5DeepEqual(src *int64) bool {
+
+	if p.SnapshotAtMs == src {
+		return true
+	} else if p.SnapshotAtMs == nil || src == nil {
+		return false
+	}
+	if *p.SnapshotAtMs != *src {
 		return false
 	}
 	return true
