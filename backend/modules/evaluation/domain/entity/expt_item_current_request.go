@@ -3,7 +3,10 @@
 
 package entity
 
-import "time"
+import (
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"time"
+)
 
 // ExptItemCurrentRequest is one primary database observation of the canonical item and run log.
 type ExptItemCurrentRequest struct {
@@ -84,4 +87,17 @@ func SameCurrentEvaluatorRefs(a, b *EvaluatorResults) bool {
 		}
 	}
 	return true
+}
+
+// TurnError preserves the existing result reader's turn-level error contract.
+// A yielding retry leaves prior error text unchanged; terminal completion replaces it.
+func (w *ExptCurrentItemRunWrite) TurnError(status TurnRunState) []byte {
+	if status == TurnRunState_Terminal {
+		return []byte(errno.SerializeErr(errno.NewItemManuallyTerminatedErr()))
+	}
+	if status != TurnRunState_Fail {
+		return nil
+	}
+	reason := errno.DeserializeErr(w.ErrMsg)
+	return []byte(errno.SerializeErr(errno.NewTurnOtherErr(reason.Error(), reason)))
 }

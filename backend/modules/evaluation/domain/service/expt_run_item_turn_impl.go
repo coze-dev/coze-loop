@@ -23,6 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/mem"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -138,6 +139,11 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 // Direct turn callers also need a local event before mode-based reuse checks.
 func scopeTurnEvalEvent(etec *entity.ExptTurnEvalCtx) {
 	if etec == nil || etec.Event == nil || etec.Turn == nil || etec.Event.ResumeSource == nil || etec.Event.ResumeSource.TurnID == etec.Turn.ID {
+		return
+	}
+	// A non-source turn with cleared flags is already scoped. Keep its event
+	// identity so CallEvaluators sees CallTarget's marker after a new invoke.
+	if !etec.Event.AsyncReportTrigger && !etec.Event.AsyncEvaluatorReportTrigger {
 		return
 	}
 	itemCtx := *etec.ExptItemEvalCtx
@@ -365,8 +371,15 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	if etec.Expt.EvalConf != nil {
 		etc.EnableExtractTrajectory = etec.Expt.EvalConf.EnableExtractTrajectory
 	}
+	// Provider storage clips Content in place; retain independent history for later turns.
+	var historyMessages []*entity.Message
+	if history != nil {
+		if err := mem.DeepCopy(history, &historyMessages); err != nil {
+			return nil, errorx.Wrapf(err, "copy target history")
+		}
+	}
 	etid := &entity.EvalTargetInputData{
-		HistoryMessages: history,
+		HistoryMessages: historyMessages,
 		InputFields:     inputFields,
 		Ext:             ext,
 	}

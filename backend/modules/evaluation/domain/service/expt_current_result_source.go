@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -24,9 +25,11 @@ var errExptNonCurrentSource = errors.New("execution source is no longer current"
 
 type currentItemSourceKey struct{}
 type currentItemExecution struct {
-	Source   *entity.ExptCurrentItemRunSource
-	LockLost bool
-	LogCtx   context.Context
+	Source        *entity.ExptCurrentItemRunSource
+	LockLost      bool
+	Completed     bool
+	QuotaReleased bool
+	LogCtx        context.Context
 }
 
 func executionSource(ctx context.Context) *currentItemExecution {
@@ -111,7 +114,7 @@ func (e *ExptItemEventEvalServiceImpl) validateResumeSource(ctx context.Context,
 		if record.ID <= 0 || record.SpaceID <= 0 || record.ExperimentRunID <= 0 || record.ItemID <= 0 || record.TurnID < 0 || record.Status == nil || *record.Status < entity.EvalTargetRunStatusSuccess || *record.Status > entity.EvalTargetRunStatusAsyncInvoking {
 			return false, errno.NewMQRetryErr("incomplete original target record")
 		}
-		return record.ID == source.RecordID && record.ExperimentRunID == event.ExptRunID && record.ItemID == event.EvalSetItemID && record.ItemVersionID == current.ItemVersionID && record.TurnID == source.TurnID, nil
+		return record.ID == source.RecordID && record.ExperimentRunID == event.ExptRunID && record.ItemID == event.EvalSetItemID && (record.ItemVersionID == 0 || record.ItemVersionID == current.ItemVersionID) && record.TurnID == source.TurnID, nil
 	}
 	if e.evaluatorRecordService == nil {
 		return false, errno.NewMQRetryErr("evaluator source reader missing")
@@ -126,7 +129,7 @@ func (e *ExptItemEventEvalServiceImpl) validateResumeSource(ctx context.Context,
 	if record.ID <= 0 || record.SpaceID <= 0 || record.ExperimentID <= 0 || record.ExperimentRunID <= 0 || record.ItemID <= 0 || record.TurnID < 0 || record.Status < entity.EvaluatorRunStatusSuccess || record.Status > entity.EvaluatorRunStatusSkipped || record.SourceType < 0 || record.SourceType > entity.EvaluatorRecordSourceTypeInline {
 		return false, errno.NewMQRetryErr("incomplete original evaluator record")
 	}
-	if record.ID != source.RecordID || record.ExperimentID != event.ExptID || record.ExperimentRunID != event.ExptRunID || record.ItemID != event.EvalSetItemID || record.ItemVersionID != current.ItemVersionID || record.TurnID != source.TurnID {
+	if record.ID != source.RecordID || record.ExperimentID != event.ExptID || record.ExperimentRunID != event.ExptRunID || record.ItemID != event.EvalSetItemID || record.ItemVersionID != 0 && record.ItemVersionID != current.ItemVersionID || record.TurnID != source.TurnID {
 		return false, nil
 	}
 	if record.TargetRecordID != 0 && record.TargetRecordID != turn.TargetResultID {
@@ -137,7 +140,7 @@ func (e *ExptItemEventEvalServiceImpl) validateResumeSource(ctx context.Context,
 		return false, errno.NewMQRetryErr("current evaluator source references missing")
 	}
 	if record.SourceType == entity.EvaluatorRecordSourceTypeInline {
-		if record.InlineKey == "" || record.TargetRecordID <= 0 {
+		if record.InlineKey == "" {
 			return false, errno.NewMQRetryErr("incomplete original inline evaluator source")
 		}
 		for _, ref := range refs.Inline {
@@ -241,7 +244,11 @@ func (e *ExptItemEventEvalServiceImpl) handleCurrentEventErr(ctx context.Context
 		if err != nil {
 			return errno.WrapMQRetryErr(err)
 		}
-		if !sameExecutionIdentity(execution.Source, current) || entity.IsItemRunFinished(current.Current.Status) {
+		if !sameExecutionIdentity(execution.Source, current) {
+			return nil
+		}
+		finished := entity.IsItemRunFinished(current.Current.Status)
+		if finished && !(execution.Completed && current.Current.Status == entity.ItemRunState_Fail && current.Current.ResultState == entity.ExptItemResultStateLogged) {
 			return nil
 		}
 		valid, err := e.validateResumeSource(lockCtx, event, &current.Current)
@@ -265,6 +272,9 @@ func (e *ExptItemEventEvalServiceImpl) handleCurrentEventErr(ctx context.Context
 		}
 		debt = conf.IsInDebt
 		if debt {
+			return nil
+		}
+		if finished {
 			return nil
 		}
 		write := &entity.ExptCurrentItemRunWrite{Status: entity.ItemRunState_Fail, ErrMsg: []byte(errno.SerializeErr(evalErr)), RetryTimes: int32(event.RetryTimes), FailPendingTurns: true}
@@ -309,7 +319,14 @@ func (e *ExptItemEventEvalServiceImpl) handleCurrentEventErr(ctx context.Context
 		if err := e.manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(cid), entity.WithCompleteInterval(2*time.Second)); err != nil {
 			return err
 		}
-		return e.manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, entity.WithStatus(entity.ExptStatus_Terminated), entity.WithStatusMessage(evalErr.Error()), entity.WithCID(cid), entity.WithCompleteInterval(2*time.Second))
+		if err := e.manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, entity.WithStatus(entity.ExptStatus_Terminated), entity.WithStatusMessage(evalErr.Error()), entity.WithCID(cid), entity.WithCompleteInterval(2*time.Second)); err != nil {
+			return err
+		}
+		if err := ctx.Err(); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		e.releaseCentralQuotaOutsideGate(ctx, event, evalErr, "expt terminated on indebt")
+		return nil
 	}
 	return nil
 }
@@ -320,6 +337,15 @@ func sameExecutionIdentity(expected, actual *entity.ExptCurrentItemRunSource) bo
 	a, b := expected.Current, actual.Current
 	if a.SpaceID != b.SpaceID || a.ExptID != b.ExptID || a.RunID != b.RunID || a.ItemID != b.ItemID || a.ItemVersionID != b.ItemVersionID || a.RequestID != b.RequestID || a.Mode != b.Mode || len(expected.Turns) != len(actual.Turns) {
 		return false
+	}
+	if len(expected.CanonicalTurns) != len(actual.CanonicalTurns) {
+		return false
+	}
+	for index, turn := range expected.CanonicalTurns {
+		other := actual.CanonicalTurns[index]
+		if turn == nil || other == nil || turn.ID != other.ID || turn.TurnID != other.TurnID || turn.ItemVersionID != other.ItemVersionID || turn.TargetResultID != other.TargetResultID {
+			return false
+		}
 	}
 	for id, turn := range expected.Turns {
 		other := actual.Turns[id]
@@ -390,14 +416,21 @@ func (e *ExptSchedulerImpl) handleCurrentZombies(ctx context.Context, event *ent
 			continue
 		}
 		applied, err := e.withCurrentScannedItem(ctx, event, item, func(lockCtx context.Context, port repo.IExptCurrentResultRepo) (bool, error) {
+			zombieErr := errno.NewItemZombieTimeoutErr(zombieSecond, asyncExec)
+			write := &entity.ExptCurrentItemRunWrite{Status: entity.ItemRunState_Fail, ErrMsg: []byte(errno.SerializeErr(zombieErr)), RetryTimes: item.RetryTimes, FailPendingTurns: true}
+			if err := prepareMissingRawTurnLogs(lockCtx, e.IDGen, item.Source, write); err != nil {
+				return false, err
+			}
 			if err := e.terminateZombieEvaluatorRecords(lockCtx, event, []int64{item.ItemID}); err != nil {
 				return false, err
+			}
+			if err := lockCtx.Err(); err != nil {
+				return false, errno.WrapMQRetryErr(err)
 			}
 			if err := e.terminateZombieEvalTargetRecords(lockCtx, event, expt, []int64{item.ItemID}); err != nil {
 				return false, err
 			}
-			zombieErr := errno.NewItemZombieTimeoutErr(zombieSecond, asyncExec)
-			applied, err := port.CompleteCurrentItemRun(lockCtx, item.Source, &entity.ExptCurrentItemRunWrite{Status: entity.ItemRunState_Fail, ErrMsg: []byte(errno.SerializeErr(zombieErr)), RetryTimes: item.RetryTimes, FailPendingTurns: true})
+			applied, err := port.CompleteCurrentItemRun(lockCtx, item.Source, write)
 			if err != nil || !applied {
 				return false, err
 			}
@@ -429,12 +462,13 @@ func (e *ExptSchedulerImpl) sweepCurrentSandboxItems(ctx context.Context, event 
 			continue
 		}
 		applied, err := e.withCurrentScannedItem(ctx, event, item, func(lockCtx context.Context, port repo.IExptCurrentResultRepo) (bool, error) {
-			ids := []int64{}
-			for _, turn := range item.Source.Turns {
-				if turn != nil && turn.TargetResultID > 0 {
-					ids = append(ids, turn.TargetResultID)
-				}
+			ids := frozenTargetRecordIDs(item.Source)
+			write := &entity.ExptCurrentItemRunWrite{Status: entity.ItemRunState_Fail, RetryTimes: item.RetryTimes, FailPendingTurns: true}
+			// Prepare before any sandbox RPC or cleanup.
+			if err := prepareMissingRawTurnLogs(lockCtx, e.IDGen, item.Source, write); err != nil {
+				return false, err
 			}
+
 			if len(ids) == 0 {
 				return false, nil
 			}
@@ -447,8 +481,15 @@ func (e *ExptSchedulerImpl) sweepCurrentSandboxItems(ctx context.Context, event 
 			if state == "" {
 				state = "Terminated"
 			}
+			write.ErrMsg = []byte(errno.SerializeErr(errno.NewSandboxTerminatedBeforeReportErr(state)))
+			for _, log := range write.MissingTurnLogs {
+				log.ErrMsg = string(write.TurnError(log.Status))
+			}
+			if err := lockCtx.Err(); err != nil {
+				return false, errno.WrapMQRetryErr(err)
+			}
 			e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(lockCtx, space, stopped, int32(errno.SandboxTerminatedBeforeReportCode), fmt.Sprintf("sandbox execute reached terminal state (%s) before result was reported", state), false)
-			applied, err := port.CompleteCurrentItemRun(lockCtx, item.Source, &entity.ExptCurrentItemRunWrite{Status: entity.ItemRunState_Fail, ErrMsg: []byte(errno.SerializeErr(errno.NewSandboxTerminatedBeforeReportErr(state))), RetryTimes: item.RetryTimes, FailPendingTurns: true})
+			applied, err := port.CompleteCurrentItemRun(lockCtx, item.Source, write)
 			if err != nil || !applied {
 				return false, err
 			}
@@ -476,6 +517,12 @@ func (e *ExptSchedulerImpl) sweepCurrentSandboxItems(ctx context.Context, event 
 
 // IDs are prepared before SQL and under the item lock; the transaction never calls IDGen.
 func (e *ExptItemEventEvalServiceImpl) prepareMissingRawTurnLogs(ctx context.Context, source *entity.ExptCurrentItemRunSource, write *entity.ExptCurrentItemRunWrite) error {
+	return prepareMissingRawTurnLogs(ctx, e.idgen, source, write)
+}
+func prepareMissingRawTurnLogs(ctx context.Context, gen idgen.IIDGenerator, source *entity.ExptCurrentItemRunSource, write *entity.ExptCurrentItemRunWrite) error {
+	if err := ctx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
 	if source.Current.RequestID != "" || write.RetryOnly {
 		return nil
 	}
@@ -488,11 +535,14 @@ func (e *ExptItemEventEvalServiceImpl) prepareMissingRawTurnLogs(ctx context.Con
 	if len(missing) == 0 {
 		return nil
 	}
-	if e.idgen == nil {
+	if gen == nil {
 		return errno.NewMQRetryErr("raw turn log ID preparation unavailable")
 	}
-	ids, err := e.idgen.GenMultiIDs(ctx, len(missing))
+	ids, err := gen.GenMultiIDs(ctx, len(missing))
 	if err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if err := ctx.Err(); err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
 	if len(ids) != len(missing) {
@@ -509,7 +559,26 @@ func (e *ExptItemEventEvalServiceImpl) prepareMissingRawTurnLogs(ctx context.Con
 		if write.Status == entity.ItemRunState_Terminal {
 			log.Status = entity.TurnRunState_Terminal
 		}
+		log.ErrMsg = string(write.TurnError(log.Status))
 		write.MissingTurnLogs = append(write.MissingTurnLogs, log)
 	}
 	return nil
+}
+
+func frozenTargetRecordIDs(source *entity.ExptCurrentItemRunSource) []int64 {
+	seen := map[int64]bool{}
+	ids := []int64{}
+	for _, log := range source.Turns {
+		if log != nil && log.TargetResultID > 0 && !seen[log.TargetResultID] {
+			seen[log.TargetResultID] = true
+			ids = append(ids, log.TargetResultID)
+		}
+	}
+	for _, turn := range source.CanonicalTurns {
+		if turn != nil && source.Turns[turn.TurnID] == nil && turn.TargetResultID > 0 && !seen[turn.TargetResultID] {
+			seen[turn.TargetResultID] = true
+			ids = append(ids, turn.TargetResultID)
+		}
+	}
+	return ids
 }

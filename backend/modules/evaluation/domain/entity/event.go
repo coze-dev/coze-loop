@@ -93,14 +93,14 @@ func (e *ExptItemEvalEvent) CloneWithResumeSource(kind string, recordID, turnID 
 	return cloned
 }
 
-// CloneForTurn keeps callback flags on the original turn, including turn zero.
+// CloneForTurn keeps callback flags on the original turn, including turn zero,
+// while preserving the source that identifies this event as a continuation.
 // Events without source metadata retain the legacy callback contract.
 func (e *ExptItemEvalEvent) CloneForTurn(turnID int64) *ExptItemEvalEvent {
 	cloned := e.Clone()
 	if cloned != nil && cloned.ResumeSource != nil && cloned.ResumeSource.TurnID != turnID {
 		cloned.AsyncReportTrigger = false
 		cloned.AsyncEvaluatorReportTrigger = false
-		cloned.ResumeSource = nil
 	}
 	return cloned
 }
@@ -185,7 +185,7 @@ func (e *ExptItemEvalEvent) ignoreExistedResult() bool {
 	if e == nil {
 		return false
 	}
-	if e.AsyncReportTrigger || e.AsyncEvaluatorReportTrigger {
+	if e.ResumeSource != nil || e.AsyncReportTrigger || e.AsyncEvaluatorReportTrigger {
 		return false
 	}
 	return (e.ExptRunMode == EvaluationModeRetryItems || e.ExptRunMode == EvaluationModeRetryAll) && e.RetryTimes == 0

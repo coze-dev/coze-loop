@@ -111,7 +111,7 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 		return false, fmt.Errorf("EvalTurns with invalid empty eval_set_item")
 	}
 
-	for _, turn := range eiec.EvalSetItem.Turns {
+	for turnIndex, turn := range eiec.EvalSetItem.Turns {
 		if err := ctx.Err(); err != nil {
 			return false, errno.WrapMQRetryErr(err)
 		}
@@ -129,6 +129,15 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 			return false, err
 		}
 		if existing := etec.GetExistTurnResultRunLog(turn.ID); existing != nil && existing.Status == entity.TurnRunState_Success && !etec.Event.IgnoreExistedTargetResult() {
+			target := etec.ExptTurnRunResult.GetTargetResult()
+			if existing.TargetResultID > 0 && target == nil {
+				return false, fmt.Errorf("success turn target record %d missing during history resume", existing.TargetResultID)
+			}
+			if turnIndex+1 < len(eiec.EvalSetItem.Turns) {
+				if err := e.loadTargetHistoryOutput(ctx, target); err != nil {
+					return false, err
+				}
+			}
 			history = append(history, buildHistoryMessage(ctx, etec.ExptTurnRunResult)...)
 			continue
 		}
@@ -161,6 +170,11 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 		}
 		e.emitSandboxAgentE2EFinishedIfTerminal(ctx, etec, eiec.Event, turnRunRes, nil)
 
+		if turnIndex+1 < len(eiec.EvalSetItem.Turns) {
+			if err := e.loadTargetHistoryOutput(ctx, turnRunRes.GetTargetResult()); err != nil {
+				return false, err
+			}
+		}
 		history = append(history, buildHistoryMessage(ctx, turnRunRes)...)
 	}
 
@@ -583,6 +597,9 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 		if err := checkedCurrentWrite(ctx, applied, err); err != nil {
 			return err
 		}
+		if execution := executionSource(ctx); execution != nil {
+			execution.Completed = true
+		}
 	} else {
 		if err := e.ItemResultRepo.UpdateItemRunLogIfNotTerminal(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
 			return err
@@ -760,6 +777,28 @@ func (e *ExptItemEvalCtxExecutor) evalErrNeedTerminateExpt(ctx context.Context, 
 	}
 	conf := e.Configer.GetErrRetryConf(ctx, spaceID, evalErr)
 	return conf.IsInDebt
+}
+
+// Both DB reads and fresh persisted target records can contain only a preview.
+func (e *ExptItemEvalCtxExecutor) loadTargetHistoryOutput(ctx context.Context, target *entity.EvalTargetRecord) error {
+	if target == nil || target.EvalTargetOutputData == nil {
+		return nil
+	}
+	output := target.EvalTargetOutputData.OutputFields[evalconsts.EvalTargetOutputFieldKeyActualOutput]
+	if output == nil || !output.IsContentOmitted() {
+		return nil
+	}
+	if err := e.evalTargetService.LoadRecordOutputFields(ctx, target, []string{evalconsts.EvalTargetOutputFieldKeyActualOutput}); err != nil {
+		return fmt.Errorf("load target history record %d: %w", target.ID, err)
+	}
+	if target.EvalTargetOutputData == nil {
+		return fmt.Errorf("target history record %d missing output after load", target.ID)
+	}
+	output = target.EvalTargetOutputData.OutputFields[evalconsts.EvalTargetOutputFieldKeyActualOutput]
+	if output == nil || output.IsContentOmitted() {
+		return fmt.Errorf("target history record %d incomplete after load", target.ID)
+	}
+	return nil
 }
 
 func buildHistoryMessage(ctx context.Context, turnRunResult *entity.ExptTurnRunResult) []*entity.Message {

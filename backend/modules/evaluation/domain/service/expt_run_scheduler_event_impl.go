@@ -1124,6 +1124,11 @@ func (e *ExptSchedulerImpl) terminateZombieEvalTargetRecords(ctx context.Context
 		for _, log := range execution.Source.Turns {
 			turnRunLogs = append(turnRunLogs, log)
 		}
+		for _, turn := range execution.Source.CanonicalTurns {
+			if execution.Source.Turns[turn.TurnID] == nil {
+				turnRunLogs = append(turnRunLogs, turn.ToRunLogDO())
+			}
+		}
 	} else {
 		var err error
 		turnRunLogs, err = e.ExptTurnResultRepo.MGetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, event.SpaceID)

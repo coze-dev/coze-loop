@@ -612,6 +612,9 @@ func (e *ExptItemEventEvalServiceImpl) releaseQuotaIfItemTerminal(
 	guard component.ICentralReservationGuard,
 	execErr error,
 ) {
+	if execution := executionSource(ctx); execution != nil && execution.QuotaReleased {
+		return
+	}
 	if guard == nil || e.dispatchRepo == nil {
 		return
 	}
@@ -643,6 +646,9 @@ func (e *ExptItemEventEvalServiceImpl) releaseQuotaIfItemTerminal(
 		logs.CtxWarn(relCtx, "[CentralReservation] release quota fail, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptRunID, event.EvalSetItemID, err)
 		return
+	}
+	if execution := executionSource(ctx); execution != nil {
+		execution.QuotaReleased = true
 	}
 	logs.CtxInfo(relCtx, "[CentralReservation] quota released on item terminal, scope: %v, expt_run_id: %v, item_id: %v, reason: %v",
 		schedulerScope, event.ExptRunID, event.EvalSetItemID, reason)
@@ -697,6 +703,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 			return next(ctx, event)
 		}(ctx, event)
 
+		if event.ExptRunMode == entity.EvaluationModeFailRetry && errors.Is(nextErr, errRetryStartDependencyFailure) {
+			return errno.WrapMQRetryErr(nextErr)
+		}
 		if errno.NeedMQRetry(nextErr) {
 			return nextErr
 		}
@@ -820,6 +829,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 //
 // best-effort：释放失败只告警。让"额度归还失败"阻断终态收口会把额度泄漏升级成实验不收敛。
 func (e *ExptItemEventEvalServiceImpl) releaseCentralQuotaOutsideGate(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error, reasonPrefix string) {
+	if execution := executionSource(ctx); execution != nil && execution.QuotaReleased {
+		return
+	}
 	if event == nil || evalErr == nil || e.centralGuard == nil {
 		return
 	}
@@ -839,6 +851,9 @@ func (e *ExptItemEventEvalServiceImpl) releaseCentralQuotaOutsideGate(ctx contex
 		logs.CtxWarn(relCtx, "[CentralReservation] release quota outside gate fail, scope: %v, expt_run_id: %v, item_id: %v, err: %v",
 			schedulerScope, event.ExptRunID, event.EvalSetItemID, err)
 		return
+	}
+	if execution := executionSource(ctx); execution != nil {
+		execution.QuotaReleased = true
 	}
 	logs.CtxInfo(relCtx, "[CentralReservation] quota released outside gate, scope: %v, expt_run_id: %v, item_id: %v, reason: %v",
 		schedulerScope, event.ExptRunID, event.EvalSetItemID, reason)
@@ -1724,14 +1739,15 @@ func (e *ExptRecordEvalModeRetryIgnoreResult) PreEval(ctx context.Context, eiec 
 	turnRunLogs := make([]*entity.ExptTurnResultRunLog, 0, len(eiec.EvalSetItem.Turns))
 	for idx, turn := range eiec.EvalSetItem.Turns {
 		turnRunLogs = append(turnRunLogs, &entity.ExptTurnResultRunLog{
-			ID:        ids[idx],
-			SpaceID:   event.SpaceID,
-			ExptID:    event.ExptID,
-			ExptRunID: event.ExptRunID,
-			ItemID:    event.EvalSetItemID,
-			TurnID:    turn.ID,
-			Status:    entity.TurnRunState_Processing,
-			LogID:     logID,
+			ID:            ids[idx],
+			SpaceID:       event.SpaceID,
+			ExptID:        event.ExptID,
+			ExptRunID:     event.ExptRunID,
+			ItemID:        event.EvalSetItemID,
+			ItemVersionID: gptr.Indirect(eiec.EvalSetItem.ItemVersionID),
+			TurnID:        turn.ID,
+			Status:        entity.TurnRunState_Processing,
+			LogID:         logID,
 		})
 	}
 

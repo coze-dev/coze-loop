@@ -321,7 +321,11 @@ func (dao *exptItemResultDAOImpl) CompleteCurrentItemRun(ctx context.Context, so
 				if next == entity.ItemRunState_Terminal {
 					turnState = entity.TurnRunState_Terminal
 				}
-				if err := tx.Model(&model.ExptTurnResultRunLog{}).Where(scope, args...).Where("status NOT IN ?", []int32{int32(entity.TurnRunState_Success), int32(entity.TurnRunState_Terminal)}).Updates(map[string]any{"status": int32(turnState)}).Error; err != nil {
+				turnFields := map[string]any{"status": int32(turnState)}
+				if !write.Yield {
+					turnFields["err_msg"] = write.TurnError(turnState)
+				}
+				if err := tx.Model(&model.ExptTurnResultRunLog{}).Where(scope, args...).Where("status NOT IN ?", []int32{int32(entity.TurnRunState_Success), int32(entity.TurnRunState_Terminal)}).Updates(turnFields).Error; err != nil {
 					return err
 				}
 			}
