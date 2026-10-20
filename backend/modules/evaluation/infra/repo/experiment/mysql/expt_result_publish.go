@@ -26,7 +26,15 @@ func NewExptResultPublishDAO(provider db.Provider) repo.IExptResultPublishRepo {
 }
 
 func readItemResultPublishSource(tx *gorm.DB, space, expt, run, item int64) (*entity.ExptItemResultPublishSource, error) {
-	source, err := loadItemRunSource(tx, space, expt, run, item, true)
+	return readItemResultPublishSourceWithLocks(tx, space, expt, run, item, true)
+}
+
+func readItemResultPublishSourceWithLocks(tx *gorm.DB, space, expt, run, item int64, lockRows bool) (*entity.ExptItemResultPublishSource, error) {
+	var locks []clause.Expression
+	if lockRows {
+		locks = append(locks, clause.Locking{Strength: "UPDATE"})
+	}
+	source, err := readItemRunSource(tx, space, expt, run, item, true, lockRows)
 	if err != nil || source == nil {
 		return nil, err
 	}
@@ -52,7 +60,7 @@ func readItemResultPublishSource(tx *gorm.DB, space, expt, run, item int64) (*en
 	}
 	result := &entity.ExptItemResultPublishSource{Source: source, Item: itemDO, ItemLog: convert.NewExptItemResultRunLogConverter().PO2DO(&log)}
 	var ref model.ExptItemRef
-	err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id=? AND expt_id=? AND item_id=?", space, expt, item).Take(&ref).Error
+	err = tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND item_id=?", space, expt, item).Take(&ref).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}

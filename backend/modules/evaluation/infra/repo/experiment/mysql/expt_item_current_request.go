@@ -5,6 +5,7 @@ package mysql
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -114,7 +115,11 @@ func validCurrentItemStatus(status entity.ItemRunState) bool {
 
 func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, retryFirst bool) ([]*entity.ExptItemCurrentRequest, error) {
 	var rows []*entity.ExptItemCurrentRequest
-	err := dao.provider.Transaction(ctx, func(tx *gorm.DB) error {
+	// Provider.Transaction exposes no sql.TxOptions. Start this local observation
+	// on its master session with explicit repeatable-read/read-only options so
+	// every nonlocking read shares the snapshot opened by the initial JOIN,
+	// regardless of the connection's configured isolation level.
+	err := dao.provider.NewSession(ctx, db.WithMaster()).Transaction(func(tx *gorm.DB) error {
 		var err error
 		rows, err = dao.readCurrentRequests(ctx, spaceID, exptID, runID, nil, retryFirst, db.WithTransaction(tx))
 		if err != nil {
@@ -123,7 +128,7 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 		for _, row := range rows {
 			if row.ResultState == entity.ExptItemResultStateLogged {
 				row.PublicationObserved = true
-				publication, err := readItemResultPublishSource(tx, spaceID, exptID, runID, row.ItemID)
+				publication, err := readItemResultPublishSourceWithLocks(tx, spaceID, exptID, runID, row.ItemID, false)
 				if err != nil {
 					return err
 				}
@@ -131,12 +136,12 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 					row.Publication = publication
 				}
 			}
-			// Freeze rows that can be swept. Queueing and completed rows retain the
-			// existing scan contract and do not need invocation identity here.
+			// Processing sources share this nonlocking snapshot with Logged
+			// publications; mutation paths still recheck under their own row locks.
 			if row.Status != entity.ItemRunState_Processing {
 				continue
 			}
-			source, err := loadCurrentRunSource(tx, spaceID, exptID, runID, row.ItemID)
+			source, err := readItemRunSource(tx, spaceID, exptID, runID, row.ItemID, false, false)
 			if err != nil {
 				return err
 			}
@@ -146,7 +151,7 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 			row.Source = source
 		}
 		return nil
-	}, db.WithMaster())
+	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	return rows, err
 }
 

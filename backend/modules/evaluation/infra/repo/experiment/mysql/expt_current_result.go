@@ -36,8 +36,18 @@ func loadCurrentRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64) (*e
 // Publication uses the same primary row/source validation, with a separate run
 // lifecycle rule. Execution remains active-only through loadCurrentRunSource.
 func loadItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, publication bool) (*entity.ExptCurrentItemRunSource, error) {
+	return readItemRunSource(tx, spaceID, exptID, runID, itemID, publication, true)
+}
+
+// Scan observations use only consistent nonlocking reads. Execution and
+// publication validation/commit keep the canonical-first locking path above.
+func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, publication, lockRows bool) (*entity.ExptCurrentItemRunSource, error) {
+	var locks []clause.Expression
+	if lockRows {
+		locks = append(locks, clause.Locking{Strength: "UPDATE"})
+	}
 	var item model.ExptItemResult
-	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id=? AND expt_id=? AND item_id=?", spaceID, exptID, itemID).Take(&item).Error
+	err := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND item_id=?", spaceID, exptID, itemID).Take(&item).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -88,7 +98,7 @@ func loadItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 		return nil, fmt.Errorf("invalid current source mode")
 	}
 	var log model.ExptItemResultRunLog
-	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", spaceID, exptID, runID, itemID).Take(&log).Error; err != nil {
+	if err := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", spaceID, exptID, runID, itemID).Take(&log).Error; err != nil {
 		return nil, err
 	}
 	if item.ItemVersionID != log.ItemVersionID || log.RetryTimes < 0 || !validCurrentItemStatus(entity.ItemRunState(item.Status)) || !validCurrentItemStatus(entity.ItemRunState(log.Status)) || log.ResultState == nil || *log.ResultState < 0 || *log.ResultState > int32(entity.ExptItemResultStateLogged) {
@@ -99,11 +109,11 @@ func loadItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 		source.Current.Status = entity.ItemRunState(item.Status)
 	}
 	var canonical []model.ExptTurnResult
-	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", spaceID, exptID, runID, itemID).Order("id ASC").Find(&canonical).Error; err != nil {
+	if err := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", spaceID, exptID, runID, itemID).Order("id ASC").Find(&canonical).Error; err != nil {
 		return nil, err
 	}
 	var logs []model.ExptTurnResultRunLog
-	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", spaceID, exptID, runID, itemID).Order("id ASC").Find(&logs).Error; err != nil {
+	if err := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", spaceID, exptID, runID, itemID).Order("id ASC").Find(&logs).Error; err != nil {
 		return nil, err
 	}
 	canonicalIDs := make([]int64, 0, len(canonical))
@@ -136,7 +146,7 @@ func loadItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 		return nil, fmt.Errorf("current frozen turn logs incomplete")
 	}
 	var refs []model.ExptTurnEvaluatorResultRef
-	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id=? AND expt_id=? AND expt_turn_result_id IN ?", spaceID, exptID, canonicalIDs).Order("id ASC").Find(&refs).Error; err != nil {
+	if err := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND expt_turn_result_id IN ?", spaceID, exptID, canonicalIDs).Order("id ASC").Find(&refs).Error; err != nil {
 		return nil, err
 	}
 	source.CurrentRefs = make([]*entity.ExptTurnEvaluatorResultRef, 0, len(refs))
