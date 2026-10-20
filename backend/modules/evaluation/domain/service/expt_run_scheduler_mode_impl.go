@@ -732,7 +732,7 @@ func (e *ExptSubmitExec) ScanEvalItems(ctx context.Context, event *entity.ExptSc
 
 func (e *ExptSubmitExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 {
-		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService, e.resultSvc)
 		pending, err := base.hasPendingAfterRescan(ctx, event)
 		if err != nil {
 			return false, err
@@ -1132,7 +1132,7 @@ func (e *ExptFailRetryExec) ScanEvalItems(ctx context.Context, event *entity.Exp
 
 func (e *ExptFailRetryExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 {
-		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService, e.resultSvc)
 		pending, err := base.hasPendingAfterRescan(ctx, event)
 		if err != nil {
 			return false, err
@@ -1354,6 +1354,7 @@ func (e *ExptAppendExec) PublishResult(ctx context.Context, turnEvaluatorRefs []
 }
 
 type exptBaseExec struct {
+	resultSvc              ExptResultService
 	Manager                IExptManager
 	idem                   idem.IdempotentService
 	configer               component.IConfiger
@@ -1369,8 +1370,9 @@ func newExptBaseExec(
 	exptItemResultRepo repo.IExptItemResultRepo,
 	publisher events.ExptEventPublisher,
 	evaluatorRecordService EvaluatorRecordService,
+	resultSvc ...ExptResultService,
 ) *exptBaseExec {
-	return &exptBaseExec{
+	base := &exptBaseExec{
 		Manager:                manager,
 		idem:                   idem,
 		configer:               configer,
@@ -1378,6 +1380,10 @@ func newExptBaseExec(
 		evaluatorRecordService: evaluatorRecordService,
 		publisher:              publisher,
 	}
+	if len(resultSvc) > 0 {
+		base.resultSvc = resultSvc[0]
+	}
+	return base
 }
 
 func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (toSubmit, incomplete, complete []*entity.ExptEvalItem, err error) {
@@ -1502,6 +1508,20 @@ func (e *exptBaseExec) exptEnd(ctx context.Context, event *entity.ExptScheduleEv
 
 	if exist {
 		return nil
+	}
+
+	if event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun && expt.ExptType != entity.ExptType_Online {
+		if calibration, ok := e.resultSvc.(ExptManualRetryFilterService); ok {
+			ready, err := reconcileManualRetryFilterBeforeFinish(ctx, calibration, event.SpaceID, event.ExptID, event.ExptRunID)
+			if err != nil {
+				return errno.WrapMQRetryErr(err)
+			}
+			if !ready {
+				return errno.NewMQRetryErr("manual retry filter calibration pending")
+			}
+		} else if _, current := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); current {
+			return errno.NewMQRetryErr("manual retry filter calibration service missing")
+		}
 	}
 
 	completeCID := fmt.Sprintf("exptexec:onend:%d", event.ExptRunID)
@@ -2034,7 +2054,7 @@ func (e *ExptRetryAllExec) ScanEvalItems(ctx context.Context, event *entity.Expt
 
 func (e *ExptRetryAllExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 {
-		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService, e.resultSvc)
 		pending, err := base.hasPendingAfterRescan(ctx, event)
 		if err != nil {
 			return false, err
@@ -2515,7 +2535,7 @@ func (e *ExptRetryItemsExec) ExptEnd(ctx context.Context, event *entity.ExptSche
 		}
 	}
 
-	base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+	base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService, e.resultSvc)
 	pending, err := base.hasPendingAfterRescan(ctx, event)
 	if err != nil {
 		return false, err

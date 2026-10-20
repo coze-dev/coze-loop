@@ -432,7 +432,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 				}
 			}
 			if advanced && e.resultSvc != nil {
-				if err := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, []int64{event.EvalSetItemID}); err != nil {
+				if err := refreshFilterWithHeldItemLock(ctx, e.resultSvc, event.SpaceID, event.ExptID, event.EvalSetItemID); err != nil {
 					logs.CtxWarn(ctx, "[CentralReservation] upsert turn result filter failed (display only, execution unaffected), expt_id: %v, item_id: %v: %v",
 						event.ExptID, event.EvalSetItemID, err)
 				}
@@ -564,7 +564,7 @@ func (e *ExptItemEventEvalServiceImpl) requeueOrphanedItemOnReservationAbsent(ct
 			}
 		}
 		if requeued && e.resultSvc != nil {
-			if uerr := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, []int64{event.EvalSetItemID}); uerr != nil {
+			if uerr := refreshFilterWithHeldItemLock(ctx, e.resultSvc, event.SpaceID, event.ExptID, event.EvalSetItemID); uerr != nil {
 				logs.CtxWarn(ctx, "[CentralReservation] rollback turn result filter failed (display only), expt_id: %v, item_id: %v: %v",
 					event.ExptID, event.EvalSetItemID, uerr)
 			}

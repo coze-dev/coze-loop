@@ -112,6 +112,14 @@ type IExptTurnResultFilterDAO interface {
 	GetByExptIDItemIDs(ctx context.Context, spaceID, exptID, createdDate string, itemIDs []string) ([]*compare_model.ExptTurnResultFilter, error)
 }
 
+// IExptMaterializedFilterDAO is the complete OSS projection read used only by
+// final calibration. It leaves the existing asynchronous client contract intact.
+//
+//go:generate mockgen -destination=mocks/expt_materialized_filter.go -package=mocks . IExptMaterializedFilterDAO
+type IExptMaterializedFilterDAO interface {
+	GetMaterializedByExptIDItemIDs(context.Context, string, string, string, []string) ([]*model.ExptTurnResultFilter, error)
+}
+
 type exptTurnResultFilterDAOImpl struct {
 	db ck.Provider
 	// 新增字段，用于存储数据库名
@@ -877,4 +885,15 @@ func (d *exptTurnResultFilterDAOImpl) buildGetByExptIDItemIDsSQL(ctx context.Con
 	args := []interface{}{spaceID, exptID, createdDate, itemIDs}
 	logs.CtxInfo(ctx, "GetByExptID sql: %v, args: %v", sql, args)
 	return sql, args
+}
+
+// GetMaterializedByExptIDItemIDs reads every stored field and resolves older
+// ReplacingMergeTree rows before final calibration. Map key absence is retained.
+func (d *exptTurnResultFilterDAOImpl) GetMaterializedByExptIDItemIDs(ctx context.Context, space, expt, date string, ids []string) ([]*model.ExptTurnResultFilter, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	var rows []*model.ExptTurnResultFilter
+	err := d.db.NewSession(ctx).Raw("SELECT etrf.* FROM "+getClickHouseDatabaseName()+".expt_turn_result_filter AS etrf FINAL WHERE etrf.space_id=? AND etrf.expt_id=? AND etrf.created_date=? AND etrf.item_id IN ?", space, expt, date, ids).Scan(&rows).Error
+	return rows, err
 }
