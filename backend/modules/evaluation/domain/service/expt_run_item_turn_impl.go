@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gcond"
-	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
 
@@ -24,6 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/mem"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -103,6 +103,7 @@ func (e *DefaultExptTurnEvaluationImpl) Eval(ctx context.Context, etec *entity.E
 }
 
 func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *entity.ExptTurnEvalCtx) (*entity.EvalTargetRecord, error) {
+	scopeTurnEvalEvent(etec)
 	if e.skipTargetNode(etec.Expt) {
 		return &entity.EvalTargetRecord{EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: make(map[string]*entity.Content)}}, nil
 	}
@@ -113,8 +114,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 
 	tr := etec.ExptTurnRunResult.GetTargetResult()
 
-	if etec.Event.AsyncReportTrigger || etec.Event.AsyncEvaluatorReportTrigger {
-		etec.Event.WithCtxTargetCalled(ctx)
+	if isTurnAsyncResume(etec, false) || isTurnAsyncResume(etec, true) {
 		return tr, nil
 	}
 	if tr != nil && gptr.Indirect(tr.Status) == entity.EvalTargetRunStatusSuccess && !etec.Event.IgnoreExistedTargetResult() {
@@ -136,11 +136,39 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 	return record, nil
 }
 
+// Direct turn callers also need a local event before mode-based reuse checks.
+func scopeTurnEvalEvent(etec *entity.ExptTurnEvalCtx) {
+	if etec == nil || etec.Event == nil || etec.Turn == nil || etec.Event.ResumeSource == nil || etec.Event.ResumeSource.TurnID == etec.Turn.ID {
+		return
+	}
+	// A non-source turn with cleared flags is already scoped. Keep its event
+	// identity so CallEvaluators sees CallTarget's marker after a new invoke.
+	if !etec.Event.AsyncReportTrigger && !etec.Event.AsyncEvaluatorReportTrigger {
+		return
+	}
+	itemCtx := *etec.ExptItemEvalCtx
+	itemCtx.Event = etec.Event.CloneForTurn(etec.Turn.ID)
+	etec.ExptItemEvalCtx = &itemCtx
+}
+
 func (e *DefaultExptTurnEvaluationImpl) validateEvalTargetCtx(etec *entity.ExptTurnEvalCtx) error {
-	if (etec.Event.AsyncReportTrigger || etec.Event.AsyncEvaluatorReportTrigger) && etec.ExptTurnRunResult.GetTargetResult() == nil {
+	if (isTurnAsyncResume(etec, false) || isTurnAsyncResume(etec, true)) && etec.ExptTurnRunResult.GetTargetResult() == nil {
 		return errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("target result must not be nil in async reported event"))
 	}
 	return nil
+}
+
+func isTurnAsyncResume(etec *entity.ExptTurnEvalCtx, evaluator bool) bool {
+	if etec == nil || etec.Event == nil {
+		return false
+	}
+	if source := etec.Event.ResumeSource; source != nil && (etec.Turn == nil || source.TurnID != etec.Turn.ID) {
+		return false
+	}
+	if evaluator {
+		return etec.Event.AsyncEvaluatorReportTrigger
+	}
+	return etec.Event.AsyncReportTrigger
 }
 
 // skipTargetNode Whether target is called is determined by the target info bound in expt;
@@ -287,7 +315,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		return nil, err
 	}
 
-	ext := gmap.Clone(etec.Ext)
+	ext := entity.WithoutManualRetryExt(etec.Ext)
 	if targetConf.IngressConf != nil && targetConf.IngressConf.CustomConf != nil {
 		for _, fc := range targetConf.IngressConf.CustomConf.FieldConfs {
 			if fc.FieldName == consts.FieldAdapterBuiltinFieldNameRuntimeParam {
@@ -343,8 +371,15 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	if etec.Expt.EvalConf != nil {
 		etc.EnableExtractTrajectory = etec.Expt.EvalConf.EnableExtractTrajectory
 	}
+	// Provider storage clips Content in place; retain independent history for later turns.
+	var historyMessages []*entity.Message
+	if history != nil {
+		if err := mem.DeepCopy(history, &historyMessages); err != nil {
+			return nil, errorx.Wrapf(err, "copy target history")
+		}
+	}
 	etid := &entity.EvalTargetInputData{
-		HistoryMessages: history,
+		HistoryMessages: historyMessages,
 		InputFields:     inputFields,
 		Ext:             ext,
 	}
@@ -359,7 +394,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		return nil, err
 	}
 
-	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(targetRecord.ID, 10), &entity.EvalAsyncCtx{
+	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(targetRecord.ID, 10), (&entity.EvalAsyncCtx{
 		Event:                   etec.Event,
 		RecordID:                targetRecord.ID,
 		AsyncUnixMS:             ts.UnixMilli(),
@@ -373,7 +408,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		DatasetKey:              pickDatasetKey(etec),
 		AgentName:               pickAgentName(etec),
 		ApplicationID:           pickApplicationID(etec),
-	}); err != nil {
+	}).Clone()); err != nil {
 		return nil, err
 	}
 
@@ -450,11 +485,12 @@ func pickApplicationID(etec *entity.ExptTurnEvalCtx) string {
 }
 
 func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec *entity.ExptTurnEvalCtx, targetResult *entity.EvalTargetRecord) ([]*entity.EvaluatorRecord, error) {
+	scopeTurnEvalEvent(etec)
 	if e.skipEvaluatorNode(etec.Expt) {
 		return nil, nil
 	}
 
-	if etec.Event.AsyncEvaluatorReportTrigger {
+	if isTurnAsyncResume(etec, true) || (isTurnAsyncResume(etec, false) && len(etec.ExptTurnRunResult.EvaluatorResults) > 0) {
 		logs.CtxInfo(ctx, "CallEvaluators skip re-run due to async report trigger, return existing evaluator results: %d", len(etec.ExptTurnRunResult.EvaluatorResults))
 		return etec.ExptTurnRunResult.EvaluatorResults, nil
 	}
@@ -475,6 +511,13 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 	expt := etec.Expt
 	evaluatorResults := make([]*entity.EvaluatorRecord, 0, len(expt.Evaluators))
 	pendingEvaluatorVersionIDs := make([]int64, 0, len(expt.Evaluators))
+	if !etec.Event.IgnoreExistedEvaluatorResult(ctx) {
+		for _, record := range etec.ExptTurnRunResult.EvaluatorResults {
+			if record != nil && record.SourceType == entity.EvaluatorRecordSourceTypeInline && (record.Status == entity.EvaluatorRunStatusSuccess || record.Status == entity.EvaluatorRunStatusAsyncInvoking) {
+				evaluatorResults = append(evaluatorResults, record)
+			}
+		}
+	}
 
 	for _, evaluatorVersion := range expt.Evaluators {
 		versionID := evaluatorVersion.GetEvaluatorVersionID()
@@ -635,7 +678,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			ExperimentRunID:    etec.Event.ExptRunID,
 			ItemID:             item.ItemID,
 			TurnID:             turn.ID,
-			Ext:                etec.Ext,
+			Ext:                entity.WithoutManualRetryExt(etec.Ext),
 		}); interceptErr != nil {
 			logs.CtxWarn(ctx, "[CallEvaluators] ShouldInterceptEvaluator failed, evaluator_version_id: %d, err: %v", evForCapture.GetEvaluatorVersionID(), interceptErr)
 		} else if intercepted {
@@ -652,7 +695,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			ExperimentRunID:    etec.Event.ExptRunID,
 			ItemID:             item.ItemID,
 			TurnID:             turn.ID,
-			Ext:                etec.Ext,
+			Ext:                entity.WithoutManualRetryExt(etec.Ext),
 			EvaluatorRunConf:   ecForCapture.RunConf,
 		}
 
@@ -733,6 +776,13 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 	}
 
 	// 按 versionID 建一个 Evaluator 索引, 用于 ItemConfig 循环里复用 (type/inputSchema 等元数据)。
+	if !etec.Event.IgnoreExistedEvaluatorResult(ctx) {
+		for _, record := range etec.ExptTurnRunResult.EvaluatorResults {
+			if record != nil && record.SourceType == entity.EvaluatorRecordSourceTypeInline && (record.Status == entity.EvaluatorRunStatusSuccess || record.Status == entity.EvaluatorRunStatusAsyncInvoking) {
+				collector.store(record)
+			}
+		}
+	}
 	evByVer := make(map[int64]*entity.Evaluator, len(expt.Evaluators))
 	for _, ev := range expt.Evaluators {
 		if ev != nil {
@@ -918,7 +968,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 			ExperimentRunID:    etec.Event.ExptRunID,
 			ItemID:             item.ItemID,
 			TurnID:             turn.ID,
-			Ext:                etec.Ext,
+			Ext:                entity.WithoutManualRetryExt(etec.Ext),
 			Alias:              aliasForCapture,
 			SourceType:         entity.EvaluatorRecordSourceTypeBuiltin,
 		}); interceptErr != nil {
@@ -951,7 +1001,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 				ExperimentRunID:    etec.Event.ExptRunID,
 				ItemID:             item.ItemID,
 				TurnID:             turn.ID,
-				Ext:                etec.Ext,
+				Ext:                entity.WithoutManualRetryExt(etec.Ext),
 				EvaluatorRunConf:   runConfForCapture,
 				Alias:              aliasForCapture,
 				SourceType:         entity.EvaluatorRecordSourceTypeBuiltin,
@@ -993,16 +1043,16 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluatorWithAlias(
 		ExperimentRunID:    etec.Event.ExptRunID,
 		ItemID:             etec.EvalSetItem.ItemID,
 		TurnID:             etec.Turn.ID,
-		Ext:                etec.Ext,
+		Ext:                entity.WithoutManualRetryExt(etec.Ext),
 		EvaluatorRunConf:   runConf,
 		Alias:              alias,
 		SourceType:         entity.EvaluatorRecordSourceTypeBuiltin,
-		AsyncCtx: &entity.EvalAsyncCtx{
+		AsyncCtx: (&entity.EvalAsyncCtx{
 			Event:              etec.Event,
 			Session:            etec.Event.Session,
 			EvaluatorVersionID: ev.GetEvaluatorVersionID(),
 			ResumeReady:        false,
-		},
+		}).Clone(),
 	})
 	if evaluatorRecord != nil {
 		collector.store(evaluatorRecord)
@@ -1032,14 +1082,14 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 		ExperimentRunID:    etec.Event.ExptRunID,
 		ItemID:             etec.EvalSetItem.ItemID,
 		TurnID:             etec.Turn.ID,
-		Ext:                etec.Ext,
+		Ext:                entity.WithoutManualRetryExt(etec.Ext),
 		EvaluatorRunConf:   ec.RunConf,
-		AsyncCtx: &entity.EvalAsyncCtx{
+		AsyncCtx: (&entity.EvalAsyncCtx{
 			Event:              etec.Event,
 			Session:            etec.Event.Session,
 			EvaluatorVersionID: ev.GetEvaluatorVersionID(),
 			ResumeReady:        false,
-		},
+		}).Clone(),
 	}
 	evaluatorRecord, err := e.evaluatorService.AsyncRunEvaluator(ctx, asyncReq)
 	if evaluatorRecord != nil {
@@ -1284,7 +1334,7 @@ func (e *DefaultExptTurnEvaluationImpl) getContentByJsonPath(content *entity.Con
 }
 
 func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputDataExt(ext map[string]string, runConf *entity.EvaluatorRunConfig, evalConf *entity.EvaluationConfiguration) map[string]string {
-	builtExt := gmap.Clone(ext)
+	builtExt := entity.WithoutManualRetryExt(ext)
 	if builtExt == nil {
 		builtExt = make(map[string]string)
 	}

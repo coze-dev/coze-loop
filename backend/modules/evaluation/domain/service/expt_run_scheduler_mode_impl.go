@@ -24,6 +24,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
@@ -1380,22 +1381,44 @@ func newExptBaseExec(
 }
 
 func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (toSubmit, incomplete, complete []*entity.ExptEvalItem, err error) {
-	incomplete, complete, err = e.scanIncompleteAndComplete(ctx, event, expt)
+	rows, err := e.exptItemResultRepo.ScanCurrentRequests(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.Ext[entity.RetryYieldExtKey] == "true")
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errno.WrapMQRetryErr(err)
 	}
-
-	if submitCnt := e.getItemConcurNum(ctx, expt) - len(incomplete); submitCnt > 0 {
-		toSubmit, err = e.scanToSubmit(ctx, event, expt, int64(submitCnt))
-		if err != nil {
-			return nil, nil, nil, err
+	candidates := make([]*entity.ExptEvalItem, 0)
+	toSubmit = make([]*entity.ExptEvalItem, 0)
+	incomplete = make([]*entity.ExptEvalItem, 0)
+	complete = make([]*entity.ExptEvalItem, 0)
+	for _, source := range rows {
+		if source == nil {
+			return nil, nil, nil, errno.NewMQRetryErr("nil current item source")
+		}
+		item := &entity.ExptEvalItem{ExptID: event.ExptID, EvalSetVersionID: expt.EvalSet.EvaluationSetVersion.ID, ItemID: source.ItemID, Publication: source.Publication, PublicationObserved: source.PublicationObserved, Source: source.Source, State: source.Status, RequestID: source.RequestID, Mode: source.Mode, RetryTimes: source.RetryTimes, UpdatedAt: source.UpdatedAt}
+		if source.Status == entity.ItemRunState_Processing || source.QuotaReservationState.IsQuotaReserved() {
+			incomplete = append(incomplete, item)
+		}
+		if source.ResultState == entity.ExptItemResultStateLogged {
+			complete = append(complete, item)
+		}
+		if source.Status == entity.ItemRunState_Queueing && !source.QuotaReservationState.IsQuotaReserved() {
+			candidates = append(candidates, item)
 		}
 	}
-
+	limit := e.getItemConcurNum(ctx, expt) - len(incomplete)
+	if limit > 0 {
+		if limit > len(candidates) {
+			limit = len(candidates)
+		}
+		toSubmit = append(toSubmit, candidates[:limit]...)
+	}
 	return toSubmit, incomplete, complete, nil
 }
 
 func (e *exptBaseExec) scanIncompleteAndComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (incomplete, complete []*entity.ExptEvalItem, err error) {
+	if _, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+		_, incomplete, complete, err = e.ScanEvalItems(ctx, event, expt)
+		return incomplete, complete, err
+	}
 	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{
 		RawFilter: true,
 		RawCond:   clause.Expr{SQL: "status IN (?) OR result_state = ?", Vars: []interface{}{[]int32{int32(entity.ItemRunState_Processing)}, int32(entity.ExptItemResultStateLogged)}},
@@ -2524,8 +2547,48 @@ func (e *ExptRetryItemsExec) ScheduleStart(ctx context.Context, event *entity.Ex
 		}
 	}
 	event.ExecEvalSetItemIDs = all
+	hasManualReceipt := false
+	for _, chunk := range rl.ItemIds {
+		if chunk.ManualRetryReceipt != nil {
+			hasManualReceipt = true
+			break
+		}
+	}
+	if hasManualReceipt && len(absence) == 0 {
+		return nil
+	}
+	if len(absence) > 0 {
+		if hasManualReceipt {
+			items, err := e.exptItemResultRepo.BatchGet(contexts.WithCtxWriteDB(ctx), event.SpaceID, event.ExptID, absence)
+			if err != nil {
+				return err
+			}
+			materialized := make(map[int64]bool)
+			for _, item := range items {
+				if item == nil {
+					return fmt.Errorf("manual retry item missing")
+				}
+				retry, err := entity.ParseManualRetryContext(item.Ext)
+				if err != nil {
+					return err
+				}
+				if retry != nil && retry.RunID == event.ExptRunID && item.ExptRunID == event.ExptRunID && item.SpaceID == event.SpaceID && item.ExptID == event.ExptID {
+					materialized[item.ItemID] = true
+				}
+			}
+			remaining := make([]int64, 0, len(absence))
+			for _, id := range absence {
+				if !materialized[id] {
+					remaining = append(remaining, id)
+				}
+			}
+			if len(remaining) == 0 {
+				return nil
+			}
+			absence = remaining
+		}
+	}
 	logs.CtxInfo(ctx, "ExptRetryItemsExec.ScheduleStart found absent item_id: %v, expt_id: %v", absence, event.ExptID)
-
 	return e.resetEvalItems(ctx, event, expt, absence)
 }
 

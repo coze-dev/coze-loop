@@ -691,3 +691,40 @@ error_code:
     message: "sandbox agent: unknown error"
     description: 'sandbox agent target unknown error: 未能归类到上述阶段的兜底错误'
     no_affect_stability: false
+
+  # Same-run manual retry admission refusals (7384603622).
+  - name: ManualRetryRunConflict
+    code: 4101
+    message: run_conflict
+    description: same-run manual retry run_conflict
+    no_affect_stability: true
+
+  - name: ManualRetryRunFinished
+    code: 4102
+    message: run_finished
+    description: same-run manual retry run_finished
+    no_affect_stability: true
+
+  - name: ManualRetryRequestConflict
+    code: 4103
+    message: request_conflict
+    description: same-run manual retry request_conflict
+    no_affect_stability: true
+
+  - name: ManualRetryCapacity
+    code: 4104
+    message: receipt_capacity
+    description: same-run manual retry receipt_capacity
+    no_affect_stability: true
+
+  - name: ManualRetryBusy
+    code: 4105
+    message: retry_busy
+    description: same-run manual retry retry_busy
+    no_affect_stability: true
+
+  - name: ManualRetryDisabled
+    code: 4106
+    message: running retry disabled
+    description: same-run manual retry running retry disabled
+    no_affect_stability: true
