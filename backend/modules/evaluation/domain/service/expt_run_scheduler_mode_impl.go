@@ -1393,7 +1393,7 @@ func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptSche
 		if source == nil {
 			return nil, nil, nil, errno.NewMQRetryErr("nil current item source")
 		}
-		item := &entity.ExptEvalItem{ExptID: event.ExptID, EvalSetVersionID: expt.EvalSet.EvaluationSetVersion.ID, ItemID: source.ItemID, State: source.Status, RequestID: source.RequestID, Mode: source.Mode, RetryTimes: source.RetryTimes, UpdatedAt: source.UpdatedAt}
+		item := &entity.ExptEvalItem{ExptID: event.ExptID, EvalSetVersionID: expt.EvalSet.EvaluationSetVersion.ID, ItemID: source.ItemID, Source: source.Source, State: source.Status, RequestID: source.RequestID, Mode: source.Mode, RetryTimes: source.RetryTimes, UpdatedAt: source.UpdatedAt}
 		if source.Status == entity.ItemRunState_Processing || source.QuotaReservationState.IsQuotaReserved() {
 			incomplete = append(incomplete, item)
 		}
@@ -1415,6 +1415,10 @@ func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptSche
 }
 
 func (e *exptBaseExec) scanIncompleteAndComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (incomplete, complete []*entity.ExptEvalItem, err error) {
+	if _, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+		_, incomplete, complete, err = e.ScanEvalItems(ctx, event, expt)
+		return incomplete, complete, err
+	}
 	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{
 		RawFilter: true,
 		RawCond:   clause.Expr{SQL: "status IN (?) OR result_state = ?", Vars: []interface{}{[]int32{int32(entity.ItemRunState_Processing)}, int32(entity.ExptItemResultStateLogged)}},

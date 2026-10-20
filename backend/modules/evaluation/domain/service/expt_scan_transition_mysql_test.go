@@ -82,7 +82,15 @@ func TestScanTransitionMySQLCompleteThenArchive(t *testing.T) {
 			require.NoError(t, executor.CompleteItemRun(ctx, &entity.ExptItemEvalCtx{Event: event, Expt: exptDO}, evalErr))
 			canonical, err := itemRepo.BatchGet(ctx, space, expt, []int64{item})
 			require.NoError(t, err)
-			require.Equal(t, entity.ItemRunState_Processing, canonical[0].Status)
+			require.Equal(t, status, canonical[0].Status)
+			beforeArchiveStats, err := statsRepo.Get(ctx, expt, space)
+			require.NoError(t, err)
+			require.Zero(t, beforeArchiveStats.ProcessingItemCnt)
+			if failed {
+				require.Equal(t, int32(1), beforeArchiveStats.FailItemCnt)
+			} else {
+				require.Equal(t, int32(1), beforeArchiveStats.SuccessItemCnt)
+			}
 			log, err := itemRepo.GetItemRunLog(ctx, expt, run, item, space)
 			require.NoError(t, err)
 			require.Equal(t, int32(status), log.Status)
@@ -114,6 +122,7 @@ func TestScanTransitionMySQLCompleteThenArchive(t *testing.T) {
 			require.Equal(t, int32(entity.ExptItemResultStateResulted), log.ResultState)
 			stats, err := statsRepo.Get(ctx, expt, space)
 			require.NoError(t, err)
+			require.Equal(t, *beforeArchiveStats, *stats)
 			require.Zero(t, stats.ProcessingItemCnt)
 			if failed {
 				require.Equal(t, int32(1), stats.FailItemCnt)

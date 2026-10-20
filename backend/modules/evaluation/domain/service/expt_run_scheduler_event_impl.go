@@ -742,6 +742,14 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 		asyncExec = expt.AsyncExec()
 	}
 	zombieSecond := e.Configer.GetConsumerConf(ctx).GetExptExecConf(event.SpaceID).GetExptItemEvalConf().GetItemZombieSecond(asyncExec)
+	if _, ok := e.ExptItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+		return e.handleCurrentZombies(ctx, event, items, expt, zombieSecond, asyncExec)
+	}
+	for _, item := range items {
+		if item != nil && item.RequestID != "" && item.Source == nil {
+			return nil, nil, errno.NewMQRetryErr("same-scan original item source missing")
+		}
+	}
 	for _, item := range items {
 		if item.State == entity.ItemRunState_Processing && item.UpdatedAt != nil && !gptr.Indirect(item.UpdatedAt).IsZero() {
 			if time.Since(gptr.Indirect(item.UpdatedAt)).Seconds() > float64(zombieSecond) {
@@ -828,9 +836,17 @@ func (e *ExptSchedulerImpl) terminateZombieEvaluatorRecords(ctx context.Context,
 		return nil
 	}
 
-	turnRunLogs, err := e.ExptTurnResultRepo.MGetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, event.SpaceID)
-	if err != nil {
-		return err
+	var turnRunLogs []*entity.ExptTurnResultRunLog
+	if execution := executionSource(ctx); execution != nil && execution.Source != nil {
+		for _, log := range execution.Source.Turns {
+			turnRunLogs = append(turnRunLogs, log)
+		}
+	} else {
+		var err error
+		turnRunLogs, err = e.ExptTurnResultRepo.MGetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, event.SpaceID)
+		if err != nil {
+			return err
+		}
 	}
 
 	recordIDSet := make(map[int64]struct{})
@@ -909,6 +925,14 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 		return items, nil, nil
 	}
 
+	if _, ok := e.ExptItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+		return e.sweepCurrentSandboxItems(ctx, event, items, expt)
+	}
+	for _, item := range items {
+		if item != nil && item.RequestID != "" && item.Source == nil {
+			return nil, nil, errno.NewMQRetryErr("same-scan original item source missing")
+		}
+	}
 	processingItemIDs := make([]int64, 0, len(items))
 	for _, item := range items {
 		if item == nil || item.State != entity.ItemRunState_Processing {
@@ -1095,9 +1119,17 @@ func (e *ExptSchedulerImpl) terminateZombieEvalTargetRecords(ctx context.Context
 		return nil
 	}
 
-	turnRunLogs, err := e.ExptTurnResultRepo.MGetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, event.SpaceID)
-	if err != nil {
-		return err
+	var turnRunLogs []*entity.ExptTurnResultRunLog
+	if execution := executionSource(ctx); execution != nil && execution.Source != nil {
+		for _, log := range execution.Source.Turns {
+			turnRunLogs = append(turnRunLogs, log)
+		}
+	} else {
+		var err error
+		turnRunLogs, err = e.ExptTurnResultRepo.MGetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, event.SpaceID)
+		if err != nil {
+			return err
+		}
 	}
 
 	// recordID -> 关联 itemIDs, 打点时需要按 (record, item) 展开 tag

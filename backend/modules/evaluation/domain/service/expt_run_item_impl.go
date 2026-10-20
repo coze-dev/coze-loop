@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -111,6 +112,9 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 	}
 
 	for _, turn := range eiec.EvalSetItem.Turns {
+		if err := ctx.Err(); err != nil {
+			return false, errno.WrapMQRetryErr(err)
+		}
 		// 行级终止的「不再继续」语义：每轮开始前查一次该行是否已被终止，是则 break，
 		// 当前已跑完的轮次结果保留、后续轮次不再开始（对应 spec「执行中的行在当轮结束后停止」）。
 		// 放在循环体首部（而非尾部）是为了同时覆盖「排队中被终止、事件已在途」的情形。
@@ -184,10 +188,13 @@ func (e *ExptItemEvalCtxExecutor) isItemTerminated(ctx context.Context, eiec *en
 }
 
 func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *entity.ExptTurnEvalCtx, result *entity.ExptTurnRunResult) error {
+	if err := ctx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
 	if result == nil {
 		return fmt.Errorf("StoreTurnRunResult with nil result")
 	}
-	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	persistCtx, cancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
 	defer cancel()
 
 	turn := etec.Turn
@@ -280,10 +287,25 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 
 	result.SetEvalErr(evalErr)
 
-	if err := e.TurnResultRepo.SaveTurnRunLogs(persistCtx, []*entity.ExptTurnResultRunLog{clone}); err != nil {
+	if port, ok := e.ItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+		source, err := sourceForExecution(ctx, port, etec.Event)
+		if err != nil {
+			return err
+		}
+		applied, err := port.StoreCurrentTurnRunResult(persistCtx, source, clone)
+		if err := checkedCurrentWrite(ctx, applied, err); err != nil {
+			return err
+		}
+		// Advance only the reference that this execution just stored. Never read latest
+		// and replace the expected identity after an RPC or admission.
+		source.Turns[turn.ID] = clone
+	} else if err := e.TurnResultRepo.SaveTurnRunLogs(persistCtx, []*entity.ExptTurnResultRunLog{clone}); err != nil {
 		return err
 	}
-	resumeCtx, resumeCancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	if err := ctx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	resumeCtx, resumeCancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
 	defer resumeCancel()
 	var resumeWG sync.WaitGroup
 	for _, record := range result.EvaluatorResults {
@@ -518,8 +540,14 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 }
 
 func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *entity.ExptItemEvalCtx, evalErr error) error {
+	if err := ctx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if errno.NeedMQRetry(evalErr) || errors.Is(evalErr, errExptNonCurrentSource) {
+		return evalErr
+	}
 	event := eiec.Event
-	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	persistCtx, cancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
 	defer cancel()
 
 	if evalErr != nil {
@@ -540,26 +568,28 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 		ufields["status"] = int32(entity.ItemRunState_Success)
 	}
 
-	// Terminal 是吸收态：该行已被用户行级终止时，在途执行的成功/失败结果 MUST NOT 回写 status / err_msg
-	// （对应 spec「终止后到达的执行结果不覆盖终止状态」）—— 用户要看到的是"被主动终止"，而不是终止前
-	// 那次执行的报错。
-	//
-	// ⚠️ 这里刻意**不**用「先 SELECT 判 Terminal 再 UPDATE」：普通 SELECT 会被路由到只读从库
-	// （商业化侧 db 以 WithReadReplicas 构建），主从延迟窗口内会读回终止前的旧状态并把 Terminal
-	// 覆盖成 Success —— 该行还会被重新扫成成功行、发 item-complete MQ、记进 success_cnt，
-	// 用户的终止操作被静默吞掉。即便读主库，读-判-写之间仍有 TOCTOU 窗口。
-	// 故拆成两条写，用 DB 的 WHERE 做原子判定：
-	//	 (1) 条件写：status/err_msg/result_state，仅对 status <> Terminal 的行生效；
-	//	 (2) 无条件写：result_state=Logged —— 对已 Terminal 的行也必须落，否则调度侧收不了口。
-	//	     该字段与终止语义无冲突（TerminateItems 自己也写 Logged），重复写幂等。
-	if err := e.ItemResultRepo.UpdateItemRunLogIfNotTerminal(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
-		return err
-	}
-
-	if err := e.ItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, map[string]any{
-		"result_state": entity.ExptItemResultStateLogged,
-	}, event.SpaceID); err != nil {
-		return err
+	if port, ok := e.ItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+		source, err := sourceForExecution(ctx, port, event)
+		if err != nil {
+			return err
+		}
+		write := &entity.ExptCurrentItemRunWrite{Status: entity.ItemRunState_Success, RetryTimes: int32(event.RetryTimes)}
+		if evalErr != nil {
+			write.Status = entity.ItemRunState_Fail
+			write.ErrMsg = []byte(errno.SerializeErr(evalErr))
+			write.FailPendingTurns = true
+		}
+		applied, err := port.CompleteCurrentItemRun(persistCtx, source, write)
+		if err := checkedCurrentWrite(ctx, applied, err); err != nil {
+			return err
+		}
+	} else {
+		if err := e.ItemResultRepo.UpdateItemRunLogIfNotTerminal(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
+			return err
+		}
+		if err := e.ItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, map[string]any{"result_state": entity.ExptItemResultStateLogged}, event.SpaceID); err != nil {
+			return err
+		}
 	}
 
 	// 沙箱 agent 实验:单行走到终态失败,立即发一张飞书卡。Notifier 内部做 sandbox agent + Enable 判定,

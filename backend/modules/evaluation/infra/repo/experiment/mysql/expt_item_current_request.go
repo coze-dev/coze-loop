@@ -30,8 +30,8 @@ type currentRequestRow struct {
 	UpdatedAt                                                                      time.Time
 }
 
-func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, itemIDs []int64, retryFirst bool) ([]*entity.ExptItemCurrentRequest, error) {
-	session := dao.provider.NewSession(ctx, db.WithMaster()).Table("expt_item_result_run_log AS l").
+func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, itemIDs []int64, retryFirst bool, opts ...db.Option) ([]*entity.ExptItemCurrentRequest, error) {
+	session := dao.provider.NewSession(ctx, append(opts, db.WithMaster())...).Table("expt_item_result_run_log AS l").
 		Select("l.id,l.item_id,l.item_version_id,l.status,l.result_state,l.retry_times,l.quota_reservation_state,l.updated_at,c.id AS canonical_id,c.expt_run_id AS canonical_run_id,c.status AS canonical_status,c.item_version_id AS canonical_item_version_id,c.ext,r.mode,r.status AS run_status").
 		Joins("LEFT JOIN expt_item_result AS c ON c.space_id=l.space_id AND c.expt_id=l.expt_id AND c.item_id=l.item_id AND c.deleted_at IS NULL").
 		Joins("LEFT JOIN expt_run_log AS r ON r.space_id=l.space_id AND r.expt_id=l.expt_id AND r.expt_run_id=l.expt_run_id AND r.deleted_at IS NULL").
@@ -113,7 +113,31 @@ func validCurrentItemStatus(status entity.ItemRunState) bool {
 }
 
 func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, retryFirst bool) ([]*entity.ExptItemCurrentRequest, error) {
-	return dao.readCurrentRequests(ctx, spaceID, exptID, runID, nil, retryFirst)
+	var rows []*entity.ExptItemCurrentRequest
+	err := dao.provider.Transaction(ctx, func(tx *gorm.DB) error {
+		var err error
+		rows, err = dao.readCurrentRequests(ctx, spaceID, exptID, runID, nil, retryFirst, db.WithTransaction(tx))
+		if err != nil {
+			return err
+		}
+		for _, row := range rows {
+			// Freeze rows that can be swept. Queueing and completed rows retain the
+			// existing scan contract and do not need invocation identity here.
+			if row.Status != entity.ItemRunState_Processing {
+				continue
+			}
+			source, err := loadCurrentRunSource(tx, spaceID, exptID, runID, row.ItemID)
+			if err != nil {
+				return err
+			}
+			if source == nil || !source.Current.Matches(runID, row.RequestID) || source.Current.ItemVersionID != row.ItemVersionID || source.Current.Status != row.Status || source.Current.RetryTimes != row.RetryTimes || source.Current.UpdatedAt == nil || row.UpdatedAt == nil || !source.Current.UpdatedAt.Equal(*row.UpdatedAt) {
+				continue
+			}
+			row.Source = source
+		}
+		return nil
+	}, db.WithMaster())
+	return rows, err
 }
 
 func (dao *exptItemResultDAOImpl) GetCurrentRequest(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptItemCurrentRequest, error) {

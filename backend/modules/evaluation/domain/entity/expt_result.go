@@ -292,6 +292,7 @@ func (e ExptEvalItems) GetItemIDs() []int64 {
 }
 
 type ExptEvalItem struct {
+	Source           *ExptCurrentItemRunSource
 	RequestID        string
 	Mode             ExptRunMode
 	ExptID           int64

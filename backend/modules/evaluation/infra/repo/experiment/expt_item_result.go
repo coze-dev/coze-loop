@@ -251,3 +251,13 @@ func (e ExptItemResultRepoImpl) GetCurrentRequest(ctx context.Context, spaceID, 
 func (e ExptItemResultRepoImpl) MarkProcessingIfCurrent(ctx context.Context, spaceID, exptID, runID, itemID int64, requestID string) (bool, error) {
 	return e.exptItemResultDAO.MarkProcessingIfCurrent(ctx, spaceID, exptID, runID, itemID, requestID)
 }
+
+func (e ExptItemResultRepoImpl) GetCurrentItemRunSource(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptCurrentItemRunSource, error) {
+	return e.exptItemResultDAO.(repo.IExptCurrentResultRepo).GetCurrentItemRunSource(ctx, spaceID, exptID, runID, itemID)
+}
+func (e ExptItemResultRepoImpl) StoreCurrentTurnRunResult(ctx context.Context, source *entity.ExptCurrentItemRunSource, result *entity.ExptTurnResultRunLog) (bool, error) {
+	return e.exptItemResultDAO.(repo.IExptCurrentResultRepo).StoreCurrentTurnRunResult(ctx, source, result)
+}
+func (e ExptItemResultRepoImpl) CompleteCurrentItemRun(ctx context.Context, source *entity.ExptCurrentItemRunSource, write *entity.ExptCurrentItemRunWrite) (bool, error) {
+	return e.exptItemResultDAO.(repo.IExptCurrentResultRepo).CompleteCurrentItemRun(ctx, source, write)
+}

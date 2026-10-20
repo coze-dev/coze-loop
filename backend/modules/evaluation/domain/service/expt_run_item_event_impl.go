@@ -44,6 +44,7 @@ type ExptItemEventEvalServiceImpl struct {
 	configer                 component.IConfiger
 	quotaRepo                repo.QuotaRepo
 	mutex                    lock.ILocker
+	itemLocker               ManualRetryLockerFactory
 	idem                     idem.IdempotentService
 	auditClient              audit.IAuditService
 	metric                   metrics.ExptMetric
@@ -132,6 +133,9 @@ func NewExptRecordEvalService(
 		i.sandboxAgentNotifier = sandboxAgentNotifier[0]
 	}
 
+	if m, ok := manager.(*ExptMangerImpl); ok {
+		i.itemLocker = m.manualRetryLocker
+	}
 	i.endpoints = RecordEvalChain(
 		i.HandleEventErr,
 		i.HandleEventCheck,
@@ -456,8 +460,11 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 		event.WithCtxCentralQuotaHeld(ctx, expt.SchedulerScope)
 
 		execErr := next(ctx, event)
-		if errno.NeedMQRetry(execErr) {
+		if errno.NeedMQRetry(execErr) || errors.Is(execErr, errExptNonCurrentSource) {
 			return execErr
+		}
+		if err := ctx.Err(); err != nil {
+			return errno.WrapMQRetryErr(err)
 		}
 		e.releaseQuotaIfItemTerminal(ctx, event, expt.SchedulerScope, guard, execErr)
 		return execErr
@@ -610,7 +617,7 @@ func (e *ExptItemEventEvalServiceImpl) releaseQuotaIfItemTerminal(
 	}
 
 	// 用独立超时的 ctx：主 ctx 可能已因执行失败被取消，而释放必须尽力完成。
-	relCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	relCtx, cancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
 	defer cancel()
 
 	obs, err := e.dispatchRepo.MGetDispatchObservations(relCtx, event.SpaceID, event.ExptID, event.ExptRunID,
@@ -680,6 +687,11 @@ func terminalReleaseReason(status entity.ItemRunState, execErr error) string {
 
 func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) RecordEvalEndPoint {
 	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+		if err := ctx.Err(); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		execution := &currentItemExecution{}
+		ctx = context.WithValue(ctx, currentItemSourceKey{}, execution)
 		nextErr := func(ctx context.Context, event *entity.ExptItemEvalEvent) (err error) {
 			defer goroutine.Recover(ctx, &err)
 			return next(ctx, event)
@@ -687,6 +699,18 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 
 		if errno.NeedMQRetry(nextErr) {
 			return nextErr
+		}
+		if errors.Is(nextErr, errExptNonCurrentSource) {
+			return nil
+		}
+		if execution.LockLost {
+			return errno.NewMQRetryErr("item execution lock lost")
+		}
+		if nextErr == nil {
+			return nil
+		}
+		if port, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+			return e.handleCurrentEventErr(ctx, event, nextErr, port, execution)
 		}
 		retryConf := e.configer.GetErrRetryConf(ctx, event.SpaceID, nextErr)
 		needRetry := event.RetryTimes < retryConf.GetRetryTimes()
@@ -804,7 +828,7 @@ func (e *ExptItemEventEvalServiceImpl) releaseCentralQuotaOutsideGate(ctx contex
 	}
 
 	// 独立超时的 ctx：主 ctx 可能已因执行失败被取消，而释放必须尽力完成。
-	relCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	relCtx, cancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
 	defer cancel()
 
 	reason := reasonPrefix + ": " + evalErr.Error()
@@ -831,7 +855,22 @@ func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx conte
 		return
 	}
 
-	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	if err := ctx.Err(); err != nil {
+		return
+	}
+	if port, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+		source, err := sourceForExecution(ctx, port, event)
+		if err != nil {
+			logs.CtxWarn(ctx, "unretriable error source unavailable: %v", err)
+			return
+		}
+		if _, err := port.CompleteCurrentItemRun(ctx, source, &entity.ExptCurrentItemRunWrite{Status: entity.ItemRunState_Fail, ErrMsg: []byte(errno.SerializeErr(evalErr)), RetryTimes: int32(event.RetryTimes), FailPendingTurns: true}); err != nil {
+			logs.CtxWarn(ctx, "unretriable error storage: %v", err)
+		}
+		return
+	}
+
+	persistCtx, cancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
 	defer cancel()
 
 	// Terminal 是吸收态：该行已被用户行级终止时，在途的失败结果 MUST NOT 把 status / err_msg 回写成 Fail。
@@ -896,7 +935,22 @@ func (e *ExptItemEventEvalServiceImpl) yieldItemRunForRetry(ctx context.Context,
 		return
 	}
 
-	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	if err := ctx.Err(); err != nil {
+		return
+	}
+	if port, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+		source, err := sourceForExecution(ctx, port, event)
+		if err != nil {
+			logs.CtxWarn(ctx, "yield source unavailable: %v", err)
+			return
+		}
+		if _, err := port.CompleteCurrentItemRun(ctx, source, &entity.ExptCurrentItemRunWrite{Yield: true, ErrMsg: []byte(errno.SerializeErr(evalErr)), RetryTimes: int32(event.RetryTimes) + 1}); err != nil {
+			logs.CtxWarn(ctx, "yield storage: %v", err)
+		}
+		return
+	}
+
+	persistCtx, cancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
 	defer cancel()
 
 	itemIDs := []int64{event.EvalSetItemID}
@@ -953,25 +1007,35 @@ func (e *ExptItemEventEvalServiceImpl) yieldItemRunForRetry(ctx context.Context,
 
 func (e *ExptItemEventEvalServiceImpl) HandleEventLock(next RecordEvalEndPoint) RecordEvalEndPoint {
 	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+		mutex := e.mutex
+		if e.itemLocker != nil {
+			mutex = e.itemLocker()
+		}
+		if mutex == nil {
+			return errno.NewMQRetryErr("item execution locker missing")
+		}
 		lockKey := fmt.Sprintf("expt_item_eval_run_lock:%d:%d", event.ExptID, event.EvalSetItemID)
-		locked, ctx, cancel, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*5, time.Second*60*60)
+		locked, lockCtx, cancel, err := mutex.LockWithRenew(ctx, lockKey, 5*time.Second, time.Hour)
 		if err != nil {
 			return errno.WrapMQRetryErr(err)
 		}
-
 		if !locked {
-			logs.CtxWarn(ctx, "ExptRecordEvalConsumer.HandleEventLock found locked item eval event: %v. Retry event, err: %v", json.Jsonify(event), err)
 			return errno.NewMQRetryErr("item execution lock busy")
 		}
-
 		defer func() {
 			cancel()
-			if _, err := e.mutex.Unlock(lockKey); err != nil {
-				logs.CtxWarn(ctx, "failed to unlock key: %v, err: %v", lockKey, err)
+			if _, err := mutex.Unlock(lockKey); err != nil {
+				logs.CtxWarn(ctx, "unlock item execution: %v", err)
 			}
 		}()
-
-		return next(ctx, event)
+		err = next(lockCtx, event)
+		if lockCtx.Err() != nil {
+			if execution := executionSource(ctx); execution != nil {
+				execution.LockLost = true
+			}
+			return errno.WrapMQRetryErr(lockCtx.Err())
+		}
+		return err
 	}
 }
 
@@ -997,6 +1061,9 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 		return err
 	}
 	ctx = e.WithCtx(ctx, eiec)
+	if execution := executionSource(ctx); execution != nil {
+		execution.LogCtx = ctx
+	}
 
 	mode, err := NewRecordEvalMode(
 		eiec.Event,
@@ -1016,6 +1083,11 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 
 	if err := mode.PreEval(ctx, eiec); err != nil {
 		return err
+	}
+	if execution := executionSource(ctx); execution != nil && execution.Source != nil && len(execution.Source.Turns) == 0 && event.RequestID == "" {
+		for id, log := range eiec.GetExistTurnResultLogs() {
+			execution.Source.Turns[id] = log
+		}
 	}
 
 	if err := NewExptItemEvaluation(e.exptTurnResultRepo, e.exptItemResultRepo, e.configer, e.metric, e.evaTargetService, e.evaluatorRecordService, e.evaluatorService, e.benefitService, e.evalAsyncRepo, e.evaluationSetItemService, e.itemCompletePublisher, e.sandboxAgentMetrics, e.sandboxAgentNotifier).
@@ -1159,11 +1231,18 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 
 func (e *ExptItemEventEvalServiceImpl) GetExistExptRecordEvalResult(ctx context.Context, event *entity.ExptItemEvalEvent) (*entity.ExptItemEvalResult, error) {
 	ctx = contexts.WithCtxWriteDB(ctx)
-	turnRunLogs, err := e.exptTurnResultRepo.GetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)
-	if err != nil {
-		return nil, err
+	var turnRunLogs []*entity.ExptTurnResultRunLog
+	if execution := executionSource(ctx); execution != nil && execution.Source != nil {
+		for _, log := range execution.Source.Turns {
+			turnRunLogs = append(turnRunLogs, log)
+		}
+	} else {
+		var err error
+		turnRunLogs, err = e.exptTurnResultRepo.GetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)
+		if err != nil {
+			return nil, err
+		}
 	}
-
 	turnRunResultMap := make(map[int64]*entity.ExptTurnResultRunLog, len(turnRunLogs))
 	for _, result := range turnRunLogs {
 		turnRunResultMap[result.TurnID] = result
@@ -1272,14 +1351,15 @@ func (e *ExptRecordEvalModeSubmit) PreEval(ctx context.Context, eiec *entity.Exp
 		turnRunResults := make([]*entity.ExptTurnResultRunLog, 0, len(absentRunLogTurnIDs))
 		for idx, turnID := range absentRunLogTurnIDs {
 			turnRunResults = append(turnRunResults, &entity.ExptTurnResultRunLog{
-				ID:        ids[idx],
-				SpaceID:   event.SpaceID,
-				ExptID:    event.ExptID,
-				ExptRunID: event.ExptRunID,
-				ItemID:    event.EvalSetItemID,
-				TurnID:    turnID,
-				Status:    entity.TurnRunState_Processing,
-				LogID:     logID,
+				ID:            ids[idx],
+				SpaceID:       event.SpaceID,
+				ExptID:        event.ExptID,
+				ExptRunID:     event.ExptRunID,
+				ItemID:        event.EvalSetItemID,
+				ItemVersionID: gptr.Indirect(eiec.EvalSetItem.ItemVersionID),
+				TurnID:        turnID,
+				Status:        entity.TurnRunState_Processing,
+				LogID:         logID,
 			})
 		}
 
@@ -1679,6 +1759,29 @@ func (e *ExptItemEventEvalServiceImpl) HandleCurrentSource(next RecordEvalEndPoi
 		if event.ExptRunMode != source.Mode {
 			return errno.NewMQRetryErr("event/current item mode mismatch")
 		}
+		if executionSource(ctx) == nil {
+			ctx = context.WithValue(ctx, currentItemSourceKey{}, &currentItemExecution{})
+		}
+		if port, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+			frozen, err := port.GetCurrentItemRunSource(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
+			if err != nil {
+				return errno.WrapMQRetryErr(err)
+			}
+			if frozen == nil || !frozen.Current.Matches(event.ExptRunID, event.RequestID) {
+				return nil
+			}
+			if execution := executionSource(ctx); execution != nil {
+				execution.Source = frozen
+			}
+			source = &frozen.Current
+		}
+		valid, sourceErr := e.validateResumeSource(ctx, event, source)
+		if sourceErr != nil {
+			return sourceErr
+		}
+		if !valid {
+			return nil
+		}
 		if event.RetryTimes < 0 {
 			return errno.NewMQRetryErr("invalid event retry count")
 		}
@@ -1704,6 +1807,19 @@ func (e *ExptItemEventEvalServiceImpl) HandleCurrentSource(next RecordEvalEndPoi
 					}
 				}
 			}
+		}
+		if port, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+			frozen, err := sourceForExecution(ctx, port, event)
+			if err != nil {
+				return err
+			}
+			applied, err := port.CompleteCurrentItemRun(ctx, frozen, &entity.ExptCurrentItemRunWrite{RetryOnly: true, RetryTimes: int32(event.RetryTimes)})
+			if err := checkedCurrentWrite(ctx, applied, err); err != nil {
+				return err
+			}
+		}
+		if err := ctx.Err(); err != nil {
+			return errno.WrapMQRetryErr(err)
 		}
 		return next(ctx, event)
 	}
