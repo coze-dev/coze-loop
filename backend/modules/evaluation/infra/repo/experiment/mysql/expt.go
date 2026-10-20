@@ -30,7 +30,7 @@ type IExptDAO interface {
 
 	Update(ctx context.Context, expt *model.Experiment) error
 
-	UpdateFields(ctx context.Context, id int64, ufields map[string]any) error
+	UpdateFields(ctx context.Context, id int64, ufields map[string]any, opts ...db.Option) error
 
 	Delete(ctx context.Context, id int64) error
 
@@ -40,7 +40,7 @@ type IExptDAO interface {
 
 	GetByName(ctx context.Context, name string, spaceID int64) (*model.Experiment, error)
 
-	GetByID(ctx context.Context, id int64) (*model.Experiment, error)
+	GetByID(ctx context.Context, id int64, opts ...db.Option) (*model.Experiment, error)
 
 	MGetByID(ctx context.Context, ids []int64) ([]*model.Experiment, error)
 
@@ -72,8 +72,8 @@ type exptDAOImpl struct {
 	query *query.Query
 }
 
-func (d *exptDAOImpl) UpdateFields(ctx context.Context, id int64, ufields map[string]any) error {
-	q := query.Use(d.db.NewSession(ctx)).Experiment
+func (d *exptDAOImpl) UpdateFields(ctx context.Context, id int64, ufields map[string]any, opts ...db.Option) error {
+	q := query.Use(d.db.NewSession(ctx, opts...)).Experiment
 	_, err := q.WithContext(ctx).
 		Where(q.ID.Eq(id)).
 		UpdateColumns(ufields)
@@ -389,8 +389,8 @@ func (d *exptDAOImpl) GetByName(ctx context.Context, name string, spaceID int64)
 	return found, nil
 }
 
-func (d *exptDAOImpl) GetByID(ctx context.Context, id int64) (*model.Experiment, error) {
-	expt := d.query.Experiment
+func (d *exptDAOImpl) GetByID(ctx context.Context, id int64, opts ...db.Option) (*model.Experiment, error) {
+	expt := query.Use(d.db.NewSession(ctx, opts...)).Experiment
 	q := expt.WithContext(ctx)
 	if contexts.CtxWriteDB(ctx) {
 		q = q.WriteDB()

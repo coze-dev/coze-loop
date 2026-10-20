@@ -19,6 +19,19 @@ type IExptTurnEvaluatorResultRefDAO interface {
 	BatchGet(ctx context.Context, spaceID int64, exptTurnResultIDs []int64, opts ...db.Option) ([]*model.ExptTurnEvaluatorResultRef, error)
 	GetByExptID(ctx context.Context, spaceID, exptID int64, opts ...db.Option) ([]*model.ExptTurnEvaluatorResultRef, error)
 	GetByExptEvaluatorVersionID(ctx context.Context, spaceID, exptID, evaluatorVersionID int64, opts ...db.Option) ([]*model.ExptTurnEvaluatorResultRef, error)
+	DeleteByTurnResultIDs(ctx context.Context, spaceID, exptID int64, turnResultIDs, keepRefIDs []int64, opts ...db.Option) error
+}
+
+func (dao *ExptTurnEvaluatorResultRefDAOImpl) DeleteByTurnResultIDs(ctx context.Context, spaceID, exptID int64, turnResultIDs, keepRefIDs []int64, opts ...db.Option) error {
+	if len(turnResultIDs) == 0 {
+		return nil
+	}
+	q := dao.provider.NewSession(ctx, opts...).Unscoped().
+		Where("space_id = ? AND expt_id = ? AND expt_turn_result_id IN ?", spaceID, exptID, turnResultIDs)
+	if len(keepRefIDs) > 0 {
+		q = q.Where("id NOT IN ?", keepRefIDs)
+	}
+	return q.Delete(&model.ExptTurnEvaluatorResultRef{}).Error
 }
 
 type ExptTurnEvaluatorResultRefDAOImpl struct {

@@ -292,7 +292,7 @@ func TestLogRetryItemsRun_ReleasesSupersededRunQuota(t *testing.T) {
 	mgr.mutex.(*lockMocks.MockILocker).EXPECT().
 		BackoffLockWithValue(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(true, "", nil)
-	mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil)
+	mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
 		GetByID(gomock.Any(), exptID, spaceID).Return(&entity.Experiment{
 		ID:               exptID,
@@ -337,9 +337,7 @@ func TestLogRetryItemsRun_SkipsReleaseWhenRunAlive(t *testing.T) {
 		BackoffLockWithValue(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(false, "200", nil)
 	mgr.mutex.(*lockMocks.MockILocker).EXPECT().Exists(gomock.Any(), gomock.Any()).Return(false, nil)
-	mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().
-		Get(gomock.Any(), exptID, aliveRunID).Return(&entity.ExptRunLog{ExptID: exptID, ExptRunID: aliveRunID}, nil)
-	mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil)
+	mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().AppendRunItemIDs(gomock.Any(), exptID, aliveRunID, spaceID, []int64{11}).Return(nil)
 	// 刻意不声明 GetByID / ScanItemRunLogs：真去查就是 unexpected call。
 
 	runID, retried, err := mgr.LogRetryItemsRun(context.Background(), exptID,

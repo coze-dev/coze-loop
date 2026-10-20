@@ -357,6 +357,7 @@ func (tr *ExptTurnResult) ToRunLogDO() *ExptTurnResultRunLog {
 		ExptID:             tr.ExptID,
 		ExptRunID:          tr.ExptRunID,
 		ItemID:             tr.ItemID,
+		ItemVersionID:      tr.ItemVersionID,
 		TurnID:             tr.TurnID,
 		Status:             TurnRunState(tr.Status),
 		TraceID:            tr.TraceID,
