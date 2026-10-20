@@ -199,6 +199,12 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 
 		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
 			logs.CtxInfo(ctx, "ExptSchedulerConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
+			if entity.IsExptFinished(status) && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun {
+				if finish, ok := e.Manager.(IExptNaturalRunFinisher); ok {
+					_, err := finish.FinishCurrentRun(ctx, event)
+					return err
+				}
+			}
 			return nil
 		}
 
