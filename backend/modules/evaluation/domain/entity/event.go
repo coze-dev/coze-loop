@@ -36,6 +36,7 @@ type ctxCentralQuotaHeldKey struct{}
 type ctxCentralAdmittedExptKey struct{}
 
 type ExptItemEvalEvent struct {
+	RequestID   string `json:",omitempty"`
 	SpaceID     int64
 	ExptID      int64
 	ExptRunID   int64

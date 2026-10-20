@@ -427,6 +427,21 @@ func (mr *MockIExptItemResultRepoMockRecorder) CountItemsByStatus(ctx, spaceID, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountItemsByStatus", reflect.TypeOf((*MockIExptItemResultRepo)(nil).CountItemsByStatus), ctx, spaceID, exptID)
 }
 
+// GetCurrentRequest mocks base method.
+func (m *MockIExptItemResultRepo) GetCurrentRequest(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptItemCurrentRequest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCurrentRequest", ctx, spaceID, exptID, runID, itemID)
+	ret0, _ := ret[0].(*entity.ExptItemCurrentRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCurrentRequest indicates an expected call of GetCurrentRequest.
+func (mr *MockIExptItemResultRepoMockRecorder) GetCurrentRequest(ctx, spaceID, exptID, runID, itemID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentRequest", reflect.TypeOf((*MockIExptItemResultRepo)(nil).GetCurrentRequest), ctx, spaceID, exptID, runID, itemID)
+}
+
 // GetItemIDListByExptID mocks base method.
 func (m *MockIExptItemResultRepo) GetItemIDListByExptID(ctx context.Context, exptID, spaceID int64) ([]int64, error) {
 	m.ctrl.T.Helper()
@@ -548,6 +563,21 @@ func (mr *MockIExptItemResultRepoMockRecorder) MGetItemTurnResults(ctx, spaceID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetItemTurnResults", reflect.TypeOf((*MockIExptItemResultRepo)(nil).MGetItemTurnResults), ctx, spaceID, exptID, itemIDs)
 }
 
+// MarkProcessingIfCurrent mocks base method.
+func (m *MockIExptItemResultRepo) MarkProcessingIfCurrent(ctx context.Context, spaceID, exptID, runID, itemID int64, requestID string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkProcessingIfCurrent", ctx, spaceID, exptID, runID, itemID, requestID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MarkProcessingIfCurrent indicates an expected call of MarkProcessingIfCurrent.
+func (mr *MockIExptItemResultRepoMockRecorder) MarkProcessingIfCurrent(ctx, spaceID, exptID, runID, itemID, requestID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkProcessingIfCurrent", reflect.TypeOf((*MockIExptItemResultRepo)(nil).MarkProcessingIfCurrent), ctx, spaceID, exptID, runID, itemID, requestID)
+}
+
 // SaveItemResults mocks base method.
 func (m *MockIExptItemResultRepo) SaveItemResults(ctx context.Context, itemResults []*entity.ExptItemResult) error {
 	m.ctrl.T.Helper()
@@ -560,6 +590,21 @@ func (m *MockIExptItemResultRepo) SaveItemResults(ctx context.Context, itemResul
 func (mr *MockIExptItemResultRepoMockRecorder) SaveItemResults(ctx, itemResults any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveItemResults", reflect.TypeOf((*MockIExptItemResultRepo)(nil).SaveItemResults), ctx, itemResults)
+}
+
+// ScanCurrentRequests mocks base method.
+func (m *MockIExptItemResultRepo) ScanCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, retryFirst bool) ([]*entity.ExptItemCurrentRequest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScanCurrentRequests", ctx, spaceID, exptID, runID, retryFirst)
+	ret0, _ := ret[0].([]*entity.ExptItemCurrentRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ScanCurrentRequests indicates an expected call of ScanCurrentRequests.
+func (mr *MockIExptItemResultRepoMockRecorder) ScanCurrentRequests(ctx, spaceID, exptID, runID, retryFirst any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScanCurrentRequests", reflect.TypeOf((*MockIExptItemResultRepo)(nil).ScanCurrentRequests), ctx, spaceID, exptID, runID, retryFirst)
 }
 
 // ScanItemResults mocks base method.

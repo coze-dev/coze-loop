@@ -1380,18 +1380,36 @@ func newExptBaseExec(
 }
 
 func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (toSubmit, incomplete, complete []*entity.ExptEvalItem, err error) {
-	incomplete, complete, err = e.scanIncompleteAndComplete(ctx, event, expt)
+	rows, err := e.exptItemResultRepo.ScanCurrentRequests(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.Ext[entity.RetryYieldExtKey] == "true")
 	if err != nil {
 		return nil, nil, nil, err
 	}
-
-	if submitCnt := e.getItemConcurNum(ctx, expt) - len(incomplete); submitCnt > 0 {
-		toSubmit, err = e.scanToSubmit(ctx, event, expt, int64(submitCnt))
-		if err != nil {
-			return nil, nil, nil, err
+	candidates := make([]*entity.ExptEvalItem, 0)
+	toSubmit = make([]*entity.ExptEvalItem, 0)
+	incomplete = make([]*entity.ExptEvalItem, 0)
+	complete = make([]*entity.ExptEvalItem, 0)
+	for _, source := range rows {
+		if source == nil {
+			return nil, nil, nil, fmt.Errorf("nil current item source")
+		}
+		item := &entity.ExptEvalItem{ExptID: event.ExptID, EvalSetVersionID: expt.EvalSet.EvaluationSetVersion.ID, ItemID: source.ItemID, State: source.Status, RequestID: source.RequestID, Mode: source.Mode, RetryTimes: source.RetryTimes, UpdatedAt: source.UpdatedAt}
+		if source.Status == entity.ItemRunState_Processing || source.QuotaReservationState.IsQuotaReserved() {
+			incomplete = append(incomplete, item)
+		}
+		if source.ResultState == entity.ExptItemResultStateLogged {
+			complete = append(complete, item)
+		}
+		if source.Status == entity.ItemRunState_Queueing && !source.QuotaReservationState.IsQuotaReserved() {
+			candidates = append(candidates, item)
 		}
 	}
-
+	limit := e.getItemConcurNum(ctx, expt) - len(incomplete)
+	if limit > 0 {
+		if limit > len(candidates) {
+			limit = len(candidates)
+		}
+		toSubmit = append(toSubmit, candidates[:limit]...)
+	}
 	return toSubmit, incomplete, complete, nil
 }
 

@@ -139,6 +139,7 @@ func NewExptRecordEvalService(
 		// 而放在 Lock 之前可避免为一条注定要丢弃的消息（不归本进程 / 无 Scope）去抢 item 锁。
 		i.HandleCentralAdmission,
 		i.HandleEventLock,
+		i.HandleCurrentSource,
 		// ★ 取执行权与兑现投影必须在锁内：见 HandleCentralReservation 注释。
 		i.HandleCentralReservation,
 		i.HandleEventExec,
@@ -173,9 +174,9 @@ func RecordEvalChain(mws ...RecordEvalMiddleware) RecordEvalMiddleware {
 
 func (e *ExptItemEventEvalServiceImpl) HandleEventCheck(next RecordEvalEndPoint) RecordEvalEndPoint {
 	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
-		runLog, err := e.manager.GetRunLog(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session)
+		runLog, err := e.manager.GetRunLog(contexts.WithCtxWriteDB(ctx), event.ExptID, event.ExptRunID, event.SpaceID, event.Session)
 		if err != nil {
-			return err
+			return errno.WrapMQRetryErr(err)
 		}
 
 		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
@@ -183,20 +184,11 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventCheck(next RecordEvalEndPoint)
 			return nil
 		}
 
-		// item 级闸门（实验级判定之后、正常执行之前）：该行已被用户行级终止 (TerminateItems) 则丢弃事件，
-		// 对应「排队中的行被终止后不再被调度」。判定失败只告警不拦截 —— 宁可多跑一次，
-		// 也不能因为一次查询抖动把正常行的执行掐掉（终止行即便漏拦，也有 CompleteItemRun 的 Terminal 覆盖保护兜底）。
-		if e.isItemTerminated(ctx, event) {
-			logs.CtxInfo(ctx, "[ExptItemTerminate] drop event of terminated item, expt_id: %v, expt_run_id: %v, item_id: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID)
-			return nil
-		}
-
 		return next(ctx, event)
 	}
 }
 
-// isItemTerminated 查该 item 当前 run log 是否已处于 Terminal。查询失败返回 false（不拦截），见 HandleEventCheck 注释。
-// 强制读主库（WithCtxWriteDB）：从库延迟会让刚写下的 Terminal 读不到，闸门形同虚设。
+// isItemTerminated preserves the existing retry-yield terminal check on the primary database.
 func (e *ExptItemEventEvalServiceImpl) isItemTerminated(ctx context.Context, event *entity.ExptItemEvalEvent) bool {
 	if event == nil || e.exptItemResultRepo == nil {
 		return false
@@ -229,7 +221,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralAdmission(next RecordEvalEnd
 	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
 		expt, err := e.experimentRepo.GetByID(ctx, event.ExptID, event.SpaceID)
 		if err != nil {
-			return err
+			return errno.WrapMQRetryErr(err)
 		}
 		if !entity.IsCentralDispatch(expt.ExptDispatchMode) {
 			// legacy 实验：完全不经额度闸，行为与改动前一致
@@ -260,7 +252,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralAdmission(next RecordEvalEnd
 			owned, err := e.centralScopeOwner.OwnsSchedulerScope(ctx, expt.SchedulerScope)
 			if err != nil {
 				// 无法判定归属：返回错误重试，而不是赌一把放行。
-				return err
+				return errno.WrapMQRetryErr(err)
 			}
 			if !owned {
 				logs.CtxWarn(ctx, "[CentralReservation] scheduler scope not owned by this instance, discard event, expt_scope: %v, expt_id: %v, item_id: %v",
@@ -464,6 +456,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 		event.WithCtxCentralQuotaHeld(ctx, expt.SchedulerScope)
 
 		execErr := next(ctx, event)
+		if errno.NeedMQRetry(execErr) {
+			return execErr
+		}
 		e.releaseQuotaIfItemTerminal(ctx, event, expt.SchedulerScope, guard, execErr)
 		return execErr
 	}
@@ -690,6 +685,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 			return next(ctx, event)
 		}(ctx, event)
 
+		if errno.NeedMQRetry(nextErr) {
+			return nextErr
+		}
 		retryConf := e.configer.GetErrRetryConf(ctx, event.SpaceID, nextErr)
 		needRetry := event.RetryTimes < retryConf.GetRetryTimes()
 		if event.MaxRetryTimes > 0 {
@@ -958,12 +956,12 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventLock(next RecordEvalEndPoint) 
 		lockKey := fmt.Sprintf("expt_item_eval_run_lock:%d:%d", event.ExptID, event.EvalSetItemID)
 		locked, ctx, cancel, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*5, time.Second*60*60)
 		if err != nil {
-			return err
+			return errno.WrapMQRetryErr(err)
 		}
 
 		if !locked {
-			logs.CtxWarn(ctx, "ExptRecordEvalConsumer.HandleEventLock found locked item eval event: %v. Abort event, err: %v", json.Jsonify(event), err)
-			return nil
+			logs.CtxWarn(ctx, "ExptRecordEvalConsumer.HandleEventLock found locked item eval event: %v. Retry event, err: %v", json.Jsonify(event), err)
+			return errno.NewMQRetryErr("item execution lock busy")
 		}
 
 		defer func() {
@@ -992,6 +990,12 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 		return err
 	}
 
+	if err := validateManualFrozenTurns(eiec); err != nil {
+		return err
+	}
+	if inflight, err := e.ordinaryInvocationInFlight(ctx, eiec); err != nil || inflight {
+		return err
+	}
 	ctx = e.WithCtx(ctx, eiec)
 
 	mode, err := NewRecordEvalMode(
@@ -1033,7 +1037,7 @@ func (e *ExptItemEventEvalServiceImpl) WithCtx(ctx context.Context, eiec *entity
 func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Context, event *entity.ExptItemEvalEvent) (*entity.ExptItemEvalCtx, error) {
 	exptDetail, err := e.manager.GetDetail(ctx, event.ExptID, event.SpaceID, event.Session)
 	if err != nil {
-		return nil, err
+		return nil, errno.WrapMQRetryErr(err)
 	}
 
 	// 默认用实验级主集 (老实验 / SingleSet); MultiSetConfig 下面按 item 归属集覆盖。
@@ -1055,18 +1059,17 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 	var itemConfig *entity.ExptItemConfig
 	var itemVersionID *int64 // 新数据集 item 级版本; nil=老数据集(无 item 版本)
 	if exptDetail.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig && e.exptItemRefRepo != nil {
-		ref, refErr := e.exptItemRefRepo.GetByExptIDAndItemID(ctx, event.SpaceID, event.ExptID, event.EvalSetItemID)
+		ref, refErr := e.exptItemRefRepo.GetByExptIDAndItemID(contexts.WithCtxWriteDB(ctx), event.SpaceID, event.ExptID, event.EvalSetItemID)
 		if refErr != nil {
 			logs.CtxError(ctx, "BuildExptRecordEvalCtx GetByExptIDAndItemID fail, expt_id: %v, item_id: %v, err: %v",
 				event.ExptID, event.EvalSetItemID, refErr)
-			return nil, errorx.Wrapf(refErr, "get expt_item_ref fail, expt_id: %v, item_id: %v", event.ExptID, event.EvalSetItemID)
+			return nil, errno.WrapMQRetryErr(refErr)
 		}
 		if ref == nil || ref.ItemConfig == nil {
 			// 正常调度必已写非 nil ItemConfig; 走到这里是 ref 未写全或 item_config 读空 —— 报错重试, 不静默漏评。
 			logs.CtxError(ctx, "BuildExptRecordEvalCtx expt_item_ref missing item_config, expt_id: %v, item_id: %v, ref_nil: %v",
 				event.ExptID, event.EvalSetItemID, ref == nil)
-			return nil, errorx.NewByCode(errno.CommonInternalErrorCode,
-				errorx.WithExtraMsg(fmt.Sprintf("expt_item_ref missing item_config, expt_id: %v, item_id: %v", event.ExptID, event.EvalSetItemID)))
+			return nil, errno.NewMQRetryErr("expt_item_ref missing frozen item_config")
 		}
 		itemConfig = ref.ItemConfig
 		if ref.EvalSetID > 0 {
@@ -1084,10 +1087,13 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 	// item 版本在 ExptStart 已落进 expt_item_result_run_log, 这里读回 (供版本评测集按 item 版本取数);
 	// 无版本评测集 run_log.ItemVersionID==0 → 保持 nil, 按集版本定位, 行为不变。
 	if itemVersionID == nil {
-		if runLog, rlErr := e.exptItemResultRepo.GetItemRunLog(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID); rlErr != nil {
+		if runLog, rlErr := e.exptItemResultRepo.GetItemRunLog(contexts.WithCtxWriteDB(ctx), event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID); rlErr != nil {
 			logs.CtxWarn(ctx, "BuildExptRecordEvalCtx GetItemRunLog for item version fail, expt_id: %v, item_id: %v, err: %v",
 				event.ExptID, event.EvalSetItemID, rlErr)
-		} else if runLog != nil && runLog.ItemVersionID > 0 {
+			return nil, errno.WrapMQRetryErr(rlErr)
+		} else if runLog == nil {
+			return nil, errno.NewMQRetryErr("item source run log missing")
+		} else if runLog.ItemVersionID > 0 {
 			itemVersionID = gptr.Of(runLog.ItemVersionID)
 		}
 	}
@@ -1120,7 +1126,7 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 	}
 	items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, batchGetEvaluationSetItemsParam)
 	if err != nil {
-		return nil, err
+		return nil, errno.WrapMQRetryErr(err)
 	}
 
 	if len(items) != 1 {
@@ -1138,7 +1144,7 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 
 	existResult, err := e.GetExistExptRecordEvalResult(ctx, event)
 	if err != nil {
-		return nil, err
+		return nil, errno.WrapMQRetryErr(err)
 	}
 
 	return &entity.ExptItemEvalCtx{
@@ -1152,9 +1158,7 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 }
 
 func (e *ExptItemEventEvalServiceImpl) GetExistExptRecordEvalResult(ctx context.Context, event *entity.ExptItemEvalEvent) (*entity.ExptItemEvalResult, error) {
-	if event.ExptRunMode == entity.EvaluationModeFailRetry {
-		ctx = contexts.WithCtxWriteDB(ctx)
-	}
+	ctx = contexts.WithCtxWriteDB(ctx)
 	turnRunLogs, err := e.exptTurnResultRepo.GetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)
 	if err != nil {
 		return nil, err
@@ -1536,6 +1540,9 @@ type ExptRecordEvalModeFailRetry struct {
 }
 
 func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
+	if eiec.Event != nil && eiec.Event.RequestID != "" {
+		return validateManualFrozenTurns(eiec)
+	}
 	if eiec.GetExistItemResultLog() != nil && len(eiec.GetExistTurnResultLogs()) > 0 {
 		return nil
 	}
@@ -1616,6 +1623,9 @@ type ExptRecordEvalModeRetryIgnoreResult struct {
 }
 
 func (e *ExptRecordEvalModeRetryIgnoreResult) PreEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
+	if eiec.Event != nil && eiec.Event.RequestID != "" {
+		return validateManualFrozenTurns(eiec)
+	}
 	if eiec.GetExistItemResultLog() != nil && len(eiec.GetExistTurnResultLogs()) > 0 {
 		return nil
 	}
@@ -1655,4 +1665,130 @@ func (e *ExptRecordEvalModeRetryIgnoreResult) PreEval(ctx context.Context, eiec 
 
 func (e *ExptRecordEvalModeRetryIgnoreResult) PostEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
 	return nil
+}
+
+func (e *ExptItemEventEvalServiceImpl) HandleCurrentSource(next RecordEvalEndPoint) RecordEvalEndPoint {
+	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+		source, err := e.exptItemResultRepo.GetCurrentRequest(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if !source.Matches(event.ExptRunID, event.RequestID) {
+			return nil
+		}
+		if event.ExptRunMode != source.Mode {
+			return errno.NewMQRetryErr("event/current item mode mismatch")
+		}
+		if event.RetryTimes < 0 {
+			return errno.NewMQRetryErr("invalid event retry count")
+		}
+		if int(source.RetryTimes) > event.RetryTimes {
+			event.RetryTimes = int(source.RetryTimes)
+		}
+		if source.Status == entity.ItemRunState_Queueing {
+			if _, central := event.CtxCentralAdmittedExpt(ctx); !central {
+				advanced, err := e.exptItemResultRepo.MarkProcessingIfCurrent(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.RequestID)
+				if err != nil {
+					return errno.WrapMQRetryErr(err)
+				}
+				if !advanced {
+					current, err := e.exptItemResultRepo.GetCurrentRequest(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
+					if err != nil {
+						return errno.WrapMQRetryErr(err)
+					}
+					if !current.Matches(event.ExptRunID, event.RequestID) {
+						return nil
+					}
+					if current.Status != entity.ItemRunState_Processing {
+						return errno.NewMQRetryErr("current item remains Queueing")
+					}
+				}
+			}
+		}
+		return next(ctx, event)
+	}
+}
+
+func validateManualFrozenTurns(eiec *entity.ExptItemEvalCtx) error {
+	if eiec == nil || eiec.Event == nil || eiec.Event.RequestID == "" {
+		return nil
+	}
+	if eiec.GetExistItemResultLog() == nil || eiec.EvalSetItem == nil || len(eiec.EvalSetItem.Turns) == 0 {
+		return errno.NewMQRetryErr("manual frozen item or turns missing")
+	}
+	for _, turn := range eiec.EvalSetItem.Turns {
+		if turn == nil {
+			return errno.NewMQRetryErr("manual frozen turn missing")
+		}
+		log := eiec.GetExistTurnResultRunLog(turn.ID)
+		if log == nil || log.ExptID != eiec.Event.ExptID || log.ExptRunID != eiec.Event.ExptRunID || log.ItemID != eiec.Event.EvalSetItemID || log.SpaceID != eiec.Event.SpaceID {
+			return errno.NewMQRetryErr("manual frozen turn log missing or foreign")
+		}
+		if log.Status < entity.TurnRunState_Queueing || log.Status > entity.TurnRunState_Terminal {
+			return errno.NewMQRetryErr("unknown frozen turn status")
+		}
+	}
+	return nil
+}
+
+func (e *ExptItemEventEvalServiceImpl) ordinaryInvocationInFlight(ctx context.Context, eiec *entity.ExptItemEvalCtx) (bool, error) {
+	if eiec.Event.AsyncReportTrigger || eiec.Event.AsyncEvaluatorReportTrigger {
+		return false, nil
+	}
+	for _, log := range eiec.GetExistTurnResultLogs() {
+		if log == nil {
+			return false, errno.NewMQRetryErr("nil turn source")
+		}
+		if log.Status < entity.TurnRunState_Queueing || log.Status > entity.TurnRunState_Terminal {
+			return false, errno.NewMQRetryErr("unknown source turn state")
+		}
+		if log.Status != entity.TurnRunState_Processing {
+			continue
+		}
+		if log.TargetResultID > 0 {
+			record, err := e.evaTargetService.GetRecordByID(ctx, resolveLoadSpaceID(eiec.Event.SpaceID, eiec.TargetSourceSpaceID()), log.TargetResultID)
+			if err != nil {
+				return false, errno.WrapMQRetryErr(err)
+			}
+			if record == nil {
+				return false, errno.NewMQRetryErr("target source record missing")
+			}
+			if gptr.Indirect(record.Status) == entity.EvalTargetRunStatusAsyncInvoking {
+				return true, nil
+			}
+		}
+		refs := log.EvaluatorResultIds
+		if refs == nil {
+			continue
+		}
+		ids := make(map[int64]struct{})
+		for _, id := range refs.EvalVerIDToResID {
+			if id > 0 {
+				ids[id] = struct{}{}
+			}
+		}
+		for _, ref := range refs.Registered {
+			if ref != nil && ref.RecordID > 0 {
+				ids[ref.RecordID] = struct{}{}
+			}
+		}
+		for _, ref := range refs.Inline {
+			if ref != nil && ref.RecordID > 0 {
+				ids[ref.RecordID] = struct{}{}
+			}
+		}
+		for id := range ids {
+			record, err := e.evaluatorRecordService.GetEvaluatorRecord(ctx, id, false)
+			if err != nil {
+				return false, errno.WrapMQRetryErr(err)
+			}
+			if record == nil {
+				return false, errno.NewMQRetryErr("evaluator source record missing")
+			}
+			if record.Status == entity.EvaluatorRunStatusAsyncInvoking {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }
