@@ -105,11 +105,12 @@ func TestRunningRetryTurnResume_EventAndCacheIsolation(t *testing.T) {
 	last, err := f.executor.buildExptTurnEvalCtx(ctx, f.item.EvalSetItem.Turns[2], f.item, nil)
 	require.NoError(t, err)
 	assert.False(t, first.Event.AsyncEvaluatorReportTrigger)
-	assert.Nil(t, first.Event.ResumeSource)
+	assert.Equal(t, f.item.Event.ResumeSource, first.Event.ResumeSource)
+	assert.NotSame(t, f.item.Event.ResumeSource, first.Event.ResumeSource)
 	assert.True(t, middle.Event.AsyncEvaluatorReportTrigger)
 	assert.Equal(t, int64(20), middle.Event.ResumeSource.TurnID)
 	assert.False(t, last.Event.AsyncEvaluatorReportTrigger)
-	assert.Nil(t, last.Event.ResumeSource)
+	assert.Equal(t, f.item.Event.ResumeSource, last.Event.ResumeSource)
 	require.NotSame(t, f.item.Event, first.Event)
 	require.NotSame(t, first.Event, last.Event)
 	first.Event.WithCtxTargetCalled(ctx)
@@ -501,22 +502,23 @@ func TestRunningRetryTurnResume_DirectCallerIgnoresOtherTurnCallback(t *testing.
 	f := newTurnResumeFixture(t, entity.EvaluationModeRetryItems, 0)
 	f.item.Event.AsyncEvaluatorReportTrigger = true
 	f.item.Event.ResumeSource = &entity.ExptResumeSource{Kind: "evaluator", TurnID: 20, RecordID: 301, InvokeID: "301"}
-	// Direct callers also have to treat turn zero as ordinary selected work.
+	// A callback from turn 20 is still a continuation of RQ1 on turn zero.
+	// Only its callback flags are ignored here; successful current refs survive.
 	etec := &entity.ExptTurnEvalCtx{ExptItemEvalCtx: f.item, Turn: f.item.EvalSetItem.Turns[0], Ext: map[string]string{}, ExptTurnRunResult: &entity.ExptTurnRunResult{TargetResult: resumeTarget(201, 0), EvaluatorResults: []*entity.EvaluatorRecord{resumeEvaluator(301, 401, 0, ""), resumeEvaluator(302, 402, 0, "")}}}
-	f.benefit.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil).Times(2)
-	f.target.EXPECT().ExecuteTarget(gomock.Any(), int64(3), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(resumeTarget(202, 0), nil)
-	f.evaluator.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil).Times(2)
-	f.evaluator.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
-		return resumeEvaluator(1000+r.EvaluatorVersionID, r.EvaluatorVersionID, 0, ""), nil
-	}).Times(2)
 	ctx := ctxcache.Init(context.Background())
 	svc := &DefaultExptTurnEvaluationImpl{metric: f.executor.Metric, evalTargetService: f.target, evaluatorService: f.evaluator, benefitService: f.benefit}
 	target, err := svc.CallTarget(ctx, etec)
 	require.NoError(t, err)
-	assert.Equal(t, int64(202), target.ID)
+	assert.Equal(t, int64(201), target.ID)
+	scoped := etec.Event
 	results, err := svc.CallEvaluators(ctx, etec, target)
 	require.NoError(t, err)
 	require.Len(t, results, 2)
+	assert.Equal(t, int64(301), results[0].ID)
+	assert.Equal(t, int64(302), results[1].ID)
+	assert.Same(t, scoped, etec.Event, "both stage calls share the scoped event")
+	assert.False(t, etec.Event.AsyncEvaluatorReportTrigger)
+	assert.Equal(t, int64(20), etec.Event.ResumeSource.TurnID)
 	assert.True(t, f.item.Event.AsyncEvaluatorReportTrigger)
 	assert.Equal(t, int64(20), f.item.Event.ResumeSource.TurnID)
 }

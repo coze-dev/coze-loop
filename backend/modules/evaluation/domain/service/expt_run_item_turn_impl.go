@@ -140,6 +140,11 @@ func scopeTurnEvalEvent(etec *entity.ExptTurnEvalCtx) {
 	if etec == nil || etec.Event == nil || etec.Turn == nil || etec.Event.ResumeSource == nil || etec.Event.ResumeSource.TurnID == etec.Turn.ID {
 		return
 	}
+	// A non-source turn with cleared flags is already scoped. Keep its event
+	// identity so CallEvaluators sees CallTarget's marker after a new invoke.
+	if !etec.Event.AsyncReportTrigger && !etec.Event.AsyncEvaluatorReportTrigger {
+		return
+	}
 	itemCtx := *etec.ExptItemEvalCtx
 	itemCtx.Event = etec.Event.CloneForTurn(etec.Turn.ID)
 	etec.ExptItemEvalCtx = &itemCtx
