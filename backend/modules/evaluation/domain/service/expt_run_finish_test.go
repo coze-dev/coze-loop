@@ -266,6 +266,7 @@ func TestRunFinishActualModesCommitThenCleanupRetry(t *testing.T) {
 			idem := idemmocks.NewMockIdempotentService(ctrl)
 			idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 			idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			manager.idem = idem
 			config := componentmocks.NewMockIConfiger(ctrl)
 			config.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Return(&entity.ExptExecConf{}).AnyTimes()
 			event := &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, ExptRunMode: mode, ExptType: entity.ExptType_Offline}

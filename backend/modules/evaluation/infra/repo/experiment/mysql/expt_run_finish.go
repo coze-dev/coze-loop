@@ -56,7 +56,7 @@ func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.E
 			result.Experiment, err = convert.NewExptConverter().PO2DO(expt, nil)
 			return err
 		}
-		if expt.Status != int32(entity.ExptStatus_Processing) || gptr.Indirect(run.Status) != int64(entity.ExptStatus_Processing) {
+		if expt.Status != int32(entity.ExptStatus_Processing) || (gptr.Indirect(run.Status) != int64(entity.ExptStatus_Pending) && gptr.Indirect(run.Status) != int64(entity.ExptStatus_Processing)) {
 			return fmt.Errorf("finish requires active experiment and run")
 		}
 		session := d.provider.NewSession(ctx, opts...)

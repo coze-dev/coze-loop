@@ -166,9 +166,21 @@ func (e *ExptMangerImpl) cleanupNaturallyFinishedRun(ctx context.Context, event 
 	if err := cleanupCtx.Err(); err != nil {
 		return err
 	}
-	if current.SourceType == entity.SourceType_Workflow {
-		e.notifyWorkflowPipelineOnExptFinished(cleanupCtx, current, event.SpaceID, current.Status)
+
+	// Resources above remain replayable. Only the completed notification segment
+	// is deduplicated, under the same lifecycle lease that serializes retries.
+	if e.idem == nil {
+		return errno.NewMQRetryErr("finish notification idempotency service missing")
 	}
+	notificationKey := fmt.Sprintf("finish-cleanup:%d:%d", event.ExptID, event.ExptRunID)
+	seen, err := e.idem.Exist(cleanupCtx, notificationKey)
+	if err != nil {
+		return err
+	}
+	if seen {
+		return cleanupCtx.Err()
+	}
+
 	if current.ExptTemplateMeta != nil && current.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
 		if err := e.templateManager.UpdateExptInfo(cleanupCtx, current.ExptTemplateMeta.ID, event.SpaceID, event.ExptID, current.Status, 0, nil); err != nil {
 			return err
@@ -190,9 +202,25 @@ func (e *ExptMangerImpl) cleanupNaturallyFinishedRun(ctx context.Context, event 
 			return err
 		}
 	}
+	if err := cleanupCtx.Err(); err != nil {
+		return err
+	}
+	if current.SourceType == entity.SourceType_Workflow {
+		e.notifyWorkflowPipelineOnExptFinished(cleanupCtx, current, event.SpaceID, current.Status)
+	}
+
 	if e.mtr != nil {
 		e.mtr.EmitExptExecResult(event.SpaceID, int64(current.ExptType), int64(current.Status), gptr.Indirect(current.StartAt))
 	}
 	e.emitSandboxAgentExperimentFinished(cleanupCtx, current, current.Status, gptr.Indirect(current.EndAt))
-	return cleanupCtx.Err()
+	if err := cleanupCtx.Err(); err != nil {
+		return err
+	}
+	duration := 3 * time.Minute
+	if e.configer != nil {
+		duration = time.Duration(e.configer.GetExptExecConf(cleanupCtx, event.SpaceID).GetZombieIntervalSecond()) * time.Second * 2
+	}
+	// A crash or Set failure after RPC success can replay this segment; the key
+	// bounds normal duplicates, it does not provide distributed exactly-once.
+	return e.idem.Set(cleanupCtx, notificationKey, duration)
 }
