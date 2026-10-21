@@ -25,10 +25,11 @@ import (
 
 // releaseCall 记录一次 Release 调用，供断言"释放了几次、释放的是谁"。
 type releaseCall struct {
-	Scope  string
-	RunID  int64
-	ItemID int64
-	Reason string
+	Scope     string
+	RunID     int64
+	ItemID    int64
+	RequestID string
+	Reason    string
 }
 
 // fakeGuard 手写的额度闸替身。
@@ -42,6 +43,7 @@ type fakeGuard struct {
 	confirmResult bool
 	confirmErr    error
 	confirmCalls  int
+	confirmTokens []string
 
 	releaseErr   error
 	releaseCalls []releaseCall
@@ -58,17 +60,18 @@ type repriceCall struct {
 	Consumption *entity.ExpectedQuotaConsumption
 }
 
-func (f *fakeGuard) ConfirmRunning(ctx context.Context, schedulerScope string, exptRunID, itemID int64) (bool, error) {
+func (f *fakeGuard) ConfirmRunning(ctx context.Context, schedulerScope string, exptRunID, itemID int64, expectedRequestID string) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.confirmCalls++
+	f.confirmTokens = append(f.confirmTokens, expectedRequestID)
 	return f.confirmResult, f.confirmErr
 }
 
-func (f *fakeGuard) Release(ctx context.Context, schedulerScope string, exptRunID, itemID int64, reason string) error {
+func (f *fakeGuard) Release(ctx context.Context, schedulerScope string, exptRunID, itemID int64, expectedRequestID, reason string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.releaseCalls = append(f.releaseCalls, releaseCall{Scope: schedulerScope, RunID: exptRunID, ItemID: itemID, Reason: reason})
+	f.releaseCalls = append(f.releaseCalls, releaseCall{Scope: schedulerScope, RunID: exptRunID, ItemID: itemID, RequestID: expectedRequestID, Reason: reason})
 	return f.releaseErr
 }
 
@@ -512,12 +515,12 @@ type recordingGuard struct {
 	confirmResult bool
 }
 
-func (r *recordingGuard) ConfirmRunning(ctx context.Context, schedulerScope string, exptRunID, itemID int64) (bool, error) {
+func (r *recordingGuard) ConfirmRunning(ctx context.Context, schedulerScope string, exptRunID, itemID int64, expectedRequestID string) (bool, error) {
 	*r.seq = append(*r.seq, "confirm")
 	return r.confirmResult, nil
 }
 
-func (r *recordingGuard) Release(ctx context.Context, schedulerScope string, exptRunID, itemID int64, reason string) error {
+func (r *recordingGuard) Release(ctx context.Context, schedulerScope string, exptRunID, itemID int64, expectedRequestID, reason string) error {
 	*r.seq = append(*r.seq, "release")
 	return nil
 }

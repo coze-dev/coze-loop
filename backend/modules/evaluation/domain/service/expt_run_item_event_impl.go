@@ -305,7 +305,13 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			return nil
 		}
 
-		ok, err := guard.ConfirmRunning(ctx, expt.SchedulerScope, event.ExptRunID, event.EvalSetItemID)
+		// Direct callers with an item repository use the same source/turn checks
+		// as the production HandleCurrentSource middleware before touching quota.
+		if execution := executionSource(ctx); e.exptItemResultRepo != nil && (execution == nil || !execution.SourceValidated) {
+			return e.HandleCurrentSource(e.HandleCentralReservation(next))(ctx, event)
+		}
+		event = event.Clone()
+		ok, err := guard.ConfirmRunning(ctx, expt.SchedulerScope, event.ExptRunID, event.EvalSetItemID, event.RequestID)
 		if err != nil {
 			// 账本暂时不可用：返回错误让 MQ 重试，而不是丢弃 —— item 已被预占，
 			// 丢弃会让它停在 Queueing 直到 reservation 超时清理，白等一轮。
@@ -355,14 +361,21 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 		// 而不必把 Scope / guard 这些中心调度概念泄进 HandleEventErr 的签名。
 		event.WithCtxCentralQuotaHeld(ctx, expt.SchedulerScope)
 
+		releaseEvent := event.Clone()
 		execErr := next(ctx, event)
 		if errno.NeedMQRetry(execErr) || errors.Is(execErr, errExptNonCurrentSource) {
+			if execution := executionSource(ctx); execution != nil && execution.Completed && ctx.Err() != nil {
+				e.releaseQuotaIfItemTerminal(ctx, releaseEvent, expt.SchedulerScope, guard, execErr)
+			}
 			return execErr
 		}
 		if err := ctx.Err(); err != nil {
+			if execution := executionSource(ctx); execution != nil && execution.Completed {
+				e.releaseQuotaIfItemTerminal(ctx, releaseEvent, expt.SchedulerScope, guard, execErr)
+			}
 			return errno.WrapMQRetryErr(err)
 		}
-		e.releaseQuotaIfItemTerminal(ctx, event, expt.SchedulerScope, guard, execErr)
+		e.releaseQuotaIfItemTerminal(ctx, releaseEvent, expt.SchedulerScope, guard, execErr)
 		return execErr
 	}
 }
@@ -472,9 +485,10 @@ func (e *ExptItemEventEvalServiceImpl) releaseQuotaIfItemTerminal(
 	if guard == nil || e.dispatchRepo == nil {
 		return
 	}
+	event = quotaReleaseSourceEvent(ctx, event)
 
 	// 用独立超时的 ctx：主 ctx 可能已因执行失败被取消，而释放必须尽力完成。
-	relCtx, cancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
+	relCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
 	defer cancel()
 
 	obs, err := e.dispatchRepo.MGetDispatchObservations(relCtx, event.SpaceID, event.ExptID, event.ExptRunID,
@@ -484,9 +498,12 @@ func (e *ExptItemEventEvalServiceImpl) releaseQuotaIfItemTerminal(
 			event.ExptRunID, event.EvalSetItemID, err)
 		return
 	}
-	if len(obs) == 0 {
+	if len(obs) != 1 || obs[0] == nil {
 		// run log 查不到：item 记录已被清理（重跑清表等）。此时 reservation 也该走，
 		// 交由对账处理 —— 这里贸然释放可能释放的是新一轮 run 的额度。
+		return
+	}
+	if obs[0].ItemID != event.EvalSetItemID || obs[0].RequestID != event.RequestID {
 		return
 	}
 
@@ -496,7 +513,7 @@ func (e *ExptItemEventEvalServiceImpl) releaseQuotaIfItemTerminal(
 	}
 
 	reason := terminalReleaseReason(entity.ItemRunState(obs[0].Status), execErr)
-	if err := guard.Release(relCtx, schedulerScope, event.ExptRunID, event.EvalSetItemID, reason); err != nil {
+	if err := guard.Release(relCtx, schedulerScope, event.ExptRunID, event.EvalSetItemID, event.RequestID, reason); err != nil {
 		logs.CtxWarn(relCtx, "[CentralReservation] release quota fail, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptRunID, event.EvalSetItemID, err)
 		return
@@ -695,13 +712,14 @@ func (e *ExptItemEventEvalServiceImpl) releaseCentralQuotaOutsideGate(ctx contex
 		// 没持有预占：legacy 实验，或消息在取得执行权之前就被丢弃/失败了。
 		return
 	}
+	event = quotaReleaseSourceEvent(ctx, event)
 
 	// 独立超时的 ctx：主 ctx 可能已因执行失败被取消，而释放必须尽力完成。
-	relCtx, cancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
+	relCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
 	defer cancel()
 
 	reason := reasonPrefix + ": " + evalErr.Error()
-	if err := e.centralGuard.Release(relCtx, schedulerScope, event.ExptRunID, event.EvalSetItemID, reason); err != nil {
+	if err := e.centralGuard.Release(relCtx, schedulerScope, event.ExptRunID, event.EvalSetItemID, event.RequestID, reason); err != nil {
 		logs.CtxWarn(relCtx, "[CentralReservation] release quota outside gate fail, scope: %v, expt_run_id: %v, item_id: %v, err: %v",
 			schedulerScope, event.ExptRunID, event.EvalSetItemID, err)
 		return
@@ -711,6 +729,16 @@ func (e *ExptItemEventEvalServiceImpl) releaseCentralQuotaOutsideGate(ctx contex
 	}
 	logs.CtxInfo(relCtx, "[CentralReservation] quota released outside gate, scope: %v, expt_run_id: %v, item_id: %v, reason: %v",
 		schedulerScope, event.ExptRunID, event.EvalSetItemID, reason)
+}
+
+func quotaReleaseSourceEvent(ctx context.Context, event *entity.ExptItemEvalEvent) *entity.ExptItemEvalEvent {
+	event = event.Clone()
+	if execution := executionSource(ctx); execution != nil && execution.Source != nil {
+		current := execution.Source.Current
+		event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID = current.SpaceID, current.ExptID, current.RunID, current.ItemID
+		event.RequestID = current.RequestID
+	}
+	return event
 }
 
 // completeItemRunOnUnretriableErr 将 item 落为 Fail 并写入错误信息。
@@ -1694,6 +1722,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleCurrentSource(next RecordEvalEndPoi
 		if err := ctx.Err(); err != nil {
 			return errno.WrapMQRetryErr(err)
 		}
+		executionSource(ctx).SourceValidated = true
 		return next(ctx, event)
 	}
 }

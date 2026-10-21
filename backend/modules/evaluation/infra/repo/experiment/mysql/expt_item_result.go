@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/query"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
@@ -26,6 +27,7 @@ import (
 
 //go:generate  mockgen -destination=mocks/expt_item_result.go  -package mocks . IExptItemResultDAO
 type IExptItemResultDAO interface {
+	ScanIncompleteDispatchObservations(ctx context.Context, spaceID, exptID, runID int64) ([]*repo.ExptDispatchObservation, error)
 	ScanCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, retryFirst bool) ([]*entity.ExptItemCurrentRequest, error)
 	GetCurrentRequest(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptItemCurrentRequest, error)
 	MarkProcessingIfCurrent(ctx context.Context, spaceID, exptID, runID, itemID int64, requestID string) (bool, error)
@@ -68,6 +70,12 @@ func NewExptItemResultDAO(db db.Provider) IExptItemResultDAO {
 	return &exptItemResultDAOImpl{
 		provider: db,
 	}
+}
+
+// Cleanup shares dispatch's canonical/run-log observation, never a later
+// canonical token paired with an earlier run-log status.
+func (dao *exptItemResultDAOImpl) ScanIncompleteDispatchObservations(ctx context.Context, spaceID, exptID, runID int64) ([]*repo.ExptDispatchObservation, error) {
+	return (&exptItemDispatchDAOImpl{db: dao.provider}).dispatchObservations(ctx, spaceID, exptID, runID, nil, true)
 }
 
 func (dao *exptItemResultDAOImpl) BatchGet(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) ([]*model.ExptItemResult, error) {
