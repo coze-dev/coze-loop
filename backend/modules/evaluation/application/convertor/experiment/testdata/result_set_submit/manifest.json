@@ -1,0 +1,10 @@
+{
+  "frontend_commit": "9e51cb07a879650abf7d55673729bd9818aa8abd",
+  "generation": "actual production normalize/copy -> getSubmitValues -> withSharedEvalSet -> JSON.stringify, invoked by Vitest",
+  "scope": "synthetic unit contract fixtures; not live resources or E2E",
+  "files": {
+    "fresh": "e65f7bed2c4fb8fb7f2cac4100fd2b47334926a4f5e2c52f27bfaa90368df93e",
+    "copy": "34e8bcc82776ebe3623254f347fdfcb033f8b687f34496317cb4023a3545a773",
+    "ab": "2a8d060f6f894d04314587f5b929026d047def1912854b8f7c117f265acb26fa"
+  }
+}

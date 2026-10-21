@@ -163,6 +163,10 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	}
 	logs.CtxInfo(ctx, "CreateExperiment userIDInContext: %s", session.UserID)
 
+	if err := experiment.NormalizeResultSetCreateRequest(req); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
+
 	// ★ 唯一分流硬校验: eval_set_source_type 与 eval_set_configs 必须一致 (所有入口最终汇入此处)。
 	isMulti := req.GetEvalSetSourceType() == domain_expt.ExptEvalSetSourceType_MultiSetConfig
 	hasConfigs := len(req.GetEvalSetConfigs()) > 0

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 )
@@ -22,8 +23,8 @@ type ResultSetRuntimePolicy struct {
 	SupportedBinaryVersions []string `json:"supported_binary_versions"`
 }
 
-func (p *ResultSetRuntimePolicy) Validate(spaceID int64, environment, binaryVersion string, isBOE bool) error {
-	if p == nil || !p.Enabled || !isBOE || !slices.Contains(p.SpaceIDs, strconv.FormatInt(spaceID, 10)) || !slices.Contains(p.Environments, environment) {
+func (p *ResultSetRuntimePolicy) Validate(spaceID int64, environment, binaryVersion string, isDevelopmentEnvironment bool) error {
+	if p == nil || !p.Enabled || !isDevelopmentEnvironment || environment == "prod" || !slices.Contains(p.SpaceIDs, strconv.FormatInt(spaceID, 10)) || !slices.Contains(p.Environments, environment) {
 		return fmt.Errorf("result_set is disabled for this environment or workspace")
 	}
 	if binaryVersion == "" || !slices.Contains(p.SupportedBinaryVersions, binaryVersion) {
@@ -45,6 +46,13 @@ func (c *EvaluationConfiguration) ExecutionKind() string {
 }
 
 func ResultSetBinaryVersion(raw string) (string, error) {
+	return parseResultSetBinaryVersion(raw, true)
+}
+
+func parseResultSetBinaryVersion(raw string, required bool) (string, error) {
+	if !required && strings.TrimSpace(raw) == "" {
+		return "", nil
+	}
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(raw), &fields); err != nil || fields == nil {
 		return "", fmt.Errorf("result_set runtime parameters must specify binary_version")
@@ -54,6 +62,9 @@ func ResultSetBinaryVersion(raw string) (string, error) {
 			return "", fmt.Errorf("result_set does not accept Agent runtime parameter %q", key)
 		}
 	}
+	if _, exists := fields["binary_version"]; !required && !exists {
+		return "", nil
+	}
 	var version string
 	if err := json.Unmarshal(fields["binary_version"], &version); err != nil || version == "" {
 		return "", fmt.Errorf("result_set runtime parameters must specify binary_version")
@@ -62,14 +73,31 @@ func ResultSetBinaryVersion(raw string) (string, error) {
 }
 
 func (c *EvaluationConfiguration) ResultSetBinaryVersions() ([]string, error) {
+	versions, err := c.resultSetBinaryVersions(true)
+	if err != nil {
+		return nil, err
+	}
+	if len(versions) == 0 {
+		return nil, fmt.Errorf("result_set requires binary_version")
+	}
+	return versions, nil
+}
+
+func (c *EvaluationConfiguration) RequestedResultSetBinaryVersions() ([]string, error) {
+	return c.resultSetBinaryVersions(false)
+}
+
+func (c *EvaluationConfiguration) resultSetBinaryVersions(required bool) ([]string, error) {
 	var versions []string
 	for _, field := range c.verificationRuntimeFields() {
 		if field != nil && field.FieldName == consts.FieldAdapterBuiltinFieldNameRuntimeParam {
-			v, err := ResultSetBinaryVersion(field.Value)
+			v, err := parseResultSetBinaryVersion(field.Value, required)
 			if err != nil {
 				return nil, err
 			}
-			versions = append(versions, v)
+			if v != "" {
+				versions = append(versions, v)
+			}
 		}
 	}
 	for _, set := range c.EvalSetConfigs {
@@ -80,19 +108,69 @@ func (c *EvaluationConfiguration) ResultSetBinaryVersions() ([]string, error) {
 			if target == nil {
 				continue
 			}
+			for key := range target.RuntimeParam {
+				if key != consts.FieldAdapterBuiltinFieldNameRuntimeParam {
+					return nil, fmt.Errorf("result_set does not accept Agent runtime field %q", key)
+				}
+			}
 			if raw, ok := target.RuntimeParam[consts.FieldAdapterBuiltinFieldNameRuntimeParam]; ok {
-				v, err := ResultSetBinaryVersion(raw)
+				v, err := parseResultSetBinaryVersion(raw, required)
 				if err != nil {
 					return nil, err
 				}
-				versions = append(versions, v)
+				if v != "" {
+					versions = append(versions, v)
+				}
 			}
 		}
 	}
-	if len(versions) == 0 {
-		return nil, fmt.Errorf("result_set requires binary_version")
-	}
 	return versions, nil
+}
+
+func (c *EvaluationConfiguration) FreezeResultSetBinaryVersion(version string) error {
+	if version == "" {
+		return fmt.Errorf("result_set cannot freeze an empty runtime version")
+	}
+	raw, _ := json.Marshal(map[string]string{"binary_version": version})
+	if c.ConnectorConf.TargetConf == nil {
+		c.ConnectorConf.TargetConf = &TargetConf{}
+	}
+	target := c.ConnectorConf.TargetConf
+	if target.IngressConf == nil {
+		target.IngressConf = &TargetIngressConf{}
+	}
+	if target.IngressConf.EvalSetAdapter == nil {
+		target.IngressConf.EvalSetAdapter = &FieldAdapter{}
+	}
+	if target.IngressConf.CustomConf == nil {
+		target.IngressConf.CustomConf = &FieldAdapter{}
+	}
+	found := false
+	for _, field := range target.IngressConf.CustomConf.FieldConfs {
+		if field != nil && field.FieldName == consts.FieldAdapterBuiltinFieldNameRuntimeParam {
+			field.Value = string(raw)
+			found = true
+		}
+	}
+	if !found {
+		target.IngressConf.CustomConf.FieldConfs = append(target.IngressConf.CustomConf.FieldConfs, &FieldConf{FieldName: consts.FieldAdapterBuiltinFieldNameRuntimeParam, Value: string(raw)})
+	}
+	for _, set := range c.EvalSetConfigs {
+		if set == nil {
+			continue
+		}
+		if len(set.TargetConfs) == 0 {
+			set.TargetConfs = []*ExptTargetConf{{}}
+		}
+		for i, binding := range set.TargetConfs {
+			if binding == nil {
+				binding = &ExptTargetConf{}
+				set.TargetConfs[i] = binding
+			}
+			binding.RuntimeParam = map[string]string{consts.FieldAdapterBuiltinFieldNameRuntimeParam: string(raw)}
+		}
+	}
+	return nil
 }
 
 func (p *CreateExptParam) PrepareResultSetTarget() error {

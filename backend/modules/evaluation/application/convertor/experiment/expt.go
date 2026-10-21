@@ -866,6 +866,9 @@ func ExptType2EvalMode(exptType domain_expt.ExptType, trialRunItemCount *int64) 
 }
 
 func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig) (param *entity.CreateExptParam, err error) {
+	if err := NormalizeResultSetCreateRequest(cer); err != nil {
+		return nil, err
+	}
 	param = &entity.CreateExptParam{
 		WorkspaceID:           cer.WorkspaceID,
 		EvalSetVersionID:      cer.GetEvalSetVersionID(),

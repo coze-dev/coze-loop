@@ -1081,13 +1081,10 @@ func (e *ExptMangerImpl) authorizeSharedResource(
 }
 
 func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error) {
-	if req.ExptConf.IsResultSet() {
-		conf := *req.ExptConf
-		conf.EvalSetConfigs = req.EvalSetConfigs
-		if err := e.checkResultSetAdmission(ctx, req.WorkspaceID, &conf); err != nil {
-			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
-		}
+	if err := e.prepareResultSetCreation(ctx, req); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
+
 	if err := req.PrepareResultSetTarget(); err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
@@ -1589,6 +1586,20 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		}
 		if do.EvalConf != nil && do.EvalConf.ConnectorConf.TargetConf != nil {
 			do.EvalConf.ConnectorConf.TargetConf.TargetVersionID = do.TargetVersionID
+		}
+	}
+
+	if do.EvalConf.IsResultSet() {
+		for _, set := range do.EvalConf.EvalSetConfigs {
+			if set == nil {
+				continue
+			}
+			for _, binding := range set.TargetConfs {
+				if binding != nil {
+					binding.TargetID = do.TargetID
+					binding.TargetVersionID = do.TargetVersionID
+				}
+			}
 		}
 	}
 
