@@ -125,6 +125,7 @@ func NewExptManager(
 type ManualRetryLockerFactory func() lock.ILocker
 
 type ExptMangerImpl struct {
+	runFinishRepo     repo.IExptRunFinishRepo
 	manualRetryLocker ManualRetryLockerFactory
 	manualRetryRepo   repo.IExptManualRetryRepo
 	evaluatorRecords  EvaluatorRecordService
