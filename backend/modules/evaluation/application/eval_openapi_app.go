@@ -3743,8 +3743,8 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("status must be SUCCESS or FAILED"))
 	}
 	if req.GetStatus() == spi.InvokeEvaluatorRunStatus_SUCCESS {
-		if req.Output == nil || req.Output.EvaluatorResult_ == nil || req.Output.EvaluatorResult_.Score == nil {
-			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_result.score is required for SUCCESS"))
+		if req.Output == nil || req.Output.EvaluatorResult_ == nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_result is required for SUCCESS"))
 		}
 	}
 	if req.GetStatus() == spi.InvokeEvaluatorRunStatus_FAILED {
@@ -3837,6 +3837,25 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
 }
 
+// sandboxTenantForAsyncDebug 是 Debug 入口（AsyncDebugEvalTargetOApi）的租户推导。
+func sandboxTenantForAsyncDebug(mode entity.SandboxCountMode) rpc.SandboxTenant {
+	switch mode {
+	case entity.SandboxCountModeDual:
+		// 双沙箱 debug 走**旧链路租户**: 本入口是评测对象级调试, 请求里没有实验、
+		// 也没有 run_mode_config, 无从判断新旧链路 (见 entity.IsNewRunModeLink)。
+		// 新链路租户只由实验提交/重试链路按 run_mode 推导, 见 experiment_app.go
+		// dualSandboxTenantByRunMode。
+		return rpc.SandboxTenantFornaxTraeEvalDualSandbox
+	case entity.SandboxCountModeMacVMPlusSandbox, entity.SandboxCountModeMacVMPlusSSH:
+		return rpc.SandboxTenantFornaxEvalGeneralGUI
+	case entity.SandboxCountModeShared:
+		// 共享沙箱走通用评测租户, 与实验链路一致 —— 它用的是同一套 runtime 编排,
+		// 不存在 Dual 那种新旧两条实现并存的问题, 所以这里不需要像 Dual 那样回落旧租户。
+		return rpc.SandboxTenantFornaxEvalGeneral
+	}
+	return rpc.SandboxTenantDefault
+}
+
 func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, req *openapi.AsyncDebugEvalTargetOApiRequest) (r *openapi.AsyncDebugEvalTargetOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
@@ -3890,6 +3909,9 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 		if err != nil {
 			return nil, err
 		}
+		if record == nil {
+			return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("async debug eval target returned nil record"))
+		}
 
 		if err := e.asyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(record.ID, 10), &entity.EvalAsyncCtx{
 			RecordID:    record.ID,
@@ -3912,21 +3934,8 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 			if agent := req.GetSandboxAgent(); agent != nil {
 				mode = entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode()))
 			}
-			tenant := rpc.SandboxTenantDefault
-			switch mode {
-			case entity.SandboxCountModeDual:
-				// 双沙箱 debug 走**旧链路租户**: 本入口是评测对象级调试, 请求里没有实验、
-				// 也没有 run_mode_config, 无从判断新旧链路 (见 entity.IsNewRunModeLink)。
-				// 新链路租户只由实验提交/重试链路按 run_mode 推导, 见 experiment_app.go
-				// dualSandboxTenantByRunMode。
-				tenant = rpc.SandboxTenantFornaxTraeEvalDualSandbox
-			case entity.SandboxCountModeMacVMPlusSandbox, entity.SandboxCountModeMacVMPlusSSH:
-				tenant = rpc.SandboxTenantFornaxEvalGeneralGUI
-			}
-			// Debug 没有 ItemConcurNum；保留原基础 task 的固定 50 execution 配额，
-			// Mac VM 拓扑新增同容量的独立 task。基础 task 在 SSH 模式下每次占 ssh+orch 两份。
 			if initErr := initSandboxTasksByTaskID(ctx, e.sandboxSchedulerAdapter, "debug target", sandboxDebugTaskID,
-				sandboxTaskConcurrency{sandbox: 50, macVM: 50}, req.GetWorkspaceID(), tenant); initErr != nil {
+				sandboxTaskConcurrency{sandbox: 50, macVM: 50}, req.GetWorkspaceID(), sandboxTenantForAsyncDebug(mode)); initErr != nil {
 				return nil, errorx.Wrapf(initErr, "init sandbox debug task fail")
 			}
 		}
@@ -3952,6 +3961,9 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 		})
 		if err != nil {
 			return nil, err
+		}
+		if record == nil {
+			return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("async debug eval target returned nil record"))
 		}
 
 		if err := e.asyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(record.ID, 10), &entity.EvalAsyncCtx{

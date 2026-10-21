@@ -96,6 +96,7 @@ func itemSnapshotCondsEntityToCK(src []*entity.ItemSnapshotVersionCond) []*ck.It
 				FloatMapFilters:  fieldFiltersEntityToCK(s.Cond.FloatMapFilters),
 				IntMapFilters:    fieldFiltersEntityToCK(s.Cond.IntMapFilters),
 				StringMapFilters: fieldFiltersEntityToCK(s.Cond.StringMapFilters),
+				ItemKey:          fieldFilterEntityToCK(s.Cond.ItemKey),
 			},
 		})
 	}
@@ -118,6 +119,7 @@ func (e *ExptTurnResultFilterRepoImpl) QueryItemIDStates(ctx context.Context, fi
 	cond.ItemIDs = fieldFiltersEntityToCK(filter.ItemIDs)
 	cond.ItemRunStatus = fieldFiltersEntityToCK(filter.ItemRunStatus)
 	cond.TurnRunStatus = fieldFiltersEntityToCK(filter.TurnRunStatus)
+	cond.EvalSetIDs = fieldFiltersEntityToCK(filter.EvalSetIDs)
 	if !filter.CreatedDate.IsZero() {
 		createdDate := filter.CreatedDate
 		cond.CreatedDate = ptr.Of(createdDate)
@@ -146,6 +148,7 @@ func (e *ExptTurnResultFilterRepoImpl) QueryItemIDStates(ctx context.Context, fi
 			FloatMapFilters:  fieldFiltersEntityToCK(filter.ItemSnapshotCond.FloatMapFilters),
 			IntMapFilters:    fieldFiltersEntityToCK(filter.ItemSnapshotCond.IntMapFilters),
 			StringMapFilters: fieldFiltersEntityToCK(filter.ItemSnapshotCond.StringMapFilters),
+			ItemKey:          fieldFilterEntityToCK(filter.ItemSnapshotCond.ItemKey),
 		}
 	}
 	// ★ 多评测集：per-set 条件透传，DAO 侧按 dis.version_id 分组 OR。
@@ -171,6 +174,11 @@ func (e *ExptTurnResultFilterRepoImpl) QueryItemIDStates(ctx context.Context, fi
 	itemIDStates, total, err := e.exptTurnResultFilterDAO.QueryItemIDStates(ctx, cond)
 	if err != nil {
 		logs.CtxError(ctx, "QueryItemIDStates failed: %v", err)
+		// item_key 强筛选请求必须透传错误：吞错返回空集会被上层当真实零命中，
+		// 且触发 service 层无筛选回退，静默返回未筛选全量。
+		if filter.HasItemKeyFilter() {
+			return nil, 0, err
+		}
 	}
 	itemID2ItemRunState := make(map[int64]entity.ItemRunState)
 	for itemIDStr, status := range itemIDStates {

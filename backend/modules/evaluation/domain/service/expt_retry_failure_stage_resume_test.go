@@ -126,6 +126,9 @@ func (m failRetryTurnUpdateMatcher) Matches(x any) bool {
 	if !ok || got["status"] != int32(entity.TurnRunState_Queueing) || got["expt_run_id"] != m.wantRunID {
 		return false
 	}
+	if value, exists := got["err_msg"]; !exists || value != nil {
+		return false
+	}
 	value, exists := got["target_result_id"]
 	if m.wantTargetID == nil {
 		return !exists
@@ -187,7 +190,8 @@ func TestExptFailRetryExec_ExptStart_PreservesSuccessfulTargetAndItemVersion(t *
 	})
 
 	itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, []int64{itemID}, map[string]any{
-		"status": int32(entity.ItemRunState_Queueing), "expt_run_id": newRunID,
+		"err_msg": nil,
+		"status":  int32(entity.ItemRunState_Queueing), "expt_run_id": newRunID,
 	}).Return(nil)
 	turnRepo.EXPECT().UpdateTurnResults(gomock.Any(), exptID, gomock.Any(), spaceID, failRetryTurnUpdateMatcher{wantRunID: newRunID}).Return(nil)
 	statsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{FailItemCnt: 1}, nil)

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -86,18 +87,31 @@ func TestBatchGetEvaluatorRecordForAggr_DAOError(t *testing.T) {
 func TestCompareAndSwapEvaluatorRecordResult_SQL(t *testing.T) {
 	t.Parallel()
 
-	ctrl := gomock.NewController(t)
-	dao, mock, cleanup := newAggrTestDAO(t, ctrl)
-	defer cleanup()
+	for _, tc := range []struct {
+		name      string
+		score     *float64
+		wantScore any
+	}{
+		{name: "N/A writes NULL", score: nil, wantScore: nil},
+		{name: "zero", score: gptr.Of(0.0), wantScore: float64(0)},
+		{name: "numeric", score: gptr.Of(0.8), wantScore: 0.8},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			dao, mock, cleanup := newAggrTestDAO(t, ctrl)
+			defer cleanup()
 
-	mock.ExpectBegin()
-	mock.ExpectExec(`UPDATE `+"`evaluator_record`"+` SET .+ WHERE \(id = .+ AND space_id = .+ AND status = .+ AND deleted_at IS NULL\) AND `+"`evaluator_record`.`deleted_at`"+` IS NULL`).
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), int64(10), int64(20), int8(entity.EvaluatorRunStatusAsyncInvoking)).
-		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectCommit()
+			mock.ExpectBegin()
+			mock.ExpectExec(`UPDATE `+"`evaluator_record`"+` SET `+"`output_data`=.,`score`=.,`status`=.,`updated_at`=."+` WHERE \(id = .+ AND space_id = .+ AND status = .+ AND deleted_at IS NULL\) AND `+"`evaluator_record`.`deleted_at`"+` IS NULL`).
+				WithArgs(`{}`, tc.wantScore, int8(entity.EvaluatorRunStatusSuccess), sqlmock.AnyArg(), int64(10), int64(20), int8(entity.EvaluatorRunStatusAsyncInvoking)).
+				WillReturnResult(sqlmock.NewResult(0, 1))
+			mock.ExpectCommit()
 
-	rows, err := dao.CompareAndSwapEvaluatorRecordResult(context.Background(), 10, 20, int8(entity.EvaluatorRunStatusAsyncInvoking), int8(entity.EvaluatorRunStatusSuccess), 0.8, `{}`)
-	require.NoError(t, err)
-	assert.Equal(t, int64(1), rows)
-	assert.NoError(t, mock.ExpectationsWereMet())
+			rows, err := dao.CompareAndSwapEvaluatorRecordResult(context.Background(), 10, 20, int8(entity.EvaluatorRunStatusAsyncInvoking), int8(entity.EvaluatorRunStatusSuccess), tc.score, `{}`)
+			require.NoError(t, err)
+			assert.Equal(t, int64(1), rows)
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
 }

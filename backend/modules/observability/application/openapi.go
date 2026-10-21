@@ -1239,9 +1239,10 @@ func (o *OpenAPIApplication) ListTrajectoryOApi(ctx context.Context, req *openap
 	}
 
 	resp, err := o.traceService.ListTrajectory(ctx, &service.ListTrajectoryRequest{
-		WorkspaceID: req.GetWorkspaceID(),
-		TraceIds:    req.GetTraceIds(),
-		StartTime:   startTime,
+		WorkspaceID:  req.GetWorkspaceID(),
+		TraceIds:     req.GetTraceIds(),
+		StartTime:    startTime,
+		PlatformType: loop_span.PlatformType(req.GetPlatformType()),
 	})
 	if err != nil {
 		return nil, err

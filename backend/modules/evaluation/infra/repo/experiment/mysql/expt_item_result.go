@@ -39,6 +39,12 @@ type IExptItemResultDAO interface {
 	// CountItemsByStatus 按 status 聚合该实验的 item 行数，返回 status -> 行数。
 	// 供 expt_stats 计数行的对账使用：主表是完成侧记账的锚点，所以要对账就得以它为准。
 	CountItemsByStatus(ctx context.Context, spaceID, exptID int64, opts ...db.Option) (map[int32]int64, error)
+	// CountItemsByBackflowStatus 按 backflow_status 聚合该实验的 item 行数，返回 backflow_status -> 行数。
+	// 与 CountItemsByStatus 同形，只换聚合列；走 idx_expt_backflow_status。
+	CountItemsByBackflowStatus(ctx context.Context, spaceID, exptID int64, opts ...db.Option) (map[int32]int64, error)
+	// ListItemIDsByBackflowStatus 取该实验中回流状态命中给定集合的 item_id。
+	// 供「按回流状态筛选」把白名单下推给结果加速器（accelerator 只认 item 粒度）。
+	ListItemIDsByBackflowStatus(ctx context.Context, spaceID, exptID int64, backflowStatuses []int32, opts ...db.Option) ([]int64, error)
 	GetMaxItemIdxByExptID(ctx context.Context, exptID, spaceID int64, opts ...db.Option) (int32, error)
 
 	BatchCreateNXRunLogs(ctx context.Context, itemRunLogs []*model.ExptItemResultRunLog, opts ...db.Option) error
@@ -116,6 +122,55 @@ func (dao *exptItemResultDAOImpl) CountItemsByStatus(ctx context.Context, spaceI
 		out[r.Status] = r.Cnt
 	}
 	return out, nil
+}
+
+// CountItemsByBackflowStatus 一条 GROUP BY 拿到该实验 item 的回流状态分布。
+//
+// 与 CountItemsByStatus 完全同形，只换聚合列，走 idx_expt_backflow_status
+// (space_id, expt_id, backflow_status)。刻意按需聚合而不另建计数列：
+// 增量计数在事件丢失/重复时会漂，而这张表本身就是回流状态的唯一权威源。
+func (dao *exptItemResultDAOImpl) CountItemsByBackflowStatus(ctx context.Context, spaceID, exptID int64, opts ...db.Option) (map[int32]int64, error) {
+	type row struct {
+		BackflowStatus int32 `gorm:"column:backflow_status"`
+		Cnt            int64 `gorm:"column:cnt"`
+	}
+	var rows []*row
+	session := dao.provider.NewSession(ctx, opts...)
+	if err := session.Model(&model.ExptItemResult{}).
+		Select("backflow_status, count(*) as cnt").
+		Where("space_id = ? AND expt_id = ?", spaceID, exptID).
+		Group("backflow_status").
+		Find(&rows).Error; err != nil {
+		return nil, errorx.Wrapf(err, "CountItemsByBackflowStatus fail, expt_id: %v", exptID)
+	}
+	out := make(map[int32]int64, len(rows))
+	for _, r := range rows {
+		if r == nil {
+			continue
+		}
+		out[r.BackflowStatus] = r.Cnt
+	}
+	return out, nil
+}
+
+// ListItemIDsByBackflowStatus 取回流状态命中给定集合的 item_id 列表。
+//
+// 用途是把「按回流状态筛选」下推给结果加速器：加速器只支持 item 粒度的 ID 白名单，
+// 所以先在本表按 idx_expt_backflow_status 收敛出 item_id，再塞给 accelerator。
+// 命中量可能很大，调用方需自行设阈值并在超限时降级（降级后 total 是估算值，
+// MUST NOT 当精确值返回）。
+func (dao *exptItemResultDAOImpl) ListItemIDsByBackflowStatus(ctx context.Context, spaceID, exptID int64, backflowStatuses []int32, opts ...db.Option) ([]int64, error) {
+	if len(backflowStatuses) == 0 {
+		return nil, nil
+	}
+	var itemIDs []int64
+	session := dao.provider.NewSession(ctx, opts...)
+	if err := session.Model(&model.ExptItemResult{}).
+		Where("space_id = ? AND expt_id = ? AND backflow_status IN ?", spaceID, exptID, backflowStatuses).
+		Pluck("item_id", &itemIDs).Error; err != nil {
+		return nil, errorx.Wrapf(err, "ListItemIDsByBackflowStatus fail, expt_id: %v", exptID)
+	}
+	return itemIDs, nil
 }
 
 func (dao *exptItemResultDAOImpl) GetItemTurnResults(ctx context.Context, spaceID, exptID, itemID int64, opts ...db.Option) ([]*model.ExptTurnResult, error) {

@@ -3414,11 +3414,14 @@ func TestEvaluatorServiceImpl_AsyncDebugEvaluator(t *testing.T) {
 	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
 	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	mockEvaluatorSourceService.EXPECT().Validate(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	s := &EvaluatorServiceImpl{
 		limiter:             mockLimiter,
 		idgen:               mockIDGen,
 		evaluatorRecordRepo: mockEvaluatorRecordRepo,
+		evalAsyncRepo:       mockEvalAsyncRepo,
 		evaluatorSourceServices: map[entity.EvaluatorType]EvaluatorSourceService{
 			entity.EvaluatorTypeAgent: mockEvaluatorSourceService,
 		},
@@ -3453,13 +3456,23 @@ func TestEvaluatorServiceImpl_AsyncDebugEvaluator(t *testing.T) {
 				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(888), nil)
 				mockEvaluatorSourceService.EXPECT().AsyncDebug(gomock.Any(), agentEvaluatorDO, gomock.Any(), gomock.Any(), int64(2), int64(888)).
 					Return(map[string]string{"d": "1"}, "trace-d", nil)
+				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:888", gomock.Any()).DoAndReturn(func(_ context.Context, _ string, actx *entity.EvalAsyncCtx) error {
+					assert.Equal(t, int64(101), actx.EvaluatorVersionID)
+					assert.Nil(t, actx.Event)
+					return nil
+				})
+				mockEvaluatorRecordRepo.EXPECT().UpdateEvaluatorRecordAsyncDispatch(gomock.Any(), int64(888), int64(2), "trace-d", gomock.Any()).DoAndReturn(func(_ context.Context, _, _ int64, _ string, output *entity.EvaluatorOutputData) error {
+					assert.Equal(t, map[string]string{"d": "1"}, output.Ext)
+					return nil
+				})
 				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(_ context.Context, record *entity.EvaluatorRecord) error {
 						assert.Equal(t, int64(888), record.ID)
 						assert.Equal(t, int64(2), record.SpaceID)
 						assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, record.Status)
 						if assert.NotNil(t, record.EvaluatorOutputData) {
-							assert.Equal(t, map[string]string{"d": "1"}, record.EvaluatorOutputData.Ext)
+							assert.Empty(t, record.EvaluatorOutputData.Ext)
+							assert.Equal(t, int64(101), record.EvaluatorVersionID)
 						}
 						return nil
 					},
@@ -5095,4 +5108,68 @@ func TestEvaluatorServiceImpl_publishEvaluatorResumeEvent(t *testing.T) {
 		err := s.publishEvaluatorResumeEvent(ctx, event)
 		require.ErrorIs(t, err, context.Canceled)
 	})
+}
+
+func customRPCAsyncDebugRequest() *entity.AsyncDebugEvaluatorRequest {
+	return &entity.AsyncDebugEvaluatorRequest{
+		SpaceID: 2,
+		EvaluatorDO: &entity.Evaluator{
+			SpaceID: 2, EvaluatorType: entity.EvaluatorTypeCustomRPC,
+			CustomRPCEvaluatorVersion: &entity.CustomRPCEvaluatorVersion{
+				IsAsync: true, AccessProtocol: entity.EvaluatorAccessProtocolRPC,
+				ServiceName: gptr.Of("test.custom.evaluator"),
+			},
+		},
+		InputData: &entity.EvaluatorInputData{InputFields: map[string]*entity.Content{
+			"answer": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("complete input")},
+		}, Ext: map[string]string{"runtime_param": "original"}},
+	}
+}
+
+func TestEvaluatorServiceImpl_AsyncDebugEvaluator_CustomRPCValidation(t *testing.T) {
+	cases := []struct {
+		name   string
+		change func(*entity.AsyncDebugEvaluatorRequest)
+		code   int32
+	}{
+		{"missing content", func(r *entity.AsyncDebugEvaluatorRequest) { r.EvaluatorDO.CustomRPCEvaluatorVersion = nil }, errno.InvalidEvaluatorConfigurationCode},
+		{"synchronous config", func(r *entity.AsyncDebugEvaluatorRequest) { r.EvaluatorDO.CustomRPCEvaluatorVersion.IsAsync = false }, errno.InvalidEvaluatorConfigurationCode},
+		{"builtin", func(r *entity.AsyncDebugEvaluatorRequest) { r.EvaluatorDO.Builtin = true }, errno.InvalidEvaluatorTypeCode},
+		{"cross space", func(r *entity.AsyncDebugEvaluatorRequest) { r.EvaluatorDO.SpaceID = 3 }, errno.EvaluatorVersionNotFoundCode},
+		{"legacy rpc", func(r *entity.AsyncDebugEvaluatorRequest) {
+			r.EvaluatorDO.CustomRPCEvaluatorVersion.AccessProtocol = entity.EvaluatorAccessProtocolRPCOld
+		}, errno.InvalidAccessProtocolCode},
+		{"legacy http", func(r *entity.AsyncDebugEvaluatorRequest) {
+			r.EvaluatorDO.CustomRPCEvaluatorVersion.AccessProtocol = entity.EvaluatorAccessProtocolFaasHTTPOld
+		}, errno.InvalidAccessProtocolCode},
+		{"missing service", func(r *entity.AsyncDebugEvaluatorRequest) { r.EvaluatorDO.CustomRPCEvaluatorVersion.ServiceName = nil }, errno.InvalidServiceNameCode},
+		{"missing async http path", func(r *entity.AsyncDebugEvaluatorRequest) {
+			r.EvaluatorDO.CustomRPCEvaluatorVersion.AccessProtocol = entity.EvaluatorAccessProtocolFaasHTTP
+		}, errno.InvalidEvaluatorConfigurationCode},
+		{"missing input", func(r *entity.AsyncDebugEvaluatorRequest) { r.InputData = nil }, errno.InvalidInputDataCode},
+		{"invalid input schema", func(r *entity.AsyncDebugEvaluatorRequest) {
+			r.EvaluatorDO.CustomRPCEvaluatorVersion.InputSchemas = []*entity.ArgsSchema{{
+				Key: gptr.Of("answer"), SupportContentTypes: []entity.ContentType{entity.ContentTypeText}, JsonSchema: gptr.Of(`{"type":"integer"}`),
+			}}
+		}, errno.ContentSchemaInvalidCode},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := customRPCAsyncDebugRequest()
+			tc.change(req)
+			svc := &EvaluatorServiceImpl{}
+			if tc.name == "builtin" {
+				ctrl := gomock.NewController(t)
+				source := mocks.NewMockEvaluatorSourceService(ctrl)
+				source.EXPECT().Validate(gomock.Any(), req.EvaluatorDO).Return(errorx.NewByCode(errno.InvalidEvaluatorTypeCode))
+				svc.evaluatorSourceServices = map[entity.EvaluatorType]EvaluatorSourceService{entity.EvaluatorTypeCustomRPC: source}
+			}
+			resp, err := svc.AsyncDebugEvaluator(context.Background(), req)
+			require.Error(t, err)
+			require.Nil(t, resp)
+			statusErr, ok := errorx.FromStatusError(err)
+			require.True(t, ok)
+			assert.Equal(t, tc.code, statusErr.Code())
+		})
+	}
 }

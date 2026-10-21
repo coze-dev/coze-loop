@@ -14,7 +14,7 @@ import (
 
 func TestResolveVerificationConfig(t *testing.T) {
 	for _, mode := range []VerificationMode{VerificationModeNopOnly, VerificationModeOracleOnly, VerificationModeF2P} {
-		for _, topology := range []SandboxCountMode{"", SandboxCountModeSingle, SandboxCountModeDual, SandboxCountModeMacVMPlusSandbox, SandboxCountModeMacVMPlusSSH} {
+		for _, topology := range []SandboxCountMode{"", SandboxCountModeSingle, SandboxCountModeDual, SandboxCountModeMacVMPlusSandbox, SandboxCountModeMacVMPlusSSH, SandboxCountModeShared} {
 			agent := &SandboxAgent{Name: "any application name", SandboxCountMode: topology}
 			cfg := &VerificationConfig{Mode: mode}
 			got, raw, err := ResolveVerificationConfig(cfg, agent, `{"binary_version":"pinned"}`)
@@ -62,6 +62,25 @@ func TestResolveVerificationConfig(t *testing.T) {
 			}
 		})
 	}
+}
+
+// 这个白名单是 sandbox_count_mode 的**穷举式** fail-closed 门，不是精选子集。它管的是**提交合法性**：
+// 漏一个取值，配了 shared 的评测对象一提 verification 实验就在参数校验整体报错。
+// 至于执行拓扑：verify agent 必须跑在 Agent 沙箱里，而 shared 恰恰没有 Agent 沙箱，所以
+// **下游控制面**把 verification×shared 折回双沙箱执行（与 verification×single 的折回对称）——
+// 那是执行路由的事，不在本仓，白名单放行与折回不矛盾。
+func TestResolveVerificationConfigAdmitsSharedSandbox(t *testing.T) {
+	cfg := &VerificationConfig{Mode: VerificationModeF2P}
+	agent := &SandboxAgent{Name: "remote faas application", SandboxCountMode: SandboxCountModeShared}
+	got, raw, err := ResolveVerificationConfig(cfg, agent, `{"verification":{"mode":"f2p"},"binary_version":"pinned"}`)
+	require.NoError(t, err)
+	require.Equal(t, VerificationModeF2P, got.Mode)
+	require.JSONEq(t, `{"binary_version":"pinned"}`, raw, "进了白名单也仍要摘掉 legacy verification 键")
+
+	// 补一条 shared 不等于"什么都放过"：拼写差一个大小写仍旧 fail-closed，与 ResolveSandboxCountMode 的
+	// 大小写不容错对齐 —— 否则这里放过、那里回落 Single，实验会静默按旧扁平链路跑完。
+	_, _, err = ResolveVerificationConfig(cfg, &SandboxAgent{SandboxCountMode: "Shared"}, "")
+	require.ErrorContains(t, err, `unsupported verification sandbox_count_mode "Shared"`)
 }
 
 func TestVerificationStoredInExistingConfiguration(t *testing.T) {

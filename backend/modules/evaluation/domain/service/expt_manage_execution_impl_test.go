@@ -153,6 +153,8 @@ func TestExptMangerImpl_Run(t *testing.T) {
 					EXPECT().
 					CreateOrUpdate(ctx, int64(789), gomock.Any(), session).
 					Return(errors.New("quota exceeded"))
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), int64(123), int64(456), int64(789), gomock.Any()).Return(nil)
+				mgr.mutex.(*lockMocks.MockILocker).EXPECT().UnlockForce(gomock.Any(), mgr.makeExptMutexLockKey(123)).Return(true, nil)
 			},
 			wantErr: true,
 		},
@@ -622,6 +624,8 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 					EXPECT().
 					Create(ctx, gomock.Any()).
 					Return(errors.New("create failed"))
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), int64(123), int64(456), int64(789), gomock.Any()).Return(nil)
+				mgr.mutex.(*lockMocks.MockILocker).EXPECT().UnlockForce(gomock.Any(), mgr.makeExptMutexLockKey(123)).Return(true, nil)
 			},
 			wantErr: true,
 		},
@@ -802,6 +806,8 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					Return(true, "1006", nil)
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().Save(ctx, gomock.Any()).Return(errors.New("save failed"))
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), exptID, int64(1006), spaceID, gomock.Any()).Return(nil)
+				mgr.mutex.(*lockMocks.MockILocker).EXPECT().UnlockForce(gomock.Any(), mgr.makeExptMutexLockKey(exptID)).Return(true, nil)
 			},
 			wantErr: true,
 		},
@@ -898,6 +904,8 @@ func TestExptMangerImpl_RetryItems(t *testing.T) {
 			setup: func() {
 				mgr.quotaRepo.(*repoMocks.MockQuotaRepo).
 					EXPECT().CreateOrUpdate(ctx, spaceID, gomock.Any(), session).Return(errors.New("quota exceeded"))
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), exptID, runID, spaceID, gomock.Any()).Return(nil)
+				mgr.mutex.(*lockMocks.MockILocker).EXPECT().UnlockForce(gomock.Any(), mgr.makeExptMutexLockKey(exptID)).Return(true, nil)
 				mgr.configer.(*componentMocks.MockIConfiger).
 					EXPECT().GetExptExecConf(ctx, spaceID).AnyTimes().
 					Return(&entity.ExptExecConf{SpaceExptConcurLimit: 10})
@@ -2091,7 +2099,7 @@ func TestExptMangerImpl_SetExptTerminating(t *testing.T) {
 				// Mock successful run log update
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().
-					Update(ctx, int64(123), int64(456), map[string]any{"status": int64(entity.ExptStatus_Terminating)}).
+					Update(ctx, int64(123), int64(456), int64(789), map[string]any{"status": int64(entity.ExptStatus_Terminating)}).
 					Return(nil)
 
 				// Mock successful experiment update
@@ -2115,7 +2123,7 @@ func TestExptMangerImpl_SetExptTerminating(t *testing.T) {
 				// Mock failed run log update
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().
-					Update(ctx, int64(123), int64(456), map[string]any{"status": int64(entity.ExptStatus_Terminating)}).
+					Update(ctx, int64(123), int64(456), int64(789), map[string]any{"status": int64(entity.ExptStatus_Terminating)}).
 					Return(errors.New("database error"))
 			},
 			wantErr: true,
@@ -2129,7 +2137,7 @@ func TestExptMangerImpl_SetExptTerminating(t *testing.T) {
 				// Mock successful run log update
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().
-					Update(ctx, int64(123), int64(456), map[string]any{"status": int64(entity.ExptStatus_Terminating)}).
+					Update(ctx, int64(123), int64(456), int64(789), map[string]any{"status": int64(entity.ExptStatus_Terminating)}).
 					Return(nil)
 
 				// Mock failed experiment update

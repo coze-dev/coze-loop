@@ -41,6 +41,8 @@ type ItemSnapshotFilter struct {
 	FloatMapFilters  []*FieldFilter
 	IntMapFilters    []*FieldFilter
 	StringMapFilters []*FieldFilter
+	// ItemKey 快照表物理列 dis.item_key（题目名称）的筛选条件，与 map 条件相互独立、AND 关系。
+	ItemKey *FieldFilter
 }
 
 type ExptTurnResultFilterMapCond struct {
@@ -74,6 +76,7 @@ type ExptTurnResultFilterQueryCond struct {
 	ItemIDs                 []*FieldFilter // 支持多组itemID筛选
 	ItemRunStatus           []*FieldFilter // 支持多组item状态筛选
 	TurnRunStatus           []*FieldFilter // 支持多组turn状态筛选
+	EvalSetIDs              []*FieldFilter // 支持多组评测集筛选
 	EvaluatorScoreCorrected *FieldFilter
 
 	CreatedDate      *time.Time
@@ -227,6 +230,24 @@ func (d *exptTurnResultFilterDAOImpl) buildMainTableConditions(cond *ExptTurnRes
 	if cond.CreatedDate != nil {
 		*whereSQL += " AND etrf.created_date = ?"
 		*args = append(*args, cond.CreatedDate.Format(time.DateOnly))
+	}
+	// 多组评测集 filter：多评测集实验按评测集筛明细。主表 eval_set_id 已逐行回填，
+	// 无需下探快照表，也与 ItemSnapshotCondBySet 的 per-set 快照条件互不干扰。
+	for _, f := range cond.EvalSetIDs {
+		switch f.Op {
+		case "in", "IN":
+			*whereSQL += " AND etrf.eval_set_id IN ?"
+			*args = append(*args, f.Values)
+		case "=":
+			*whereSQL += " AND etrf.eval_set_id = ?"
+			*args = append(*args, f.Values[0])
+		case "!=":
+			*whereSQL += " AND etrf.eval_set_id != ?"
+			*args = append(*args, f.Values[0])
+		case "NOT IN":
+			*whereSQL += " AND etrf.eval_set_id NOT IN ?"
+			*args = append(*args, f.Values)
+		}
 	}
 	if cond.EvalSetVersionID != nil {
 		*whereSQL += " AND etrf.eval_set_version_id = ?"
@@ -517,6 +538,9 @@ func (d *exptTurnResultFilterDAOImpl) appendItemSnapshotFilters(f *ItemSnapshotF
 	if f == nil {
 		return
 	}
+	if f.ItemKey != nil {
+		d.appendItemSnapshotItemKeyCond(whereSQL, args, f.ItemKey)
+	}
 	for _, ff := range f.StringMapFilters {
 		d.appendItemSnapshotMapCond(whereSQL, args, "string_map", ff)
 	}
@@ -529,6 +553,16 @@ func (d *exptTurnResultFilterDAOImpl) appendItemSnapshotFilters(f *ItemSnapshotF
 	for _, ff := range f.BoolMapFilters {
 		d.appendItemSnapshotMapCond(whereSQL, args, "bool_map", ff)
 	}
+}
+
+// appendItemSnapshotItemKeyCond 题目名称走快照表物理列 dis.item_key，不做 map subkey 映射。
+// 只支持 LIKE + 单值（service 层已校验；这里对漏网的非法条件按未知 Op 的既有方式跳过，不拼谓词）。
+func (d *exptTurnResultFilterDAOImpl) appendItemSnapshotItemKeyCond(whereSQL *string, args *[]interface{}, f *FieldFilter) {
+	if f.Op != "LIKE" || len(f.Values) != 1 {
+		return
+	}
+	*whereSQL += " AND dis.item_key LIKE ?"
+	*args = append(*args, "%"+escapeSpecialChars(fmt.Sprintf("%v", f.Values[0]))+"%")
 }
 
 func (d *exptTurnResultFilterDAOImpl) appendItemSnapshotMapCond(whereSQL *string, args *[]interface{}, mapKey string, f *FieldFilter) {
@@ -656,7 +690,7 @@ func (d *exptTurnResultFilterDAOImpl) hasItemSnapshotFilters(f *ItemSnapshotFilt
 		return false
 	}
 	return len(f.BoolMapFilters) > 0 || len(f.FloatMapFilters) > 0 ||
-		len(f.IntMapFilters) > 0 || len(f.StringMapFilters) > 0
+		len(f.IntMapFilters) > 0 || len(f.StringMapFilters) > 0 || f.ItemKey != nil
 }
 
 // needJoinItemSnapshot 是否需要联快照表：单份条件或 per-set 任一组有条件都要 join。

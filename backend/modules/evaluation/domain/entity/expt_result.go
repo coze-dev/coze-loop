@@ -509,8 +509,12 @@ type ExptListFilter struct {
 	// EvalSetSourceTypes 评测集来源模式筛选 (experiment.eval_set_source_type 列): 1=SingleSet / 2=MultiSetConfig。
 	// 与 FuzzyName 同级 (不走 Includes/Excludes)。ListExperiments 默认仅返回 1; 由 Convert 在调用方未指定时注入 [1]。
 	EvalSetSourceTypes []int64
-	Includes           *ExptFilterFields
-	Excludes           *ExptFilterFields
+	// OnlyResultSetEval 结果集评测筛选: true = 仅返回无评测对象的实验 (target_id = 0)。
+	// 与 FuzzyName 同级 (不走 Includes/Excludes)。true 时 DAO 层豁免 EvalSetSourceTypes 的默认排除
+	// (结果集评测实验本身即 MultiSetConfig, 不豁免会滤成空)。缺省不过滤。
+	OnlyResultSetEval bool
+	Includes          *ExptFilterFields
+	Excludes          *ExptFilterFields
 }
 
 type ExptFilterFields struct {
@@ -705,6 +709,9 @@ type ItemSnapshotFilter struct {
 	FloatMapFilters  []*FieldFilter
 	IntMapFilters    []*FieldFilter
 	StringMapFilters []*FieldFilter
+	// ItemKey 对快照表物理列 dis.item_key（题目名称元数据）的筛选，不参与 schema
+	// field_key -> map subkey 的映射翻译；与其他 map 条件是 AND 关系，nil 表示不筛。
+	ItemKey *FieldFilter `json:"item_key,omitempty"`
 }
 
 type KeywordFilter struct {
@@ -756,6 +763,8 @@ type ExptTurnResultFilterAccelerator struct {
 	ItemIDs                 []*FieldFilter `json:"item_id"`
 	ItemRunStatus           []*FieldFilter `json:"item_status"`
 	TurnRunStatus           []*FieldFilter `json:"turn_status"`
+	// EvalSetIDs 多评测集实验下按评测集筛明细，落到主表 eval_set_id 列上。
+	EvalSetIDs []*FieldFilter `json:"eval_set_id"`
 	// map类查询条件
 	MapCond          *ExptTurnResultFilterMapCond `json:"map_cond,omitempty"`
 	ItemSnapshotCond *ItemSnapshotFilter          `json:"item_snapshot_cond,omitempty"`
@@ -778,11 +787,28 @@ type ExptTurnResultFilterAccelerator struct {
 	IsOnlineExpt bool `json:"is_online_expt"`
 }
 
+// HasItemKeyFilter 判断请求是否携带 item_key（题目名称物理列）强筛选。
+// 该筛选由本链路显式引入，语义上「查不到条件满足的题」≠「返回全部题」：
+// 任何一层若吞掉校验/mapping/CK 错误并回退无筛选查询，会静默返回未筛选全量。
+// 因此 Repo/Service 对该路径 fail-loud 透传错误；旧请求保持既有容错回退策略。
+func (e *ExptTurnResultFilterAccelerator) HasItemKeyFilter() bool {
+	if e.ItemSnapshotCond != nil && e.ItemSnapshotCond.ItemKey != nil {
+		return true
+	}
+	for _, group := range e.ItemSnapshotCondBySet {
+		if group != nil && group.Cond != nil && group.Cond.ItemKey != nil {
+			return true
+		}
+	}
+	return false
+}
+
 func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
 	hasFilters := e.EvaluatorScoreCorrected != nil ||
 		len(e.ItemIDs) > 0 ||
 		len(e.ItemRunStatus) > 0 ||
-		len(e.TurnRunStatus) > 0
+		len(e.TurnRunStatus) > 0 ||
+		len(e.EvalSetIDs) > 0
 	hasFilters = hasFilters || (e.MapCond != nil && (len(e.MapCond.EvalTargetDataFilters) > 0 ||
 		len(e.MapCond.EvaluatorScoreFilters) > 0 ||
 		e.MapCond.EvaluatorWeightedScoreFilter != nil ||
@@ -793,7 +819,8 @@ func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
 	hasFilters = hasFilters || (e.ItemSnapshotCond != nil && (len(e.ItemSnapshotCond.BoolMapFilters) > 0 ||
 		len(e.ItemSnapshotCond.FloatMapFilters) > 0 ||
 		len(e.ItemSnapshotCond.IntMapFilters) > 0 ||
-		len(e.ItemSnapshotCond.StringMapFilters) > 0))
+		len(e.ItemSnapshotCond.StringMapFilters) > 0 ||
+		e.ItemSnapshotCond.ItemKey != nil))
 	hasFilters = hasFilters || (e.KeywordSearch != nil && ((e.KeywordSearch.ItemSnapshotFilter != nil && (len(e.KeywordSearch.ItemSnapshotFilter.BoolMapFilters) > 0 ||
 		len(e.KeywordSearch.ItemSnapshotFilter.FloatMapFilters) > 0 ||
 		len(e.KeywordSearch.ItemSnapshotFilter.IntMapFilters) > 0 ||

@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	infraredis "github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
 	evaluation "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	domainexpt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
@@ -38,6 +39,7 @@ import (
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	experimentredisdao "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/redis/dao"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
@@ -6638,7 +6640,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 		},
 
 		{
-			name: "success without score rejected",
+			name: "success without output rejected",
 			req: &openapi.ReportEvaluatorInvokeResultRequest{
 				WorkspaceID: gptr.Of(workspaceID),
 				InvokeID:    gptr.Of(invokeID),
@@ -6647,6 +6649,51 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 			setup: func(*rpcmocks.MockIAuthProvider, *repomocks.MockIEvalAsyncRepo, *servicemocks.MockEvaluatorService, *eventmocks.MockExptEventPublisher, *servicemocks.MockIEvaluatorCallbackDispatcher) {
 			},
 			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "success without evaluator result rejected",
+			req: &openapi.ReportEvaluatorInvokeResultRequest{
+				WorkspaceID: gptr.Of(workspaceID),
+				InvokeID:    gptr.Of(invokeID),
+				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
+				Output:      &spi.InvokeEvaluatorOutputData{},
+			},
+			setup: func(*rpcmocks.MockIAuthProvider, *repomocks.MockIEvalAsyncRepo, *servicemocks.MockEvaluatorService, *eventmocks.MockExptEventPublisher, *servicemocks.MockIEvaluatorCallbackDispatcher) {
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "success with reasoning-only N/A score resumes experiment",
+			req: &openapi.ReportEvaluatorInvokeResultRequest{
+				WorkspaceID: gptr.Of(workspaceID),
+				InvokeID:    gptr.Of(invokeID),
+				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
+				Output: &spi.InvokeEvaluatorOutputData{
+					EvaluatorResult_: &spi.InvokeEvaluatorResult_{Reasoning: gptr.Of("No text in the image to evaluate")},
+				},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, publisher *eventmocks.MockExptEventPublisher, _ *servicemocks.MockIEvaluatorCallbackDispatcher) {
+				resumeEvent := &entity.ExptItemEvalEvent{ExptID: 3003, ExptRunID: 4004}
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
+					Event: resumeEvent, ResumeReady: true, EvaluatorVersionID: 9,
+				}, nil)
+				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *entity.ReportEvaluatorRecordParam) (entity.ReportEvaluatorResultOutcome, error) {
+					assert.Equal(t, entity.EvaluatorRunStatusSuccess, param.Status)
+					if assert.NotNil(t, param.OutputData) && assert.NotNil(t, param.OutputData.EvaluatorResult) {
+						assert.Nil(t, param.OutputData.EvaluatorResult.Score)
+						assert.Equal(t, "No text in the image to evaluate", param.OutputData.EvaluatorResult.Reasoning)
+					}
+					return entity.ReportEvaluatorResultApplied, nil
+				})
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), resumeEvent, gomock.Not(gomock.Nil()), gomock.Any()).DoAndReturn(
+					func(_ context.Context, ev *entity.ExptItemEvalEvent, _ *time.Duration, modifyFunc func(*entity.ExptItemEvalEvent)) error {
+						modifyFunc(ev)
+						assert.True(t, ev.AsyncEvaluatorReportTrigger)
+						return nil
+					},
+				)
+			},
 		},
 		{
 			name: "failed without error message rejected",
@@ -6943,13 +6990,13 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 			},
 		},
 		{
-			name: "success",
+			name: "success with zero score",
 			req: &openapi.ReportEvaluatorInvokeResultRequest{
 				WorkspaceID: gptr.Of(workspaceID),
 				InvokeID:    gptr.Of(invokeID),
 				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
 				Output: &spi.InvokeEvaluatorOutputData{
-					EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(float64(0.9)), Reasoning: gptr.Of("r")},
+					EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(float64(0)), Reasoning: gptr.Of("r")},
 					EvaluatorUsage:   &spi.InvokeEvaluatorUsage{InputTokens: gptr.Of(int64(1)), OutputTokens: gptr.Of(int64(2))},
 				},
 			},
@@ -6966,6 +7013,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					assert.Equal(t, invokeID, param.RecordID)
 					assert.Equal(t, entity.EvaluatorRunStatusSuccess, param.Status)
 					assert.NotNil(t, param.OutputData)
+					assert.Equal(t, gptr.Of(float64(0)), param.OutputData.EvaluatorResult.Score)
 					assert.GreaterOrEqual(t, param.OutputData.TimeConsumingMS, int64(0))
 					return entity.ReportEvaluatorResultApplied, nil
 				})
@@ -7118,9 +7166,9 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 				}
 				assert.Nil(t, resp)
 			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, resp)
-				assert.NotNil(t, resp.BaseResp)
+				if assert.NoError(t, err) && assert.NotNil(t, resp) {
+					assert.NotNil(t, resp.BaseResp)
+				}
 			}
 		})
 	}
@@ -9399,6 +9447,54 @@ func TestEvalOpenAPIApplication_AsyncDebugEvalTargetOApi_MacVMPlusSSHInitsBothTa
 	assert.Equal(t, rpc.SandboxResourceTypeMacVM, gotResourceType[sandboxDebugTaskID+sandboxMacVMTaskIDSuffix])
 }
 
+func TestEvalOpenAPIApplication_AsyncDebugEvalTargetOApi_ReturnsErrorWhenRecordNil(t *testing.T) {
+	tests := []struct {
+		name           string
+		evalTargetType openapiEvalTarget.EvalTargetType
+		callee         string
+		sandboxAgent   *openapiEvalTarget.SandboxAgent
+	}{
+		{
+			name:           "custom rpc",
+			evalTargetType: openapiEvalTarget.EvalTargetTypeCustomRPCServer,
+			callee:         "custom-rpc",
+		},
+		{
+			name:           "sandbox agent",
+			evalTargetType: openapiEvalTarget.EvalTargetTypeSandboxAgent,
+			callee:         "sandbox-agent",
+			sandboxAgent:   &openapiEvalTarget.SandboxAgent{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			targetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
+			auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			targetSvc.EXPECT().AsyncDebugTarget(gomock.Any(), gomock.Any()).Return(nil, tt.callee, nil)
+
+			app := &EvalOpenAPIApplication{
+				auth: auth, targetSvc: targetSvc, metric: &fakeOpenAPIMetric{},
+			}
+			_, err := app.AsyncDebugEvalTargetOApi(context.Background(), &openapi.AsyncDebugEvalTargetOApiRequest{
+				WorkspaceID:    gptr.Of(int64(123)),
+				EvalTargetType: gptr.Of(tt.evalTargetType),
+				Param:          gptr.Of("{}"),
+				SandboxAgent:   tt.sandboxAgent,
+			})
+
+			require.Error(t, err)
+			statusErr, ok := errorx.FromStatusError(err)
+			require.True(t, ok)
+			assert.Equal(t, int32(errno.CommonInternalErrorCode), statusErr.Code())
+		})
+	}
+}
+
 func TestEvalOpenAPIApplication_DestroyDebugSandboxExecutionsSplitsMacVMTask(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -9620,4 +9716,33 @@ func TestEvalOpenAPIApplication_ListEvaluationSetVersionsOApi_SharedExecuteHides
 	assert.Equal(t, versionID, resp.Data.Versions[0].GetID())
 	assert.Nil(t, resp.Data.Versions[0].EvaluationSetSchema)
 	assert.NotNil(t, version.EvaluationSetSchema)
+}
+
+func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult_ExpiredDebugContext(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	redisClient := infraredis.NewTestRedis(t)
+	asyncRepo := experimentredisdao.NewEvalAsyncDAO(redisClient, nil)
+	ctx := context.Background()
+	require.NoError(t, asyncRepo.SetEvalAsyncCtx(ctx, "evaluator:42", &entity.EvalAsyncCtx{RecordID: 42, ResumeReady: true}))
+	fresh, err := asyncRepo.GetEvalAsyncCtxStrong(ctx, "evaluator:42")
+	require.NoError(t, err)
+	require.Equal(t, int64(42), fresh.RecordID)
+	raw, ok := infraredis.Unwrap(redisClient)
+	require.True(t, ok)
+	expired, err := raw.Expire(ctx, "[experiment]item_turn_eval_async_ctx:evaluator:42", 0).Result()
+	require.NoError(t, err)
+	require.True(t, expired)
+	app := &EvalOpenAPIApplication{
+		auth: auth, asyncRepo: asyncRepo,
+		evaluatorService: servicemocks.NewMockEvaluatorService(ctrl),
+		publisher:        eventmocks.NewMockExptEventPublisher(ctrl),
+	}
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	resp, err := app.ReportEvaluatorInvokeResult_(ctx, &openapi.ReportEvaluatorInvokeResultRequest{
+		WorkspaceID: gptr.Of(int64(1001)), InvokeID: gptr.Of(int64(42)), Status: gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
+		Output: &spi.InvokeEvaluatorOutputData{EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(1.0)}},
+	})
+	require.ErrorContains(t, err, "eval async context not found after bounded retry")
+	require.Nil(t, resp)
 }

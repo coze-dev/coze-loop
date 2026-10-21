@@ -82,10 +82,10 @@ func (mr *MockEvaluatorRecordDAOMockRecorder) BatchGetEvaluatorRecordForAggr(arg
 }
 
 // CompareAndSwapEvaluatorRecordResult mocks base method.
-func (m *MockEvaluatorRecordDAO) CompareAndSwapEvaluatorRecordResult(ctx context.Context, recordID, spaceID int64, fromStatus, toStatus int8, score float64, outputData string, opts ...db.Option) (int64, error) {
+func (m *MockEvaluatorRecordDAO) CompareAndSwapEvaluatorRecordResult(arg0 context.Context, arg1, arg2 int64, arg3, arg4 int8, arg5 *float64, arg6 string, arg7 ...db.Option) (int64, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, recordID, spaceID, fromStatus, toStatus, score, outputData}
-	for _, a := range opts {
+	varargs := []any{arg0, arg1, arg2, arg3, arg4, arg5, arg6}
+	for _, a := range arg7 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "CompareAndSwapEvaluatorRecordResult", varargs...)
@@ -95,9 +95,9 @@ func (m *MockEvaluatorRecordDAO) CompareAndSwapEvaluatorRecordResult(ctx context
 }
 
 // CompareAndSwapEvaluatorRecordResult indicates an expected call of CompareAndSwapEvaluatorRecordResult.
-func (mr *MockEvaluatorRecordDAOMockRecorder) CompareAndSwapEvaluatorRecordResult(ctx, recordID, spaceID, fromStatus, toStatus, score, outputData any, opts ...any) *gomock.Call {
+func (mr *MockEvaluatorRecordDAOMockRecorder) CompareAndSwapEvaluatorRecordResult(arg0, arg1, arg2, arg3, arg4, arg5, arg6 any, arg7 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, recordID, spaceID, fromStatus, toStatus, score, outputData}, opts...)
+	varargs := append([]any{arg0, arg1, arg2, arg3, arg4, arg5, arg6}, arg7...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompareAndSwapEvaluatorRecordResult", reflect.TypeOf((*MockEvaluatorRecordDAO)(nil).CompareAndSwapEvaluatorRecordResult), varargs...)
 }
 
@@ -160,10 +160,10 @@ func (mr *MockEvaluatorRecordDAOMockRecorder) UpdateEvaluatorRecord(arg0, arg1 a
 }
 
 // UpdateEvaluatorRecordAsyncDispatch mocks base method.
-func (m *MockEvaluatorRecordDAO) UpdateEvaluatorRecordAsyncDispatch(ctx context.Context, recordID, spaceID int64, traceID, outputData string, opts ...db.Option) error {
+func (m *MockEvaluatorRecordDAO) UpdateEvaluatorRecordAsyncDispatch(arg0 context.Context, arg1, arg2 int64, arg3, arg4 string, arg5 ...db.Option) error {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, recordID, spaceID, traceID, outputData}
-	for _, a := range opts {
+	varargs := []any{arg0, arg1, arg2, arg3, arg4}
+	for _, a := range arg5 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "UpdateEvaluatorRecordAsyncDispatch", varargs...)
@@ -172,9 +172,9 @@ func (m *MockEvaluatorRecordDAO) UpdateEvaluatorRecordAsyncDispatch(ctx context.
 }
 
 // UpdateEvaluatorRecordAsyncDispatch indicates an expected call of UpdateEvaluatorRecordAsyncDispatch.
-func (mr *MockEvaluatorRecordDAOMockRecorder) UpdateEvaluatorRecordAsyncDispatch(ctx, recordID, spaceID, traceID, outputData any, opts ...any) *gomock.Call {
+func (mr *MockEvaluatorRecordDAOMockRecorder) UpdateEvaluatorRecordAsyncDispatch(arg0, arg1, arg2, arg3, arg4 any, arg5 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, recordID, spaceID, traceID, outputData}, opts...)
+	varargs := append([]any{arg0, arg1, arg2, arg3, arg4}, arg5...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorRecordAsyncDispatch", reflect.TypeOf((*MockEvaluatorRecordDAO)(nil).UpdateEvaluatorRecordAsyncDispatch), varargs...)
 }
 

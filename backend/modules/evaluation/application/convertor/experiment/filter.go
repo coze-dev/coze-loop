@@ -36,6 +36,7 @@ func (e *ExptFilterConvertor) Convert(ctx context.Context, efo *domain_expt.Expt
 	}
 
 	filters.FuzzyName = efo.GetFuzzyName()
+	filters.OnlyResultSetEval = efo.GetOnlyResultSetEval()
 
 	// eval_set_source_types 与 fuzzy_name 同级 (不走 filters)。
 	// 调用方未指定 → 留空透传, 由 DAO 层默认排除 MultiSetConfig(2) (含旧数据 NULL); 显式传则按调用方意图走白名单 IN。
@@ -580,6 +581,7 @@ func ConvertExptTurnResultFilterAccelerator(experimentFilter *domain_expt.Experi
 		ItemIDs:       []*entity.FieldFilter{},
 		ItemRunStatus: []*entity.FieldFilter{},
 		TurnRunStatus: []*entity.FieldFilter{},
+		EvalSetIDs:    []*entity.FieldFilter{},
 		MapCond: &entity.ExptTurnResultFilterMapCond{
 			EvalTargetDataFilters:    []*entity.FieldFilter{},
 			EvaluatorScoreFilters:    []*entity.FieldFilter{},
@@ -703,6 +705,8 @@ func ConvertExptTurnResultFilterAccelerator(experimentFilter *domain_expt.Experi
 			//	}
 			case domain_expt.FieldType_ItemID:
 				result.ItemIDs = append(result.ItemIDs, fieldFilter)
+			case domain_expt.FieldType_EvalSetID:
+				result.EvalSetIDs = append(result.EvalSetIDs, fieldFilter)
 			case domain_expt.FieldType_TotalLatency:
 				// 使用固定key：total_latency
 				fieldFilter.Key = "total_latency"

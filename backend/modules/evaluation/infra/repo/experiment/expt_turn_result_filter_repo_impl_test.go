@@ -5,6 +5,7 @@ package experiment
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -408,7 +409,7 @@ func TestItemSnapshotCondsEntityToCK(t *testing.T) {
 		assert.Empty(t, got)
 	})
 
-	t.Run("id 转字符串，四类 map 条件全部透传", func(t *testing.T) {
+	t.Run("id 转字符串，四类 map 条件与 ItemKey 全部透传", func(t *testing.T) {
 		got := itemSnapshotCondsEntityToCK([]*entity.ItemSnapshotVersionCond{
 			{
 				EvalSetID: 10, EvalSetVersionID: 100, SyncCkDate: "2026-08-30",
@@ -417,12 +418,13 @@ func TestItemSnapshotCondsEntityToCK(t *testing.T) {
 					IntMapFilters:    []*entity.FieldFilter{{Key: "int_key_0", Op: "=", Values: []any{1}}},
 					FloatMapFilters:  []*entity.FieldFilter{{Key: "float_key_0", Op: ">", Values: []any{1.5}}},
 					BoolMapFilters:   []*entity.FieldFilter{{Key: "bool_key_0", Op: "=", Values: []any{true}}},
+					ItemKey:          &entity.FieldFilter{Op: "LIKE", Values: []any{"题目"}},
 				},
 			},
 			{
 				EvalSetID: 20, EvalSetVersionID: 200, SyncCkDate: "2026-08-31",
 				Cond: &entity.ItemSnapshotFilter{
-					StringMapFilters: []*entity.FieldFilter{{Key: "string_key_3", Op: "=", Values: []any{"w"}}},
+					ItemKey: &entity.FieldFilter{Op: "LIKE", Values: []any{"kw"}},
 				},
 			},
 		})
@@ -436,10 +438,15 @@ func TestItemSnapshotCondsEntityToCK(t *testing.T) {
 		assert.Equal(t, "int_key_0", got[0].Cond.IntMapFilters[0].Key)
 		assert.Equal(t, "float_key_0", got[0].Cond.FloatMapFilters[0].Key)
 		assert.Equal(t, "bool_key_0", got[0].Cond.BoolMapFilters[0].Key)
+		require.NotNil(t, got[0].Cond.ItemKey)
+		assert.Equal(t, "LIKE", got[0].Cond.ItemKey.Op)
+		assert.Equal(t, []any{"题目"}, got[0].Cond.ItemKey.Values)
 
 		assert.Equal(t, "20", got[1].EvalSetID)
 		assert.Equal(t, "200", got[1].EvalSetVersionID)
-		assert.Equal(t, "string_key_3", got[1].Cond.StringMapFilters[0].Key)
+		// 只有 ItemKey、无 map 条件的组也不丢
+		require.NotNil(t, got[1].Cond.ItemKey)
+		assert.Equal(t, []any{"kw"}, got[1].Cond.ItemKey.Values)
 	})
 }
 
@@ -475,4 +482,125 @@ func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_PerSetPassthrough(t *tes
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), total)
 	assert.Equal(t, map[int64]entity.ItemRunState{1: entity.ItemRunState(2)}, states)
+}
+
+func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_EvalSetIDs(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockExptTurnResultFilterDAO := ckmocks.NewMockIExptTurnResultFilterDAO(ctrl)
+	mockExptTurnResultFilterKeyMappingDAO := mysqlmocks.NewMockIExptTurnResultFilterKeyMappingDAO(ctrl)
+	repo := NewExptTurnResultFilterRepo(mockExptTurnResultFilterDAO, mockExptTurnResultFilterKeyMappingDAO)
+
+	mockExptTurnResultFilterDAO.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, cond *ck.ExptTurnResultFilterQueryCond) (map[string]int32, int64, error) {
+			assert.Equal(t, []*ck.FieldFilter{{Key: "eval_set_id", Op: "IN", Values: []any{"7", "8"}}}, cond.EvalSetIDs)
+			return map[string]int32{}, 0, nil
+		})
+
+	_, _, err := repo.QueryItemIDStates(context.Background(), &entity.ExptTurnResultFilterAccelerator{
+		SpaceID: 1,
+		ExptID:  2,
+		EvalSetIDs: []*entity.FieldFilter{
+			{Key: "eval_set_id", Op: "IN", Values: []any{"7", "8"}},
+		},
+	})
+	assert.NoError(t, err)
+}
+
+// 单组 ItemSnapshotCond 与 per-set 两组的 ItemKey 都要透传到 DAO 层。
+func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_ItemKeyPassthrough(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dao := ckmocks.NewMockIExptTurnResultFilterDAO(ctrl)
+	r := NewExptTurnResultFilterRepo(dao, mysqlmocks.NewMockIExptTurnResultFilterKeyMappingDAO(ctrl))
+
+	dao.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, cond *ck.ExptTurnResultFilterQueryCond) (map[string]int32, int64, error) {
+			require.NotNil(t, cond.ItemSnapshotCond)
+			require.NotNil(t, cond.ItemSnapshotCond.ItemKey)
+			assert.Equal(t, "LIKE", cond.ItemSnapshotCond.ItemKey.Op)
+			assert.Equal(t, []any{"题目"}, cond.ItemSnapshotCond.ItemKey.Values)
+
+			require.Len(t, cond.ItemSnapshotCondBySet, 2)
+			for _, set := range cond.ItemSnapshotCondBySet {
+				require.NotNil(t, set.Cond.ItemKey)
+				assert.Equal(t, "LIKE", set.Cond.ItemKey.Op)
+			}
+			assert.Equal(t, []any{"kw1"}, cond.ItemSnapshotCondBySet[0].Cond.ItemKey.Values)
+			assert.Equal(t, []any{"kw2"}, cond.ItemSnapshotCondBySet[1].Cond.ItemKey.Values)
+			return nil, 0, nil
+		}).Times(1)
+
+	_, _, err := r.QueryItemIDStates(context.Background(), &entity.ExptTurnResultFilterAccelerator{
+		SpaceID: 1, ExptID: 2,
+		ItemSnapshotCond: &entity.ItemSnapshotFilter{
+			ItemKey: &entity.FieldFilter{Op: "LIKE", Values: []any{"题目"}},
+		},
+		ItemSnapshotCondBySet: []*entity.ItemSnapshotVersionCond{
+			{EvalSetID: 10, EvalSetVersionID: 100, SyncCkDate: "d1", Cond: &entity.ItemSnapshotFilter{
+				ItemKey: &entity.FieldFilter{Op: "LIKE", Values: []any{"kw1"}},
+			}},
+			{EvalSetID: 20, EvalSetVersionID: 200, SyncCkDate: "d2", Cond: &entity.ItemSnapshotFilter{
+				StringMapFilters: []*entity.FieldFilter{{Key: "string_key_3", Op: "=", Values: []any{"v"}}},
+				ItemKey:          &entity.FieldFilter{Op: "LIKE", Values: []any{"kw2"}},
+			}},
+		},
+	})
+	assert.NoError(t, err)
+}
+
+// item_key 强筛选请求：DAO 错误必须透传（吞错返回空集会被上层当真实零命中，
+// 且触发 service 层无筛选回退）；旧请求保持既有吞错容错。
+func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_ItemKeyErrorPropagation(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockDAO := ckmocks.NewMockIExptTurnResultFilterDAO(ctrl)
+	mockKeyMappingDAO := mysqlmocks.NewMockIExptTurnResultFilterKeyMappingDAO(ctrl)
+	repo := NewExptTurnResultFilterRepo(mockDAO, mockKeyMappingDAO)
+
+	daoErr := errors.New("ck rpc error")
+	itemKeyFilter := &entity.ExptTurnResultFilterAccelerator{
+		SpaceID: 1, ExptID: 1,
+		ItemSnapshotCond: &entity.ItemSnapshotFilter{
+			ItemKey: &entity.FieldFilter{Key: "item_key", Op: "LIKE", Values: []any{"deepswe"}},
+		},
+	}
+	legacyFilter := &entity.ExptTurnResultFilterAccelerator{
+		SpaceID: 1, ExptID: 1,
+		ItemIDs: []*entity.FieldFilter{{Key: "item_id", Op: "=", Values: []any{"10"}}},
+	}
+	perSetFilter := &entity.ExptTurnResultFilterAccelerator{
+		SpaceID: 1, ExptID: 1,
+		ItemSnapshotCondBySet: []*entity.ItemSnapshotVersionCond{
+			{
+				EvalSetID: 5, EvalSetVersionID: 7, SyncCkDate: "2026-10-13",
+				Cond: &entity.ItemSnapshotFilter{
+					ItemKey: &entity.FieldFilter{Key: "item_key", Op: "LIKE", Values: []any{"deepswe"}},
+				},
+			},
+		},
+	}
+
+	t.Run("单值 ItemKey 条件透传 DAO 错误", func(t *testing.T) {
+		mockDAO.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).Return(nil, int64(0), daoErr).Times(1)
+		_, _, err := repo.QueryItemIDStates(context.Background(), itemKeyFilter)
+		assert.Equal(t, daoErr, err)
+	})
+
+	t.Run("per-set ItemKey 条件透传 DAO 错误", func(t *testing.T) {
+		mockDAO.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).Return(nil, int64(0), daoErr).Times(1)
+		_, _, err := repo.QueryItemIDStates(context.Background(), perSetFilter)
+		assert.Equal(t, daoErr, err)
+	})
+
+	t.Run("旧请求保持吞错返回空集", func(t *testing.T) {
+		mockDAO.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).Return(nil, int64(0), daoErr).Times(1)
+		states, total, err := repo.QueryItemIDStates(context.Background(), legacyFilter)
+		assert.NoError(t, err)
+		assert.Empty(t, states)
+		assert.Equal(t, int64(0), total)
+	})
 }
