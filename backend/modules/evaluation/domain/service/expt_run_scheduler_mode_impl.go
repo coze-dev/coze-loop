@@ -1021,7 +1021,7 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 			return err
 		}
 
-		if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, plan.itemIDs, map[string]any{
+		if err := updateNewRunItemResults(ctx, e.manager, e.exptItemResultRepo, event, plan.itemIDs, map[string]any{
 			"err_msg":     nil,
 			"status":      int32(entity.ItemRunState_Queueing),
 			"expt_run_id": event.ExptRunID,
@@ -1661,6 +1661,7 @@ func makeEndIdemKey(event *entity.ExptScheduleEvent) string {
 }
 
 type retryItemResetDeps struct {
+	manager                  IExptManager
 	evaluationSetItemService EvaluationSetItemService
 	exptItemResultRepo       repo.IExptItemResultRepo
 	exptTurnResultRepo       repo.IExptTurnResultRepo
@@ -1816,7 +1817,7 @@ func resetRetryRunLogsForItems(ctx context.Context, deps retryItemResetDeps, eve
 	if len(itemIDs) == 0 {
 		return nil, nil
 	}
-	if err := deps.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, itemIDs, map[string]any{
+	if err := updateNewRunItemResults(ctx, deps.manager, deps.exptItemResultRepo, event, itemIDs, map[string]any{
 		"err_msg":     nil,
 		"status":      int32(entity.ItemRunState_Queueing),
 		"expt_run_id": event.ExptRunID,
@@ -1992,7 +1993,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 			idIdx++
 		}
 
-		if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k }), map[string]any{
+		if err := updateNewRunItemResults(ctx, e.manager, e.exptItemResultRepo, event, maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k }), map[string]any{
 			"err_msg":     nil,
 			"status":      int32(entity.ItemRunState_Queueing),
 			"expt_run_id": event.ExptRunID,
@@ -2172,6 +2173,7 @@ func (e *ExptRetryAllExec) exptStartMultiSet(ctx context.Context, event *entity.
 	}
 
 	deps := retryItemResetDeps{
+		manager:                  e.manager,
 		evaluationSetItemService: e.evaluationSetItemService,
 		exptItemResultRepo:       e.exptItemResultRepo,
 		exptTurnResultRepo:       e.exptTurnResultRepo,
@@ -2427,7 +2429,7 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 			idIdx++
 		}
 
-		if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, maps.ToSlice(itemIDMap, func(k int64, v bool) int64 { return k }), map[string]any{
+		if err := updateNewRunItemResults(ctx, e.manager, e.exptItemResultRepo, event, maps.ToSlice(itemIDMap, func(k int64, v bool) int64 { return k }), map[string]any{
 			"err_msg":     nil,
 			"status":      int32(entity.ItemRunState_Queueing),
 			"expt_run_id": event.ExptRunID,
@@ -2481,6 +2483,7 @@ func (e *ExptRetryItemsExec) resetEvalItemsMultiSet(ctx context.Context, event *
 	}
 
 	deps := retryItemResetDeps{
+		manager:                  e.manager,
 		evaluationSetItemService: e.evaluationSetItemService,
 		exptItemResultRepo:       e.exptItemResultRepo,
 		exptTurnResultRepo:       e.exptTurnResultRepo,

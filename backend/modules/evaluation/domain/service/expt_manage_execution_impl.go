@@ -21,6 +21,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -321,6 +322,16 @@ func (e *ExptMangerImpl) prepareRun(ctx context.Context, exptID, runID, spaceID 
 }
 
 func (e *ExptMangerImpl) cleanupUnscheduledRun(ctx context.Context, exptID, runID, spaceID int64, cause error) {
+	if e.runFinishRepo != nil {
+		if err := e.cleanupCurrentUnscheduledRun(ctx, exptID, runID, spaceID, cause); err != nil {
+			logs.CtxError(ctx, "current unscheduled cleanup failed: %v", err)
+		}
+		return
+	}
+	e.cleanupLegacyUnscheduledRun(ctx, exptID, runID, spaceID, cause)
+}
+
+func (e *ExptMangerImpl) cleanupLegacyUnscheduledRun(ctx context.Context, exptID, runID, spaceID int64, cause error) {
 	if runID <= 0 {
 		logs.CtxError(ctx, "[ExptEval][RunLock] invalid cleanup run [expt_id=%v run_id=%v]", exptID, runID)
 		return
@@ -484,6 +495,42 @@ func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID 
 }
 
 func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
+	if e.runFinishRepo == nil {
+		if _, current := e.itemResultRepo.(repo.IExptCurrentResultRepo); current {
+			return errno.NewMQRetryErr("current completion provider missing")
+		}
+	}
+
+	if e.runFinishRepo != nil {
+		current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if current == nil {
+			return errno.NewMQRetryErr("complete run experiment missing")
+		}
+		if current.ExptType == entity.ExptType_Offline {
+			if current.LatestRunID != exptRunID {
+				return nil
+			}
+			opt := &entity.CompleteExptOption{}
+			for _, fn := range opts {
+				fn(opt)
+			}
+			if opt.Status == entity.ExptStatus_Terminated || opt.Status == entity.ExptStatus_Failed {
+				_, err := e.TerminateCurrentRun(ctx, exptID, exptRunID, spaceID, session, nil, opts...)
+				return err
+			}
+			result, err := e.FinishCurrentRun(ctx, &entity.ExptScheduleEvent{ExptID: exptID, ExptRunID: exptRunID, SpaceID: spaceID, Session: session})
+			if err != nil {
+				return err
+			}
+			if result == nil || result.Disposition == entity.ExptRunFinishPending {
+				return errno.NewMQRetryErr("current run completion pending")
+			}
+			return nil
+		}
+	}
 	const idemKeyPrefix = "CompleteRun:"
 
 	opt := &entity.CompleteExptOption{}
@@ -619,6 +666,36 @@ func (e *ExptMangerImpl) calculateRunLogStats(ctx context.Context, exptID, exptR
 }
 
 func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRunID *int64, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
+	if e.runFinishRepo == nil {
+		if _, current := e.itemResultRepo.(repo.IExptCurrentResultRepo); current {
+			return errno.NewMQRetryErr("current completion provider missing")
+		}
+	}
+
+	if e.runFinishRepo != nil {
+		current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if current == nil {
+			return errno.NewMQRetryErr("complete experiment missing")
+		}
+		if current.ExptType == entity.ExptType_Offline {
+			if exptRunID == nil || *exptRunID <= 0 {
+				return errno.NewMQRetryErr("offline completion requires original run identity")
+			}
+			opt := &entity.CompleteExptOption{}
+			for _, fn := range opts {
+				fn(opt)
+			}
+			if opt.Status == entity.ExptStatus_Terminated || opt.Status == entity.ExptStatus_Failed {
+				_, err := e.TerminateCurrentRun(ctx, exptID, *exptRunID, spaceID, session, nil, opts...)
+				return err
+			}
+			_, err := e.FinishCurrentRun(ctx, &entity.ExptScheduleEvent{ExptID: exptID, ExptRunID: *exptRunID, SpaceID: spaceID, Session: session})
+			return err
+		}
+	}
 	const idemKeyPrefix = "CompleteExpt:"
 
 	opt := &entity.CompleteExptOption{}
@@ -1249,6 +1326,24 @@ func (e *ExptMangerImpl) terminateItemTurns(ctx context.Context, exptID int64, i
 // 沙箱销毁与 CK 读侧刷新为 best-effort，失败仅记日志、不影响返回值。
 func (e *ExptMangerImpl) TerminateItems(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDs []int64, session *entity.Session) error {
 	if len(itemIDs) == 0 {
+		return nil
+	}
+	if e.runFinishRepo != nil {
+		current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if current == nil {
+			return errno.NewMQRetryErr("termination experiment missing")
+		}
+		if current.ExptType == entity.ExptType_Offline {
+			return e.terminateCurrentItems(ctx, exptID, exptRunID, spaceID, itemIDs, session)
+		}
+	}
+	if _, current := e.itemResultRepo.(repo.IExptCurrentResultRepo); current && e.runFinishRepo == nil {
+		return errno.NewMQRetryErr("termination provider missing")
+	}
+	if len(itemIDs) == 0 {
 		logs.CtxInfo(ctx, "[ExptItemTerminate] skip with empty item_ids, expt_id: %v, expt_run_id: %v", exptID, exptRunID)
 		return nil
 	}
@@ -1800,7 +1895,13 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 	}
 
 	// 重试顶替旧 run：必须赶在下面改写 LatestRunID 之前释放旧 run 的残留预占。
-	e.releaseSupersededRunQuota(ctx, exptID, spaceID, exptRunID, mode)
+	if e.runFinishRepo != nil {
+		if err := e.releaseCurrentSupersededRunQuota(ctx, exptID, spaceID, exptRunID, mode); err != nil {
+			return err
+		}
+	} else {
+		e.releaseSupersededRunQuota(ctx, exptID, spaceID, exptRunID, mode)
+	}
 
 	if err := e.exptRepo.Update(ctx, &entity.Experiment{
 		ID:          exptID,
@@ -1885,7 +1986,13 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 	// retried 分支刻意不释放：那说明锁被一个**活着的 run** 持有，runID 是它的号、
 	// LatestRunID 也还是它 —— 此时释放等于把正在跑的 item 的额度还回去。
 	if !retried {
-		e.releaseSupersededRunQuota(ctx, exptID, spaceID, runID, mode)
+		if e.runFinishRepo != nil {
+			if err := e.releaseCurrentSupersededRunQuota(ctx, exptID, spaceID, runID, mode); err != nil {
+				return 0, false, err
+			}
+		} else {
+			e.releaseSupersededRunQuota(ctx, exptID, spaceID, runID, mode)
+		}
 
 		if err := e.exptRepo.Update(ctx, &entity.Experiment{ID: exptID, LatestRunID: runID}); err != nil {
 			return 0, false, err
@@ -1901,6 +2008,21 @@ func (e *ExptMangerImpl) GetRunLog(ctx context.Context, exptID, exptRunID, space
 }
 
 func (e *ExptMangerImpl) SetExptTerminating(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
+	if e.runFinishRepo != nil {
+		current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if current == nil {
+			return errno.NewMQRetryErr("termination experiment missing")
+		}
+		if current.ExptType == entity.ExptType_Offline {
+			return e.beginCurrentRunTermination(ctx, exptID, exptRunID, spaceID)
+		}
+	}
+	if _, current := e.itemResultRepo.(repo.IExptCurrentResultRepo); current && e.runFinishRepo == nil {
+		return errno.NewMQRetryErr("termination provider missing")
+	}
 	if err := e.runLogRepo.Update(ctx, exptID, exptRunID, spaceID, map[string]any{"status": int64(entity.ExptStatus_Terminating)}); err != nil {
 		return err
 	}
