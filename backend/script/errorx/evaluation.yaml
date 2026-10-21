@@ -746,15 +746,3 @@ error_code:
     message: running retry disabled
     description: same-run manual retry running retry disabled
     no_affect_stability: true
-
-  - name: StandardEvalOutputSourceMismatch
-    code: 4107
-    message: standard_eval_output_source_mismatch
-    description: standard eval output source does not match the expected source
-    no_affect_stability: true
-
-  - name: StandardEvalOutputSourceNotReady
-    code: 4108
-    message: standard_eval_output_source_not_ready
-    description: standard eval output source is not ready
-    no_affect_stability: true

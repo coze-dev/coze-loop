@@ -4,6 +4,7 @@ package repo
 
 import (
 	"context"
+
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
@@ -14,10 +15,4 @@ type IExptResultPublishRepo interface {
 	GetItemResultPublishSource(context.Context, int64, int64, int64, int64) (*entity.ExptItemResultPublishSource, error)
 	IsItemResultPublishSourceCurrent(context.Context, *entity.ExptItemResultPublishSource) (bool, error)
 	CommitItemResult(context.Context, *entity.ExptItemResultPublication) (bool, error)
-}
-
-// IExptStandardEvalOutputSourceRepo observes one primary repeatable-read snapshot without row locks.
-// A zero run selects the current latest run inside that snapshot.
-type IExptStandardEvalOutputSourceRepo interface {
-	GetStandardEvalOutputSource(context.Context, int64, int64, int64, int64) (*entity.ExptItemResultPublishSource, error)
 }
