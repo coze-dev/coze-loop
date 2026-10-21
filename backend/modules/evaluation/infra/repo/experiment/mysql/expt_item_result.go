@@ -467,6 +467,9 @@ func (dao *exptItemResultDAOImpl) ScanItemRunLogs(ctx context.Context, exptID, e
 		filter = &entity.ExptItemRunLogFilter{}
 	}
 	session := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		session = session.Clauses(dbresolver.Write)
+	}
 
 	// RawFilter: use raw gorm.DB Where(sql, vars...) to avoid gen clause conversion / unknown clause issues.
 	if filter.RawFilter && filter.RawCond.SQL != "" {

@@ -222,7 +222,7 @@ func (e *ExptMangerImpl) TerminateCurrentRun(ctx context.Context, expt, run, spa
 		var ids []int64
 		var cursor int64
 		for {
-			logs, next, err := e.itemResultRepo.ScanItemRunLogs(ctx, expt, run, &entity.ExptItemRunLogFilter{}, cursor, 500, space)
+			logs, next, err := e.itemResultRepo.ScanItemRunLogs(contexts.WithCtxWriteDB(ctx), expt, run, &entity.ExptItemRunLogFilter{}, cursor, 500, space)
 			if err != nil {
 				return errno.WrapMQRetryErr(err)
 			}
