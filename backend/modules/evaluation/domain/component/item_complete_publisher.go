@@ -27,27 +27,6 @@ type ItemCompleteEvent struct {
 	EnableAnalysis bool `json:"enable_analysis"`
 	// CreatedBy 实验创建人 userID，来源 experiment.created_by（实验级恒定）。
 	CreatedBy string `json:"created_by"`
-	// A present empty request identifies raw execution; legacy events omit both source fields.
-	RequestID         *string                  `json:"request_id,omitempty"`
-	SourceTurnRecords []ItemCompleteTurnSource `json:"source_turn_records,omitempty"`
-}
-
-type ItemCompleteTurnSource struct {
-	TurnID         string                         `json:"turn_id"`
-	TargetRecordID string                         `json:"target_record_id"`
-	Registered     []ItemCompleteRegisteredSource `json:"registered,omitempty"`
-	Inline         []ItemCompleteInlineSource     `json:"inline,omitempty"`
-}
-
-type ItemCompleteRegisteredSource struct {
-	VersionID string `json:"version_id"`
-	Alias     string `json:"alias"`
-	RecordID  string `json:"record_id"`
-}
-
-type ItemCompleteInlineSource struct {
-	InlineKey string `json:"inline_key"`
-	RecordID  string `json:"record_id"`
 }
 
 type IItemCompletePublisher interface {

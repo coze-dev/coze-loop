@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -719,7 +718,6 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 //
 // 导出而非包内私有: 下游发行版需要在「重新触发某批 item 的完成事件」场景复用同一份组装。
 // 入参全是导出类型, 直接调用即可 —— 若改回私有, 下游只能照抄这十余个字段的组装, 两份必然漂移。
-// This legacy entry point omits source; validated publications use WithSource below.
 func BuildItemCompleteEventFromScheduler(spaceID, exptID, exptRunID int64, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64) *component.ItemCompleteEvent {
 	eiec := &entity.ExptItemEvalCtx{
 		Event: &entity.ExptItemEvalEvent{
@@ -733,165 +731,6 @@ func BuildItemCompleteEventFromScheduler(spaceID, exptID, exptRunID int64, expt 
 		EvalSetVersionID: evalSetVersionID,
 	}
 	return buildItemCompleteEvent(eiec)
-}
-
-// BuildItemCompleteEventFromSchedulerWithSource uses the validated publication without reading records.
-func BuildItemCompleteEventFromSchedulerWithSource(spaceID, exptID, exptRunID int64, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64, publication *entity.ExptItemResultPublication) (*component.ItemCompleteEvent, error) {
-	if item == nil {
-		return nil, fmt.Errorf("item-complete item missing")
-	}
-	return buildItemCompleteEventWithSource(&entity.ExptItemEvalCtx{
-		Event: &entity.ExptItemEvalEvent{SpaceID: spaceID, ExptID: exptID, ExptRunID: exptRunID, EvalSetItemID: item.ItemID, RequestID: item.RequestID},
-		Expt:  expt, EvalSetItem: evalSetItem, EvalSetVersionID: evalSetVersionID,
-	}, publication)
-}
-
-func buildItemCompleteEventWithSource(eiec *entity.ExptItemEvalCtx, publication *entity.ExptItemResultPublication) (*component.ItemCompleteEvent, error) {
-	if eiec == nil || eiec.Event == nil || publication == nil || publication.Source == nil || publication.Source.Source == nil {
-		return nil, fmt.Errorf("item-complete publication source missing")
-	}
-	source := publication.Source.Source
-	c := source.Current
-	event := eiec.Event
-	if c.SpaceID <= 0 || c.ExptID <= 0 || c.RunID <= 0 || c.ItemID <= 0 || c.ItemVersionID < 0 || c.SpaceID != event.SpaceID || c.ExptID != event.ExptID || c.RunID != event.ExptRunID || c.ItemID != event.EvalSetItemID || c.RequestID != event.RequestID {
-		return nil, fmt.Errorf("item-complete publication scope mismatch")
-	}
-	turns, err := buildItemCompleteSourceRecords(publication, entity.ExptItemResultStateLogged)
-	if err != nil {
-		return nil, err
-	}
-	ev := buildItemCompleteEvent(eiec)
-	request := c.RequestID
-	ev.RequestID = &request
-	ev.SourceTurnRecords = turns
-	return ev, nil
-}
-
-// buildItemCompleteSourceRecords validates only frozen invocation identities; it performs no reads or writes.
-// Publication retains Logged gating. Standard output uses Resulted and canonical/current references.
-func buildItemCompleteSourceRecords(publication *entity.ExptItemResultPublication, resultState entity.ExptItemResultState) ([]component.ItemCompleteTurnSource, error) {
-	if publication == nil || publication.Source == nil || publication.Source.Source == nil {
-		return nil, fmt.Errorf("item-complete publication source missing")
-	}
-	source := publication.Source.Source
-	c := source.Current
-	item, itemLog := publication.Source.Item, publication.Source.ItemLog
-	if item == nil || itemLog == nil || item.ID <= 0 || itemLog.ID <= 0 || item.SpaceID != c.SpaceID || item.ExptID != c.ExptID || item.ExptRunID != c.RunID || item.ItemID != c.ItemID || item.ItemVersionID != c.ItemVersionID || itemLog.SpaceID != c.SpaceID || itemLog.ExptID != c.ExptID || itemLog.ExptRunID != c.RunID || itemLog.ItemID != c.ItemID || itemLog.ItemVersionID != c.ItemVersionID || itemLog.Status != int32(entity.ItemRunState_Success) || itemLog.ResultState != int32(resultState) {
-		return nil, fmt.Errorf("item-complete item source invalid")
-	}
-	if len(publication.Turns) == 0 || len(publication.Turns) != len(source.Turns) || len(publication.Turns) != len(source.CanonicalTurns) {
-		return nil, fmt.Errorf("item-complete publication turns incomplete")
-	}
-	canonical := make(map[int64]int64, len(source.CanonicalTurns))
-	for _, turn := range source.CanonicalTurns {
-		if turn == nil || turn.ID <= 0 || turn.TurnID < 0 || turn.SpaceID != c.SpaceID || turn.ExptID != c.ExptID || turn.ExptRunID != c.RunID || turn.ItemID != c.ItemID || turn.ItemVersionID != c.ItemVersionID {
-			return nil, fmt.Errorf("item-complete canonical turn invalid")
-		}
-		if _, exists := canonical[turn.ID]; exists {
-			return nil, fmt.Errorf("item-complete canonical turn duplicated")
-		}
-		canonical[turn.ID] = turn.TurnID
-	}
-	seenTurns := make(map[int64]bool, len(publication.Turns))
-	turnRecords := make(map[int64]*component.ItemCompleteTurnSource, len(publication.Turns))
-	expected := map[string]int64{}
-	for _, turn := range publication.Turns {
-		if turn == nil || turn.ID <= 0 || turn.TurnID < 0 || turn.TargetResultID < 0 || turn.SpaceID != c.SpaceID || turn.ExptID != c.ExptID || turn.ExptRunID != c.RunID || turn.ItemID != c.ItemID || turn.ItemVersionID != c.ItemVersionID {
-			return nil, fmt.Errorf("item-complete turn source invalid")
-		}
-		if id, exists := canonical[turn.ID]; !exists || id != turn.TurnID || seenTurns[turn.TurnID] {
-			return nil, fmt.Errorf("item-complete turn duplicated or foreign")
-		}
-		seenTurns[turn.TurnID] = true
-		log := source.Turns[turn.TurnID]
-		if log == nil || log.ID <= 0 || log.TurnID != turn.TurnID || log.SpaceID != c.SpaceID || log.ExptID != c.ExptID || log.ExptRunID != c.RunID || log.ItemID != c.ItemID || log.ItemVersionID != c.ItemVersionID || log.TargetResultID != turn.TargetResultID || log.Status != entity.TurnRunState_Success || turn.Status != int32(log.Status) {
-			return nil, fmt.Errorf("item-complete turn source mismatch")
-		}
-		turnRecords[turn.ID] = &component.ItemCompleteTurnSource{TurnID: strconv.FormatInt(turn.TurnID, 10), TargetRecordID: strconv.FormatInt(turn.TargetResultID, 10)}
-		if refs := log.EvaluatorResultIds; refs != nil {
-			add := func(version int64, alias, inline string, record int64) error {
-				if record <= 0 || version < 0 || inline == "" && version == 0 {
-					return fmt.Errorf("item-complete evaluator source invalid")
-				}
-				key := itemCompleteRefKey(turn.ID, version, alias, inline)
-				if _, exists := expected[key]; exists {
-					return fmt.Errorf("item-complete evaluator source duplicated")
-				}
-				expected[key] = record
-				return nil
-			}
-			for _, ref := range refs.Registered {
-				if ref == nil || ref.VersionID <= 0 {
-					return nil, fmt.Errorf("item-complete registered source missing")
-				}
-				if err := add(ref.VersionID, ref.Alias, "", ref.RecordID); err != nil {
-					return nil, err
-				}
-			}
-			for _, ref := range refs.Inline {
-				if ref == nil || ref.InlineKey == "" {
-					return nil, fmt.Errorf("item-complete inline source missing")
-				}
-				if err := add(0, "", ref.InlineKey, ref.RecordID); err != nil {
-					return nil, err
-				}
-			}
-			for version, record := range refs.EvalVerIDToResID {
-				if err := add(version, "", "", record); err != nil {
-					return nil, err
-				}
-			}
-		}
-	}
-	if len(expected) != len(publication.Refs) {
-		return nil, fmt.Errorf("item-complete publication refs incomplete")
-	}
-	seenRefs := map[string]bool{}
-	for _, ref := range publication.Refs {
-		if ref == nil || ref.ID <= 0 || ref.SpaceID != c.SpaceID || ref.ExptID != c.ExptID || ref.EvaluatorResultID <= 0 || turnRecords[ref.ExptTurnResultID] == nil {
-			return nil, fmt.Errorf("item-complete publication ref invalid")
-		}
-		if ref.SourceType == int32(entity.EvaluatorRecordSourceTypeInline) {
-			if ref.InlineKey == "" || ref.EvaluatorVersionID != 0 || ref.Alias != "" {
-				return nil, fmt.Errorf("item-complete inline ref invalid")
-			}
-		} else if (ref.SourceType != 0 && ref.SourceType != int32(entity.EvaluatorRecordSourceTypeBuiltin)) || ref.EvaluatorVersionID <= 0 || ref.InlineKey != "" {
-			return nil, fmt.Errorf("item-complete registered ref invalid")
-		}
-		key := itemCompleteRefKey(ref.ExptTurnResultID, ref.EvaluatorVersionID, ref.Alias, ref.InlineKey)
-		if seenRefs[key] || expected[key] != ref.EvaluatorResultID {
-			return nil, fmt.Errorf("item-complete publication ref mismatch")
-		}
-		seenRefs[key] = true
-		entry := turnRecords[ref.ExptTurnResultID]
-		if ref.SourceType == int32(entity.EvaluatorRecordSourceTypeInline) {
-			entry.Inline = append(entry.Inline, component.ItemCompleteInlineSource{InlineKey: ref.InlineKey, RecordID: strconv.FormatInt(ref.EvaluatorResultID, 10)})
-		} else {
-			entry.Registered = append(entry.Registered, component.ItemCompleteRegisteredSource{VersionID: strconv.FormatInt(ref.EvaluatorVersionID, 10), Alias: ref.Alias, RecordID: strconv.FormatInt(ref.EvaluatorResultID, 10)})
-		}
-	}
-	ordered := append([]*entity.ExptTurnResult(nil), publication.Turns...)
-	sort.Slice(ordered, func(i, j int) bool { return ordered[i].TurnID < ordered[j].TurnID })
-	turns := make([]component.ItemCompleteTurnSource, 0, len(ordered))
-	for _, turn := range ordered {
-		entry := turnRecords[turn.ID]
-		sort.Slice(entry.Registered, func(i, j int) bool {
-			a, b := entry.Registered[i], entry.Registered[j]
-			if a.VersionID != b.VersionID {
-				av, _ := strconv.ParseInt(a.VersionID, 10, 64)
-				bv, _ := strconv.ParseInt(b.VersionID, 10, 64)
-				return av < bv
-			}
-			return a.Alias < b.Alias
-		})
-		sort.Slice(entry.Inline, func(i, j int) bool { return entry.Inline[i].InlineKey < entry.Inline[j].InlineKey })
-		turns = append(turns, *entry)
-	}
-	return turns, nil
-}
-
-func itemCompleteRefKey(turn, version int64, alias, inline string) string {
-	return fmt.Sprintf("%d:%d:%d:%s:%s", turn, version, len(alias), alias, inline)
 }
 
 // 按 experiment.eval_set_source_type 显式分流（权威分流开关，DB not null default 1）：

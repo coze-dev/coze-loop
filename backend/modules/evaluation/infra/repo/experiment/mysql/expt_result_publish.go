@@ -15,8 +15,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
-	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -104,48 +102,6 @@ func (r *ExptResultPublishDAOImpl) GetItemResultPublishSource(ctx context.Contex
 		result, err = readItemResultPublishSource(tx, space, expt, run, item)
 		return err
 	}, db.WithMaster())
-	return result, err
-}
-
-func (r *ExptResultPublishDAOImpl) GetStandardEvalOutputSource(ctx context.Context, space, expt, run, item int64) (*entity.ExptItemResultPublishSource, error) {
-	var result *entity.ExptItemResultPublishSource
-	err := r.provider.NewSession(ctx, db.WithMaster()).Transaction(func(tx *gorm.DB) error {
-		before, err := collectItemReadObservation(tx, space, expt, run, []int64{item}, nil)
-		if err != nil {
-			return err
-		}
-		var experiment model.Experiment
-		if err := tx.Where("space_id=? AND id=?", space, expt).Take(&experiment).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil
-			}
-			return err
-		}
-		if run > 0 && experiment.LatestRunID != run {
-			return nil
-		}
-		if run == 0 {
-			run = experiment.LatestRunID
-		}
-		if run <= 0 {
-			return nil
-		}
-		result, err = readItemResultPublishSourceWithLocks(tx, space, expt, run, item, false)
-		if err != nil {
-			return err
-		}
-		after, err := collectItemReadObservation(tx, space, expt, run, []int64{item}, before)
-		if err != nil {
-			return err
-		}
-		if err := verifyItemReadObservation(before, after); err != nil {
-			return errorx.NewByCode(errno.StandardEvalOutputSourceNotReadyCode, errorx.WithExtraMsg(err.Error()))
-		}
-		return ctx.Err()
-	})
-	if err != nil {
-		return nil, err
-	}
 	return result, err
 }
 
