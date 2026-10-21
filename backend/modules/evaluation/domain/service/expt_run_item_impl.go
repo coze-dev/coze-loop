@@ -756,8 +756,27 @@ func buildItemCompleteEventWithSource(eiec *entity.ExptItemEvalCtx, publication 
 	if c.SpaceID <= 0 || c.ExptID <= 0 || c.RunID <= 0 || c.ItemID <= 0 || c.ItemVersionID < 0 || c.SpaceID != event.SpaceID || c.ExptID != event.ExptID || c.RunID != event.ExptRunID || c.ItemID != event.EvalSetItemID || c.RequestID != event.RequestID {
 		return nil, fmt.Errorf("item-complete publication scope mismatch")
 	}
+	turns, err := buildItemCompleteSourceRecords(publication, entity.ExptItemResultStateLogged)
+	if err != nil {
+		return nil, err
+	}
+	ev := buildItemCompleteEvent(eiec)
+	request := c.RequestID
+	ev.RequestID = &request
+	ev.SourceTurnRecords = turns
+	return ev, nil
+}
+
+// buildItemCompleteSourceRecords validates only frozen invocation identities; it performs no reads or writes.
+// Publication retains Logged gating. Standard output uses Resulted and canonical/current references.
+func buildItemCompleteSourceRecords(publication *entity.ExptItemResultPublication, resultState entity.ExptItemResultState) ([]component.ItemCompleteTurnSource, error) {
+	if publication == nil || publication.Source == nil || publication.Source.Source == nil {
+		return nil, fmt.Errorf("item-complete publication source missing")
+	}
+	source := publication.Source.Source
+	c := source.Current
 	item, itemLog := publication.Source.Item, publication.Source.ItemLog
-	if item == nil || itemLog == nil || item.ID <= 0 || itemLog.ID <= 0 || item.SpaceID != c.SpaceID || item.ExptID != c.ExptID || item.ExptRunID != c.RunID || item.ItemID != c.ItemID || item.ItemVersionID != c.ItemVersionID || itemLog.SpaceID != c.SpaceID || itemLog.ExptID != c.ExptID || itemLog.ExptRunID != c.RunID || itemLog.ItemID != c.ItemID || itemLog.ItemVersionID != c.ItemVersionID || itemLog.Status != int32(entity.ItemRunState_Success) || itemLog.ResultState != int32(entity.ExptItemResultStateLogged) {
+	if item == nil || itemLog == nil || item.ID <= 0 || itemLog.ID <= 0 || item.SpaceID != c.SpaceID || item.ExptID != c.ExptID || item.ExptRunID != c.RunID || item.ItemID != c.ItemID || item.ItemVersionID != c.ItemVersionID || itemLog.SpaceID != c.SpaceID || itemLog.ExptID != c.ExptID || itemLog.ExptRunID != c.RunID || itemLog.ItemID != c.ItemID || itemLog.ItemVersionID != c.ItemVersionID || itemLog.Status != int32(entity.ItemRunState_Success) || itemLog.ResultState != int32(resultState) {
 		return nil, fmt.Errorf("item-complete item source invalid")
 	}
 	if len(publication.Turns) == 0 || len(publication.Turns) != len(source.Turns) || len(publication.Turns) != len(source.CanonicalTurns) {
@@ -868,16 +887,13 @@ func buildItemCompleteEventWithSource(eiec *entity.ExptItemEvalCtx, publication 
 		sort.Slice(entry.Inline, func(i, j int) bool { return entry.Inline[i].InlineKey < entry.Inline[j].InlineKey })
 		turns = append(turns, *entry)
 	}
-	ev := buildItemCompleteEvent(eiec)
-	request := c.RequestID
-	ev.RequestID = &request
-	ev.SourceTurnRecords = turns
-	return ev, nil
+	return turns, nil
 }
 
 func itemCompleteRefKey(turn, version int64, alias, inline string) string {
 	return fmt.Sprintf("%d:%d:%d:%s:%s", turn, version, len(alias), alias, inline)
 }
+
 // 按 experiment.eval_set_source_type 显式分流（权威分流开关，DB not null default 1）：
 //   - MultiSetConfig(2) 新实验: 从 EvalSetDetails 按 datasetID 匹配归属集（GetDetail 已批量填充所有集详情）；
 //     匹配不到即返回 nil，不回退主集，避免把主集版本误安到非主集 item 上（张冠李戴）。
