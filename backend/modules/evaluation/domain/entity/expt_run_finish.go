@@ -17,3 +17,22 @@ type ExptRunFinishResult struct {
 	Disposition ExptRunFinishDisposition
 	Experiment  *Experiment
 }
+
+// ExptRunTerminationRequest is a frozen control operation, never an execution writer.
+type ExptRunTerminationRequest struct {
+	SpaceID, ExptID, RunID int64
+	Begin                  bool
+	Finalize               bool
+	SetupAbort             bool
+	Status                 ExptStatus
+	StatusMessage          string
+	NoCompleteItemTurn     bool
+	ExpectedSource         *ExptCurrentItemRunSource
+	Items                  []*ExptCurrentItemRunSource
+	MissingTurnLogs        []*ExptTurnResultRunLog
+}
+type ExptRunTerminationResult struct {
+	Applied    bool
+	NonCurrent bool
+	Experiment *Experiment
+}

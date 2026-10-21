@@ -91,6 +91,14 @@ func newPendingRunFixture(t *testing.T, initMode entity.ExptRunMode) *pendingRun
 	metric.EXPECT().EmitExptExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Do(func(int64, int64, int64, time.Time) { notifications.Add(1) }).AnyTimes()
 	cleanupResult := &finishCalibrationTestResult{ExptResultService: svcmocks.NewMockExptResultService(ctrl), ready: true}
 	cleanupResult.ExptResultService.(*svcmocks.MockExptResultService).EXPECT().GetIncompleteTurns(gomock.Any(), f.expt, f.space, gomock.Any()).Return(nil, nil).AnyTimes()
+	cleanupResult.ExptResultService.(*svcmocks.MockExptResultService).EXPECT().UpsertExptTurnResultFilter(gomock.Any(), f.space, f.expt, gomock.Any()).DoAndReturn(func(ctx context.Context, _, _ int64, ids []int64) error {
+		var rows []model.ExptItemResult
+		require.NoError(t, f.conn.WithContext(ctx).Where("space_id=? AND item_id IN ?", f.space, ids).Find(&rows).Error)
+		for _, row := range rows {
+			require.Equal(t, int32(entity.ItemRunState_Terminal), row.Status)
+		}
+		return nil
+	}).AnyTimes()
 	manager := &ExptMangerImpl{configer: config, mutex: factory(), manualRetryLocker: factory, runLogRepo: runs, exptRepo: experiments, itemResultRepo: f.itemRepo(), itemRefRepo: exptrepo.NewExptItemRefRepo(exptmysql.NewExptItemRefDAO(f.provider)), turnResultRepo: f.turnRepo(), statsRepo: stats, runFinishRepo: exptrepo.NewExptRunFinishRepo(f.provider), manualRetryRepo: exptrepo.NewExptManualRetryRepo(f.provider, ids), mtr: metric, idgenerator: ids, idem: idem, centralGuard: component.NewNoopCentralReservationGuard(), currentRunWaker: component.NewNoopCurrentRunSchedulerWaker(), quotaRepo: quota, exptResultService: cleanupResult}
 	session := &entity.Session{UserID: "pending-run-test"}
 	if initMode == entity.EvaluationModeRetryItems {

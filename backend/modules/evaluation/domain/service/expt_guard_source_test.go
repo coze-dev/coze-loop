@@ -266,13 +266,18 @@ func TestGuardSourceMySQLDebtFinishThenCancelStillReleases(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctxcache.Init(context.WithValue(context.Background(), guardSourceContextKey{}, "scope-value")))
 	defer cancel()
 	event.WithCtxCentralQuotaHeld(ctx, testScope)
-	manager.EXPECT().CompleteRun(gomock.Any(), f.expt, f.run, f.space, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	manager.EXPECT().CompleteExpt(gomock.Any(), f.expt, &f.run, f.space, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, int64, *int64, int64, *entity.Session, ...entity.CompleteExptOptionFn) error {
-		cancel()
-		return nil
-	})
 	guard := &boundedSourceGuard{t: t}
-	svc := &ExptItemEventEvalServiceImpl{centralGuard: guard, exptItemResultRepo: f.itemRepo(), exptTurnResultRepo: f.turnRepo(), manager: manager, configer: config, itemLocker: lateWriteLocker(t, ctrl)}
+	terminator := &guardSourceTestTerminator{IExptManager: manager, finish: func(ctx context.Context, original *entity.ExptCurrentItemRunSource) (bool, error) {
+		require.True(t, sameExecutionIdentity(source, original))
+		cancel()
+		releaseCtx, stop := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+		defer stop()
+		if err := guard.Release(releaseCtx, testScope, f.run, f.item, original.Current.RequestID, "debt"); err != nil {
+			return true, err
+		}
+		return true, errno.WrapMQRetryErr(ctx.Err())
+	}}
+	svc := &ExptItemEventEvalServiceImpl{centralGuard: guard, exptItemResultRepo: f.itemRepo(), exptTurnResultRepo: f.turnRepo(), manager: terminator, configer: config, itemLocker: lateWriteLocker(t, ctrl)}
 	var completed map[string]string
 	err := svc.HandleEventErr(func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
 		executionSource(ctx).Source = source
@@ -419,4 +424,13 @@ func TestGuardSourceMySQLConcurrentOldAndCurrentConsumer(t *testing.T) {
 	require.Equal(t, []string{"rq2"}, guard.confirmTokens)
 	require.Empty(t, guard.releases())
 	t.Log("REAL_MYSQL_GUARD_CONCURRENT real item lock serializes rq1/rq2; old quota zero")
+}
+
+type guardSourceTestTerminator struct {
+	IExptManager
+	finish func(context.Context, *entity.ExptCurrentItemRunSource) (bool, error)
+}
+
+func (t *guardSourceTestTerminator) TerminateCurrentRun(ctx context.Context, _, _, _ int64, _ *entity.Session, source *entity.ExptCurrentItemRunSource, _ ...entity.CompleteExptOptionFn) (bool, error) {
+	return t.finish(ctx, source)
 }
