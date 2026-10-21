@@ -305,6 +305,10 @@ func (e *ExptSchedulerImpl) recordCurrentItemResults(ctx context.Context, event 
 		if !publicationReady(source) {
 			continue
 		}
+		current := source.Source.Current
+		if current.SpaceID != event.SpaceID || current.ExptID != event.ExptID || current.RunID != event.ExptRunID || current.ItemID != item.ItemID || current.RequestID != item.RequestID {
+			return errno.NewMQRetryErr("publication execution scope mismatch")
+		}
 		publication, err := service.PrepareItemResultPublication(ctx, source, expt)
 		if err != nil {
 			return err
@@ -316,7 +320,7 @@ func (e *ExptSchedulerImpl) recordCurrentItemResults(ctx context.Context, event 
 			current := *item
 			current.State = entity.ItemRunState(source.ItemLog.Status)
 			current.RequestID = source.Source.Current.RequestID
-			return e.sendItemComplete(lockCtx, event, expt, &current, itemMeta[item.ItemID], itemVer[item.ItemID], publication)
+			return e.sendItemComplete(lockCtx, event, expt, &current, itemMeta[item.ItemID], itemVer[item.ItemID])
 		})
 		if err != nil {
 			return err

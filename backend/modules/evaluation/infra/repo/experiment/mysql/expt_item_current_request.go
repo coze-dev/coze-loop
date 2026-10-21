@@ -117,7 +117,7 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 	// NDB accepts ordinary Begin, without per-transaction isolation/readOnly SQL.
 	// Complete raw source verification also makes default RC reads fail closed.
 	err := dao.provider.NewSession(ctx, db.WithMaster()).Transaction(func(tx *gorm.DB) error {
-		before, err := collectItemReadObservation(tx, spaceID, exptID, runID, nil, nil)
+		before, err := collectItemReadObservation(tx, spaceID, exptID, runID, nil)
 		if err != nil {
 			return err
 		}
@@ -153,7 +153,7 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 			}
 			row.Source = source
 		}
-		after, err := collectItemReadObservation(tx, spaceID, exptID, runID, nil, before)
+		after, err := collectItemReadObservation(tx, spaceID, exptID, runID, before)
 		if err != nil {
 			return err
 		}

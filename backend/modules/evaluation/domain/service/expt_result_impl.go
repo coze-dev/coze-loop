@@ -2147,12 +2147,7 @@ func (e *ExptResultBuilder) buildEvaluatorResult(ctx context.Context) error {
 		if _, ok := turnResultID2VersionID2Result[turnResultID]; !ok {
 			turnResultID2VersionID2Result[turnResultID] = make(map[int64]*entity.EvaluatorRecord)
 		}
-		key := evaluatorRecord.EvaluatorVersionID
-		if entity.ExptStandardEvalOutputSourceFromContext(ctx) != nil {
-			// The source-bound standard reader needs every invocation, including aliases and Inline version zero.
-			key = evaluatorRecord.ID
-		}
-		turnResultID2VersionID2Result[turnResultID][key] = evaluatorRecord
+		turnResultID2VersionID2Result[turnResultID][evaluatorRecord.EvaluatorVersionID] = evaluatorRecord
 		if evaluatorRecord.GetCorrected() {
 			turnResultID2ScoreCorrected[turnResultID] = true
 		} else {

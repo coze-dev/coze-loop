@@ -705,7 +705,7 @@ func (e *ExptSchedulerImpl) resolveItemCompleteMeta(ctx context.Context, event *
 
 // sendItemComplete 组装并发送单行 item-complete(success) 事件。
 // 发送失败返回 error, 由调用方中断本次调度、靠下次调度重扫 completeItems 补发; 元数据缺失属组装侧问题, 跳过不阻断。
-func (e *ExptSchedulerImpl) sendItemComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64, publication ...*entity.ExptItemResultPublication) error {
+func (e *ExptSchedulerImpl) sendItemComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64) error {
 	if err := ctx.Err(); err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
@@ -715,16 +715,6 @@ func (e *ExptSchedulerImpl) sendItemComplete(ctx context.Context, event *entity.
 		return nil
 	}
 	completeEvent := BuildItemCompleteEventFromScheduler(event.SpaceID, event.ExptID, event.ExptRunID, expt, item, evalSetItem, evalSetVersionID)
-	if len(publication) > 0 {
-		if len(publication) != 1 {
-			return errno.NewMQRetryErr("item-complete publication count invalid")
-		}
-		var err error
-		completeEvent, err = BuildItemCompleteEventFromSchedulerWithSource(event.SpaceID, event.ExptID, event.ExptRunID, expt, item, evalSetItem, evalSetVersionID, publication[0])
-		if err != nil {
-			return errno.WrapMQRetryErr(err)
-		}
-	}
 	if err := ctx.Err(); err != nil {
 		return errno.WrapMQRetryErr(err)
 	}

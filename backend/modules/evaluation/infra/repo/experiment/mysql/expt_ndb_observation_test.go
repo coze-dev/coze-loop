@@ -18,32 +18,22 @@ import (
 // Only Begin options are simulated; all data queries use the actual MySQL driver.
 // This cannot certify production NDB acceptance.
 func TestNDBObservationMySQLDefaultBegin(t *testing.T) {
-	for _, operation := range []string{"legacy_queueing_scan", "standard_source"} {
-		t.Run(operation, func(t *testing.T) {
-			f := newCurrentResultFixture(t, "")
-			provider := newObservationProvider(t, "READ-COMMITTED")
-			provider.rejectExplicit = true
-			before := f.snapshot()
-			if operation == "legacy_queueing_scan" {
-				require.NoError(t, f.conn.Model(&model.ExptItemResult{}).Where("space_id=?", f.space).Update("status", int32(entity.ItemRunState_Queueing)).Error)
-				require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=?", f.space).Update("status", int32(entity.ItemRunState_Queueing)).Error)
-				before = f.snapshot()
-				rows, err := NewExptItemResultDAO(provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, false)
-				require.NoError(t, err, "default-off legacy queue must not fail at NDB Begin")
-				require.Len(t, rows, 3)
-				for _, row := range rows {
-					require.Equal(t, entity.ItemRunState_Queueing, row.Status)
-					require.Empty(t, row.RequestID)
-				}
-			} else {
-				source, err := NewExptResultPublishDAO(provider).(*ExptResultPublishDAOImpl).GetStandardEvalOutputSource(context.Background(), f.space, f.expt, 0, f.item)
-				require.NoError(t, err, "source RPC DAO must not fail at NDB Begin")
-				require.NotNil(t, source)
-				require.Equal(t, f.run, source.Source.Current.RunID)
-			}
-			require.Equal(t, before, f.snapshot(), "observers must leave all eleven tables unchanged")
-		})
-	}
+	t.Run("scan", func(t *testing.T) {
+		f := newCurrentResultFixture(t, "")
+		provider := newObservationProvider(t, "READ-COMMITTED")
+		provider.rejectExplicit = true
+		require.NoError(t, f.conn.Model(&model.ExptItemResult{}).Where("space_id=?", f.space).Update("status", int32(entity.ItemRunState_Queueing)).Error)
+		require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=?", f.space).Update("status", int32(entity.ItemRunState_Queueing)).Error)
+		before := f.snapshot()
+		rows, err := NewExptItemResultDAO(provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, false)
+		require.NoError(t, err, "default-off legacy queue must not fail at NDB Begin")
+		require.Len(t, rows, 3)
+		for _, row := range rows {
+			require.Equal(t, entity.ItemRunState_Queueing, row.Status)
+			require.Empty(t, row.RequestID)
+		}
+		require.Equal(t, before, f.snapshot(), "observers must leave all eleven tables unchanged")
+	})
 }
 
 type readonlyObservationProbe struct {
@@ -103,106 +93,87 @@ func (p *readonlyObservationProbe) assert(t *testing.T, f *currentResultFixture,
 func TestNDBObservationMySQLFullSourceChanges(t *testing.T) {
 	changes := []string{"latest", "new_run", "raw_manual", "same_request_new_record", "registered", "inline", "physical_ref", "canonical_terminal", "runlog_processing", "run_terminal", "turn_status", "item_config", "raw_ext", "retry_cycle"}
 	for _, isolation := range []string{"READ-COMMITTED", "REPEATABLE-READ"} {
-		for _, operation := range []string{"scan", "standard"} {
-			for _, change := range changes {
-				t.Run(isolation+"/"+operation+"/"+change, func(t *testing.T) {
-					f := newScanObservationFixture(t)
-					if change == "raw_manual" {
-						f.token("")
+		for _, change := range changes {
+			t.Run(isolation+"/scan/"+change, func(t *testing.T) {
+				f := newScanObservationFixture(t)
+				if change == "raw_manual" {
+					f.token("")
+				}
+				if change == "retry_cycle" {
+					require.NoError(t, f.conn.Model(&model.ExptItemResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", int32(entity.ItemRunState_Processing)).Error)
+					require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Updates(map[string]any{"status": int32(entity.ItemRunState_Processing), "result_state": int32(entity.ExptItemResultStateDefault)}).Error)
+				}
+				expectedRows, err := NewExptItemResultDAO(f.provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, false)
+				require.NoError(t, err)
+				provider := newObservationProvider(t, isolation)
+				conn := provider.NewSession(context.Background())
+				probe := observeReadonlySQL(t, conn)
+				expectedSnapshot := f.snapshot()
+				var once sync.Once
+				// End of the complete first collection: all old source values
+				// already exist, before the inner observer queries start.
+				require.NoError(t, conn.Callback().Query().After("observation_query").Register("observation_change", func(tx *gorm.DB) {
+					if tx.Statement.Table != "expt_turn_evaluator_result_ref" {
+						return
 					}
-					if change == "retry_cycle" {
-						require.NoError(t, f.conn.Model(&model.ExptItemResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", int32(entity.ItemRunState_Processing)).Error)
-						require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Updates(map[string]any{"status": int32(entity.ItemRunState_Processing), "result_state": int32(entity.ExptItemResultStateDefault)}).Error)
-					}
-					expectedSource, err := NewExptResultPublishDAO(f.provider).(*ExptResultPublishDAOImpl).GetStandardEvalOutputSource(context.Background(), f.space, f.expt, 0, f.item)
-					require.NoError(t, err)
-					expectedRows, err := NewExptItemResultDAO(f.provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, false)
-					require.NoError(t, err)
-					provider := newObservationProvider(t, isolation)
-					conn := provider.NewSession(context.Background())
-					probe := observeReadonlySQL(t, conn)
-					expectedSnapshot := f.snapshot()
-					var once sync.Once
-					// End of the complete first collection: all old source values
-					// already exist, before the inner observer queries start.
-					require.NoError(t, conn.Callback().Query().After("observation_query").Register("observation_change", func(tx *gorm.DB) {
-						if tx.Statement.Table != "expt_turn_evaluator_result_ref" {
-							return
-						}
-						once.Do(func() {
-							switch change {
-							case "latest":
-								require.NoError(t, f.conn.Model(&model.Experiment{}).Where("space_id=?", f.space).Update("latest_run_id", f.run+1).Error)
-							case "new_run":
-								require.NoError(t, f.provider.Transaction(context.Background(), func(writer *gorm.DB) error {
-									if err := writer.Model(&model.Experiment{}).Where("space_id=?", f.space).Update("latest_run_id", f.run+1).Error; err != nil {
-										return err
-									}
-									return writer.Model(&model.ExptItemResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("expt_run_id", f.run+1).Error
-								}))
-							case "raw_manual":
-								f.token("rq2")
-							case "same_request_new_record":
-								require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=? AND turn_id=0", f.space, f.item).Update("target_result_id", f.base+99).Error)
-							case "registered", "inline":
-								refs := &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{{VersionID: f.base + 51, Alias: "alias", RecordID: f.base + 61}}, Inline: []*entity.InlineEvalResult{{InlineKey: "inline", RecordID: f.base + 62}}}
-								if change == "registered" {
-									refs.Registered[0].RecordID++
-								} else {
-									refs.Inline[0].RecordID++
+					once.Do(func() {
+						switch change {
+						case "latest":
+							require.NoError(t, f.conn.Model(&model.Experiment{}).Where("space_id=?", f.space).Update("latest_run_id", f.run+1).Error)
+						case "new_run":
+							require.NoError(t, f.provider.Transaction(context.Background(), func(writer *gorm.DB) error {
+								if err := writer.Model(&model.Experiment{}).Where("space_id=?", f.space).Update("latest_run_id", f.run+1).Error; err != nil {
+									return err
 								}
-								raw, err := json.Marshal(refs)
-								require.NoError(t, err)
-								require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=? AND turn_id=0", f.space, f.item).Update("evaluator_result_ids", raw).Error)
-							case "physical_ref":
-								require.NoError(t, f.conn.Model(&model.ExptTurnEvaluatorResultRef{}).Where("space_id=?", f.space).Update("evaluator_result_id", f.base+99).Error)
-							case "canonical_terminal":
-								require.NoError(t, f.conn.Model(&model.ExptItemResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", int32(entity.ItemRunState_Terminal)).Error)
-							case "runlog_processing":
-								require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", int32(entity.ItemRunState_Processing)).Error)
-							case "run_terminal":
-								require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(entity.ExptStatus_Success)).Error)
-							case "turn_status":
-								require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=? AND turn_id=0", f.space, f.item).Update("status", int32(entity.TurnRunState_Terminal)).Error)
-							case "item_config":
-								require.NoError(t, f.conn.Model(&model.ExptItemRef{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("item_config", []byte(`{"target_source_space_id":99}`)).Error)
-							case "raw_ext":
-								require.NoError(t, f.conn.Model(&model.ExptItemResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("ext", []byte(`{"other":"changed"}`)).Error)
-							case "retry_cycle":
-								// Retry state returns to Processing, but monotonic retry
-								// count remains evidence of the new observation generation.
-								require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("retry_times", 2).Error)
+								return writer.Model(&model.ExptItemResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("expt_run_id", f.run+1).Error
+							}))
+						case "raw_manual":
+							f.token("rq2")
+						case "same_request_new_record":
+							require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=? AND turn_id=0", f.space, f.item).Update("target_result_id", f.base+99).Error)
+						case "registered", "inline":
+							refs := &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{{VersionID: f.base + 51, Alias: "alias", RecordID: f.base + 61}}, Inline: []*entity.InlineEvalResult{{InlineKey: "inline", RecordID: f.base + 62}}}
+							if change == "registered" {
+								refs.Registered[0].RecordID++
+							} else {
+								refs.Inline[0].RecordID++
 							}
-							expectedSnapshot = f.snapshot()
-						})
-					}))
-					defer func() { require.NoError(t, conn.Callback().Query().Remove("observation_change")) }()
-					if operation == "scan" {
-						rows, err := NewExptItemResultDAO(provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, false)
-						if isolation == "READ-COMMITTED" {
-							require.Error(t, err)
-							require.Nil(t, rows)
-						} else {
+							raw, err := json.Marshal(refs)
 							require.NoError(t, err)
-							require.Equal(t, expectedRows, rows)
+							require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=? AND turn_id=0", f.space, f.item).Update("evaluator_result_ids", raw).Error)
+						case "physical_ref":
+							require.NoError(t, f.conn.Model(&model.ExptTurnEvaluatorResultRef{}).Where("space_id=?", f.space).Update("evaluator_result_id", f.base+99).Error)
+						case "canonical_terminal":
+							require.NoError(t, f.conn.Model(&model.ExptItemResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", int32(entity.ItemRunState_Terminal)).Error)
+						case "runlog_processing":
+							require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", int32(entity.ItemRunState_Processing)).Error)
+						case "run_terminal":
+							require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(entity.ExptStatus_Success)).Error)
+						case "turn_status":
+							require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=? AND turn_id=0", f.space, f.item).Update("status", int32(entity.TurnRunState_Terminal)).Error)
+						case "item_config":
+							require.NoError(t, f.conn.Model(&model.ExptItemRef{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("item_config", []byte(`{"target_source_space_id":99}`)).Error)
+						case "raw_ext":
+							require.NoError(t, f.conn.Model(&model.ExptItemResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("ext", []byte(`{"other":"changed"}`)).Error)
+						case "retry_cycle":
+							// Retry state returns to Processing, but monotonic retry
+							// count remains evidence of the new observation generation.
+							require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("retry_times", 2).Error)
 						}
-					} else {
-						source, err := NewExptResultPublishDAO(provider).(*ExptResultPublishDAOImpl).GetStandardEvalOutputSource(context.Background(), f.space, f.expt, 0, f.item)
-						if isolation == "READ-COMMITTED" {
-							// A moved latest/canonical source is also allowed to be
-							// rejected immediately as absent, before final equality.
-							if change != "latest" {
-								require.Error(t, err)
-							}
-							require.Nil(t, source)
-						} else {
-							require.NoError(t, err)
-							require.Equal(t, expectedSource, source)
-						}
-					}
-					probe.assert(t, f, expectedSnapshot)
-				})
-			}
+						expectedSnapshot = f.snapshot()
+					})
+				}))
+				defer func() { require.NoError(t, conn.Callback().Query().Remove("observation_change")) }()
+				rows, err := NewExptItemResultDAO(provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, false)
+				if isolation == "READ-COMMITTED" {
+					require.Error(t, err)
+					require.Nil(t, rows)
+				} else {
+					require.NoError(t, err)
+					require.Equal(t, expectedRows, rows)
+				}
+				probe.assert(t, f, expectedSnapshot)
+			})
 		}
 	}
 }
@@ -210,31 +181,23 @@ func TestNDBObservationMySQLFullSourceChanges(t *testing.T) {
 // After its first value was observed, a config mutation must invalidate the
 // complete RC observation rather than return any partially collected source.
 func TestNDBObservationMySQLChangedSourceDiscardsAll(t *testing.T) {
-	for _, operation := range []string{"scan", "standard"} {
-		t.Run(operation, func(t *testing.T) {
-			f := newScanObservationFixture(t)
-			provider := newObservationProvider(t, "READ-COMMITTED")
-			conn := provider.NewSession(context.Background())
-			var once sync.Once
-			require.NoError(t, conn.Callback().Query().After("gorm:query").Register("change_after_first_config", func(tx *gorm.DB) {
-				if tx.Statement.Table == "expt_item_ref" {
-					once.Do(func() {
-						require.NoError(t, f.conn.Model(&model.ExptItemRef{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("item_config", []byte(`{"target_source_space_id":99}`)).Error)
-					})
-				}
-			}))
-			defer func() { require.NoError(t, conn.Callback().Query().Remove("change_after_first_config")) }()
-			if operation == "scan" {
-				rows, err := NewExptItemResultDAO(provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, false)
-				require.Error(t, err, "RC change must fail closed without partial scan rows")
-				require.Nil(t, rows)
-			} else {
-				source, err := NewExptResultPublishDAO(provider).(*ExptResultPublishDAOImpl).GetStandardEvalOutputSource(context.Background(), f.space, f.expt, 0, f.item)
-				require.Error(t, err, "RC change must not adopt later source fields")
-				require.Nil(t, source)
+	t.Run("scan", func(t *testing.T) {
+		f := newScanObservationFixture(t)
+		provider := newObservationProvider(t, "READ-COMMITTED")
+		conn := provider.NewSession(context.Background())
+		var once sync.Once
+		require.NoError(t, conn.Callback().Query().After("gorm:query").Register("change_after_first_config", func(tx *gorm.DB) {
+			if tx.Statement.Table == "expt_item_ref" {
+				once.Do(func() {
+					require.NoError(t, f.conn.Model(&model.ExptItemRef{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("item_config", []byte(`{"target_source_space_id":99}`)).Error)
+				})
 			}
-		})
-	}
+		}))
+		defer func() { require.NoError(t, conn.Callback().Query().Remove("change_after_first_config")) }()
+		rows, err := NewExptItemResultDAO(provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, false)
+		require.Error(t, err, "RC change must fail closed without partial scan rows")
+		require.Nil(t, rows)
+	})
 }
 
 func TestNDBObservationMySQLStableFullSource(t *testing.T) {
@@ -242,7 +205,7 @@ func TestNDBObservationMySQLStableFullSource(t *testing.T) {
 		for _, kind := range []string{"logged", "resulted_finished", "raw_ref0_version0"} {
 			t.Run(isolation+"/"+kind, func(t *testing.T) {
 				f := newScanObservationFixture(t)
-				if kind != "logged" {
+				if kind == "resulted_finished" {
 					require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("result_state", int32(entity.ExptItemResultStateResulted)).Error)
 					require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(entity.ExptStatus_Success)).Error)
 					for _, table := range []string{"expt_turn_result", "expt_turn_result_run_log"} {
@@ -256,25 +219,21 @@ func TestNDBObservationMySQLStableFullSource(t *testing.T) {
 					}
 					require.NoError(t, f.conn.Model(&model.ExptTurnEvaluatorResultRef{}).Where("space_id=?", f.space).Update("source_type", 0).Error)
 				}
-				expectedSource, err := NewExptResultPublishDAO(f.provider).(*ExptResultPublishDAOImpl).GetStandardEvalOutputSource(context.Background(), f.space, f.expt, 0, f.item)
-				require.NoError(t, err)
-				require.NotNil(t, expectedSource)
 				expectedRows, err := NewExptItemResultDAO(f.provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, true)
 				require.NoError(t, err)
 				before := f.snapshot()
 				provider := newObservationProvider(t, isolation)
 				provider.rejectExplicit = true
 				probe := observeReadonlySQL(t, provider.NewSession(context.Background()))
-				source, err := NewExptResultPublishDAO(provider).(*ExptResultPublishDAOImpl).GetStandardEvalOutputSource(context.Background(), f.space, f.expt, 0, f.item)
-				require.NoError(t, err)
-				require.Equal(t, expectedSource, source, "complete stable source including canonical/log/ref/config must match")
 				rows, err := NewExptItemResultDAO(provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, true)
 				require.NoError(t, err)
 				require.Equal(t, expectedRows, rows)
 				if kind == "raw_ref0_version0" {
-					require.Empty(t, source.Source.Current.RequestID)
-					require.Zero(t, source.Source.Current.ItemVersionID)
-					require.Zero(t, source.Source.CurrentRefs[0].SourceType)
+					require.Len(t, rows, 3)
+					require.NotNil(t, rows[0].Publication)
+					require.Empty(t, rows[0].Publication.Source.Current.RequestID)
+					require.Zero(t, rows[0].Publication.Source.Current.ItemVersionID)
+					require.Zero(t, rows[0].Publication.Source.CurrentRefs[0].SourceType)
 				}
 				probe.assert(t, f, before)
 			})
