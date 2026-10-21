@@ -315,19 +315,11 @@ func (e *ExptItemEventEvalServiceImpl) handleCurrentEventErr(ctx context.Context
 		return err
 	}
 	if debt {
-		// The existing whole-run finish contract is retained; task 4.5 supplies its run boundary.
-		cid := fmt.Sprintf("terminate:indebt:%d", event.ExptRunID)
-		if err := e.manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(cid), entity.WithCompleteInterval(2*time.Second)); err != nil {
+		if terminate, ok := e.manager.(IExptCurrentRunTerminator); ok {
+			_, err := terminate.TerminateCurrentRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, execution.Source, entity.WithStatus(entity.ExptStatus_Terminated), entity.WithStatusMessage(evalErr.Error()))
 			return err
 		}
-		if err := e.manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, entity.WithStatus(entity.ExptStatus_Terminated), entity.WithStatusMessage(evalErr.Error()), entity.WithCID(cid), entity.WithCompleteInterval(2*time.Second)); err != nil {
-			return err
-		}
-		e.releaseCentralQuotaOutsideGate(ctx, event, evalErr, "expt terminated on indebt")
-		if err := ctx.Err(); err != nil {
-			return errno.WrapMQRetryErr(err)
-		}
-		return nil
+		return errno.NewMQRetryErr("source-aware debt termination provider missing")
 	}
 	return nil
 }

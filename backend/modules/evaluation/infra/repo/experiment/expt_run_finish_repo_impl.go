@@ -16,6 +16,15 @@ type ExptRunFinishRepoImpl struct{ dao repo.IExptRunFinishRepo }
 func NewExptRunFinishRepo(provider db.Provider) repo.IExptRunFinishRepo {
 	return &ExptRunFinishRepoImpl{dao: mysql.NewExptRunFinishDAO(provider)}
 }
+
 func (r *ExptRunFinishRepoImpl) FinishCurrentRun(ctx context.Context, request *entity.ExptRunFinishRequest) (*entity.ExptRunFinishResult, error) {
 	return r.dao.FinishCurrentRun(ctx, request)
+}
+
+func (r *ExptRunFinishRepoImpl) TerminateCurrentRun(ctx context.Context, request *entity.ExptRunTerminationRequest) (*entity.ExptRunTerminationResult, error) {
+	return r.dao.(repo.IExptRunTerminationRepo).TerminateCurrentRun(ctx, request)
+}
+
+func (r *ExptRunFinishRepoImpl) GetTerminationItemSource(ctx context.Context, space, expt, run, item int64) (*entity.ExptCurrentItemRunSource, error) {
+	return r.dao.(repo.IExptRunTerminationRepo).GetTerminationItemSource(ctx, space, expt, run, item)
 }
