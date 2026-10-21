@@ -15,6 +15,7 @@ import (
 
 	db "github.com/coze-dev/coze-loop/backend/infra/db"
 	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	repo "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -605,6 +606,21 @@ func (m *MockIExptItemResultRepo) ScanCurrentRequests(ctx context.Context, space
 func (mr *MockIExptItemResultRepoMockRecorder) ScanCurrentRequests(ctx, spaceID, exptID, runID, retryFirst any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScanCurrentRequests", reflect.TypeOf((*MockIExptItemResultRepo)(nil).ScanCurrentRequests), ctx, spaceID, exptID, runID, retryFirst)
+}
+
+// ScanIncompleteDispatchObservations mocks base method.
+func (m *MockIExptItemResultRepo) ScanIncompleteDispatchObservations(ctx context.Context, spaceID, exptID, runID int64) ([]*repo.ExptDispatchObservation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScanIncompleteDispatchObservations", ctx, spaceID, exptID, runID)
+	ret0, _ := ret[0].([]*repo.ExptDispatchObservation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ScanIncompleteDispatchObservations indicates an expected call of ScanIncompleteDispatchObservations.
+func (mr *MockIExptItemResultRepoMockRecorder) ScanIncompleteDispatchObservations(ctx, spaceID, exptID, runID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScanIncompleteDispatchObservations", reflect.TypeOf((*MockIExptItemResultRepo)(nil).ScanIncompleteDispatchObservations), ctx, spaceID, exptID, runID)
 }
 
 // ScanItemResults mocks base method.
