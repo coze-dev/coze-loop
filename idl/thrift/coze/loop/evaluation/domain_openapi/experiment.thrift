@@ -319,6 +319,8 @@ struct Experiment {
     34: optional eval_target.EvalTarget eval_target
     // 评估器 id + version 关联（与 evaluator_field_mapping 共同使用，兼容老逻辑）
     35: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list (go.tag = 'json:"evaluator_id_version_list"')
+    36: optional i64 eval_set_id (api.js_conv = 'true', go.tag = 'json:"eval_set_id"')
+    37: optional i64 eval_set_version_id (api.js_conv = 'true', go.tag = 'json:"eval_set_version_id"')
 
     // 统计信息
     50: optional ExperimentStatistics expt_stats
