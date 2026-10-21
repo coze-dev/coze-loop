@@ -133,15 +133,35 @@ func (m *ExptMangerImpl) prepareTerminalCandidatesAndReusableRefs(ctx context.Co
 		} else if item.ExptRunID == runID {
 			return nil, fmt.Errorf("current retry item log missing")
 		}
-		prepared.FrozenItemRef, err = m.itemRefRepo.GetByExptIDAndItemID(ctx, expt.SpaceID, expt.ID, item.ItemID)
-		if err != nil {
-			return nil, err
+		switch expt.EvalSetSourceType {
+		case 0, entity.ExptEvalSetSourceType_SingleSet:
+			// A committed experiment binding and the existing item/turn rows are
+			// the frozen single-set source. Never fall back to reading a live draft.
+			if expt.EvalSetID <= 0 || resolveLoadSpaceID(expt.SpaceID, expt.EvalSetSpaceID) <= 0 || resolveSetReadVersionID(expt.EvalSetID, expt.EvalSetVersionID) == nil || item.ItemVersionID < 0 {
+				return nil, fmt.Errorf("frozen single-set retry source missing")
+			}
+			if log := prepared.CurrentItemLog; log != nil && log.ItemVersionID != item.ItemVersionID {
+				return nil, fmt.Errorf("frozen retry item version mismatch")
+			}
+			prepared.SingleSetSource = &entity.PreparedRetrySingleSetSource{
+				SourceType: expt.EvalSetSourceType, EvalSetID: expt.EvalSetID,
+				EvalSetVersionID: expt.EvalSetVersionID, EvalSetSpaceID: expt.EvalSetSpaceID,
+				TargetID: expt.TargetID, TargetVersionID: expt.TargetVersionID,
+				TargetSpaceID: expt.TargetSpaceID, TargetType: expt.TargetType,
+			}
+		case entity.ExptEvalSetSourceType_MultiSetConfig:
+			prepared.FrozenItemRef, err = m.itemRefRepo.GetByExptIDAndItemID(ctx, expt.SpaceID, expt.ID, item.ItemID)
+			if err != nil {
+				return nil, err
+			}
+			ref := prepared.FrozenItemRef
+			if ref == nil || ref.SpaceID != expt.SpaceID || ref.ExptID != expt.ID || ref.ItemID != item.ItemID || ref.ItemVersionID != item.ItemVersionID {
+				return nil, fmt.Errorf("frozen retry item version mismatch")
+			}
+		default:
+			return nil, fmt.Errorf("invalid retry evaluation set source type")
 		}
-		ref := prepared.FrozenItemRef
-		if ref == nil || ref.SpaceID != expt.SpaceID || ref.ExptID != expt.ID || ref.ItemID != item.ItemID || ref.ItemVersionID != item.ItemVersionID {
-			return nil, fmt.Errorf("frozen retry item version mismatch")
-		}
-		prepared.ItemVersionID = ref.ItemVersionID
+		prepared.ItemVersionID = item.ItemVersionID
 		if err := m.prepareManualRetryTurns(ctx, expt, runID, mode, prepared, records); err != nil {
 			return nil, err
 		}
@@ -218,8 +238,10 @@ func (m *ExptMangerImpl) prepareManualRetryTurns(ctx context.Context, expt *enti
 				prepared.EvaluatorResults = retryEvaluatorResultsFromRefs(turn.ID, prepared.SourceRefs)
 			} else {
 				targetSpace := expt.TargetSpaceID
-				if cfg := item.FrozenItemRef.ItemConfig; cfg != nil && cfg.TargetSourceSpaceID > 0 {
-					targetSpace = cfg.TargetSourceSpaceID
+				if item.FrozenItemRef != nil {
+					if cfg := item.FrozenItemRef.ItemConfig; cfg != nil && cfg.TargetSourceSpaceID > 0 {
+						targetSpace = cfg.TargetSourceSpaceID
+					}
 				}
 				targetVersion := expt.TargetVersionID
 				targetRequired := !shouldSkipTargetNode(expt)

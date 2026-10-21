@@ -10,8 +10,23 @@ type PreparedRetryItem struct {
 	SourceItem        *ExptItemResult
 	CurrentItemLog    *ExptItemResultRunLog
 	FrozenItemRef     *ExptItemRef
+	SingleSetSource   *PreparedRetrySingleSetSource
 	SourceTurnLogs    []*ExptTurnResultRunLog
 	Turns             []*PreparedRetryTurn
+}
+
+// PreparedRetrySingleSetSource freezes the existing experiment binding for the
+// single-set path, whose start does not materialize expt_item_ref rows.
+// It is preparation metadata only and is never persisted as a synthetic ref.
+type PreparedRetrySingleSetSource struct {
+	SourceType       ExptEvalSetSourceType
+	EvalSetID        int64
+	EvalSetVersionID int64
+	EvalSetSpaceID   int64
+	TargetID         int64
+	TargetVersionID  int64
+	TargetSpaceID    int64
+	TargetType       EvalTargetType
 }
 
 type PreparedRetryTurn struct {

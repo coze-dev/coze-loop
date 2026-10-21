@@ -83,7 +83,7 @@ func TestManualRetryPrepareSuccessfulStages(t *testing.T) {
 				}
 				eval.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).Return([]*entity.EvaluatorRecord{{ID: 61, ExperimentID: 7, ExperimentRunID: 8, ItemID: evalItem, TurnID: 21, EvaluatorVersionID: 51, Status: entity.EvaluatorRunStatusSuccess}, {ID: 62, Status: entity.EvaluatorRunStatusFail}}, nil).AnyTimes()
 			}
-			got, err := preparer.prepareTerminalCandidatesAndReusableRefs(context.Background(), &entity.Experiment{ID: 7, SpaceID: 9, TargetVersionID: 41, ExptType: entity.ExptType_Offline}, 8, entity.EvaluationModeFailRetry, nil, eval)
+			got, err := preparer.prepareTerminalCandidatesAndReusableRefs(context.Background(), &entity.Experiment{ID: 7, SpaceID: 9, TargetVersionID: 41, EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig, ExptType: entity.ExptType_Offline}, 8, entity.EvaluationModeFailRetry, nil, eval)
 			if kind == "wrong_target_source" || tc.wrongTopVersion {
 				require.ErrorContains(t, err, "target source")
 				require.Nil(t, got)
@@ -127,7 +127,7 @@ func TestManualRetryPrepareManualSelection(t *testing.T) {
 	turns.EXPECT().GetItemTurnResults(gomock.Any(), int64(7), int64(11), int64(9)).Return([]*entity.ExptTurnResult{{ID: 301, SpaceID: 9, ExptID: 7, ExptRunID: 8, ItemID: 11, ItemVersionID: 91, TurnID: 21, Status: 1, TargetResultID: 31}}, nil)
 	turns.EXPECT().GetItemTurnRunLogs(gomock.Any(), int64(7), int64(8), int64(11), int64(9)).Return([]*entity.ExptTurnResultRunLog{{ID: 401, SpaceID: 9, ExptID: 7, ExptRunID: 8, ItemID: 11, ItemVersionID: 91, TurnID: 21}}, nil)
 	turns.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(9), []int64{301}).Return(nil, nil)
-	got, err := preparer.prepareTerminalCandidatesAndReusableRefs(context.Background(), &entity.Experiment{ID: 7, SpaceID: 9}, 8, entity.EvaluationModeRetryItems, []int64{13, 11, 12, 11}, nil)
+	got, err := preparer.prepareTerminalCandidatesAndReusableRefs(context.Background(), &entity.Experiment{ID: 7, SpaceID: 9, EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig}, 8, entity.EvaluationModeRetryItems, []int64{13, 11, 12, 11}, nil)
 	require.NoError(t, err)
 	require.Len(t, got.Items, 1)
 	require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 12, Reason: "processing"}, {ItemID: 13, Reason: "queueing"}}, got.RejectedItems)
