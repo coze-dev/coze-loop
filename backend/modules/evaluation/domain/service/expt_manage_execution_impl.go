@@ -336,7 +336,13 @@ func (e *ExptMangerImpl) cleanupUnscheduledRun(ctx context.Context, exptID, runI
 	cancelState()
 
 	unlockCtx, cancelUnlock := context.WithTimeout(ctx, 2*time.Second)
-	released, unlockErr := e.mutex.UnlockForce(unlockCtx, e.makeExptMutexLockKey(exptID))
+	var released bool
+	var unlockErr error
+	if e.runFinishRepo != nil {
+		released, unlockErr = e.mutex.UnlockWithValue(unlockCtx, e.makeExptMutexLockKey(exptID), strconv.FormatInt(runID, 10))
+	} else {
+		released, unlockErr = e.mutex.UnlockForce(unlockCtx, e.makeExptMutexLockKey(exptID))
+	}
 	cancelUnlock()
 	if stateErr != nil || unlockErr != nil {
 		logs.CtxError(ctx, "[ExptEval][RunLock] cleanup failed [expt_id=%v run_id=%v state_err=%v unlock_err=%v]", exptID, runID, stateErr, unlockErr)
@@ -1752,7 +1758,14 @@ func (e *ExptMangerImpl) unlockCompletingRun(ctx context.Context, exptID, exptRu
 
 func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) (err error) {
 	duration := time.Duration(e.configer.GetExptExecConf(ctx, spaceID).GetZombieIntervalSecond()) * time.Second
-	locked, err := e.mutex.LockBackoff(ctx, e.makeExptMutexLockKey(exptID), duration, time.Second)
+	var locked bool
+	if e.runFinishRepo != nil {
+		locked, _, err = e.mutex.BackoffLockWithValue(ctx, e.makeExptMutexLockKey(exptID), strconv.FormatInt(exptRunID, 10), duration, time.Second)
+	} else {
+		// Existing constructor callers retain the old lock contract. Production
+		// uses NewExptManagerWithRunFinish and binds the lifecycle owner to runID.
+		locked, err = e.mutex.LockBackoff(ctx, e.makeExptMutexLockKey(exptID), duration, time.Second)
+	}
 	if err != nil {
 		return err
 	}
@@ -1828,6 +1841,15 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 		if err != nil {
 			logs.CtxInfo(ctx, "[ExptEval][RunLock] lock occupied [expt_id=%v holder=%s]", exptID, existedRunID)
 			return 0, false, errorx.NewByCode(errno.ExperimentRunningExistedCode)
+		}
+		if e.runFinishRepo != nil {
+			existing, readErr := e.runLogRepo.Get(ctx, exptID, runID)
+			if readErr != nil {
+				return 0, false, readErr
+			}
+			if existing == nil || existing.SpaceID != spaceID || existing.ExptID != exptID || existing.ExptRunID != runID || entity.ExptRunMode(existing.Mode) != entity.EvaluationModeRetryItems || (existing.Status != int64(entity.ExptStatus_Pending) && existing.Status != int64(entity.ExptStatus_Processing)) {
+				return 0, false, errorx.NewByCode(errno.ExperimentRunningExistedCode)
+			}
 		}
 		logs.CtxDebug(ctx, "[ExptEval][RunLock] joining existing run [expt_id=%v run_id=%v]", exptID, runID)
 

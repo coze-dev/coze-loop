@@ -411,7 +411,7 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	if run.SpaceID != expt.SpaceID || run.ExptID != expt.ID || run.ExptRunID != normalized.ExpectedRunID {
 		return nil, errorx.NewByCode(errno.ManualRetryRunConflictCode)
 	}
-	if run.Status != int64(entity.ExptStatus_Processing) {
+	if run.Status != int64(entity.ExptStatus_Pending) && run.Status != int64(entity.ExptStatus_Processing) {
 		return nil, errorx.NewByCode(errno.ManualRetryRunFinishedCode)
 	}
 	opCtx, stop := context.WithCancel(lockCtx)

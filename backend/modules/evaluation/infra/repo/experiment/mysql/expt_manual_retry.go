@@ -180,7 +180,7 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 		if expt.LatestRunID != request.RunID {
 			return errorx.NewByCode(errno.ManualRetryRunConflictCode)
 		}
-		if expt.Status != int32(entity.ExptStatus_Processing) || gptr.Indirect(run.Status) != int64(entity.ExptStatus_Processing) || expt.ExptType != int32(entity.ExptType_Offline) {
+		if expt.Status != int32(entity.ExptStatus_Processing) || (gptr.Indirect(run.Status) != int64(entity.ExptStatus_Pending) && gptr.Indirect(run.Status) != int64(entity.ExptStatus_Processing)) || expt.ExptType != int32(entity.ExptType_Offline) {
 			return errorx.NewByCode(errno.ManualRetryRunFinishedCode)
 		}
 		receipt = &entity.ManualRetryReceipt{RequestID: request.RequestID, PayloadHash: request.PayloadHash, SnapshotAtMS: request.SnapshotAtMS, RejectedItems: append([]*entity.ManualRetryRejectedItem(nil), request.RejectedItems...)}
@@ -615,7 +615,7 @@ func (d *ExptManualRetryDAOImpl) PreflightTerminalItems(ctx context.Context, req
 		if expt.SpaceID != request.SpaceID || run.SpaceID != request.SpaceID || expt.LatestRunID != request.RunID {
 			return errorx.NewByCode(errno.ManualRetryRunConflictCode)
 		}
-		if expt.Status != int32(entity.ExptStatus_Processing) || expt.ExptType != int32(entity.ExptType_Offline) || gptr.Indirect(run.Status) != int64(entity.ExptStatus_Processing) {
+		if expt.Status != int32(entity.ExptStatus_Processing) || expt.ExptType != int32(entity.ExptType_Offline) || (gptr.Indirect(run.Status) != int64(entity.ExptStatus_Pending) && gptr.Indirect(run.Status) != int64(entity.ExptStatus_Processing)) {
 			return errorx.NewByCode(errno.ManualRetryRunFinishedCode)
 		}
 		chunks, err := decodeManualRetryRunItems(run)
