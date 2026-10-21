@@ -411,7 +411,7 @@ func DomainEvaluationSetDTO2OpenAPI(dto *domain_eval_set.EvaluationSet) *openapi
 
 	var datasetType *string
 	if dto.Type != nil {
-		value := string(*dto.Type)
+		value := *dto.Type
 		datasetType = &value
 	}
 	tags := make([]*entity.ResourceTag, 0, len(dto.Tags))
@@ -422,8 +422,8 @@ func DomainEvaluationSetDTO2OpenAPI(dto *domain_eval_set.EvaluationSet) *openapi
 		tags = append(tags, &entity.ResourceTag{
 			TagName:     tag.TagName,
 			TagKeyID:    gptr.Indirect(tag.TagKeyID),
-			ContentType: string(gptr.Indirect(tag.ContentType)),
-			Status:      string(gptr.Indirect(tag.Status)),
+			ContentType: gptr.Indirect(tag.ContentType),
+			Status:      gptr.Indirect(tag.Status),
 		})
 	}
 
