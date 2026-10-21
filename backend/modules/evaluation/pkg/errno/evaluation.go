@@ -547,9 +547,14 @@ const (
 	ManualRetryDisabledCode              = 601204106 // same-run manual retry running retry disabled
 	manualRetryDisabledMessage           = "running retry disabled"
 	manualRetryDisabledNoAffectStability = true
+
+	StandardEvalOutputSourceMismatchCode = 601204107
+	StandardEvalOutputSourceNotReadyCode = 601204108
 )
 
 func init() {
+	code.Register(StandardEvalOutputSourceMismatchCode, "standard_eval_output_source_mismatch", code.WithAffectStability(false))
+	code.Register(StandardEvalOutputSourceNotReadyCode, "standard_eval_output_source_not_ready", code.WithAffectStability(false))
 
 	code.Register(
 		CommonNoPermissionCode,
