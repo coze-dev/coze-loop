@@ -192,9 +192,9 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	if rmc := req.GetRunModeConfig(); rmc != nil {
 		if rmc.IsSetRunMode() && !isValidExptRunModeDTO(rmc) {
 			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
-				"invalid run_mode %d (supported: %d=single_turn, %d=fixed_script_multi_turn, %d=sua_multi_turn, %d=goal)",
+				"invalid run_mode %d (supported: %d=single_turn, %d=fixed_script_multi_turn, %d=sua_multi_turn, %d=goal, %d=result_set)",
 				rmc.GetRunMode(), domain_expt.ExptRunMode_SingleTurn, domain_expt.ExptRunMode_FixedScriptMultiTurn,
-				domain_expt.ExptRunMode_SuaMultiTurn, domain_expt.ExptRunMode_Goal)))
+				domain_expt.ExptRunMode_SuaMultiTurn, domain_expt.ExptRunMode_Goal, domain_expt.ExptRunMode_ResultSet)))
 		}
 		if rmc.IsSetSuaMode() && !isValidExptSuaModeDTO(rmc.GetSuaMode()) {
 			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
@@ -849,7 +849,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 // emitSandboxAgentExperimentStarted 判断实验是否为沙箱 agent 类型, 是则上报 experiment_started。
 // 上报字段与看板保持一致: expt_id / dataset_id / dataset_version。
 func (e *experimentApplication) emitSandboxAgentExperimentStarted(ctx context.Context, exptDTO *domain_expt.Experiment) {
-	if e.sandboxAgentMetrics == nil || exptDTO == nil {
+	if e.sandboxAgentMetrics == nil || exptDTO == nil || exptDTO.GetRunModeConfig().GetRunMode() == domain_expt.ExptRunMode_ResultSet {
 		return
 	}
 	if exptDTO.GetEvalTarget().GetEvalTargetType() != domain_eval_target.EvalTargetType_SandboxAgent {
@@ -2090,7 +2090,7 @@ func isValidExptRunModeDTO(cfg *domain_expt.RunModeConfig) bool {
 	}
 	switch cfg.GetRunMode() {
 	case domain_expt.ExptRunMode_SingleTurn, domain_expt.ExptRunMode_FixedScriptMultiTurn,
-		domain_expt.ExptRunMode_SuaMultiTurn, domain_expt.ExptRunMode_Goal:
+		domain_expt.ExptRunMode_SuaMultiTurn, domain_expt.ExptRunMode_Goal, domain_expt.ExptRunMode_ResultSet:
 		return true
 	default:
 		return false

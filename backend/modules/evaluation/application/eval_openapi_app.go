@@ -1341,6 +1341,13 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		logs.CtxInfo(ctx, "report target record, record_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v, item_id: %v", req.GetInvokeID(), req.GetWorkspaceID(), actx.Event.ExptID, actx.Event.ExptRunID, actx.Event.EvalSetItemID)
 	}
 	outputData := target.ToInvokeOutputDataDO(req)
+	if actx.ExecutionKind == entity.RunModeResultSet {
+		outputData.EvalTargetUsage = nil
+		if outputData.Ext == nil {
+			outputData.Ext = make(map[string]string)
+		}
+		outputData.Ext["execution_kind"] = entity.RunModeResultSet
+	}
 	outputData.TimeConsumingMS = gptr.Of(time.Now().UnixMilli() - actx.AsyncUnixMS)
 	if err := e.targetSvc.ReportInvokeRecords(ctx, &entity.ReportTargetRecordParam{
 		SpaceID:                 req.GetWorkspaceID(),
@@ -1476,6 +1483,9 @@ func (e *EvalOpenAPIApplication) destroyDebugSandboxExecutions(ctx context.Conte
 //   - 错误分类根据 req.Status + req.ErrorCode 决定, 遵循 classifier 表.
 //   - submitTime 来自 AsyncCtx.AsyncUnixMS (提交侧写入), 未落时长度回退为 0.
 func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest, actx *entity.EvalAsyncCtx) {
+	if actx != nil && actx.ExecutionKind == entity.RunModeResultSet {
+		return
+	}
 	if e == nil || e.sandboxAgentMetric == nil || req == nil {
 		logs.CtxWarn(ctx, "[sandbox_agent_metrics] emitInvokeFinished skipped, metric_nil=%v, req_nil=%v",
 			e == nil || e.sandboxAgentMetric == nil, req == nil)
@@ -1568,6 +1578,7 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepMetric(ctx context.Context,
 	}
 
 	// 反查 asyncCtx 拿全部 tag; 拿不到时 tag 会走占位符, 但仍然上报以便看板不遗漏事件。
+	isResultSet := false
 	tags := metrics.SandboxAgentStepTags{
 		InvokeID: strconv.FormatInt(req.GetInvokeID(), 10),
 		StepName: req.GetStepName(),
@@ -1578,6 +1589,7 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepMetric(ctx context.Context,
 			// asyncCtx 反查失败不阻塞打点, 上报仅缺失 tag; 打个 warn 便于排障。
 			logs.CtxWarn(ctx, "ReportEvalTargetStepMetric: GetEvalAsyncCtx failed, invoke_id=%d, err=%v", req.GetInvokeID(), ctxErr)
 		} else if actx != nil {
+			isResultSet = actx.ExecutionKind == entity.RunModeResultSet
 			if actx.Event != nil {
 				tags.ExperimentID = actx.Event.ExptID
 				tags.ItemID = actx.Event.EvalSetItemID
@@ -1594,7 +1606,9 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepMetric(ctx context.Context,
 	case openapi.EvalTargetStepEventType_STARTED:
 		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit step_started, invoke_id=%d, step_name=%s, expt_id=%d, item_id=%d",
 			req.GetInvokeID(), req.GetStepName(), tags.ExperimentID, tags.ItemID)
-		e.sandboxAgentMetric.EmitStepStarted(tags)
+		if !isResultSet {
+			e.sandboxAgentMetric.EmitStepStarted(tags)
+		}
 	case openapi.EvalTargetStepEventType_FINISHED:
 		var stepErr error
 		if !req.GetSuccess() {
@@ -1602,7 +1616,9 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepMetric(ctx context.Context,
 		}
 		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit step_finished, invoke_id=%d, step_name=%s, success=%v, err_code=%d, duration_ms=%d",
 			req.GetInvokeID(), req.GetStepName(), req.GetSuccess(), req.GetErrorCode(), req.GetDurationMs())
-		e.sandboxAgentMetric.EmitStepFinished(tags, stepErr, req.GetErrorCode(), req.GetDurationMs())
+		if !isResultSet {
+			e.sandboxAgentMetric.EmitStepFinished(tags, stepErr, req.GetErrorCode(), req.GetDurationMs())
+		}
 	default:
 		logs.CtxWarn(ctx, "ReportEvalTargetStepMetric: unknown event_type=%v, invoke_id=%d, step_name=%s",
 			req.GetEventType(), req.GetInvokeID(), req.GetStepName())

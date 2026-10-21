@@ -32,6 +32,14 @@ import (
 type ExptCheckFn = func(ctx context.Context, expt *entity.Experiment, session *entity.Session) error
 
 func (e *ExptMangerImpl) CheckRun(ctx context.Context, expt *entity.Experiment, spaceID int64, session *entity.Session, opts ...entity.ExptRunCheckOptionFn) error {
+	if err := e.checkResultSetAdmission(ctx, spaceID, expt.EvalConf); err != nil {
+		return err
+	}
+	if expt.EvalConf.IsResultSet() {
+		if err := entity.ValidateResultSetTarget(expt.Target, spaceID); err != nil {
+			return err
+		}
+	}
 	opt := &entity.ExptRunCheckOption{}
 	for _, fn := range opts {
 		fn(opt)
@@ -821,7 +829,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 // (Target 需要额外从 evalTargetService 查出来)。所以判断 isSandboxAgentExperiment
 // 之前需要先 fallback 补查一次 target, 否则会静默跳过。
 func (e *ExptMangerImpl) emitSandboxAgentExperimentFinished(ctx context.Context, expt *entity.Experiment, status entity.ExptStatus, endAt time.Time) {
-	if e.sandboxAgentMetrics == nil || expt == nil {
+	if e.sandboxAgentMetrics == nil || expt == nil || expt.EvalConf.IsResultSet() {
 		logs.CtxWarn(ctx, "[sandbox_agent_metrics] emitExperimentFinished skipped, metrics_nil=%v, expt_nil=%v",
 			e.sandboxAgentMetrics == nil, expt == nil)
 		return

@@ -603,6 +603,9 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 		// experiment_group_key: 关联同组实验，默认为实验 ID。
 		// PO→DO 转换已保证非空（空则填实验 ID），此处直接透传。
 		ev.ExperimentGroupKey = expt.ExperimentGroupKey
+		if expt.EvalConf.IsResultSet() {
+			ev.EnableAnalysis = false
+		}
 		// created_by: 实验创建人 userID，实验级恒定，内存已加载零额外 IO。
 		ev.CreatedBy = expt.CreatedBy
 	}
@@ -750,7 +753,7 @@ func (e *ExptItemEvalCtxExecutor) emitSandboxAgentE2EStarted(ctx context.Context
 	if etec == nil || etec.Event == nil || etec.Expt == nil {
 		return
 	}
-	if !isSandboxAgentExpt(etec.Expt) {
+	if !isSandboxAgentExpt(etec.Expt) || etec.Expt.EvalConf.IsResultSet() {
 		return
 	}
 	if etec.Event.RetryTimes != 0 || etec.Event.AsyncReportTrigger || etec.Event.AsyncEvaluatorReportTrigger {
@@ -772,7 +775,7 @@ func (e *ExptItemEvalCtxExecutor) emitSandboxAgentE2EFinishedIfTerminal(ctx cont
 	if etec == nil || etec.Expt == nil || event == nil {
 		return
 	}
-	if !isSandboxAgentExpt(etec.Expt) {
+	if !isSandboxAgentExpt(etec.Expt) || etec.Expt.EvalConf.IsResultSet() {
 		return
 	}
 	if evalErr != nil {

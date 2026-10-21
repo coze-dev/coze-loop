@@ -304,6 +304,9 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	// case-file experiment_info。非多轮/未配时为空不透传。
 	if etec.Expt != nil && etec.Expt.EvalConf != nil && etec.Expt.EvalConf.RunModeConfig != nil {
 		ext[consts.TargetExecuteExtRunModeConfigKey] = json.Jsonify(etec.Expt.EvalConf.RunModeConfig)
+		if etec.Expt.EvalConf.IsResultSet() {
+			ext["execution_kind"] = entity.RunModeResultSet
+		}
 	}
 
 	var targetRecord *entity.EvalTargetRecord
@@ -373,6 +376,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		DatasetKey:              pickDatasetKey(etec),
 		AgentName:               pickAgentName(etec),
 		ApplicationID:           pickApplicationID(etec),
+		ExecutionKind:           etec.Expt.EvalConf.ExecutionKind(),
 	}); err != nil {
 		return nil, err
 	}

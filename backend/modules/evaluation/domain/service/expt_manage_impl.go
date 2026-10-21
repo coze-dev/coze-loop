@@ -1081,6 +1081,16 @@ func (e *ExptMangerImpl) authorizeSharedResource(
 }
 
 func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error) {
+	if req.ExptConf.IsResultSet() {
+		conf := *req.ExptConf
+		conf.EvalSetConfigs = req.EvalSetConfigs
+		if err := e.checkResultSetAdmission(ctx, req.WorkspaceID, &conf); err != nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+		}
+	}
+	if err := req.PrepareResultSetTarget(); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	if err := req.PrepareVerificationTarget(); err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}

@@ -1459,6 +1459,8 @@ func suaRunModeDTO2DO(m domain_expt.ExptRunMode) entity.RunMode {
 		return entity.RunModeSUAMultiTurn
 	case domain_expt.ExptRunMode_Goal:
 		return entity.RunModeGoal
+	case domain_expt.ExptRunMode_ResultSet:
+		return entity.RunModeResultSet
 	default:
 		return entity.RunModeSingleTurn
 	}
@@ -1626,6 +1628,8 @@ func suaRunModeDO2DTO(m entity.RunMode) domain_expt.ExptRunMode {
 		return domain_expt.ExptRunMode_SuaMultiTurn
 	case entity.RunModeGoal:
 		return domain_expt.ExptRunMode_Goal
+	case entity.RunModeResultSet:
+		return domain_expt.ExptRunMode_ResultSet
 	default:
 		return domain_expt.ExptRunMode_SingleTurn
 	}

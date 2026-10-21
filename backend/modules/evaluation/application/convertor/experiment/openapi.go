@@ -3268,6 +3268,8 @@ func openAPIRunModeToDomain(s openapiExperiment.ExptRunMode) (domainExpt.ExptRun
 		return domainExpt.ExptRunMode_SuaMultiTurn, true
 	case openapiExperiment.ExptRunModeGoal:
 		return domainExpt.ExptRunMode_Goal, true
+	case openapiExperiment.ExptRunModeResultSet:
+		return domainExpt.ExptRunMode_ResultSet, true
 	default:
 		return 0, false
 	}
@@ -3450,6 +3452,8 @@ func domainRunModeToOpenAPI(m domainExpt.ExptRunMode) (openapiExperiment.ExptRun
 		return openapiExperiment.ExptRunModeSuaMultiTurn, true
 	case domainExpt.ExptRunMode_Goal:
 		return openapiExperiment.ExptRunModeGoal, true
+	case domainExpt.ExptRunMode_ResultSet:
+		return openapiExperiment.ExptRunModeResultSet, true
 	default:
 		return "", false
 	}

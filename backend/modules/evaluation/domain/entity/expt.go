@@ -481,6 +481,7 @@ const (
 	RunModeSUALoopMultiTurn      RunMode = "sua_loop_multi_turn"
 	RunModeSUAHumanLoopMultiTurn RunMode = "sua_human_loop_multi_turn"
 	RunModeGoal                  RunMode = "goal"
+	RunModeResultSet             RunMode = "result_set"
 )
 
 // IsValidRunMode 判断 run_mode 字面量是否是平台已知的合法跑法。
@@ -492,7 +493,7 @@ const (
 func IsValidRunMode(m RunMode) bool {
 	switch m {
 	case RunModeSingleTurn, RunModeFixedScriptMultiTurn, RunModeSUAMultiTurn,
-		RunModeSUALoopMultiTurn, RunModeSUAHumanLoopMultiTurn, RunModeGoal:
+		RunModeSUALoopMultiTurn, RunModeSUAHumanLoopMultiTurn, RunModeGoal, RunModeResultSet:
 		return true
 	default:
 		return false
@@ -547,6 +548,8 @@ func RunModeToInt(m RunMode) int {
 		return 4
 	case RunModeGoal:
 		return 5
+	case RunModeResultSet:
+		return 6
 	default:
 		return 1
 	}

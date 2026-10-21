@@ -758,6 +758,7 @@ type CKDBConfig struct {
 }
 
 type EvalAsyncCtx struct {
+	ExecutionKind           string `json:"execution_kind,omitempty"`
 	Event                   *ExptItemEvalEvent
 	RecordID                int64
 	AsyncUnixMS             int64 // async call time with unix ms ts
