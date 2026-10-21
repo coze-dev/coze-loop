@@ -240,6 +240,42 @@ func (f *manualRetryFixture) request(mode entity.ExptRunMode) *entity.RequeueTer
 	return &entity.RequeueTerminalItemsRequest{SpaceID: f.space, ExptID: f.expt, RunID: f.run, RequestID: "rq1", PayloadHash: "hash1", Operator: "operator", Mode: mode, SnapshotAtMS: 1700000000123, Items: []*entity.PreparedRetryItem{prepared}}
 }
 
+func TestManualRetryMySQLReceiptUnknownRun(t *testing.T) {
+	f := newManualRetryFixture(t)
+	before := f.snapshot()
+	ctx := context.Background()
+	run, err := NewExptRunLogDAO(f.provider).Get(ctx, f.expt, f.run+1, db.WithMaster())
+	require.Nil(t, run)
+	require.ErrorIs(t, err, gorm.ErrRecordNotFound)
+	require.NotEqual(t, gorm.ErrRecordNotFound, err, "run DAO wraps the missing-row error")
+	t.Log("WRAPPED_NOT_FOUND_VERIFIED errors.Is=true direct_equality=false")
+	receipt, err := f.port.FindReceipt(ctx, f.space, f.expt, f.run+1, "unknown-run", "hash")
+	require.Equal(t, before, f.snapshot(), "receipt lookup must not write any fixture data")
+	require.NoError(t, err, "an unknown run has no receipt; the manager must validate the expected run")
+	require.Nil(t, receipt)
+}
+
+func TestManualRetryMySQLReceiptQueryErrorRetainsCause(t *testing.T) {
+	f := newManualRetryFixture(t)
+	before := f.snapshot()
+	// Matching text is not the GORM sentinel and must remain a database error.
+	cause := errors.New("record not found")
+	name := "manual_retry_receipt_query_error"
+	require.NoError(t, f.conn.Callback().Query().After("gorm:query").Register(name, func(tx *gorm.DB) {
+		if tx.Statement.Table == "expt_run_log" {
+			require.NoError(t, tx.Error)
+			require.Equal(t, int64(1), tx.RowsAffected, "inject only after the real run query succeeds")
+			_ = tx.AddError(cause)
+		}
+	}))
+	defer func() { require.NoError(t, f.conn.Callback().Query().Remove(name)) }()
+	receipt, err := f.port.FindReceipt(context.Background(), f.space, f.expt, f.run, "query-error", "hash")
+	require.Nil(t, receipt)
+	require.ErrorIs(t, err, cause)
+	require.NotErrorIs(t, err, gorm.ErrRecordNotFound)
+	require.Equal(t, before, f.snapshot())
+}
+
 func TestManualRetryMySQLSameRun(t *testing.T) {
 	f := newManualRetryFixture(t)
 	before := f.snapshot()
@@ -370,7 +406,7 @@ func TestManualRetryMySQLWriteRollback(t *testing.T) {
 }
 
 func TestManualRetryMySQLBoundaries(t *testing.T) {
-	for _, kind := range []string{"logged", "source_changed", "capacity", "manual_whole_row", "zero_accepted", "finished_replay"} {
+	for _, kind := range []string{"logged", "source_changed", "capacity", "manual_whole_row", "zero_accepted", "finished_replay", "replaced_replay"} {
 		t.Run(kind, func(t *testing.T) {
 			f := newManualRetryFixture(t)
 			mode := entity.EvaluationModeFailRetry
@@ -436,17 +472,27 @@ func TestManualRetryMySQLBoundaries(t *testing.T) {
 				var refs int64
 				require.NoError(t, f.conn.Model(&model.ExptTurnEvaluatorResultRef{}).Where("space_id=? AND expt_id=?", f.space, f.expt).Count(&refs).Error)
 				require.Zero(t, refs)
-			case "finished_replay":
+			case "finished_replay", "replaced_replay":
 				require.NoError(t, f.conn.Model(&model.Experiment{}).Where("id=?", f.expt).Update("status", int32(entity.ExptStatus_Success)).Error)
 				require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("id=?", f.run).Update("status", int64(entity.ExptStatus_Success)).Error)
+				if kind == "replaced_replay" {
+					require.NoError(t, f.conn.Model(&model.Experiment{}).Where("id=?", f.expt).Updates(map[string]any{"latest_run_id": f.run + 1, "status": int32(entity.ExptStatus_Processing)}).Error)
+				}
 				after := f.snapshot()
+				expectedReceipt, err := json.Marshal(receipt)
+				require.NoError(t, err)
 				replay, err := f.port.RequeueTerminalItems(context.Background(), req)
 				require.NoError(t, err)
-				require.Equal(t, receipt.RequestID, replay.RequestID)
+				replayedReceipt, err := json.Marshal(replay)
+				require.NoError(t, err)
+				require.JSONEq(t, string(expectedReceipt), string(replayedReceipt))
 				require.Equal(t, after, f.snapshot())
 				found, err := f.port.FindReceipt(context.Background(), f.space, f.expt, f.run, req.RequestID, req.PayloadHash)
 				require.NoError(t, err)
-				require.Equal(t, int32(1), found.AcceptedCount)
+				foundReceipt, err := json.Marshal(found)
+				require.NoError(t, err)
+				require.JSONEq(t, string(expectedReceipt), string(foundReceipt))
+				require.Equal(t, after, f.snapshot())
 			}
 		})
 	}
