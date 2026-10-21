@@ -5,7 +5,6 @@ package mysql
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -115,12 +114,16 @@ func validCurrentItemStatus(status entity.ItemRunState) bool {
 
 func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, retryFirst bool) ([]*entity.ExptItemCurrentRequest, error) {
 	var rows []*entity.ExptItemCurrentRequest
-	// Provider.Transaction exposes no sql.TxOptions. Start this local observation
-	// on its master session with explicit repeatable-read/read-only options so
-	// every nonlocking read shares the snapshot opened by the initial JOIN,
-	// regardless of the connection's configured isolation level.
+	// NDB accepts ordinary Begin, without per-transaction isolation/readOnly SQL.
+	// Complete raw source verification also makes default RC reads fail closed.
 	err := dao.provider.NewSession(ctx, db.WithMaster()).Transaction(func(tx *gorm.DB) error {
-		var err error
+		before, err := collectItemReadObservation(tx, spaceID, exptID, runID, nil, nil)
+		if err != nil {
+			return err
+		}
+		if len(before.Experiment) != 1 || before.Experiment[0].LatestRunID != runID {
+			return nil
+		}
 		rows, err = dao.readCurrentRequests(ctx, spaceID, exptID, runID, nil, retryFirst, db.WithTransaction(tx))
 		if err != nil {
 			return err
@@ -136,8 +139,8 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 					row.Publication = publication
 				}
 			}
-			// Processing sources share this nonlocking snapshot with Logged
-			// publications; mutation paths still recheck under their own row locks.
+			// Both source forms are inside the same verified observation window;
+			// mutation paths still recheck under their own row locks.
 			if row.Status != entity.ItemRunState_Processing {
 				continue
 			}
@@ -150,8 +153,18 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 			}
 			row.Source = source
 		}
-		return nil
-	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+		after, err := collectItemReadObservation(tx, spaceID, exptID, runID, nil, before)
+		if err != nil {
+			return err
+		}
+		if err := verifyItemReadObservation(before, after); err != nil {
+			return err
+		}
+		return ctx.Err()
+	})
+	if err != nil {
+		return nil, err
+	}
 	return rows, err
 }
 

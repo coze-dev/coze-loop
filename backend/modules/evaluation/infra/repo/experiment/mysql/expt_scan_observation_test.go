@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -136,11 +137,12 @@ func TestScanObservationMySQLDoesNotAccumulateLocks(t *testing.T) {
 }
 
 // The test wrapper records the real BeginTx options while forwarding to MySQL.
-// The concurrency assertions below also prove the observed data is one snapshot.
+// The concurrency assertions prove either a stable RR snapshot or RC rejection.
 type observationProvider struct {
-	base    db.Provider
-	mu      sync.Mutex
-	options []sql.TxOptions
+	base           db.Provider
+	mu             sync.Mutex
+	options        []sql.TxOptions
+	rejectExplicit bool
 }
 type observationConnPool struct {
 	*sql.DB
@@ -155,6 +157,9 @@ func (p *observationConnPool) BeginTx(ctx context.Context, options *sql.TxOption
 	p.owner.mu.Lock()
 	p.owner.options = append(p.owner.options, option)
 	p.owner.mu.Unlock()
+	if p.owner.rejectExplicit && (option.Isolation != sql.LevelDefault || option.ReadOnly) {
+		return nil, fmt.Errorf("SimulatedNDBBegin: Error 1105 near LEVEL REPEATABLE READ (explicit isolation/readOnly rejected)")
+	}
 	return p.DB.BeginTx(ctx, options)
 }
 func (p *observationProvider) NewSession(ctx context.Context, options ...db.Option) *gorm.DB {
@@ -192,7 +197,7 @@ func newObservationProvider(t *testing.T, isolation string) *observationProvider
 }
 
 // A concurrent writer commits a new invocation after the initial run/item scan.
-// Even a READ-COMMITTED connection must return every part of the old snapshot.
+// RR preserves the old snapshot; RC must discard all rows when the source changes.
 func TestScanObservationMySQLConsistentAcrossSessionIsolation(t *testing.T) {
 	for _, isolation := range []string{"REPEATABLE-READ", "READ-COMMITTED"} {
 		t.Run(isolation, func(t *testing.T) {
@@ -257,34 +262,43 @@ func TestScanObservationMySQLConsistentAcrossSessionIsolation(t *testing.T) {
 			once.Do(func() { close(resume) })
 			result := <-done
 			require.NoError(t, writeErr)
-			require.NoError(t, result.err)
-			require.Len(t, result.rows, 3)
+			if isolation == "READ-COMMITTED" {
+				require.Error(t, result.err, "changed RC observation must be retried")
+				require.Nil(t, result.rows, "no mixed or partial source can escape")
+			} else {
+				require.NoError(t, result.err)
+				require.Len(t, result.rows, 3)
+			}
 			var observed *entity.ExptItemResultPublishSource
 			for _, row := range result.rows {
 				if row.ItemID == f.item {
 					observed = row.Publication
 				}
 			}
-			require.Equal(t, expected, observed, "initial request/turn/ref/config observation must not be replaced by a new same-request invocation")
+			if isolation == "REPEATABLE-READ" {
+				require.Equal(t, expected, observed, "initial request/turn/ref/config observation must not be replaced by a new same-request invocation")
+			} else {
+				require.Nil(t, observed)
+			}
 			provider.mu.Lock()
 			options := append([]sql.TxOptions(nil), provider.options...)
 			provider.mu.Unlock()
 			require.Len(t, options, 1)
-			require.Equal(t, sql.LevelRepeatableRead, options[0].Isolation, "snapshot isolation must be explicit even on READ-COMMITTED connections")
-			require.True(t, options[0].ReadOnly)
+			require.Equal(t, sql.LevelDefault, options[0].Isolation)
+			require.False(t, options[0].ReadOnly, "readonly semantics must not require NDB transaction option SQL")
 			require.NoError(t, metadataErr)
-			require.Equal(t, "REPEATABLE READ", txMetadata.IsolationLevel)
-			require.Equal(t, "READ ONLY", txMetadata.AccessMode)
+			require.Equal(t, strings.ReplaceAll(isolation, "-", " "), txMetadata.IsolationLevel)
+			require.Equal(t, "READ WRITE", txMetadata.AccessMode)
 			require.Zero(t, locks)
 			var unchangedDefault string
 			require.NoError(t, provider.NewSession(context.Background(), db.WithMaster()).Raw("SELECT @@session.transaction_isolation").Scan(&unchangedDefault).Error)
 			require.Equal(t, isolation, unchangedDefault, "one-transaction isolation must not change connection defaults")
 			t.Logf("REAL_MYSQL_SCAN_SNAPSHOT session_default=%s BeginTx=%+v performance_schema=%+v locking_queries=%d", isolation, options[0], txMetadata, locks)
-			current, err := port.IsItemResultPublishSourceCurrent(context.Background(), observed)
+			current, err := port.IsItemResultPublishSourceCurrent(context.Background(), expected)
 			require.NoError(t, err)
 			require.False(t, current, "notification validation rejects the old frozen source after the writer committed")
 			before := f.snapshot()
-			applied, err := port.CommitItemResult(context.Background(), &entity.ExptItemResultPublication{Source: observed})
+			applied, err := port.CommitItemResult(context.Background(), &entity.ExptItemResultPublication{Source: expected})
 			require.NoError(t, err)
 			require.False(t, applied)
 			require.Equal(t, before, f.snapshot(), "old scan cannot publish against new references")
@@ -386,8 +400,6 @@ func TestScanObservationMySQLProcessingSharesSnapshot(t *testing.T) {
 	f := newScanObservationFixture(t)
 	require.NoError(t, f.conn.Model(&model.ExptItemResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", int32(entity.ItemRunState_Processing)).Error)
 	require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Updates(map[string]any{"status": int32(entity.ItemRunState_Processing), "result_state": int32(entity.ExptItemResultStateDefault)}).Error)
-	expected, err := f.port.GetCurrentItemRunSource(context.Background(), f.space, f.expt, f.run, f.item)
-	require.NoError(t, err)
 	provider := newObservationProvider(t, "READ-COMMITTED")
 	conn := provider.NewSession(context.Background(), db.WithMaster())
 	scannedInitial := make(chan struct{})
@@ -423,18 +435,8 @@ func TestScanObservationMySQLProcessingSharesSnapshot(t *testing.T) {
 	require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=? AND turn_id=0", f.space, f.item).Update("target_result_id", f.base+71).Error)
 	once.Do(func() { close(resume) })
 	observed := <-done
-	require.NoError(t, observed.err)
-	require.Len(t, observed.rows, 3)
-	for _, row := range observed.rows {
-		if row.ItemID == f.item {
-			require.Equal(t, expected, row.Source)
-			require.Equal(t, entity.ItemRunState_Processing, row.Status)
-		}
-		if row.ItemID == f.item+1 {
-			require.True(t, row.PublicationObserved)
-			require.NotNil(t, row.Publication)
-		}
-	}
+	require.Error(t, observed.err, "Processing source changed during RC scan")
+	require.Nil(t, observed.rows, "Logged and Queueing rows cannot escape the failed observation")
 	require.Zero(t, locks)
-	t.Log("REAL_MYSQL_PROCESSING_SNAPSHOT old_source_preserved=true mixed_logged_processing_queueing=3 locking_queries=0")
+	t.Log("REAL_MYSQL_PROCESSING_SNAPSHOT changed_source_discarded=true mixed_logged_processing_queueing_discarded=3 locking_queries=0")
 }
