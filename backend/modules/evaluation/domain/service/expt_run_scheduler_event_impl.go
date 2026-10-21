@@ -769,6 +769,7 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 			return nil, nil, errno.NewMQRetryErr("same-scan original item source missing")
 		}
 	}
+	zombieRequestIDs := scannedQuotaRequestIDs(items)
 	for _, item := range items {
 		if item.State == entity.ItemRunState_Processing && item.UpdatedAt != nil && !gptr.Indirect(item.UpdatedAt).IsZero() {
 			if time.Since(gptr.Indirect(item.UpdatedAt)).Seconds() > float64(zombieSecond) {
@@ -823,7 +824,7 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 	// item 已落终态 → 释放其额度预占。放在 run log 写库之后：调度侧判占用读的是
 	// run log（LoadDispatchRuntime 按 status IN (Queueing, Processing) 扫），
 	// 先落 Fail 再放额度，才不会留下"额度已归还、run log 仍算占用"的窗口。
-	e.releaseCentralQuotaForItems(ctx, expt, event.ExptRunID, zombieItemIDs, "item zombie timeout")
+	e.releaseCentralQuotaForItems(ctx, expt, event.ExptRunID, zombieItemIDs, zombieRequestIDs, "item zombie timeout")
 
 	// 不清 run_log 的 target_result_id / evaluator_result_ids：
 	// zombie 场景是「终态失败」，需要保留已入库的 record id，
@@ -1010,6 +1011,7 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 		firstStatus = "Terminated"
 	}
 
+	terminatedRequestIDs := scannedQuotaRequestIDs(items)
 	alives = make([]*entity.ExptEvalItem, 0, len(items))
 	terminated = make([]*entity.ExptEvalItem, 0, len(terminatedItemIDSet))
 	for _, item := range items {
@@ -1063,7 +1065,7 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 
 	// item 已落终态 → 释放额度预占。沙箱已提前终止，对应 consumer 消息不会再回来，
 	// 不在此释放则这些 item 的额度永久泄漏。
-	e.releaseCentralQuotaForItems(ctx, expt, event.ExptRunID, terminatedItemIDs, "sandbox terminated before report")
+	e.releaseCentralQuotaForItems(ctx, expt, event.ExptRunID, terminatedItemIDs, terminatedRequestIDs, "sandbox terminated before report")
 
 	// 打点：复用沙箱 agent 评测对象的 EmitInvokeFinished，让"沙箱终态未回调 → 兜底失败"
 	// 与正常回调路径的 invoke_finished 在同一 dashboard 上可比。err_code 用
@@ -1277,7 +1279,22 @@ func sandboxAgentTargetTagsFromExpt(expt *entity.Experiment) (agentName string, 
 // legacy 实验直接返回：它们从不预占额度，调用释放只是无谓的 Redis 往返。
 // 全程 best-effort：单个 item 释放失败只告警，不影响 zombie 清理本身 ——
 // 清理失败会让实验永不收敛，比额度泄漏更严重，而额度有对账兜底。
-func (e *ExptSchedulerImpl) releaseCentralQuotaForItems(ctx context.Context, expt *entity.Experiment, exptRunID int64, itemIDs []int64, reason string) {
+func scannedQuotaRequestIDs(items []*entity.ExptEvalItem) map[int64]string {
+	requests := make(map[int64]string, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		request := item.RequestID
+		if item.Source != nil {
+			request = item.Source.Current.RequestID
+		}
+		requests[item.ItemID] = request
+	}
+	return requests
+}
+
+func (e *ExptSchedulerImpl) releaseCentralQuotaForItems(ctx context.Context, expt *entity.Experiment, exptRunID int64, itemIDs []int64, itemRequestIDs map[int64]string, reason string) {
 	if e.centralGuard == nil || expt == nil || len(itemIDs) == 0 {
 		return
 	}
@@ -1292,8 +1309,15 @@ func (e *ExptSchedulerImpl) releaseCentralQuotaForItems(ctx context.Context, exp
 		return
 	}
 
+	relCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+	defer cancel()
 	for _, itemID := range itemIDs {
-		if err := e.centralGuard.Release(ctx, expt.SchedulerScope, exptRunID, itemID, reason); err != nil {
+		request, observed := itemRequestIDs[itemID]
+		if !observed {
+			logs.CtxWarn(relCtx, "[CentralReservation] original scanned request missing, skip release, item_id: %v", itemID)
+			continue
+		}
+		if err := e.centralGuard.Release(relCtx, expt.SchedulerScope, exptRunID, itemID, request, reason); err != nil {
 			logs.CtxWarn(ctx, "[CentralReservation] release quota fail, scope: %v, expt_run_id: %v, item_id: %v, reason: %v, err: %v",
 				expt.SchedulerScope, exptRunID, itemID, reason, err)
 		}
