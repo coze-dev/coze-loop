@@ -582,8 +582,8 @@ func TestDomainEvaluationSetDTO2OpenAPI(t *testing.T) {
 			{
 				TagName:     "tag-a",
 				TagKeyID:    &tagKeyID,
-				ContentType: gptr.Of(string(tagContentType)),
-				Status:      gptr.Of(string(tagStatus)),
+				ContentType: gptr.Of(tagContentType),
+				Status:      gptr.Of(tagStatus),
 			},
 		},
 		SharedInfo: &common.SharedResourceInfo{
