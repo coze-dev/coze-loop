@@ -375,6 +375,8 @@ const (
 	ExptRunMode_SuaMultiTurn ExptRunMode = 3
 	// 目标驱动(下发时为 5)
 	ExptRunMode_Goal ExptRunMode = 4
+	// 固定结果只评分(下发时为 6)
+	ExptRunMode_ResultSet ExptRunMode = 5
 )
 
 func (p ExptRunMode) String() string {
@@ -387,6 +389,8 @@ func (p ExptRunMode) String() string {
 		return "SuaMultiTurn"
 	case ExptRunMode_Goal:
 		return "Goal"
+	case ExptRunMode_ResultSet:
+		return "ResultSet"
 	}
 	return "<UNSET>"
 }
@@ -401,6 +405,8 @@ func ExptRunModeFromString(s string) (ExptRunMode, error) {
 		return ExptRunMode_SuaMultiTurn, nil
 	case "Goal":
 		return ExptRunMode_Goal, nil
+	case "ResultSet":
+		return ExptRunMode_ResultSet, nil
 	}
 	return ExptRunMode(0), fmt.Errorf("not a valid ExptRunMode string")
 }
