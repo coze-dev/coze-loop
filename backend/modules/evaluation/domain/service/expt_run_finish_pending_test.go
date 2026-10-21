@@ -126,9 +126,58 @@ func (p *pendingRunFixture) publishSuccess(t *testing.T, withRecord bool) {
 	current, err := p.manager.itemResultRepo.GetCurrentRequest(ctx, f.space, f.expt, f.run, f.item)
 	require.NoError(t, err)
 	require.NotNil(t, current)
-	applied, err := p.manager.itemResultRepo.MarkProcessingIfCurrent(ctx, f.space, f.expt, f.run, f.item, current.RequestID)
+	dispatch := exptrepo.NewExptItemDispatchRepo(exptmysql.NewExptItemDispatchDAO(f.provider))
+	runtime, err := dispatch.LoadDispatchRuntime(ctx, f.space, f.expt, f.run, 1)
 	require.NoError(t, err)
-	require.True(t, applied)
+	require.Equal(t, []int64{f.item}, runtime.CandidateItemIDs)
+	require.Equal(t, current.RequestID, runtime.ItemRequestIDs[f.item])
+	if current.RequestID != "" {
+		for _, stale := range []string{"", "obsolete-request"} {
+			before := f.snapshot()
+			claimed, err := dispatch.ClaimQuotaReserved(ctx, f.space, f.expt, f.run, []int64{f.item}, map[int64]string{f.item: stale})
+			require.NoError(t, err)
+			require.Empty(t, claimed)
+			require.Equal(t, before, f.snapshot(), "stale grant cannot mutate the admitted request")
+		}
+	}
+	claimed, err := dispatch.ClaimQuotaReserved(ctx, f.space, f.expt, f.run, []int64{f.item}, runtime.ItemRequestIDs)
+	require.NoError(t, err)
+	require.Len(t, claimed, 1)
+	payload := claimed[0]
+	require.Equal(t, f.item, payload.ItemID)
+	require.Equal(t, current.RequestID, payload.RequestID)
+	require.Equal(t, current.Mode, payload.Mode)
+	require.Equal(t, current.RetryTimes, payload.RetryTimes)
+	assertPending := func(stage string) {
+		before := f.snapshot()
+		finish, err := p.manager.runFinishRepo.FinishCurrentRun(ctx, &entity.ExptRunFinishRequest{SpaceID: f.space, ExptID: f.expt, RunID: f.run})
+		require.NoError(t, err)
+		require.Equal(t, entity.ExptRunFinishPending, finish.Disposition, stage)
+		require.Equal(t, before, f.snapshot(), stage)
+	}
+	assertPending("reserved grant")
+	started, err := dispatch.StartReservedItem(ctx, f.space, f.expt, f.run, payload.ItemID, payload.RequestID)
+	require.NoError(t, err)
+	require.True(t, started.CurrentRequest)
+	require.True(t, started.Started)
+	before := f.snapshot()
+	duplicate, err := dispatch.StartReservedItem(ctx, f.space, f.expt, f.run, payload.ItemID, payload.RequestID)
+	require.NoError(t, err)
+	require.True(t, duplicate.CurrentRequest)
+	require.False(t, duplicate.Started)
+	require.Equal(t, before, f.snapshot(), "duplicate Start cannot apply a second stats delta")
+	assertPending("processing source")
+	consumer := &ExptItemEventEvalServiceImpl{exptItemResultRepo: f.itemRepo()}
+	invoked := false
+	require.NoError(t, consumer.HandleCurrentSource(func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+		invoked = true
+		source := executionSource(ctx).Source
+		require.Equal(t, payload.RequestID, source.Current.RequestID)
+		require.Equal(t, payload.Mode, source.Current.Mode)
+		require.Equal(t, int(payload.RetryTimes), event.RetryTimes)
+		return nil
+	})(ctx, &entity.ExptItemEvalEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, EvalSetItemID: payload.ItemID, RequestID: payload.RequestID, ExptRunMode: payload.Mode}))
+	require.True(t, invoked)
 	source := f.source()
 	turn := *source.Turns[0]
 	turn.Status = entity.TurnRunState_Success
@@ -138,18 +187,20 @@ func (p *pendingRunFixture) publishSuccess(t *testing.T, withRecord bool) {
 		turn.EvaluatorResultIds = &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{f.base + 51: f.base + 61}}
 		p.records.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{f.base + 61}, false, false).Return([]*entity.EvaluatorRecord{{ID: f.base + 61, SpaceID: f.space, ExperimentID: f.expt, ExperimentRunID: f.run, ItemID: f.item, ItemVersionID: f.version, TurnID: 0, EvaluatorVersionID: f.base + 51, Status: entity.EvaluatorRunStatusSuccess}}, nil)
 	}
-	applied, err = f.port.StoreCurrentTurnRunResult(ctx, source, &turn)
+	applied, err := f.port.StoreCurrentTurnRunResult(ctx, source, &turn)
 	require.NoError(t, err)
 	require.True(t, applied)
 	source = f.source()
 	applied, err = f.port.CompleteCurrentItemRun(ctx, source, &entity.ExptCurrentItemRunWrite{Status: entity.ItemRunState_Success, RetryTimes: source.Current.RetryTimes})
 	require.NoError(t, err)
 	require.True(t, applied)
+	assertPending("logged result awaiting publication")
 	_, err = p.result.RecordItemRunLogs(ctx, f.expt, f.run, f.item, f.space, p.expt)
 	require.NoError(t, err)
 	log, err := p.manager.itemResultRepo.GetItemRunLog(ctx, f.expt, f.run, f.item, f.space)
 	require.NoError(t, err)
 	require.Equal(t, int32(entity.ExptItemResultStateResulted), log.ResultState)
+	t.Logf("REAL_MYSQL_PENDING_DISPATCH_SOURCE_PUBLICATION request=%q mode=%d duplicate_start_stats_once=true reserved_processing_logged_block_finish=true", payload.RequestID, payload.Mode)
 }
 
 func TestRunFinishPendingRealInitializers(t *testing.T) {
