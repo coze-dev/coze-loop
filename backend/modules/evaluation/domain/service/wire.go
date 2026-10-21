@@ -29,7 +29,8 @@ import (
 
 // ExperimentDomainServiceSet 提供所有 Experiment 相关的 Domain Service
 var ExperimentDomainServiceSet = wire.NewSet(
-	NewExptManager,
+	NewExptManagerWithRunFinish,
+	experimentrepo.NewExptRunFinishRepo,
 	NewExptResultServiceWithPublication,
 	NewExptAggrResultService,
 	NewExptSchedulerSvc,
