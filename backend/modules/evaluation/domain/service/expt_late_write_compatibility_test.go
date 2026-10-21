@@ -7,14 +7,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/bytedance/gg/gptr"
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	experimentmysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	"github.com/coze-dev/coze-loop/backend/pkg/ctxcache"
 	"gorm.io/gorm"
-	"strconv"
-	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -240,7 +241,7 @@ func TestLateCompatDebtFinishedAndPreExec(t *testing.T) {
 				return nil
 			}).Times(map[bool]int{true: 1, false: 0}[expected])
 			manager.EXPECT().CompleteExpt(gomock.Any(), f.expt, &f.run, f.space, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(map[bool]int{true: 1, false: 0}[expected])
-			guard.EXPECT().Release(gomock.Any(), "frozen-scope", f.run, f.item, gomock.Any()).DoAndReturn(func(ctx context.Context, _ string, _, _ int64, _ string) error {
+			guard.EXPECT().Release(gomock.Any(), "frozen-scope", f.run, f.item, "rq1", gomock.Any()).DoAndReturn(func(ctx context.Context, _ string, _, _ int64, _, _ string) error {
 				require.NoError(t, ctx.Err())
 				releases++
 				return nil
@@ -467,7 +468,7 @@ func TestLateCompatDebtQuotaReleasedOnlyOnce(t *testing.T) {
 	event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 11}
 	event.WithCtxCentralQuotaHeld(ctx, "scope")
 	dispatch.EXPECT().MGetDispatchObservations(gomock.Any(), int64(3), int64(1), int64(2), []int64{11}).Return([]*repo.ExptDispatchObservation{{ItemID: 11, Status: int32(entity.ItemRunState_Fail)}}, nil)
-	guard.EXPECT().Release(gomock.Any(), "scope", int64(2), int64(11), gomock.Any()).Return(nil).Times(1)
+	guard.EXPECT().Release(gomock.Any(), "scope", int64(2), int64(11), "", gomock.Any()).Return(nil).Times(1)
 	svc := &ExptItemEventEvalServiceImpl{centralGuard: guard, dispatchRepo: dispatch}
 	svc.releaseQuotaIfItemTerminal(ctx, event, "scope", guard, errors.New("debt"))
 	svc.releaseCentralQuotaOutsideGate(ctx, event, errors.New("debt"), "expt terminated on indebt")

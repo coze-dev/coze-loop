@@ -249,6 +249,12 @@ func (e ExptItemResultRepoImpl) GetCurrentRequest(ctx context.Context, spaceID, 
 	return e.exptItemResultDAO.GetCurrentRequest(ctx, spaceID, exptID, runID, itemID)
 }
 
+// ScanIncompleteDispatchObservations exposes the existing strict primary JOIN to resource
+// cleanup, which must also observe runs that have already entered a terminal state.
+func (e ExptItemResultRepoImpl) ScanIncompleteDispatchObservations(ctx context.Context, spaceID, exptID, runID int64) ([]*repo.ExptDispatchObservation, error) {
+	return e.exptItemResultDAO.ScanIncompleteDispatchObservations(ctx, spaceID, exptID, runID)
+}
+
 func (e ExptItemResultRepoImpl) MarkProcessingIfCurrent(ctx context.Context, spaceID, exptID, runID, itemID int64, requestID string) (bool, error) {
 	return e.exptItemResultDAO.MarkProcessingIfCurrent(ctx, spaceID, exptID, runID, itemID, requestID)
 }

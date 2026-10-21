@@ -55,6 +55,7 @@ func TestReservationAbsent_RequeueAtomicAndFilter(t *testing.T) {
 				exptItemResultRepo: repoMocks.NewMockIExptItemResultRepo(ctrl), exptTurnResultRepo: repoMocks.NewMockIExptTurnResultRepo(ctrl), exptStatsRepo: repoMocks.NewMockIExptStatsRepo(ctrl),
 			}
 			event := &entity.ExptItemEvalEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2, EvalSetItemID: 4, RequestID: "rq1"}
+			svc.exptItemResultRepo.(*repoMocks.MockIExptItemResultRepo).EXPECT().GetCurrentRequest(gomock.Any(), int64(3), int64(1), int64(2), int64(4)).Return(&entity.ExptItemCurrentRequest{RunID: 2, ItemID: 4, RequestID: "rq1", Status: entity.ItemRunState_Processing}, nil)
 			require.NoError(t, svc.HandleCentralReservation(func(context.Context, *entity.ExptItemEvalEvent) error {
 				t.Fatal("absent reservation must stop")
 				return nil
@@ -168,6 +169,7 @@ func TestReservationAbsent_CASMissLeavesStatsAndMainTableUntouched(t *testing.T)
 		exptStatsRepo:      statsRepo,
 		exptItemResultRepo: itemResultRepo,
 	}
+	itemResultRepo.EXPECT().GetCurrentRequest(gomock.Any(), int64(3), int64(1), int64(2), int64(4)).Return(&entity.ExptItemCurrentRequest{RunID: 2, ItemID: 4, Status: entity.ItemRunState_Processing}, nil)
 	event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 4}
 	assert.NoError(t, svc.HandleCentralReservation(func(context.Context, *entity.ExptItemEvalEvent) error {
 		t.Fatal("CAS 未命中时不得执行 item")
