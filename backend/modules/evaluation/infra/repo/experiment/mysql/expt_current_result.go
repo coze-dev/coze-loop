@@ -265,6 +265,17 @@ func (dao *exptItemResultDAOImpl) CompleteCurrentItemRun(ctx context.Context, so
 		if !currentSourceMatches(source, actual) || actual.Current.ResultState == entity.ExptItemResultStateResulted {
 			return nil
 		}
+		if write.OnlyIfQueueingUnreserved {
+			// Reuse the canonical-first locked PO reader: the source DTO does not
+			// carry the canonical status or a populated quota reservation state.
+			locked, err := lockDispatchItem(tx, actual.Current.SpaceID, actual.Current.ExptID, actual.Current.RunID, actual.Current.ItemID, actual.Current.RequestID)
+			if err != nil {
+				return err
+			}
+			if locked == nil || locked.item.Status != int32(entity.ItemRunState_Queueing) || locked.log.Status != int32(entity.ItemRunState_Queueing) || locked.log.QuotaReservationState != int32(entity.QuotaReservationStateNone) {
+				return nil
+			}
+		}
 		c := actual.Current
 		if entity.IsItemRunFinished(c.Status) && !(c.Status == entity.ItemRunState_Terminal && c.ResultState == entity.ExptItemResultStateDefault) {
 			return nil
