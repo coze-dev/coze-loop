@@ -131,10 +131,23 @@ func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Co
 	if len(req.GetItemIds()) > maxStandardEvalOutputMGetItemIDs {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids exceeds maximum of 100"))
 	}
+	expected, err := validateStandardEvalOutputSourceRequest(req)
+	if err != nil {
+		return nil, err
+	}
 	if err := e.authStandardEvalOutput(ctx, req.GetWorkspaceID()); err != nil {
 		return nil, err
 	}
+	if expected || req.GetSourceOnly() {
+		return e.mgetStandardEvalOutputsWithSource(ctx, req, expected)
+	}
+	return e.mgetStandardEvalOutputs(ctx, req, nil)
+}
 
+func (e *experimentApplication) mgetStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest, source *entity.ExptStandardEvalOutputSource) (*expt.MGetExperimentStandardEvalOutputsResponse, error) {
+	if source != nil {
+		ctx = entity.WithExptStandardEvalOutputSource(ctx, source)
+	}
 	param := &entity.MGetExperimentResultParam{
 		SpaceID:                   req.GetWorkspaceID(),
 		ExptIDs:                   []int64{req.GetExptID()},
@@ -150,8 +163,14 @@ func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Co
 	if err != nil {
 		return nil, err
 	}
+	if source != nil {
+		if err := validateStandardEvalOutputResultSource(result, source); err != nil {
+			return nil, err
+		}
+	}
 
 	items, err := buildItemStandardEvalOutputs(ctx, result, standardEvalOutputBuildOptions{
+		Source:                   source,
 		ExptID:                   req.GetExptID(),
 		SourceTargetIDByTargetID: e.resolveSourceTargetIDs(ctx, req.GetWorkspaceID(), result),
 		MQMeta:                   e.resolveStandardEvalOutputMQMeta(ctx, req.GetWorkspaceID(), req.GetExptID()),
@@ -355,6 +374,7 @@ func (e *experimentApplication) resolveStandardEvalOutputMQMeta(ctx context.Cont
 }
 
 type standardEvalOutputBuildOptions struct {
+	Source               *entity.ExptStandardEvalOutputSource
 	ExptID               int64
 	EvaluatorByVersionID map[int64]*entity.ColumnEvaluator
 	// SourceTargetIDByTargetID: eval_target_id(=EvalTargetRecord.TargetID) -> 业务侧原始对象 ID。
@@ -1172,6 +1192,9 @@ func standardEvalResult(payload *entity.ExperimentTurnPayload, opt standardEvalO
 		for key, record := range payload.EvaluatorOutput.EvaluatorRecords {
 			if record == nil {
 				continue
+			}
+			if opt.Source != nil {
+				key = record.EvaluatorVersionID
 			}
 			resultKey := evaluatorResultKey(opt, key, record)
 			if score == nil && record.GetScore() != nil {

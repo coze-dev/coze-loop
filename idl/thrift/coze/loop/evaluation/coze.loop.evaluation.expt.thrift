@@ -438,6 +438,12 @@ struct MGetExperimentStandardEvalOutputsRequest {
 
     10: required list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"', vt.min_size = "1", vt.max_size = "100")
 
+    // All three expected fields must be present together. An empty request identifies raw execution.
+    31: optional i64 expected_expt_run_id (api.body = 'expected_expt_run_id', api.js_conv = 'true', go.tag = 'json:"expected_expt_run_id,omitempty"')
+    32: optional string expected_request_id (api.body = 'expected_request_id', go.tag = 'json:"expected_request_id,omitempty"')
+    33: optional list<ItemStandardEvalOutputTurnSource> expected_source_turn_records (api.body = 'expected_source_turn_records', go.tag = 'json:"expected_source_turn_records,omitempty"')
+    34: optional bool source_only (api.body = 'source_only', go.tag = 'json:"source_only,omitempty"')
+
     255: optional base.Base Base
 }
 
@@ -453,6 +459,25 @@ struct ListExperimentStandardEvalOutputsRequest {
     30: optional bool item_id_only (api.body = 'item_id_only', go.tag = 'json:"item_id_only"')
 
     255: optional base.Base Base
+}
+
+// Same shape as item-complete source records; decimal identifiers never pass through JSON numbers.
+struct ItemStandardEvalOutputRegisteredSource {
+    1: optional string version_id (go.tag = 'json:"version_id,omitempty"')
+    2: optional string alias (go.tag = 'json:"alias,omitempty"')
+    3: optional string record_id (go.tag = 'json:"record_id,omitempty"')
+}
+
+struct ItemStandardEvalOutputInlineSource {
+    1: optional string inline_key (go.tag = 'json:"inline_key,omitempty"')
+    2: optional string record_id (go.tag = 'json:"record_id,omitempty"')
+}
+
+struct ItemStandardEvalOutputTurnSource {
+    1: optional string turn_id (go.tag = 'json:"turn_id,omitempty"')
+    2: optional string target_record_id (go.tag = 'json:"target_record_id,omitempty"')
+    3: optional list<ItemStandardEvalOutputRegisteredSource> registered (go.tag = 'json:"registered,omitempty"')
+    4: optional list<ItemStandardEvalOutputInlineSource> inline (go.tag = 'json:"inline,omitempty"')
 }
 
 struct ItemStandardEvalOutput {
@@ -477,6 +502,9 @@ struct ItemStandardEvalOutput {
     17: optional i64 item_end_time (api.js_conv = 'true', go.tag = 'json:"item_end_time"')  // item 执行结束时间（秒），来源 expt_item_result.updated_at
     18: optional string created_by (go.tag = 'json:"created_by"')  // 实验创建人 userID，来源 experiment.created_by（实验级恒定）
     19: optional string fornax_sandbox_log_url (go.tag = 'json:"fornax_sandbox_log_url"')  // 沙箱日志链接，来源 eval_target ext_output 的同名字段（SandboxAgent 内置 output schema）；detail.output 内的同名字段保留不动
+
+    20: optional string request_id (go.tag = 'json:"request_id,omitempty"')
+    21: optional list<ItemStandardEvalOutputTurnSource> source_turn_records (go.tag = 'json:"source_turn_records,omitempty"')
 
     // 标准化评测输出内容块：小内容 inline，大内容通过各 section 的 full_content 引用。
     30: optional StandardEvalOutputContent detail (go.tag = 'json:"detail"')

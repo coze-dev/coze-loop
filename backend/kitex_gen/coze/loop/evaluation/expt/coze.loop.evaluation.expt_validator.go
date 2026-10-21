@@ -448,6 +448,15 @@ func (p *ListExperimentStandardEvalOutputsRequest) IsValid() error {
 	}
 	return nil
 }
+func (p *ItemStandardEvalOutputRegisteredSource) IsValid() error {
+	return nil
+}
+func (p *ItemStandardEvalOutputInlineSource) IsValid() error {
+	return nil
+}
+func (p *ItemStandardEvalOutputTurnSource) IsValid() error {
+	return nil
+}
 func (p *ItemStandardEvalOutput) IsValid() error {
 	if p.Detail != nil {
 		if err := p.Detail.IsValid(); err != nil {

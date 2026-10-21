@@ -4,6 +4,7 @@ package mysql
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -104,6 +105,33 @@ func (r *ExptResultPublishDAOImpl) GetItemResultPublishSource(ctx context.Contex
 	}, db.WithMaster())
 	return result, err
 }
+
+func (r *ExptResultPublishDAOImpl) GetStandardEvalOutputSource(ctx context.Context, space, expt, run, item int64) (*entity.ExptItemResultPublishSource, error) {
+	var result *entity.ExptItemResultPublishSource
+	err := r.provider.NewSession(ctx, db.WithMaster()).Transaction(func(tx *gorm.DB) error {
+		var experiment model.Experiment
+		if err := tx.Where("space_id=? AND id=?", space, expt).Take(&experiment).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			return err
+		}
+		if run > 0 && experiment.LatestRunID != run {
+			return nil
+		}
+		if run == 0 {
+			run = experiment.LatestRunID
+		}
+		if run <= 0 {
+			return nil
+		}
+		var err error
+		result, err = readItemResultPublishSourceWithLocks(tx, space, expt, run, item, false)
+		return err
+	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+	return result, err
+}
+
 func (r *ExptResultPublishDAOImpl) IsItemResultPublishSourceCurrent(ctx context.Context, source *entity.ExptItemResultPublishSource) (bool, error) {
 	if source == nil || source.Source == nil {
 		return false, fmt.Errorf("publication source missing")
