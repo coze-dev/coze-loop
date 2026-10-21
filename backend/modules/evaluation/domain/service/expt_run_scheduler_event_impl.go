@@ -198,6 +198,22 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 		}
 
 		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
+			if event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && (status == entity.ExptStatus_Terminated || status == entity.ExptStatus_Failed) {
+				if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok {
+					options := []entity.CompleteExptOptionFn{entity.WithStatus(status)}
+					if status == entity.ExptStatus_Terminated {
+						options = append(options, entity.NoAggrCalculate())
+					}
+					_, err := terminate.TerminateCurrentRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, nil, options...)
+					return err
+				}
+			}
+			if status == entity.ExptStatus_Terminating && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+				if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok {
+					_, err := terminate.TerminateCurrentRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, nil, entity.WithStatus(entity.ExptStatus_Terminated), entity.NoAggrCalculate())
+					return err
+				}
+			}
 			logs.CtxInfo(ctx, "ExptSchedulerConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 			if entity.IsExptFinished(status) && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun {
 				if finish, ok := e.Manager.(IExptNaturalRunFinisher); ok {
@@ -324,6 +340,17 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 				logs.CtxWarn(ctx, "[ExptEval] infra error detected, attempting reschedule (%d/%d), expt_id: %v, expt_run_id: %v, err: %v",
 					event.InfraErrorRetryTimes+1, maxInfraRetry, event.ExptID, event.ExptRunID, nextErr)
 
+				if _, current := e.Manager.(IExptCurrentRunTerminator); current && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+					if err := ctx.Err(); err != nil {
+						return errno.WrapMQRetryErr(err)
+					}
+					fresh := *event
+					fresh.InfraErrorRetryTimes++
+					if err := e.Publisher.PublishExptScheduleEvent(ctx, &fresh, gptr.Of(5*time.Second)); err != nil {
+						return errno.WrapMQRetryErr(err)
+					}
+					return nil
+				}
 				// 复制context保留存储内容，仅断开cancel传播
 				freshCtx := context.WithoutCancel(ctx)
 				event.InfraErrorRetryTimes++
@@ -341,6 +368,10 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 			}
 		}
 
+		if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+			_, err := terminate.TerminateCurrentRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, nil, entity.WithStatus(entity.ExptStatus_Failed), entity.WithStatusMessage(userVisibleErrMsg(nextErr)))
+			return err
+		}
 		// 业务逻辑错误：终止实验
 		completeCID := fmt.Sprintf("exptexec:onerr:%d", event.ExptRunID)
 

@@ -236,11 +236,14 @@ func TestLateCompatDebtFinishedAndPreExec(t *testing.T) {
 			svc := &ExptItemEventEvalServiceImpl{exptItemResultRepo: f.itemRepo(), exptTurnResultRepo: f.turnRepo(), configer: config, manager: manager, centralGuard: guard, itemLocker: lateWriteLocker(t, ctrl)}
 			expected := kind == "completed_debt" || kind == "preexec_debt"
 			finishes, releases := 0, 0
-			manager.EXPECT().CompleteRun(gomock.Any(), f.expt, f.run, f.space, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, int64, int64, int64, *entity.Session, ...entity.CompleteExptOptionFn) error {
+
+			svc.manager = &guardSourceTestTerminator{IExptManager: manager, finish: func(ctx context.Context, original *entity.ExptCurrentItemRunSource) (bool, error) {
+				require.True(t, sameExecutionIdentity(source, original))
 				finishes++
-				return nil
-			}).Times(map[bool]int{true: 1, false: 0}[expected])
-			manager.EXPECT().CompleteExpt(gomock.Any(), f.expt, &f.run, f.space, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(map[bool]int{true: 1, false: 0}[expected])
+				err := guard.Release(ctx, "frozen-scope", f.run, f.item, original.Current.RequestID, "debt")
+				return true, err
+			}}
+
 			guard.EXPECT().Release(gomock.Any(), "frozen-scope", f.run, f.item, "rq1", gomock.Any()).DoAndReturn(func(ctx context.Context, _ string, _, _ int64, _, _ string) error {
 				require.NoError(t, ctx.Err())
 				releases++

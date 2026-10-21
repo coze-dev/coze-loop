@@ -2162,6 +2162,10 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 	}
 
 	kill := func(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
+		if terminate, ok := e.manager.(service.IExptCurrentRunTerminator); ok && got.ExptType == entity.ExptType_Offline {
+			_, err := terminate.TerminateCurrentRun(ctx, exptID, exptRunID, spaceID, session, nil, entity.WithStatus(entity.ExptStatus_Terminated), entity.NoAggrCalculate())
+			return err
+		}
 		if err := e.manager.CompleteRun(ctx, exptID, exptRunID, spaceID, session, entity.WithStatus(entity.ExptStatus_Terminated)); err != nil {
 			return err
 		}
