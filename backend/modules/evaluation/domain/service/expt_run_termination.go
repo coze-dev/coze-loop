@@ -264,8 +264,6 @@ func (e *ExptMangerImpl) TerminateCurrentRun(ctx context.Context, expt, run, spa
 }
 
 func (e *ExptMangerImpl) releaseTerminationResources(ctx context.Context, expt *entity.Experiment, run int64, sources []*entity.ExptCurrentItemRunSource, whole bool, session *entity.Session) error {
-	releaseCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
-	defer cancel()
 	seen := map[int64]bool{}
 	records := []int64{}
 	for _, source := range sources {
@@ -275,14 +273,22 @@ func (e *ExptMangerImpl) releaseTerminationResources(ctx context.Context, expt *
 		if !whole && (source.Current.Status == entity.ItemRunState_Success || source.Current.Status == entity.ItemRunState_Fail) {
 			continue
 		}
-		if err := releaseCtx.Err(); err != nil {
+		if err := ctx.Err(); err != nil {
 			return errno.WrapMQRetryErr(err)
 		}
 		if e.centralGuard != nil && entity.IsCentralDispatch(expt.ExptDispatchMode) {
 			if expt.SchedulerScope == "" {
 				return fmt.Errorf("termination scope missing")
 			}
-			if err := e.centralGuard.Release(releaseCtx, expt.SchedulerScope, run, source.Current.ItemID, source.Current.RequestID, "current run item terminated"); err != nil {
+			// Each ledger IO has its own budget; a healthy large run must reach
+			// its tail. The caller's lease/cancellation still bounds the loop.
+			releaseCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
+			err := e.centralGuard.Release(releaseCtx, expt.SchedulerScope, run, source.Current.ItemID, source.Current.RequestID, "current run item terminated")
+			if err == nil {
+				err = releaseCtx.Err()
+			}
+			cancel()
+			if err != nil {
 				return errno.WrapMQRetryErr(err)
 			}
 		}
@@ -302,12 +308,20 @@ func (e *ExptMangerImpl) releaseTerminationResources(ctx context.Context, expt *
 		}
 	}
 	if e.evalTargetService != nil && len(records) > 0 {
+		releaseCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
 		e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(releaseCtx, resolveLoadSpaceID(expt.SpaceID, expt.TargetSpaceID), records, int32(errno.AsyncEvalTargetTerminatedCode), "async eval target terminated: experiment cancelled", false)
+		err := releaseCtx.Err()
+		cancel()
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
 	}
-	if err := releaseCtx.Err(); err != nil {
+	if err := ctx.Err(); err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
 	if whole && e.quotaRepo != nil {
+		releaseCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
+		defer cancel()
 		return NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(releaseCtx, expt.ID, expt.SpaceID, session)
 	}
 	return nil
@@ -328,7 +342,10 @@ func (e *ExptMangerImpl) cleanupTerminatedRun(ctx context.Context, event *entity
 	if _, err := locker.UnlockWithValue(resourceCtx, key, strconv.FormatInt(event.ExptRunID, 10)); err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
-	locked, leaseCtx, cancel, err := locker.LockWithRenew(resourceCtx, key, 5*time.Second, 8*time.Second)
+	if err := ctx.Err(); err != nil {
+		return e.cleanupCancelledTerminationResources(ctx, event, finished, sources)
+	}
+	locked, leaseCtx, cancel, err := locker.LockWithRenew(ctx, key, 5*time.Second, 5*time.Minute)
 	if err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
@@ -338,6 +355,13 @@ func (e *ExptMangerImpl) cleanupTerminatedRun(ctx context.Context, event *entity
 	defer cancel()
 	current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(leaseCtx), event.ExptID, event.SpaceID)
 	if err != nil {
+		if ctx.Err() != nil {
+			cancel()
+			if _, unlockErr := locker.Unlock(key); unlockErr != nil {
+				return errno.WrapMQRetryErr(unlockErr)
+			}
+			return e.cleanupCancelledTerminationResources(ctx, event, finished, sources)
+		}
 		return errno.WrapMQRetryErr(err)
 	}
 	if current == nil {
@@ -350,6 +374,13 @@ func (e *ExptMangerImpl) cleanupTerminatedRun(ctx context.Context, event *entity
 		return errno.NewMQRetryErr("termination cleanup observed active run")
 	}
 	if err := e.releaseTerminationResources(leaseCtx, current, event.ExptRunID, sources, true, event.Session); err != nil {
+		if ctx.Err() != nil {
+			cancel()
+			if _, unlockErr := locker.Unlock(key); unlockErr != nil {
+				return errno.WrapMQRetryErr(unlockErr)
+			}
+			return e.cleanupCancelledTerminationResources(ctx, event, current, sources)
+		}
 		return err
 	}
 	if err := ctx.Err(); err != nil {
@@ -409,6 +440,29 @@ func (e *ExptMangerImpl) cleanupTerminatedRun(ctx context.Context, event *entity
 		return errno.WrapMQRetryErr(err)
 	}
 	return e.idem.Set(opCtx, notificationKey, 3*time.Minute)
+}
+
+func (e *ExptMangerImpl) cleanupCancelledTerminationResources(ctx context.Context, event *entity.ExptScheduleEvent, frozen *entity.Experiment, sources []*entity.ExptCurrentItemRunSource) error {
+	// Cancellation permits only frozen resource IO. A separate holder prevents
+	// the cancelled operation's asynchronous unlock from deleting this lease.
+	resourceCtx, stop := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+	defer stop()
+	locker := e.manualRetryLocker()
+	if locker == nil {
+		return errno.NewMQRetryErr("termination resource locker missing")
+	}
+	locked, leaseCtx, cancel, err := locker.LockWithRenew(resourceCtx, e.makeExptMutexLockKey(event.ExptID), 5*time.Second, 8*time.Second)
+	if err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if !locked {
+		return errno.NewMQRetryErr("termination resource owner unavailable")
+	}
+	defer cancel()
+	if err := e.releaseTerminationResources(leaseCtx, frozen, event.ExptRunID, sources, true, event.Session); err != nil {
+		return err
+	}
+	return errno.WrapMQRetryErr(ctx.Err())
 }
 
 func (e *ExptMangerImpl) refreshTerminatedRunFilters(ctx context.Context, event *entity.ExptScheduleEvent, sources []*entity.ExptCurrentItemRunSource) error {
