@@ -52,6 +52,7 @@ func TestCentralReservation_NoSecondStatsWrite(t *testing.T) {
 				centralGuard: &fakeGuard{confirmResult: true}, dispatchRepo: dispatch,
 				exptItemResultRepo: repoMocks.NewMockIExptItemResultRepo(ctrl), exptStatsRepo: repoMocks.NewMockIExptStatsRepo(ctrl),
 			}
+			svc.exptItemResultRepo.(*repoMocks.MockIExptItemResultRepo).EXPECT().GetCurrentRequest(gomock.Any(), int64(3), int64(1), int64(2), int64(4)).Return(&entity.ExptItemCurrentRequest{RunID: 2, ItemID: 4, RequestID: "rq1", Status: entity.ItemRunState_Processing}, nil)
 			called := false
 			require.NoError(t, svc.HandleCentralReservation(func(context.Context, *entity.ExptItemEvalEvent) error { called = true; return nil })(centralAdmittedCtx(t), &entity.ExptItemEvalEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2, EvalSetItemID: 4, RequestID: "rq1"}))
 			require.True(t, called)

@@ -25,11 +25,12 @@ var errExptNonCurrentSource = errors.New("execution source is no longer current"
 
 type currentItemSourceKey struct{}
 type currentItemExecution struct {
-	Source        *entity.ExptCurrentItemRunSource
-	LockLost      bool
-	Completed     bool
-	QuotaReleased bool
-	LogCtx        context.Context
+	Source          *entity.ExptCurrentItemRunSource
+	LockLost        bool
+	Completed       bool
+	QuotaReleased   bool
+	SourceValidated bool
+	LogCtx          context.Context
 }
 
 func executionSource(ctx context.Context) *currentItemExecution {
@@ -322,10 +323,10 @@ func (e *ExptItemEventEvalServiceImpl) handleCurrentEventErr(ctx context.Context
 		if err := e.manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, entity.WithStatus(entity.ExptStatus_Terminated), entity.WithStatusMessage(evalErr.Error()), entity.WithCID(cid), entity.WithCompleteInterval(2*time.Second)); err != nil {
 			return err
 		}
+		e.releaseCentralQuotaOutsideGate(ctx, event, evalErr, "expt terminated on indebt")
 		if err := ctx.Err(); err != nil {
 			return errno.WrapMQRetryErr(err)
 		}
-		e.releaseCentralQuotaOutsideGate(ctx, event, evalErr, "expt terminated on indebt")
 		return nil
 	}
 	return nil
@@ -434,7 +435,7 @@ func (e *ExptSchedulerImpl) handleCurrentZombies(ctx context.Context, event *ent
 			if err != nil || !applied {
 				return false, err
 			}
-			e.releaseCentralQuotaForItems(lockCtx, expt, event.ExptRunID, []int64{item.ItemID}, "item zombie timeout")
+			e.releaseCentralQuotaForItems(lockCtx, expt, event.ExptRunID, []int64{item.ItemID}, map[int64]string{item.ItemID: item.Source.Current.RequestID}, "item zombie timeout")
 			if e.sandboxAgentNotifier != nil {
 				if err := e.sandboxAgentNotifier.NotifyItemFail(lockCtx, expt, item.ItemID, zombieErr); err != nil {
 					logs.CtxWarn(lockCtx, "notify zombie item: %v", err)
@@ -493,7 +494,7 @@ func (e *ExptSchedulerImpl) sweepCurrentSandboxItems(ctx context.Context, event 
 			if err != nil || !applied {
 				return false, err
 			}
-			e.releaseCentralQuotaForItems(lockCtx, expt, event.ExptRunID, []int64{item.ItemID}, "sandbox terminated before report")
+			e.releaseCentralQuotaForItems(lockCtx, expt, event.ExptRunID, []int64{item.ItemID}, map[int64]string{item.ItemID: item.Source.Current.RequestID}, "sandbox terminated before report")
 			byRecord := map[int64][]int64{}
 			for _, id := range stopped {
 				byRecord[id] = []int64{item.ItemID}

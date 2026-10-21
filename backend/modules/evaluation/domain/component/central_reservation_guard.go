@@ -36,11 +36,13 @@ type ICentralReservationGuard interface {
 	// schedulerScope 是 Experiment 冻结的调度域，决定去哪本额度账本查这条 reservation。
 	// 由调用方从 DB 读出后传入，不由实现方按当前运行环境推断 —— 推断会让"实验属于哪本账"
 	// 取决于谁在处理消息，而它本该只取决于数据本身。
-	ConfirmRunning(ctx context.Context, schedulerScope string, exptRunID, itemID int64) (bool, error)
+	// expectedRequestID is the original event/grant token; empty is never a wildcard.
+	ConfirmRunning(ctx context.Context, schedulerScope string, exptRunID, itemID int64, expectedRequestID string) (bool, error)
 
 	// Release 在 item 进入终态（成功/失败/终止/僵尸清理）时幂等释放额度。
 	// 重复调用为 no-op。
-	Release(ctx context.Context, schedulerScope string, exptRunID, itemID int64, reason string) error
+	// Compare the original expectedRequestID atomically before refunding/deleting.
+	Release(ctx context.Context, schedulerScope string, exptRunID, itemID int64, expectedRequestID, reason string) error
 
 	// RepriceRunConsumption 把该 run 在飞的预占按新的单 item 消耗向量重新计价。
 	//
@@ -95,13 +97,13 @@ type noopCentralReservationGuard struct{}
 // 选择 fail-closed 而非放行：本方法只会被判定为 enforce 的实验触达，而 enforce 意味着
 // "该实验的额度由中心账本管控"。没有账本却放行，等于让实验在无任何额度约束下跑，
 // 这比让它停下来等待更危险 —— 后者可见（实验不动会被发现），前者静默（资源被打爆才发现）。
-func (noopCentralReservationGuard) ConfirmRunning(ctx context.Context, schedulerScope string, exptRunID, itemID int64) (bool, error) {
+func (noopCentralReservationGuard) ConfirmRunning(ctx context.Context, schedulerScope string, exptRunID, itemID int64, expectedRequestID string) (bool, error) {
 	return false, nil
 }
 
 // Release 无账本可释放，直接成功返回。
 // 不返回错误：终态收口路径不应因为额度模块缺席而失败。
-func (noopCentralReservationGuard) Release(ctx context.Context, schedulerScope string, exptRunID, itemID int64, reason string) error {
+func (noopCentralReservationGuard) Release(ctx context.Context, schedulerScope string, exptRunID, itemID int64, expectedRequestID, reason string) error {
 	return nil
 }
 

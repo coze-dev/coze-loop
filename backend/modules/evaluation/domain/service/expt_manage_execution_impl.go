@@ -20,6 +20,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -1000,27 +1001,49 @@ func (e *ExptMangerImpl) releaseCentralQuotaForRun(
 	//     （判据只能用预占时刻，分不出"卡死很久"与"刚被接管"，按它释放会真超发）；
 	//   zombie 清理只扫 Processing，但实验已终态、daemon 不再跳。
 	// 三条路都不接 ⇒ 永久泄漏。
-	itemIDs, err := e.incompleteItemIDsForRelease(ctx, expt.ID, runID, expt.SpaceID)
+	observations, err := e.incompleteItemObservationsForRelease(ctx, expt.ID, runID, expt.SpaceID)
 	if err != nil {
 		// 查不到就不猜：宁可这次不释放（留给对账/人工），也不能凭空构造 item 列表。
 		logs.CtxError(ctx, "[CentralReservation] scan incomplete items fail on %s, skip release, expt_id: %v, expt_run_id: %v, err: %v",
 			occasion, expt.ID, runID, err)
 		return
 	}
-	if len(itemIDs) == 0 {
+	if len(observations) == 0 {
 		return
 	}
 
 	failed := 0
-	for _, itemID := range itemIDs {
-		if err := e.centralGuard.Release(ctx, expt.SchedulerScope, runID, itemID, reason); err != nil {
+	relCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+	defer cancel()
+	for _, observation := range observations {
+		itemID := observation.ItemID
+		if err := e.centralGuard.Release(relCtx, expt.SchedulerScope, runID, itemID, observation.RequestID, reason); err != nil {
 			failed++
 			logs.CtxWarn(ctx, "[CentralReservation] release quota fail on %s, scope: %v, expt_run_id: %v, item_id: %v, err: %v",
 				occasion, expt.SchedulerScope, runID, itemID, err)
 		}
 	}
 	logs.CtxInfo(ctx, "[CentralReservation] quota released for incomplete items on %s, scope: %v, expt_id: %v, expt_run_id: %v, items: %v, failed: %v, reason: %v",
-		occasion, expt.SchedulerScope, expt.ID, runID, len(itemIDs), failed, reason)
+		occasion, expt.SchedulerScope, expt.ID, runID, len(observations), failed, reason)
+}
+
+func (e *ExptMangerImpl) incompleteItemObservationsForRelease(ctx context.Context, exptID, runID, spaceID int64) ([]*repo.ExptDispatchObservation, error) {
+	observations, err := e.itemResultRepo.ScanIncompleteDispatchObservations(ctx, spaceID, exptID, runID)
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[int64]bool, len(observations))
+	observed := make([]*repo.ExptDispatchObservation, 0, len(observations))
+	for _, observation := range observations {
+		if observation == nil || observation.ItemID <= 0 || seen[observation.ItemID] {
+			return nil, fmt.Errorf("incomplete or foreign quota release observation")
+		}
+		seen[observation.ItemID] = true
+		// The primary query already restricts the original run log to incomplete
+		// rows. An absorbing terminal canonical projection still owns that token.
+		observed = append(observed, observation)
+	}
+	return observed, nil
 }
 
 // releaseSupersededRunQuota 在重试新建 run 之前，释放**被顶替的上一个 run** 仍挂在账本上的预占。

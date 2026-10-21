@@ -43,32 +43,32 @@ func (m *MockICentralReservationGuard) EXPECT() *MockICentralReservationGuardMoc
 }
 
 // ConfirmRunning mocks base method.
-func (m *MockICentralReservationGuard) ConfirmRunning(ctx context.Context, schedulerScope string, exptRunID, itemID int64) (bool, error) {
+func (m *MockICentralReservationGuard) ConfirmRunning(ctx context.Context, schedulerScope string, exptRunID, itemID int64, expectedRequestID string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ConfirmRunning", ctx, schedulerScope, exptRunID, itemID)
+	ret := m.ctrl.Call(m, "ConfirmRunning", ctx, schedulerScope, exptRunID, itemID, expectedRequestID)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ConfirmRunning indicates an expected call of ConfirmRunning.
-func (mr *MockICentralReservationGuardMockRecorder) ConfirmRunning(ctx, schedulerScope, exptRunID, itemID any) *gomock.Call {
+func (mr *MockICentralReservationGuardMockRecorder) ConfirmRunning(ctx, schedulerScope, exptRunID, itemID, expectedRequestID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConfirmRunning", reflect.TypeOf((*MockICentralReservationGuard)(nil).ConfirmRunning), ctx, schedulerScope, exptRunID, itemID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConfirmRunning", reflect.TypeOf((*MockICentralReservationGuard)(nil).ConfirmRunning), ctx, schedulerScope, exptRunID, itemID, expectedRequestID)
 }
 
 // Release mocks base method.
-func (m *MockICentralReservationGuard) Release(ctx context.Context, schedulerScope string, exptRunID, itemID int64, reason string) error {
+func (m *MockICentralReservationGuard) Release(ctx context.Context, schedulerScope string, exptRunID, itemID int64, expectedRequestID, reason string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Release", ctx, schedulerScope, exptRunID, itemID, reason)
+	ret := m.ctrl.Call(m, "Release", ctx, schedulerScope, exptRunID, itemID, expectedRequestID, reason)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Release indicates an expected call of Release.
-func (mr *MockICentralReservationGuardMockRecorder) Release(ctx, schedulerScope, exptRunID, itemID, reason any) *gomock.Call {
+func (mr *MockICentralReservationGuardMockRecorder) Release(ctx, schedulerScope, exptRunID, itemID, expectedRequestID, reason any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Release", reflect.TypeOf((*MockICentralReservationGuard)(nil).Release), ctx, schedulerScope, exptRunID, itemID, reason)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Release", reflect.TypeOf((*MockICentralReservationGuard)(nil).Release), ctx, schedulerScope, exptRunID, itemID, expectedRequestID, reason)
 }
 
 // ReleaseTerminalReservation mocks base method.

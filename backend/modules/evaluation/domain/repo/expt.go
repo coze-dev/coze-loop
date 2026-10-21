@@ -59,6 +59,8 @@ type IExptStatsRepo interface {
 }
 
 type IExptItemResultRepo interface {
+	// Resource cleanup uses the same strict primary dispatch observation, including terminal runs.
+	ScanIncompleteDispatchObservations(ctx context.Context, spaceID, exptID, runID int64) ([]*ExptDispatchObservation, error)
 	ScanCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, retryFirst bool) ([]*entity.ExptItemCurrentRequest, error)
 	GetCurrentRequest(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptItemCurrentRequest, error)
 	MarkProcessingIfCurrent(ctx context.Context, spaceID, exptID, runID, itemID int64, requestID string) (bool, error)
