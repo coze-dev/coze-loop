@@ -45,6 +45,10 @@ type ExptCurrentItemRunWrite struct {
 	RetryOnly        bool
 	FailPendingTurns bool
 	MissingTurnLogs  []*ExptTurnResultRunLog
+
+	// OnlyIfQueueingUnreserved rejects a superseded pre-execution observation.
+	// Its zero value preserves ordinary completion, yield and retry writes.
+	OnlyIfQueueingUnreserved bool
 }
 
 // SameCurrentEvaluatorRefs compares invocation identity across JSON round trips.
