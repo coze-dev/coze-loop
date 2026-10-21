@@ -4,11 +4,13 @@
 package experiment
 
 import (
+	"encoding/json"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/cloudwego/gopkg/protocol/thrift"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -19,6 +21,7 @@ import (
 	openapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 
 	domainCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	domainEvalSet "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	domaindoEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	domainEvaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domainExpt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
@@ -238,6 +241,113 @@ func TestDomainExperimentDTO2OpenAPI(t *testing.T) {
 		}
 	}
 	assert.Nil(t, DomainExperimentDTO2OpenAPI(nil))
+}
+
+func TestDomainExperimentDTO2OpenAPI_EvalSetBinding(t *testing.T) {
+	t.Parallel()
+
+	evalSetID := int64(100)
+	boundVersionID := int64(200)
+	domainExperiment := &domainExpt.Experiment{
+		EvalSetID:        &evalSetID,
+		EvalSetVersionID: &boundVersionID,
+		EvalSet: &domainEvalSet.EvaluationSet{
+			ID:            &evalSetID,
+			Name:          gptr.Of("evaluation set"),
+			LatestVersion: gptr.Of("v3"),
+			EvaluationSetVersion: &domainEvalSet.EvaluationSetVersion{
+				ID:      &boundVersionID,
+				Version: gptr.Of("v2"),
+			},
+		},
+	}
+
+	converted := DomainExperimentDTO2OpenAPI(domainExperiment)
+	require.NotNil(t, converted)
+	assert.Equal(t, evalSetID, converted.GetEvalSetID())
+	assert.Equal(t, boundVersionID, converted.GetEvalSetVersionID())
+	require.NotNil(t, converted.EvalSet)
+	assert.Equal(t, evalSetID, converted.EvalSet.GetID())
+	assert.Equal(t, "v3", converted.EvalSet.GetLatestVersion())
+	require.NotNil(t, converted.EvalSet.CurrentVersion)
+	assert.Equal(t, boundVersionID, converted.EvalSet.CurrentVersion.GetID())
+	assert.Equal(t, "v2", converted.EvalSet.CurrentVersion.GetVersion())
+}
+
+func TestDomainExperimentDTO2OpenAPI_EvalSetBindingOptional(t *testing.T) {
+	t.Parallel()
+
+	converted := DomainExperimentDTO2OpenAPI(&domainExpt.Experiment{})
+	require.NotNil(t, converted)
+	assert.Nil(t, converted.EvalSet)
+	assert.Nil(t, converted.EvalSetID)
+	assert.Nil(t, converted.EvalSetVersionID)
+}
+
+func TestOpenAPIExperimentEvalSetBindingContractCompatibility(t *testing.T) {
+	t.Parallel()
+
+	id := int64(1)
+	evalSetID := int64(100)
+	versionID := int64(200)
+	newPayload := &openapiExperiment.Experiment{
+		ID:               &id,
+		EvalSetID:        &evalSetID,
+		EvalSetVersionID: &versionID,
+	}
+	buf := make([]byte, newPayload.BLength())
+	require.Equal(t, len(buf), newPayload.FastWriteNocopy(buf, nil))
+
+	legacyID, err := readLegacyExperimentID(buf)
+	require.NoError(t, err)
+	assert.Equal(t, id, legacyID)
+
+	oldPayload := &openapiExperiment.Experiment{ID: &id}
+	oldBuf := make([]byte, oldPayload.BLength())
+	require.Equal(t, len(oldBuf), oldPayload.FastWriteNocopy(oldBuf, nil))
+	decoded := openapiExperiment.NewExperiment()
+	read, err := decoded.FastRead(oldBuf)
+	require.NoError(t, err)
+	assert.Equal(t, len(oldBuf), read)
+	assert.Equal(t, id, decoded.GetID())
+	assert.Nil(t, decoded.EvalSetID)
+	assert.Nil(t, decoded.EvalSetVersionID)
+
+	jsonPayload, err := json.Marshal(newPayload)
+	require.NoError(t, err)
+	var fields map[string]any
+	require.NoError(t, json.Unmarshal(jsonPayload, &fields))
+	assert.Equal(t, float64(evalSetID), fields["eval_set_id"])
+	assert.Equal(t, float64(versionID), fields["eval_set_version_id"])
+}
+
+func readLegacyExperimentID(buf []byte) (int64, error) {
+	var experimentID int64
+	for offset := 0; offset < len(buf); {
+		fieldType, fieldID, read, err := thrift.Binary.ReadFieldBegin(buf[offset:])
+		if err != nil {
+			return 0, err
+		}
+		offset += read
+		if fieldType == thrift.STOP {
+			return experimentID, nil
+		}
+		if fieldID == 1 && fieldType == thrift.I64 {
+			value, read, err := thrift.Binary.ReadI64(buf[offset:])
+			if err != nil {
+				return 0, err
+			}
+			experimentID = value
+			offset += read
+			continue
+		}
+		read, err = thrift.Binary.Skip(buf[offset:], fieldType)
+		if err != nil {
+			return 0, err
+		}
+		offset += read
+	}
+	return experimentID, nil
 }
 
 // TestDomainExperimentDTO2OpenAPI_MultiSetReadView 验证多评测集读视图 (110~114) 映射到 OpenAPI。
