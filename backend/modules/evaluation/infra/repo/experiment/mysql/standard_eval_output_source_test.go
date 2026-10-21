@@ -100,18 +100,23 @@ func TestSourceStandardMySQLSnapshotAcrossIsolation(t *testing.T) {
 			}, db.WithMaster()))
 			once.Do(func() { close(resume) })
 			observed := <-done
-			require.NoError(t, observed.err)
-			require.NotNil(t, observed.source)
-			require.Equal(t, "rq1", observed.source.Source.Current.RequestID)
-			require.Equal(t, f.base+41, observed.source.Source.Turns[0].TargetResultID)
+			if isolation == "READ-COMMITTED" {
+				require.Error(t, observed.err, "new request cannot enter an RC source observation")
+				require.Nil(t, observed.source)
+			} else {
+				require.NoError(t, observed.err)
+				require.NotNil(t, observed.source)
+				require.Equal(t, "rq1", observed.source.Source.Current.RequestID)
+				require.Equal(t, f.base+41, observed.source.Source.Turns[0].TargetResultID)
+			}
 			require.Zero(t, locks)
 			provider.mu.Lock()
 			options := append([]sql.TxOptions(nil), provider.options...)
 			provider.mu.Unlock()
 			require.Len(t, options, 1)
-			require.Equal(t, sql.LevelRepeatableRead, options[0].Isolation)
-			require.True(t, options[0].ReadOnly)
-			t.Logf("REAL_MYSQL_STANDARD_SOURCE_SNAPSHOT session_default=%s explicit_repeatable_read=true read_only=true locks=%d request=rq1", isolation, locks)
+			require.Equal(t, sql.LevelDefault, options[0].Isolation)
+			require.False(t, options[0].ReadOnly)
+			t.Logf("REAL_MYSQL_STANDARD_SOURCE_SNAPSHOT session_default=%s default_begin=true semantic_read_only=true locks=%d stable_or_discard=true", isolation, locks)
 		})
 	}
 }
