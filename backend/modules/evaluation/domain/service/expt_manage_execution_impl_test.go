@@ -3917,7 +3917,7 @@ func TestExptMangerImpl_terminateSandboxExecutesForCancelledItems_CrossSpace(t *
 			gomock.Any(), false,
 		).Times(1)
 
-		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, itemIDs)
+		_ = mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, itemIDs)
 	})
 
 	t.Run("targetSourceSpaceID=0 → 回退到消费方 (3)", func(t *testing.T) {
@@ -3934,7 +3934,7 @@ func TestExptMangerImpl_terminateSandboxExecutesForCancelledItems_CrossSpace(t *
 			gomock.Any(), false,
 		).Times(1)
 
-		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 0, exptID, exptRunID, itemIDs)
+		_ = mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 0, exptID, exptRunID, itemIDs)
 	})
 
 	t.Run("evalTargetService=nil → 立即返回, 不查库", func(t *testing.T) {
@@ -3944,7 +3944,7 @@ func TestExptMangerImpl_terminateSandboxExecutesForCancelledItems_CrossSpace(t *
 		mgr.evalTargetService = nil
 		// turnResultRepo 上不 EXPECT 任何调用: gomock.Finish 会校验没有意外调用
 
-		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, itemIDs)
+		_ = mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, itemIDs)
 	})
 
 	t.Run("exptRunID=nil / <=0 → 立即返回", func(t *testing.T) {
@@ -3952,8 +3952,8 @@ func TestExptMangerImpl_terminateSandboxExecutesForCancelledItems_CrossSpace(t *
 		defer ctrl.Finish()
 		mgr := newTestExptManager(ctrl)
 
-		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, nil, itemIDs)
-		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, gptr.Of[int64](0), itemIDs)
+		_ = mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, nil, itemIDs)
+		_ = mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, gptr.Of[int64](0), itemIDs)
 	})
 
 	t.Run("itemIDs 为空 → 立即返回", func(t *testing.T) {
@@ -3961,7 +3961,7 @@ func TestExptMangerImpl_terminateSandboxExecutesForCancelledItems_CrossSpace(t *
 		defer ctrl.Finish()
 		mgr := newTestExptManager(ctrl)
 
-		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, nil)
+		_ = mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, nil)
 	})
 
 	t.Run("MGetItemTurnRunLogs 出错 → best-effort 静默返回, 不发 Terminate RPC", func(t *testing.T) {
@@ -3974,7 +3974,7 @@ func TestExptMangerImpl_terminateSandboxExecutesForCancelledItems_CrossSpace(t *
 			Return(nil, errors.New("db err"))
 		// evalTargetService 上不 EXPECT Terminate: 出错后必须 return
 
-		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, itemIDs)
+		_ = mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, itemIDs)
 	})
 
 	t.Run("MGet 返回空 record / TargetResultID<=0 → 不发 Terminate RPC", func(t *testing.T) {
@@ -3989,6 +3989,6 @@ func TestExptMangerImpl_terminateSandboxExecutesForCancelledItems_CrossSpace(t *
 				nil,                             // nil 被过滤
 			}, nil)
 
-		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, itemIDs)
+		_ = mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, itemIDs)
 	})
 }

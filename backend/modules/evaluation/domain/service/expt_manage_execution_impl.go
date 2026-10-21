@@ -724,7 +724,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 					logs.CtxWarn(ctx, "UpsertExptTurnResultFilter fail after terminateItemTurns, expt_id: %v, err: %v", exptID, err)
 				}
 				// SandboxAgent 评测对象：被取消的 turn 关联的 EvalTargetRecord 走 best-effort 销毁
-				e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, exptRunID, terminatedItemIDs)
+				_ = e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, exptRunID, terminatedItemIDs)
 			}
 		default:
 			// **Failed 等其它终态也必须销毁沙箱**。此前清理只挂在 Terminated 一个 case 上, 于是
@@ -744,7 +744,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 					itemIDSet[itemTurnID.ItemID] = true
 				}
 				itemIDs := maps.ToSlice(itemIDSet, func(k int64, v bool) int64 { return k })
-				e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, exptRunID, itemIDs)
+				_ = e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, exptRunID, itemIDs)
 			}
 		}
 	}
@@ -1284,7 +1284,7 @@ func (e *ExptMangerImpl) TerminateItems(ctx context.Context, exptID, exptRunID, 
 	if err != nil {
 		logs.CtxWarn(ctx, "[ExptItemTerminate] GetByID fail, skip sandbox destroy, expt_id: %v, err: %v", exptID, err)
 	} else {
-		e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, &exptRunID, targetIDs)
+		_ = e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, &exptRunID, targetIDs)
 	}
 
 	logs.CtxInfo(ctx, "[ExptItemTerminate] done, expt_id: %v, expt_run_id: %v, terminated_item_ids: %v", exptID, exptRunID, targetIDs)

@@ -685,7 +685,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 			executeIDs := sandboxExecuteIDsOf(ctx, record)
 			logs.CtxError(ctx, "[SandboxDestroy] create eval target record fail, destroying sandbox executes to avoid leak, invoke_id=%d, expt_id=%d, execute_ids=%v, err=%v",
 				record.ID, gptr.Indirect(param.ExperimentID), executeIDs, err)
-			e.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(param.ExperimentID), 10), spaceID, executeIDs, false)
+			_ = e.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(param.ExperimentID), 10), spaceID, executeIDs, false)
 		}
 		return nil, callee, err
 	}
@@ -851,7 +851,7 @@ func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Contex
 	executeIDs := sandboxExecuteIDsOf(ctx, record)
 	logs.CtxInfo(ctx, "[SandboxDestroy] destroying sandbox executes, record_id=%d, task_id=%s, expt_run_id=%d, execute_ids=%v",
 		record.ID, taskID, record.ExperimentRunID, executeIDs)
-	e.destroySandboxExecute(ctx, taskID, record.SpaceID, executeIDs, false)
+	_ = e.destroySandboxExecute(ctx, taskID, record.SpaceID, executeIDs, false)
 }
 
 // extractExtraSandboxExecuteID 从 record 的 outputData.Ext 里读取额外沙箱 execute id；
@@ -1002,7 +1002,7 @@ func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskI
 			continue
 		}
 		goroutine.Go(destroyCtx, func() {
-			e.destroySandboxExecuteSync(destroyCtx, t, spaceID, ids, zombieTimeout)
+			_ = e.destroySandboxExecuteSync(destroyCtx, t, spaceID, ids, zombieTimeout)
 		})
 	}
 	return nil

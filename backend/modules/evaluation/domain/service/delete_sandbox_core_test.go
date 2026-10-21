@@ -1,3 +1,6 @@
+// Copyright (c) 2026 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package service
 
 import (
@@ -32,14 +35,17 @@ type deleteCoreExpts struct {
 func (r *deleteCoreExpts) GetByID(context.Context, int64, int64) (*entity.Experiment, error) {
 	return r.row, nil
 }
+
 func (r *deleteCoreExpts) MGetByID(context.Context, []int64, int64) ([]*entity.Experiment, error) {
 	return []*entity.Experiment{r.row}, nil
 }
+
 func (r *deleteCoreExpts) Delete(context.Context, int64, int64) error {
 	r.deleted++
 	r.trace.add("delete")
 	return nil
 }
+
 func (r *deleteCoreExpts) MDelete(context.Context, []int64, int64) error {
 	r.deleted++
 	r.trace.add("delete")
@@ -83,9 +89,11 @@ func (r *deleteCoreRecords) ListEvalTargetRecordByIDsAndSpaceID(context.Context,
 	copy := *r.record
 	return []*entity.EvalTargetRecord{&copy}, nil
 }
+
 func (*deleteCoreRecords) BatchGetEvalTargetVersion(context.Context, int64, []int64) ([]*entity.EvalTarget, error) {
 	return []*entity.EvalTarget{{EvalTargetType: entity.EvalTargetTypeSandboxAgent, EvalTargetVersion: &entity.EvalTargetVersion{ID: 20}}}, nil
 }
+
 func (r *deleteCoreRecords) SaveEvalTargetRecord(_ context.Context, record *entity.EvalTargetRecord, _ *bool) error {
 	copy := *record
 	r.record = &copy
@@ -118,6 +126,7 @@ func (s *deleteCoreScheduler) Destroy(_ context.Context, r *rpc.SandboxDestroyRe
 	}
 	return &rpc.SandboxDestroyResponse{AffectedCount: 1}, nil
 }
+
 func deleteCoreFixture() (*ExptMangerImpl, *deleteCoreExpts, *deleteCoreSelection, *deleteCoreTurns, *deleteCoreRecords, *deleteCoreScheduler) {
 	trace := &deleteCoreTrace{}
 	expts := &deleteCoreExpts{row: &entity.Experiment{ID: 701, SpaceID: 11, TargetSpaceID: 22, LatestRunID: 801, TargetType: entity.EvalTargetTypeSandboxAgent}, trace: trace}
@@ -128,6 +137,7 @@ func deleteCoreFixture() (*ExptMangerImpl, *deleteCoreExpts, *deleteCoreSelectio
 	target := &EvalTargetServiceImpl{evalTargetRepo: records, exptRunLogRepo: &deleteCoreRuns{}, sandboxSchedulerAdapter: scheduler, sandboxDestroyRetryBudget: time.Nanosecond}
 	return &ExptMangerImpl{exptRepo: expts, exptResultService: selection, turnResultRepo: turns, evalTargetService: target}, expts, selection, turns, records, scheduler
 }
+
 func TestDeleteSandboxCoreCallsExistingCleanupBeforeSoftDelete(t *testing.T) {
 	for _, batch := range []bool{false, true} {
 		t.Run(map[bool]string{false: "single", true: "batch"}[batch], func(t *testing.T) {
@@ -150,6 +160,7 @@ func TestDeleteSandboxCoreCallsExistingCleanupBeforeSoftDelete(t *testing.T) {
 		})
 	}
 }
+
 func TestDeleteSandboxCoreFailureRetainsRecordsAndRetriesOriginalEntry(t *testing.T) {
 	mgr, expts, _, _, records, scheduler := deleteCoreFixture()
 	scheduler.failID = "10-orch"
@@ -163,6 +174,7 @@ func TestDeleteSandboxCoreFailureRetainsRecordsAndRetriesOriginalEntry(t *testin
 	require.NoError(t, mgr.Delete(context.Background(), 701, 11, &entity.Session{}))
 	require.Equal(t, 1, expts.deleted)
 }
+
 func TestDeleteSandboxCoreSelectionFailureDoesNotDelete(t *testing.T) {
 	for _, turnQuery := range []bool{false, true} {
 		t.Run(map[bool]string{false: "selection", true: "turns"}[turnQuery], func(t *testing.T) {
@@ -178,6 +190,7 @@ func TestDeleteSandboxCoreSelectionFailureDoesNotDelete(t *testing.T) {
 		})
 	}
 }
+
 func TestDeleteSandboxCoreNonSandboxDoesNotLoadCleanup(t *testing.T) {
 	mgr, expts, selection, _, _, scheduler := deleteCoreFixture()
 	expts.row.TargetType = entity.EvalTargetTypeCustomRPCServer
@@ -186,13 +199,15 @@ func TestDeleteSandboxCoreNonSandboxDoesNotLoadCleanup(t *testing.T) {
 	require.Zero(t, selection.calls)
 	require.Zero(t, scheduler.calls)
 }
+
 func TestBaselineDestroyRetryAcceptsReturnedErrors(t *testing.T) {
 	_, _, _, _, records, scheduler := deleteCoreFixture()
 	scheduler.failFirst = true
 	target := &EvalTargetServiceImpl{evalTargetRepo: records, sandboxSchedulerAdapter: scheduler, sandboxDestroyRetryBudget: 500 * time.Millisecond}
-	target.destroySandboxExecuteSync(context.Background(), "701", 22, []string{"10-agent"}, false)
+	_ = target.destroySandboxExecuteSync(context.Background(), "701", 22, []string{"10-agent"}, false)
 	require.Equal(t, 2, scheduler.calls)
 }
+
 func TestDeleteSandboxCoreDefaultTerminationRemainsAsync(t *testing.T) {
 	mgr, _, _, _, records, scheduler := deleteCoreFixture()
 	records.record.EvalTargetOutputData.Ext[consts.OutputDataExtKeySandboxExecuteIDs] = `["10-agent"]`
@@ -201,7 +216,7 @@ func TestDeleteSandboxCoreDefaultTerminationRemainsAsync(t *testing.T) {
 	scheduler.done = make(chan struct{})
 	returned := make(chan struct{})
 	go func() {
-		mgr.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 22, []int64{10}, 1, "cancel", false)
+		_ = mgr.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 22, []int64{10}, 1, "cancel", false)
 		close(returned)
 	}()
 	select {
