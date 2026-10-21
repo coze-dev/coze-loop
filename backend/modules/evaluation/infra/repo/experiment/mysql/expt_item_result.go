@@ -8,7 +8,9 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/bytedance/gg/gptr"
 	"gorm.io/gen"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/hints"
 	"gorm.io/plugin/dbresolver"
@@ -92,6 +94,38 @@ func (dao *exptItemResultDAOImpl) BatchGet(ctx context.Context, spaceID, exptID 
 }
 
 func (dao *exptItemResultDAOImpl) UpdateItemsResult(ctx context.Context, spaceID, exptID int64, itemIDs []int64, ufields map[string]any, opts ...db.Option) error {
+	if next, ok := ufields["expt_run_id"].(int64); ok && next > 0 {
+		return dao.provider.Transaction(ctx, func(tx *gorm.DB) error {
+			var items []model.ExptItemResult
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id=? AND expt_id=? AND item_id IN ?", spaceID, exptID, itemIDs).Order("item_id").Find(&items).Error; err != nil {
+				return err
+			}
+			for _, item := range items {
+				fields := make(map[string]any, len(ufields)+1)
+				for key, value := range ufields {
+					fields[key] = value
+				}
+				if item.ExptRunID != next {
+					ext, err := entity.ParseExptItemResultExt(gptr.Indirect(item.Ext))
+					if err != nil {
+						return err
+					}
+					if _, exists := ext[entity.ManualRetryExtKey]; exists {
+						delete(ext, entity.ManualRetryExtKey)
+						raw, err := json.Marshal(ext)
+						if err != nil {
+							return err
+						}
+						fields["ext"] = raw
+					}
+				}
+				if err := tx.Model(&model.ExptItemResult{}).Where("id=? AND space_id=? AND expt_id=?", item.ID, spaceID, exptID).Updates(fields).Error; err != nil {
+					return err
+				}
+			}
+			return ctx.Err()
+		}, opts...)
+	}
 	db := dao.provider.NewSession(ctx, opts...)
 	q := query.Use(db).ExptItemResult
 	_, err := q.WithContext(ctx).
@@ -433,6 +467,9 @@ func (dao *exptItemResultDAOImpl) ScanItemRunLogs(ctx context.Context, exptID, e
 		filter = &entity.ExptItemRunLogFilter{}
 	}
 	session := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		session = session.Clauses(dbresolver.Write)
+	}
 
 	// RawFilter: use raw gorm.DB Where(sql, vars...) to avoid gen clause conversion / unknown clause issues.
 	if filter.RawFilter && filter.RawCond.SQL != "" {
