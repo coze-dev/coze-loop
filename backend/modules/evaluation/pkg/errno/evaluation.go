@@ -424,9 +424,7 @@ const (
 	exptMultiSetSpaceNotAllowedMessage           = "the space is not allowed to create multi-set experiments"
 	exptMultiSetSpaceNotAllowedNoAffectStability = true
 
-	// 沙箱 agent 评测对象上报结果错误码 (5073-5083)。沙箱侧上报时用下列细分码替代通用 CallTargetFail，
-	// 便于 metrics classifier / 前端展示按 reason 分类。触发要点见每条 comment。
-	SandboxAgentModelNotFoundCode              = 601205073 // sandbox agent target reported model_not_found (trigger: {code:10003, msg:"model X not found"})
+	SandboxAgentModelNotFoundCode              = 601205073 // sandbox agent target reported model_not_found (trigger: {code:10003, msg:"model X not found, allow:..."})
 	sandboxAgentModelNotFoundMessage           = "sandbox agent: model not found"
 	sandboxAgentModelNotFoundNoAffectStability = false
 
@@ -454,7 +452,7 @@ const (
 	sandboxAgentSessionNotWaitingInputMessage           = "sandbox agent: session not waiting input"
 	sandboxAgentSessionNotWaitingInputNoAffectStability = true
 
-	SandboxAgentCmdForwardPortNotReadyCode              = 601205080 // sandbox agent target reported cmd_forward_port_not_ready (trigger: port 16259 timeout, "Failed to connect to localhost port 16259", VSCode cmd exec failure, "[Errno 111] Connection refused")
+	SandboxAgentCmdForwardPortNotReadyCode              = 601205080 // sandbox agent target reported cmd_forward_port_not_ready (trigger: port 16259 timeout / "Failed to connect to localhost port 16259" / VSCode cmd exec failure / "[Errno 111] Connection refused")
 	sandboxAgentCmdForwardPortNotReadyMessage           = "sandbox agent: cmd forward port not ready"
 	sandboxAgentCmdForwardPortNotReadyNoAffectStability = false
 
@@ -462,7 +460,7 @@ const (
 	sandboxAgentNetworkMessage           = "sandbox agent: network error"
 	sandboxAgentNetworkNoAffectStability = false
 
-	SandboxAgentIDEHostMismatchCode              = 601205082 // sandbox agent target reported ide_host_mismatch (trigger: (a) "CN 环境机器不支持评测海外 IDE"; (b) /Applications/Trae.app/.../product.json missing and combined does not contain "Trae CN.app")
+	SandboxAgentIDEHostMismatchCode              = 601205082 // sandbox agent target reported ide_host_mismatch (trigger: (a) explicit "CN 环境机器不支持评测海外 IDE"; (b) /Applications/Trae.app/.../product.json missing and combined does not contain "Trae CN.app")
 	sandboxAgentIDEHostMismatchMessage           = "sandbox agent: IDE host mismatch"
 	sandboxAgentIDEHostMismatchNoAffectStability = true
 
@@ -470,7 +468,6 @@ const (
 	sandboxAgentConfigNameMismatchMessage           = "sandbox agent: config_name mismatch"
 	sandboxAgentConfigNameMismatchNoAffectStability = true
 
-	// 实验/行级超时错误码（用于把超时原因暴露给用户，替代原来落库为空 err_msg 或英文 raw string 的实现）
 	ExptZombieTimeoutCode              = 601205084 // 实验整体运行时长超过阈值被超时终止（HandleEventCheck 触发）
 	exptZombieTimeoutMessage           = "实验已超过最大执行时长被终止"
 	exptZombieTimeoutNoAffectStability = false
@@ -485,17 +482,12 @@ const (
 
 	ItemQuotaImpossibleCode              = 601205087 // 实验行申报的资源量超过调度域登记上限，任何配置下都无法调度（central scheduler 每拍授予点触发）
 	itemQuotaImpossibleMessage           = "实验行申报的资源量超过调度域上限，任何配置下都无法调度，已被置为失败"
-	itemQuotaImpossibleNoAffectStability = true // 结构性配置错误（申报>上限），非系统稳定性问题
+	itemQuotaImpossibleNoAffectStability = true
 
-	// ItemManuallyTerminatedCode 行级终止（TerminateExperimentItems 触发）。用户主动放弃该行，不是系统故障，
-	// 故 noAffectStability = true，不计入稳定性口径。message 会经 err_msg 落库并由 ItemSystemInfo.Error 透给前端展示。
-	// ⚠️ 原取 601205087，与 main 上新增的 ItemQuotaImpossibleCode 撞号（两边并行开发各自取了下一个空位），
-	// 合并时本码顺延到 601205088；601205087 归 main 先到者。
-	ItemManuallyTerminatedCode              = 601205088
+	ItemManuallyTerminatedCode              = 601205088 // 行级终止（TerminateExperimentItems 触发）；用户主动终止，不计入稳定性口径
 	itemManuallyTerminatedMessage           = "该行被用户主动终止"
 	itemManuallyTerminatedNoAffectStability = true
 
-	// SandboxAgent 评测对象阶段性错误码 (601206xxx)：按沙箱内执行阶段划分，便于按阶段做 metrics 分类与用户前端展示。
 	SandboxAgentSetupErrorCode              = 601206001 // sandbox agent target setup phase error: agent 初始化 / 环境依赖装载失败
 	sandboxAgentSetupErrorMessage           = "sandbox agent: agent setup failed"
 	sandboxAgentSetupErrorNoAffectStability = false
@@ -547,6 +539,14 @@ const (
 	ManualRetryDisabledCode              = 601204106 // same-run manual retry running retry disabled
 	manualRetryDisabledMessage           = "running retry disabled"
 	manualRetryDisabledNoAffectStability = true
+
+	StandardEvalOutputSourceMismatchCode              = 601204107 // standard eval output source does not match the expected source
+	standardEvalOutputSourceMismatchMessage           = "standard_eval_output_source_mismatch"
+	standardEvalOutputSourceMismatchNoAffectStability = true
+
+	StandardEvalOutputSourceNotReadyCode              = 601204108 // standard eval output source is not ready
+	standardEvalOutputSourceNotReadyMessage           = "standard_eval_output_source_not_ready"
+	standardEvalOutputSourceNotReadyNoAffectStability = true
 )
 
 func init() {
@@ -1347,6 +1347,18 @@ func init() {
 		ManualRetryDisabledCode,
 		manualRetryDisabledMessage,
 		code.WithAffectStability(!manualRetryDisabledNoAffectStability),
+	)
+
+	code.Register(
+		StandardEvalOutputSourceMismatchCode,
+		standardEvalOutputSourceMismatchMessage,
+		code.WithAffectStability(!standardEvalOutputSourceMismatchNoAffectStability),
+	)
+
+	code.Register(
+		StandardEvalOutputSourceNotReadyCode,
+		standardEvalOutputSourceNotReadyMessage,
+		code.WithAffectStability(!standardEvalOutputSourceNotReadyNoAffectStability),
 	)
 
 }
