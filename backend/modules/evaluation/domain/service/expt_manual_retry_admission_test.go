@@ -65,7 +65,7 @@ func admissionRequest() *entity.RetryInCurrentRunRequest {
 }
 
 func TestManualRetryAdmissionGuards(t *testing.T) {
-	for _, kind := range []string{"disabled", "bad_uuid", "malformed_uuid", "internal_ext", "failure_selection", "empty_selection", "retry_all", "negative_item", "foreign_run", "pending", "terminating", "draining", "online", "run_busy", "lost_run_lock"} {
+	for _, kind := range []string{"disabled", "bad_uuid", "malformed_uuid", "internal_ext", "failure_selection", "empty_selection", "retry_all", "negative_item", "foreign_run", "unknown_run", "pending", "terminating", "draining", "online", "run_busy", "lost_run_lock"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			config := componentmocks.NewMockIConfiger(ctrl)
@@ -101,6 +101,8 @@ func TestManualRetryAdmissionGuards(t *testing.T) {
 				shape = true
 			case "foreign_run":
 				got.LatestRunID = 18
+			case "unknown_run":
+				req.ExpectedRunID = got.LatestRunID + 1
 			case "pending":
 				got.Status = entity.ExptStatus_Pending
 			case "terminating":
@@ -131,7 +133,7 @@ func TestManualRetryAdmissionGuards(t *testing.T) {
 			if kind == "run_busy" {
 				require.ErrorContains(t, err, "retry_busy")
 			}
-			if kind == "foreign_run" {
+			if kind == "foreign_run" || kind == "unknown_run" {
 				require.ErrorContains(t, err, "run_conflict")
 			}
 			if kind == "lost_run_lock" {
@@ -146,7 +148,7 @@ func TestManualRetryAdmissionGuards(t *testing.T) {
 					expected = 601200202
 				case kind == "disabled":
 					expected = 601204106
-				case kind == "foreign_run":
+				case kind == "foreign_run" || kind == "unknown_run":
 					expected = 601204101
 				case kind == "run_busy":
 					expected = 601204105
@@ -261,7 +263,7 @@ type admissionWaker struct {
 func (w *admissionWaker) WakeCurrentRun(context.Context, string) error { w.calls++; return w.err }
 
 func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
-	for _, kind := range []string{"legacy", "item_busy", "lost_item_lock", "lock_state_changed", "locked_receipt", "released", "absent", "mismatch", "release_error", "preflight_capacity", "preflight_source_changed", "db_error", "wake_error", "receipt_after_close", "lost_during_preflight", "lost_after_release"} {
+	for _, kind := range []string{"legacy", "item_busy", "lost_item_lock", "lock_state_changed", "locked_receipt", "released", "absent", "mismatch", "release_error", "preflight_capacity", "preflight_source_changed", "db_error", "wake_error", "receipt_after_close", "receipt_after_replacement", "lost_during_preflight", "lost_after_release"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			config := componentmocks.NewMockIConfiger(ctrl)
@@ -278,7 +280,7 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 			req := admissionRequest()
 			req.Ext = map[string]string{"business": "unchanged"}
 			manager := &ExptMangerImpl{manualRetryRepo: port, configer: config, exptRepo: expts, itemResultRepo: items, turnResultRepo: turns, itemRefRepo: refs, runLogRepo: runs, mutex: mutex, centralGuard: guard, publisher: publisher, currentRunWaker: waker, manualRetryLocker: func() lock.ILocker { return mutex }}
-			expt := &entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline, EvalConf: &entity.EvaluationConfiguration{ItemRetryNum: gptr.Of(3), ItemConcurNum: gptr.Of(4)}}
+			expt := &entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline, EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig, EvalConf: &entity.EvaluationConfiguration{ItemRetryNum: gptr.Of(3), ItemConcurNum: gptr.Of(4)}}
 			enforce := kind == "released" || kind == "absent" || kind == "mismatch" || kind == "release_error" || kind == "preflight_capacity" || kind == "preflight_source_changed" || kind == "lost_after_release" || kind == "wake_error"
 			if enforce {
 				expt.ExptDispatchMode = entity.ExptDispatchModeEnforce
@@ -397,8 +399,12 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 			if enforce {
 				require.Equal(t, 1, waker.calls)
 			}
-			if kind == "receipt_after_close" {
+			if kind == "receipt_after_close" || kind == "receipt_after_replacement" {
 				expt.Status = entity.ExptStatus_Success
+				if kind == "receipt_after_replacement" {
+					expt.LatestRunID = 18
+					expt.Status = entity.ExptStatus_Processing
+				}
 				manager.configer = nil
 				manager.exptRepo = nil
 				manager.evaluatorRecords = nil
