@@ -94,8 +94,6 @@ const (
 
 	ExptRunModeGoal = "goal"
 
-	ExptRunModeResultSet = "result_set"
-
 	SuaModeHumanLoop = "human_loop"
 
 	SuaModeLoop = "loop"

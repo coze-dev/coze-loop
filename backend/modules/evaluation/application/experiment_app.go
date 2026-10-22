@@ -20,7 +20,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
-	domain_eval_target "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
@@ -154,7 +153,15 @@ func NewExperimentApplication(
 	}
 }
 
-func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.CreateExperimentRequest) (r *expt.CreateExperimentResponse, err error) {
+func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.CreateExperimentRequest) (*expt.CreateExperimentResponse, error) {
+	created, err := e.createExperiment(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return &expt.CreateExperimentResponse{Experiment: experiment.ToExptDTO(created), BaseResp: base.NewBaseResp()}, nil
+}
+
+func (e *experimentApplication) createExperiment(ctx context.Context, req *expt.CreateExperimentRequest) (*entity.Experiment, error) {
 	session := entity.NewSession(ctx)
 	if req.Session != nil && req.Session.UserID != nil {
 		session = &entity.Session{
@@ -162,10 +169,6 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 		}
 	}
 	logs.CtxInfo(ctx, "CreateExperiment userIDInContext: %s", session.UserID)
-
-	if err := experiment.NormalizeResultSetCreateRequest(req); err != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
-	}
 
 	// ★ 唯一分流硬校验: eval_set_source_type 与 eval_set_configs 必须一致 (所有入口最终汇入此处)。
 	isMulti := req.GetEvalSetSourceType() == domain_expt.ExptEvalSetSourceType_MultiSetConfig
@@ -191,14 +194,13 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	// 非法值应当报错、不该兜底 —— 与 sua_mode 那次修法同构 (default 改空串 + 入口报错,
 	// 见 convertor 的 suaModeDTO2DO 注释), 也与 entity.SuaModeHumanLoop 注释定的调子一致。
 	//
-	// 校验合法集必须与 entity.IsValidRunMode / isValidExptRunModeDTO 同步: IDL 新增
-	// ExptRunMode / SuaMode 枚举值时, 三处一起加, 否则新跑法会在入口被误拒。
+	// 只接受公开 IDL 跑法；由真实应用派生的内部执行模式不作为用户入参。
 	if rmc := req.GetRunModeConfig(); rmc != nil {
 		if rmc.IsSetRunMode() && !isValidExptRunModeDTO(rmc) {
 			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
-				"invalid run_mode %d (supported: %d=single_turn, %d=fixed_script_multi_turn, %d=sua_multi_turn, %d=goal, %d=result_set)",
+				"invalid run_mode %d (supported: %d=single_turn, %d=fixed_script_multi_turn, %d=sua_multi_turn, %d=goal)",
 				rmc.GetRunMode(), domain_expt.ExptRunMode_SingleTurn, domain_expt.ExptRunMode_FixedScriptMultiTurn,
-				domain_expt.ExptRunMode_SuaMultiTurn, domain_expt.ExptRunMode_Goal, domain_expt.ExptRunMode_ResultSet)))
+				domain_expt.ExptRunMode_SuaMultiTurn, domain_expt.ExptRunMode_Goal)))
 		}
 		if rmc.IsSetSuaMode() && !isValidExptSuaModeDTO(rmc.GetSuaMode()) {
 			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
@@ -258,10 +260,7 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
-	return &expt.CreateExperimentResponse{
-		Experiment: experiment.ToExptDTO(createExpt),
-		BaseResp:   base.NewBaseResp(),
-	}, nil
+	return createExpt, nil
 }
 
 // enforceSchedulingPrivilege 未获授权的调用方申报的中心调度特权参数一律作废。
@@ -774,7 +773,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
 	}
 
-	cresp, err := e.CreateExperiment(ctx, createReq)
+	created, err := e.createExperiment(ctx, createReq)
 	if err != nil {
 		return nil, err
 	}
@@ -785,12 +784,12 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	// Mac VM 独立 task 每 item 始终只占 1 个，不能跟随基础 task 一起翻倍。
 	// Init 失败即视为启动实验失败，直接向调用方返回错误，避免后续 SandboxRun 依赖一个未成功初始化的沙箱任务。
 	if e.sandboxSchedulerAdapter != nil &&
-		cresp.GetExperiment().GetEvalTarget().GetEvalTargetType() == domain_eval_target.EvalTargetType_SandboxAgent {
-		exptID := cresp.GetExperiment().GetID()
-		tenant := sandboxTenantForExperimentDTO(cresp.GetExperiment())
+		created != nil && created.Target != nil && created.Target.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
+		exptID := created.ID
+		tenant := sandboxTenantForExperimentEntity(created)
 		concurrency := sandboxTaskConcurrencyForMode(
 			ptr.ConvIntPtr[int32, int](req.ItemConcurNum),
-			sandboxCountModeForExperimentDTO(cresp.GetExperiment()),
+			sandboxCountModeForExperimentEntity(created),
 		)
 		if err := e.initSandboxTask(ctx, "submit experiment", exptID, concurrency, req.GetWorkspaceID(), tenant); err != nil {
 			return nil, err
@@ -809,7 +808,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 
 	rresp, err := e.RunExperiment(ctx, &expt.RunExperimentRequest{
 		WorkspaceID:       gptr.Of(req.GetWorkspaceID()),
-		ExptID:            cresp.GetExperiment().ID,
+		ExptID:            gptr.Of(created.ID),
 		ExptType:          req.ExptType,
 		ItemRetryNum:      req.ItemRetryNum,
 		TrialRunItemCount: req.TrialRunItemCount,
@@ -824,11 +823,11 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	// 从 lifecycle event 迁移到这里的原因: lifecycle event 走 rocket MQ, 灰度实例常常
 	// 因为 consumer group 竞争消费不到消息, 打点缺失。改到 SubmitExperiment 同步路径,
 	// 语义上表示"实验被提交并成功进入调度",与看板起始时刻对齐。
-	e.emitSandboxAgentExperimentStarted(ctx, cresp.GetExperiment())
+	e.emitSandboxAgentExperimentStarted(ctx, created)
 
 	// 如果有关联的实验模板，更新模板的 ExptInfo（创建实验，数量 +1）
 	if req.IsSetExptTemplateID() && req.GetExptTemplateID() > 0 {
-		exptID := gptr.Indirect(cresp.GetExperiment().ID)
+		exptID := created.ID
 		exptStatus := entity.ExptStatus_Pending // Submit 时实验状态为 Pending
 		latestExptStartTime := gptr.Of(time.Now().UnixMilli())
 		if err := e.templateManager.UpdateExptInfo(ctx, req.GetExptTemplateID(), req.GetWorkspaceID(), exptID, exptStatus, 1, latestExptStartTime); err != nil {
@@ -838,13 +837,13 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		}
 	}
 
-	if req.TimeRange != nil && cresp.GetExperiment() != nil {
+	if req.TimeRange != nil && created != nil {
 		tr := &entity.TaskTimeRangeDO{StartTime: req.TimeRange.StartTime, EndTime: req.TimeRange.EndTime}
-		e.manager.InjectExptConfTimeRange(ctx, gptr.Indirect(cresp.GetExperiment().ID), tr)
+		e.manager.InjectExptConfTimeRange(ctx, created.ID, tr)
 	}
 
 	return &expt.SubmitExperimentResponse{
-		Experiment: cresp.GetExperiment(),
+		Experiment: experiment.ToExptDTO(created),
 		RunID:      gptr.Of(rresp.GetRunID()),
 		BaseResp:   base.NewBaseResp(),
 	}, nil
@@ -852,19 +851,19 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 
 // emitSandboxAgentExperimentStarted 判断实验是否为沙箱 agent 类型, 是则上报 experiment_started。
 // 上报字段与看板保持一致: expt_id / dataset_id / dataset_version。
-func (e *experimentApplication) emitSandboxAgentExperimentStarted(ctx context.Context, exptDTO *domain_expt.Experiment) {
-	if e.sandboxAgentMetrics == nil || exptDTO == nil || exptDTO.GetRunModeConfig().GetRunMode() == domain_expt.ExptRunMode_ResultSet {
+func (e *experimentApplication) emitSandboxAgentExperimentStarted(ctx context.Context, expt *entity.Experiment) {
+	if e.sandboxAgentMetrics == nil || expt == nil || expt.EvalConf.IsResultSet() {
 		return
 	}
-	if exptDTO.GetEvalTarget().GetEvalTargetType() != domain_eval_target.EvalTargetType_SandboxAgent {
+	if expt.Target == nil || expt.Target.EvalTargetType != entity.EvalTargetTypeSandboxAgent {
 		return
 	}
 	tags := metricscomp.SandboxAgentExperimentTags{
-		ExperimentID:   exptDTO.GetID(),
-		DatasetID:      exptDTO.GetEvalSetID(),
-		DatasetVersion: exptDTO.GetEvalSetVersionID(),
-		TargetID:       exptDTO.GetTargetID(),
-		DatasetKey:     exptDTO.GetEvalSet().GetDatasetKey(),
+		ExperimentID: expt.ID, DatasetID: expt.EvalSetID,
+		DatasetVersion: expt.EvalSetVersionID, TargetID: expt.TargetID,
+	}
+	if expt.EvalSet != nil {
+		tags.DatasetKey = expt.EvalSet.DatasetKey
 	}
 	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit experiment_started, expt_id=%d, dataset_id=%d, dataset_version=%d, target_id=%d, dataset_key=%s",
 		tags.ExperimentID, tags.DatasetID, tags.DatasetVersion, tags.TargetID, tags.DatasetKey)
@@ -2031,39 +2030,6 @@ func sandboxTenantForExperimentEntity(expt *entity.Experiment) rpc.SandboxTenant
 	return dualSandboxTenantByRunMode(cfg)
 }
 
-// sandboxTenantForExperimentDTO 从 domain DTO 实验推导 Init 所需的沙箱租户。
-// 用于 CreateExperiment / SubmitExperiment 返回值分支——那时候实验刚落库、entity 视图不总是可用。
-func sandboxTenantForExperimentDTO(expt *domain_expt.Experiment) rpc.SandboxTenant {
-	if expt == nil {
-		return rpc.SandboxTenantDefault
-	}
-	countMode := sandboxCountModeForExperimentDTO(expt)
-	// mac_vm_plus_sandbox / mac_vm_plus_ssh: 都要 Init 一对 task（sandbox + -macvm），
-	// 共用 GUI 专用租户、靠 ResourceType 区分（见 entity 版同处注释）。
-	if countMode == entity.SandboxCountModeMacVMPlusSandbox || countMode == entity.SandboxCountModeMacVMPlusSSH {
-		return rpc.SandboxTenantFornaxEvalGeneralGUI
-	}
-	// shared（远程 FaaS 对象的单沙箱拓扑）：只 Init 一个 sandbox task，走与新双沙箱链路
-	// 相同的通用评测租户 —— 它用的是同一套 runtime 编排（operator 组 case-file、拉 binary），
-	// 区别只在少建一个沙箱。放在 Dual 判断之前：countMode != Dual 会把它扔回 Default，
-	// 那是**旧扁平链路**的租户，实验会静默跑成沙箱内 sandbox-pipeline 而不报错。
-	if countMode == entity.SandboxCountModeShared {
-		return rpc.SandboxTenantFornaxEvalGeneral
-	}
-	if countMode != entity.SandboxCountModeDual {
-		return rpc.SandboxTenantDefault
-	}
-	// DTO 侧 run_mode 是 ExptRunMode 整数枚举, 不能强转成 entity.RunMode 字符串。
-	// 这里直接判枚举合法性, 与 entity.IsNewRunModeLink 同语义 ——
-	// **两处必须同步**: IDL 新增 ExptRunMode 值时, 这里和 entity.IsValidRunMode 都要加。
-	// 不复用 convertor.suaRunModeDTO2DO: 它未导出, 且 default 静默回落 single_turn,
-	// 无法区分"传了 single_turn"和"传了非法值"。
-	if !isValidExptRunModeDTO(expt.GetRunModeConfig()) {
-		return rpc.SandboxTenantFornaxTraeEvalDualSandbox
-	}
-	return rpc.SandboxTenantFornaxEvalGeneral
-}
-
 func sandboxCountModeForExperimentEntity(expt *entity.Experiment) entity.SandboxCountMode {
 	if expt == nil || expt.Target == nil || expt.Target.EvalTargetVersion == nil {
 		return entity.SandboxCountModeSingle
@@ -2075,17 +2041,6 @@ func sandboxCountModeForExperimentEntity(expt *entity.Experiment) entity.Sandbox
 	return entity.ResolveSandboxCountMode(agent.SandboxCountMode)
 }
 
-func sandboxCountModeForExperimentDTO(expt *domain_expt.Experiment) entity.SandboxCountMode {
-	if expt == nil {
-		return entity.SandboxCountModeSingle
-	}
-	agent := expt.GetEvalTarget().GetEvalTargetVersion().GetEvalTargetContent().GetSandboxAgent()
-	if agent == nil {
-		return entity.SandboxCountModeSingle
-	}
-	return entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode()))
-}
-
 // isValidExptRunModeDTO 判断 DTO 侧 run_mode_config 是否携带合法跑法（即属于新链路）。
 // config 为 nil / run_mode 未设置 / 枚举值不在合法集内 → false（旧链路）。
 func isValidExptRunModeDTO(cfg *domain_expt.RunModeConfig) bool {
@@ -2094,7 +2049,7 @@ func isValidExptRunModeDTO(cfg *domain_expt.RunModeConfig) bool {
 	}
 	switch cfg.GetRunMode() {
 	case domain_expt.ExptRunMode_SingleTurn, domain_expt.ExptRunMode_FixedScriptMultiTurn,
-		domain_expt.ExptRunMode_SuaMultiTurn, domain_expt.ExptRunMode_Goal, domain_expt.ExptRunMode_ResultSet:
+		domain_expt.ExptRunMode_SuaMultiTurn, domain_expt.ExptRunMode_Goal:
 		return true
 	default:
 		return false

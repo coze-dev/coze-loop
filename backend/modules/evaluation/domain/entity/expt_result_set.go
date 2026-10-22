@@ -183,6 +183,9 @@ func (p *CreateExptParam) PrepareResultSetTarget() error {
 	if !p.ExptConf.IsResultSet() {
 		return nil
 	}
+	if !p.ResultSetApplication {
+		return fmt.Errorf("result_set requires a managed application")
+	}
 	if p.ExptType == ExptType_Online || p.ExptConf.VerificationConfig != nil || p.EvalSetSourceType != ExptEvalSetSourceType_MultiSetConfig {
 		return fmt.Errorf("result_set requires an offline MultiSetConfig experiment without verification_config")
 	}
@@ -196,9 +199,6 @@ func (p *CreateExptParam) PrepareResultSetTarget() error {
 	if cfg.SuaMode != "" || cfg.SuaModelID != 0 || cfg.SuaModelName != "" || cfg.SuaGoal != "" || cfg.SuaPersona != "" || cfg.SuaBehavioralConstraints != "" || cfg.SuaPETemplate != "" || cfg.MaxTurns != 0 || cfg.SkillsMode != "" || len(cfg.Skills) != 0 {
 		return fmt.Errorf("result_set only accepts max_run_minutes in run_mode_config")
 	}
-	if !p.ResultSetApplication && p.TargetSharedOption != nil && p.TargetSharedOption.Enabled() {
-		return fmt.Errorf("result_set cannot use a shared Agent target")
-	}
 	for _, set := range p.EvalSetConfigs {
 		if set == nil || set.EvalSetVersionID == 0 {
 			return fmt.Errorf("result_set requires fixed evaluation set versions")
@@ -206,34 +206,9 @@ func (p *CreateExptParam) PrepareResultSetTarget() error {
 		if len(set.EvaluatorConfs) > 0 {
 			return fmt.Errorf("result_set reads evaluators from each item evaluator_conf")
 		}
-		if !p.ResultSetApplication && set.TargetSharedOption != nil && set.TargetSharedOption.Enabled() {
-			return fmt.Errorf("result_set cannot use a shared Agent target")
-		}
 	}
 	off := false
 	p.ExptConf.EnableExtractTrajectory = &off
-	if p.ResultSetApplication {
-		return nil
-	}
-	if p.TargetVersionID != 0 || (p.TargetID != nil && *p.TargetID != 0) {
-		return nil
-	}
-	if p.CreateEvalTargetParam == nil {
-		p.CreateEvalTargetParam = &CreateEvalTargetParam{}
-	}
-	target := p.CreateEvalTargetParam
-	if target.EvalTargetType != nil && *target.EvalTargetType != EvalTargetTypeSandboxAgent {
-		return fmt.Errorf("result_set uses a system Runtime binding")
-	}
-	if target.SourceTargetID != nil && *target.SourceTargetID != "" && *target.SourceTargetID != BuiltinResultSetTargetID {
-		return fmt.Errorf("result_set cannot select an Agent application")
-	}
-	if target.SandboxAgent != nil && !isResultSetEnvironment(target.SandboxAgent) {
-		return fmt.Errorf("result_set requires an empty Linux dual-sandbox Runtime environment")
-	}
-	typeID, sourceID := EvalTargetTypeSandboxAgent, BuiltinResultSetTargetID
-	target.EvalTargetType, target.SourceTargetID = &typeID, &sourceID
-	target.SandboxAgent = &SandboxAgent{Name: "Result set evaluation", Type: SandboxAgentTypeSingleRunCLI, SandboxCountMode: SandboxCountModeDual}
 	return nil
 }
 
@@ -242,21 +217,19 @@ func isResultSetEnvironment(a *SandboxAgent) bool {
 }
 
 func ValidateResultSetTarget(target *EvalTarget, spaceID int64, applicationIDs ...string) error {
-	if target == nil || (target.SourceTargetID != BuiltinResultSetTargetID && !slices.Contains(applicationIDs, target.SourceTargetID)) || target.SpaceID != spaceID || target.EvalTargetType != EvalTargetTypeSandboxAgent || target.EvalTargetVersion == nil || target.EvalTargetVersion.SpaceID != spaceID || target.EvalTargetVersion.SandboxAgent == nil || target.EvalTargetVersion.SandboxAgent.Type != SandboxAgentTypeSingleRunCLI {
+	if target == nil || !slices.Contains(applicationIDs, target.SourceTargetID) || target.SpaceID != spaceID || target.EvalTargetType != EvalTargetTypeSandboxAgent || target.EvalTargetVersion == nil || target.EvalTargetVersion.SpaceID != spaceID || target.EvalTargetVersion.SandboxAgent == nil || target.EvalTargetVersion.SandboxAgent.Type != SandboxAgentTypeSingleRunCLI {
 		return fmt.Errorf("result_set requires its system Runtime snapshot in the experiment workspace")
 	}
 	agent := *target.EvalTargetVersion.SandboxAgent
-	if target.SourceTargetID != BuiltinResultSetTargetID {
-		if ResultSetApplicationSourceSpace(target.EvalTargetVersion.SourceTargetVersion) == 0 {
-			return fmt.Errorf("result_set requires a registered application snapshot")
-		}
-		for _, field := range agent.CustomFieldSchemas {
-			if field == nil || !slices.Contains(ResultSetOutputFields, field.Name) {
-				return fmt.Errorf("result_set snapshot has unsupported output fields")
-			}
-		}
-		agent.CustomFieldSchemas = nil
+	if ResultSetApplicationSourceSpace(target.EvalTargetVersion.SourceTargetVersion) == 0 {
+		return fmt.Errorf("result_set requires a registered application snapshot")
 	}
+	for _, field := range agent.CustomFieldSchemas {
+		if field == nil || !slices.Contains(ResultSetOutputFields, field.Name) {
+			return fmt.Errorf("result_set snapshot has unsupported output fields")
+		}
+	}
+	agent.CustomFieldSchemas = nil
 	if !isResultSetEnvironment(&agent) {
 		return fmt.Errorf("result_set requires an isolated Runtime snapshot")
 	}

@@ -64,7 +64,6 @@ enum ExptRunMode {
     FixedScriptMultiTurn = 2    // 固定脚本多轮
     SuaMultiTurn         = 3    // SUA 驱动多轮(下发时按 sua_mode 折叠成 3 或 4)
     Goal                 = 4    // 目标驱动(下发时为 5)
-    ResultSet            = 5    // 固定结果只评分(下发时为 6)
 }
 
 // SuaMode 模拟用户(SUA)生成下一轮 query 的模式, 仅 run_mode=sua_multi_turn 时有意义。

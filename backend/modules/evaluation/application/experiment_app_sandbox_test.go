@@ -10,7 +10,6 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 
-	domain_eval_target "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
@@ -182,97 +181,6 @@ func TestSandboxTenantForExperimentEntity(t *testing.T) {
 			assert.Equal(t, c.want, sandboxTenantForExperimentEntity(c.in))
 		})
 	}
-}
-
-// TestSandboxTenantForExperimentDTO 校验 domain DTO 层实验 → 沙箱租户推导。
-// 空 DTO / 无 SandboxAgent / 空 SandboxCountMode / 未识别值均返回 Default；仅 "dual" 升到 FornaxEvalGeneral。
-func TestSandboxTenantForExperimentDTO(t *testing.T) {
-	dtoWithMode := func(mode string) *domain_expt.Experiment {
-		return &domain_expt.Experiment{
-			EvalTarget: &domain_eval_target.EvalTarget{
-				EvalTargetVersion: &domain_eval_target.EvalTargetVersion{
-					EvalTargetContent: &domain_eval_target.EvalTargetContent{
-						SandboxAgent: &domain_eval_target.SandboxAgent{
-							SandboxCountMode: gptr.Of(mode),
-						},
-					},
-				},
-			},
-		}
-	}
-
-	t.Run("nil experiment", func(t *testing.T) {
-		assert.Equal(t, rpc.SandboxTenantDefault, sandboxTenantForExperimentDTO(nil))
-	})
-
-	t.Run("nil eval target chain -> Default", func(t *testing.T) {
-		assert.Equal(t, rpc.SandboxTenantDefault, sandboxTenantForExperimentDTO(&domain_expt.Experiment{}))
-	})
-
-	t.Run("nil sandbox agent -> Default", func(t *testing.T) {
-		expt := &domain_expt.Experiment{
-			EvalTarget: &domain_eval_target.EvalTarget{
-				EvalTargetVersion: &domain_eval_target.EvalTargetVersion{
-					EvalTargetContent: &domain_eval_target.EvalTargetContent{},
-				},
-			},
-		}
-		assert.Equal(t, rpc.SandboxTenantDefault, sandboxTenantForExperimentDTO(expt))
-	})
-
-	t.Run("empty mode -> Default", func(t *testing.T) {
-		expt := &domain_expt.Experiment{
-			EvalTarget: &domain_eval_target.EvalTarget{
-				EvalTargetVersion: &domain_eval_target.EvalTargetVersion{
-					EvalTargetContent: &domain_eval_target.EvalTargetContent{
-						SandboxAgent: &domain_eval_target.SandboxAgent{},
-					},
-				},
-			},
-		}
-		assert.Equal(t, rpc.SandboxTenantDefault, sandboxTenantForExperimentDTO(expt))
-	})
-
-	t.Run("single mode -> Default", func(t *testing.T) {
-		assert.Equal(t, rpc.SandboxTenantDefault, sandboxTenantForExperimentDTO(dtoWithMode(domain_eval_target.SandboxCountModeSingle)))
-	})
-
-	t.Run("dual mode without run_mode_config -> legacy tenant", func(t *testing.T) {
-		assert.Equal(t, rpc.SandboxTenantFornaxTraeEvalDualSandbox, sandboxTenantForExperimentDTO(dtoWithMode(domain_eval_target.SandboxCountModeDual)))
-	})
-
-	t.Run("dual mode with valid run_mode -> new tenant", func(t *testing.T) {
-		expt := dtoWithMode(domain_eval_target.SandboxCountModeDual)
-		expt.RunModeConfig = &domain_expt.RunModeConfig{RunMode: domain_expt.ExptRunModePtr(domain_expt.ExptRunMode_SuaMultiTurn)}
-		assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneral, sandboxTenantForExperimentDTO(expt))
-	})
-
-	// ★ config 在但 run_mode 未设置 → 旧链路。透传丢字段的形态，不能误判成新链路。
-	t.Run("dual mode with run_mode unset -> legacy tenant", func(t *testing.T) {
-		expt := dtoWithMode(domain_eval_target.SandboxCountModeDual)
-		expt.RunModeConfig = &domain_expt.RunModeConfig{}
-		assert.Equal(t, rpc.SandboxTenantFornaxTraeEvalDualSandbox, sandboxTenantForExperimentDTO(expt))
-	})
-
-	// ★ run_mode 是枚举合法集外的值 → 旧链路（不能靠 convertor 的 default 回落 single_turn 判断）。
-	t.Run("dual mode with invalid run_mode enum -> legacy tenant", func(t *testing.T) {
-		expt := dtoWithMode(domain_eval_target.SandboxCountModeDual)
-		expt.RunModeConfig = &domain_expt.RunModeConfig{RunMode: domain_expt.ExptRunModePtr(domain_expt.ExptRunMode(999))}
-		assert.Equal(t, rpc.SandboxTenantFornaxTraeEvalDualSandbox, sandboxTenantForExperimentDTO(expt))
-	})
-
-	t.Run("unrecognized mode -> Default", func(t *testing.T) {
-		assert.Equal(t, rpc.SandboxTenantDefault, sandboxTenantForExperimentDTO(dtoWithMode("triple")))
-	})
-
-	// mac_vm_plus_sandbox / mac_vm_plus_ssh → GUI 专用租户（无需 run_mode_config）。
-	t.Run("mac_vm_plus_sandbox -> GUI tenant", func(t *testing.T) {
-		assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneralGUI, sandboxTenantForExperimentDTO(dtoWithMode(string(entity.SandboxCountModeMacVMPlusSandbox))))
-	})
-
-	t.Run("mac_vm_plus_ssh -> GUI tenant", func(t *testing.T) {
-		assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneralGUI, sandboxTenantForExperimentDTO(dtoWithMode(string(entity.SandboxCountModeMacVMPlusSSH))))
-	})
 }
 
 // TestSandboxTaskConcurrencyForMode 钉住 mode → task 粒度 execution 配额。

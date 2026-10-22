@@ -18,7 +18,7 @@ func TestResultSetSubmissionAndRetryRejectAbsentDeploymentGate(t *testing.T) {
 	manager := &ExptMangerImpl{}
 	conf := &entity.EvaluationConfiguration{RunModeConfig: &entity.RunModeConfig{RunMode: entity.RunModeResultSet}}
 	_, err := manager.CreateExpt(context.Background(), &entity.CreateExptParam{WorkspaceID: 1, ExptConf: conf}, nil)
-	require.ErrorContains(t, err, "disabled")
+	require.ErrorContains(t, err, "managed application")
 	err = manager.CheckRun(context.Background(), &entity.Experiment{EvalConf: conf}, 1, nil)
 	require.ErrorContains(t, err, "disabled")
 }
@@ -41,9 +41,9 @@ func (resultSetCreationConfig) ResolveResultSetRuntime(_ context.Context, _ int6
 func TestResultSetFreshCreationFreezesSystemVersion(t *testing.T) {
 	boundary := errors.New("resource boundary reached")
 	target := svcmocks.NewMockIEvalTargetService(gomock.NewController(t))
-	target.EXPECT().CreateEvalTarget(gomock.Any(), int64(1001), entity.BuiltinResultSetTargetID, gomock.Any(), entity.EvalTargetTypeSandboxAgent, gomock.Any()).Return(int64(0), int64(0), boundary)
-	manager := &ExptMangerImpl{configer: resultSetCreationConfig{}, evalTargetService: target}
-	param := &entity.CreateExptParam{WorkspaceID: 1001, EvalSetID: 10, EvalSetVersionID: 11, EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig, EvalSetConfigs: []*entity.EvalSetConfig{{EvalSetID: 10, EvalSetVersionID: 11}}, ExptConf: &entity.EvaluationConfiguration{RunModeConfig: &entity.RunModeConfig{RunMode: entity.RunModeResultSet}}}
+	target.EXPECT().CreateEvalTarget(gomock.Any(), int64(1001), "101", gomock.Any(), entity.EvalTargetTypeSandboxAgent, gomock.Any()).Return(int64(0), int64(0), boundary)
+	manager := &ExptMangerImpl{configer: resultSetApplicationConfig{}, evalTargetService: target}
+	param := &entity.CreateExptParam{WorkspaceID: 1001, CreateEvalTargetParam: &entity.CreateEvalTargetParam{SourceTargetID: gptr.Of("101"), EvalTargetType: gptr.Of(entity.EvalTargetTypeSandboxAgent)}, EvalSetID: 10, EvalSetVersionID: 11, EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig, EvalSetConfigs: []*entity.EvalSetConfig{{EvalSetID: 10, EvalSetVersionID: 11}}, ExptConf: &entity.EvaluationConfiguration{RunModeConfig: &entity.RunModeConfig{RunMode: entity.RunModeResultSet}}}
 	_, err := manager.CreateExpt(context.Background(), param, nil)
 	require.ErrorIs(t, err, boundary)
 	versions, err := param.ExptConf.ResultSetBinaryVersions()
@@ -62,8 +62,8 @@ func TestResultSetExplicitPinsNeverFallBackToSystemDefault(t *testing.T) {
 			if conflicting {
 				conf.EvalSetConfigs[0].TargetConfs[0].RuntimeParam[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = `{"binary_version":"result-set-test"}`
 			}
-			manager := &ExptMangerImpl{configer: resultSetCreationConfig{}}
-			err := manager.prepareResultSetCreation(context.Background(), &entity.CreateExptParam{WorkspaceID: 1001, ExptConf: conf, EvalSetConfigs: conf.EvalSetConfigs})
+			manager := &ExptMangerImpl{configer: resultSetApplicationConfig{}}
+			err := manager.prepareResultSetCreation(context.Background(), &entity.CreateExptParam{WorkspaceID: 1001, CreateEvalTargetParam: &entity.CreateEvalTargetParam{SourceTargetID: gptr.Of("101"), EvalTargetType: gptr.Of(entity.EvalTargetTypeSandboxAgent)}, ExptConf: conf, EvalSetConfigs: conf.EvalSetConfigs, EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig})
 			if conflicting {
 				require.ErrorContains(t, err, "conflict")
 			} else {

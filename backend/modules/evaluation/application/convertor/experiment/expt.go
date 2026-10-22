@@ -866,9 +866,6 @@ func ExptType2EvalMode(exptType domain_expt.ExptType, trialRunItemCount *int64) 
 }
 
 func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig) (param *entity.CreateExptParam, err error) {
-	if err := NormalizeResultSetCreateRequest(cer); err != nil {
-		return nil, err
-	}
 	param = &entity.CreateExptParam{
 		WorkspaceID:           cer.WorkspaceID,
 		EvalSetVersionID:      cer.GetEvalSetVersionID(),
@@ -1462,8 +1459,6 @@ func suaRunModeDTO2DO(m domain_expt.ExptRunMode) entity.RunMode {
 		return entity.RunModeSUAMultiTurn
 	case domain_expt.ExptRunMode_Goal:
 		return entity.RunModeGoal
-	case domain_expt.ExptRunMode_ResultSet:
-		return entity.RunModeResultSet
 	default:
 		return entity.RunModeSingleTurn
 	}
@@ -1506,7 +1501,7 @@ func suaModeDTO2DO(m domain_expt.SuaMode) entity.SuaMode {
 // ⚠️ 不回显 api_key/base_url: 那是运行时从 TCC 解析注入 case-file 的密钥, 领域实体本就不持有。
 // SUA 行为四项 + max_turns 是用户自己填的配置 (非密钥), 回显它们才能让详情页显示"这个实验配了什么"。
 func runModeConfigDO2DTO(do *entity.RunModeConfig) *domain_expt.RunModeConfig {
-	if do == nil {
+	if do == nil || do.RunMode == entity.RunModeResultSet {
 		return nil
 	}
 	dto := &domain_expt.RunModeConfig{
@@ -1631,8 +1626,6 @@ func suaRunModeDO2DTO(m entity.RunMode) domain_expt.ExptRunMode {
 		return domain_expt.ExptRunMode_SuaMultiTurn
 	case entity.RunModeGoal:
 		return domain_expt.ExptRunMode_Goal
-	case entity.RunModeResultSet:
-		return domain_expt.ExptRunMode_ResultSet
 	default:
 		return domain_expt.ExptRunMode_SingleTurn
 	}

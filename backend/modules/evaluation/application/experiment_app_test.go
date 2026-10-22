@@ -8697,7 +8697,7 @@ func TestExperimentApplication_emitSandboxAgentExperimentStarted(t *testing.T) {
 	t.Run("nil metric skips", func(t *testing.T) {
 		app := &experimentApplication{}
 		// 不 panic 即通过
-		app.emitSandboxAgentExperimentStarted(context.Background(), &expt.Experiment{})
+		app.emitSandboxAgentExperimentStarted(context.Background(), &entity.Experiment{})
 	})
 
 	t.Run("nil experiment skips", func(t *testing.T) {
@@ -8713,9 +8713,9 @@ func TestExperimentApplication_emitSandboxAgentExperimentStarted(t *testing.T) {
 		defer ctrl.Finish()
 		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
 		app := &experimentApplication{sandboxAgentMetrics: mock}
-		app.emitSandboxAgentExperimentStarted(context.Background(), &expt.Experiment{
-			EvalTarget: &domain_eval_target.EvalTarget{
-				EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_CozeBot),
+		app.emitSandboxAgentExperimentStarted(context.Background(), &entity.Experiment{
+			Target: &entity.EvalTarget{
+				EvalTargetType: entity.EvalTargetTypeCozeBot,
 			},
 		})
 	})
@@ -8725,16 +8725,16 @@ func TestExperimentApplication_emitSandboxAgentExperimentStarted(t *testing.T) {
 		defer ctrl.Finish()
 		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
 		app := &experimentApplication{sandboxAgentMetrics: mock}
-		exptDTO := &expt.Experiment{
-			ID:               gptr.Of(int64(1001)),
-			EvalSetID:        gptr.Of(int64(2001)),
-			EvalSetVersionID: gptr.Of(int64(3001)),
-			TargetID:         gptr.Of(int64(4001)),
-			EvalTarget: &domain_eval_target.EvalTarget{
-				EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_SandboxAgent),
+		exptDTO := &entity.Experiment{
+			ID:               1001,
+			EvalSetID:        2001,
+			EvalSetVersionID: 3001,
+			TargetID:         4001,
+			Target: &entity.EvalTarget{
+				EvalTargetType: entity.EvalTargetTypeSandboxAgent,
 			},
-			EvalSet: &domain_eval_set.EvaluationSet{
-				DatasetKey: gptr.Of("dsk"),
+			EvalSet: &entity.EvaluationSet{
+				DatasetKey: "dsk",
 			},
 		}
 		mock.EXPECT().EmitExperimentStarted(gomock.Any()).Do(func(tags metricscomp.SandboxAgentExperimentTags) {

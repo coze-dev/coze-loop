@@ -40,25 +40,25 @@ func TestResultSetRuntimePolicyFailsClosed(t *testing.T) {
 
 func TestResultSetSystemBindingAndSnapshotIsolation(t *testing.T) {
 	makeParam := func() *CreateExptParam {
-		return &CreateExptParam{WorkspaceID: 1001, EvalSetSourceType: ExptEvalSetSourceType_MultiSetConfig, EvalSetConfigs: []*EvalSetConfig{{EvalSetID: 10, EvalSetVersionID: 11}}, ExptConf: &EvaluationConfiguration{RunModeConfig: &RunModeConfig{RunMode: RunModeResultSet}, EnableExtractTrajectory: gptr.Of(true)}}
+		return &CreateExptParam{ResultSetApplication: true, WorkspaceID: 1001, EvalSetSourceType: ExptEvalSetSourceType_MultiSetConfig, EvalSetConfigs: []*EvalSetConfig{{EvalSetID: 10, EvalSetVersionID: 11}}, ExptConf: &EvaluationConfiguration{RunModeConfig: &RunModeConfig{RunMode: RunModeResultSet}, EnableExtractTrajectory: gptr.Of(true)}}
 	}
 	p := makeParam()
 	require.NoError(t, p.PrepareResultSetTarget())
-	require.Equal(t, BuiltinResultSetTargetID, *p.CreateEvalTargetParam.SourceTargetID)
+	require.Nil(t, p.CreateEvalTargetParam)
 	require.False(t, *p.ExptConf.EnableExtractTrajectory)
-	target := &EvalTarget{SpaceID: 1001, SourceTargetID: BuiltinResultSetTargetID, EvalTargetType: EvalTargetTypeSandboxAgent, EvalTargetVersion: &EvalTargetVersion{SpaceID: 1001, SandboxAgent: p.CreateEvalTargetParam.SandboxAgent}}
-	require.NoError(t, ValidateResultSetTarget(target, 1001))
+	target := &EvalTarget{SpaceID: 1001, SourceTargetID: "101", EvalTargetType: EvalTargetTypeSandboxAgent, EvalTargetVersion: &EvalTargetVersion{SpaceID: 1001, SourceTargetVersion: "result-set-app:1001:99", SandboxAgent: NewResultSetApplicationSnapshot("scoring")}}
+	require.NoError(t, ValidateResultSetTarget(target, 1001, "101"))
 	require.Error(t, ValidateResultSetTarget(target, 1002))
 	target.SourceTargetID = "registered-agent"
 	require.Error(t, ValidateResultSetTarget(target, 1001))
-	target.SourceTargetID = BuiltinResultSetTargetID
+	target.SourceTargetID = "101"
 	target.EvalTargetVersion.SandboxAgent.ModelID = 42
 	require.Error(t, ValidateResultSetTarget(target, 1001))
 	for _, mutate := range []func(*CreateExptParam){
 		func(p *CreateExptParam) { p.ExptConf.RunModeConfig.SuaMode = SuaModeLoop },
 		func(p *CreateExptParam) { p.ExptConf.RunModeConfig.MaxTurns = 4 },
 		func(p *CreateExptParam) {
-			p.CreateEvalTargetParam = &CreateEvalTargetParam{SourceTargetID: gptr.Of("123")}
+			p.ResultSetApplication = false
 		},
 		func(p *CreateExptParam) { p.EvalSetConfigs[0].EvalSetVersionID = 0 },
 	} {

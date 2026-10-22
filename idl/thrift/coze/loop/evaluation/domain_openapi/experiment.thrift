@@ -140,7 +140,6 @@ const ExptRunMode ExptRunMode_SingleTurn = "single_turn"                       /
 const ExptRunMode ExptRunMode_FixedScriptMultiTurn = "fixed_script_multi_turn" // 固定脚本多轮
 const ExptRunMode ExptRunMode_SuaMultiTurn = "sua_multi_turn"                  // SUA 驱动多轮
 const ExptRunMode ExptRunMode_Goal = "goal"                                    // 目标驱动
-const ExptRunMode ExptRunMode_ResultSet = "result_set"                         // 固定结果只评分
 
 // SuaMode 模拟用户(SUA)生成下一轮 query 的模式, 对齐 domain SuaMode。
 typedef string SuaMode (ts.enum = "true")

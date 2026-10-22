@@ -6,6 +6,8 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
@@ -40,6 +42,9 @@ func (e *ExptMangerImpl) prepareResultSetCreation(ctx context.Context, req *enti
 	if !req.ExptConf.IsResultSet() {
 		return nil
 	}
+	if !req.ResultSetApplication {
+		return fmt.Errorf("result_set requires a managed application")
+	}
 	gate, ok := e.configer.(component.ResultSetAdmission)
 	if !ok {
 		return fmt.Errorf("result_set is disabled in this deployment")
@@ -67,10 +72,6 @@ func (e *ExptMangerImpl) prepareResultSetCreation(ctx context.Context, req *enti
 }
 
 func (e *ExptMangerImpl) normalizeResultSetApplication(ctx context.Context, req *entity.CreateExptParam) error {
-	gate, ok := e.configer.(component.ResultSetApplicationAdmission)
-	if !ok {
-		return nil
-	}
 	id := ""
 	if !req.CreateEvalTargetParam.IsNull() {
 		id = gptr.Indirect(req.CreateEvalTargetParam.SourceTargetID)
@@ -83,7 +84,11 @@ func (e *ExptMangerImpl) normalizeResultSetApplication(ctx context.Context, req 
 			id = target.SourceTargetID
 		}
 	}
-	if !gate.IsResultSetApplication(ctx, id) {
+	if strings.TrimSpace(id) == entity.BuiltinResultSetTargetID {
+		return fmt.Errorf("select a registered result_set application instead of the retired builtin target")
+	}
+	gate, ok := e.configer.(component.ResultSetApplicationAdmission)
+	if !ok || !gate.IsResultSetApplication(ctx, id) {
 		return nil
 	}
 	if !req.CreateEvalTargetParam.IsNull() {
