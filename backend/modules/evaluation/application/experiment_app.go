@@ -786,7 +786,15 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	if e.sandboxSchedulerAdapter != nil &&
 		created != nil && created.Target != nil && created.Target.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
 		exptID := created.ID
-		tenant := sandboxTenantForExperimentEntity(created)
+		tenantExpt := *created
+		if conf := created.EvalConf; conf != nil && conf.RunModeConfig != nil && conf.RunModeConfig.RunMode == "" {
+			// Submit historically defaults a present run configuration to single-turn for tenant selection only.
+			confCopy, modeCopy := *conf, *conf.RunModeConfig
+			modeCopy.RunMode = entity.RunModeSingleTurn
+			confCopy.RunModeConfig = &modeCopy
+			tenantExpt.EvalConf = &confCopy
+		}
+		tenant := sandboxTenantForExperimentEntity(&tenantExpt)
 		concurrency := sandboxTaskConcurrencyForMode(
 			ptr.ConvIntPtr[int32, int](req.ItemConcurNum),
 			sandboxCountModeForExperimentEntity(created),

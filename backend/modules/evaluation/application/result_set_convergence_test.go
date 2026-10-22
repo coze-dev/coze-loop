@@ -86,3 +86,56 @@ func TestConvergedResultSetSubmitUsesDomainForRoutingAndMetrics(t *testing.T) {
 		})
 	}
 }
+
+func TestConvergedSubmitPreservesOmittedRunModeTenant(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		conf   *domainexpt.RunModeConfig
+		tenant rpc.SandboxTenant
+	}{
+		{"absent", nil, rpc.SandboxTenantFornaxTraeEvalDualSandbox},
+		{"empty object", &domainexpt.RunModeConfig{}, rpc.SandboxTenantFornaxEvalGeneral},
+		{"budget only", &domainexpt.RunModeConfig{MaxRunMinutes: gptr.Of(int32(30))}, rpc.SandboxTenantFornaxEvalGeneral},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			manager := servicemocks.NewMockIExptManager(ctrl)
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			ids := idgenmocks.NewMockIIDGenerator(ctrl)
+			scheduler := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
+			stored := &entity.Experiment{ID: 201, SpaceID: 1001, Target: &entity.EvalTarget{
+				EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{SandboxAgent: &entity.SandboxAgent{
+					SandboxCountMode: entity.SandboxCountModeDual,
+				}},
+			}}
+			auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			manager.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, p *entity.CreateExptParam, _ *entity.Session) (*entity.Experiment, error) {
+				stored.EvalConf = p.ExptConf
+				return stored, nil
+			})
+			scheduler.EXPECT().Init(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, p *rpc.SandboxInitRequest) (*rpc.SandboxInitResponse, error) {
+				require.Equal(t, tc.tenant, p.Tenant)
+				require.Equal(t, int32(10), p.Concurrency)
+				return &rpc.SandboxInitResponse{}, nil
+			})
+			ids.EXPECT().GenID(gomock.Any()).Return(int64(501), nil)
+			manager.EXPECT().LogRun(gomock.Any(), int64(201), int64(501), gomock.Any(), int64(1001), gomock.Any(), gomock.Any()).Return(nil)
+			manager.EXPECT().Run(gomock.Any(), int64(201), int64(501), int64(1001), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			app := &experimentApplication{manager: manager, auth: auth, idgen: ids, sandboxSchedulerAdapter: scheduler}
+			_, err := app.SubmitExperiment(context.Background(), &apiexpt.SubmitExperimentRequest{
+				WorkspaceID: 1001, Name: gptr.Of("ordinary-dual"), ItemConcurNum: gptr.Of(int32(1)), RunModeConfig: tc.conf,
+				CreateEvalTargetParam: &apitarget.CreateEvalTargetParam{SourceTargetID: gptr.Of("102"), EvalTargetType: gptr.Of(domaintarget.EvalTargetType_SandboxAgent)},
+			})
+			require.NoError(t, err)
+			if tc.conf == nil {
+				require.Nil(t, stored.EvalConf.RunModeConfig)
+			} else {
+				require.Nil(t, tc.conf.RunMode)
+				require.Empty(t, stored.EvalConf.RunModeConfig.RunMode)
+				require.EqualValues(t, tc.conf.GetMaxRunMinutes(), stored.EvalConf.RunModeConfig.MaxRunMinutes)
+			}
+			require.Equal(t, rpc.SandboxTenantFornaxTraeEvalDualSandbox, sandboxTenantForExperimentEntity(stored))
+		})
+	}
+}
