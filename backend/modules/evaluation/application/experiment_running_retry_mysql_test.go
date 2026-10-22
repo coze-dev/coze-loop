@@ -58,7 +58,7 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, sqlDB.Close())
 	})
-	require.NoError(t, conn.Exec("INSERT INTO experiment(id,space_id,latest_run_id,status,expt_type,created_by,eval_conf) VALUES(?,?,?,?,?,?,?)", expt, space, run, entity.ExptStatus_Processing, entity.ExptType_Offline, "original", `{"item_retry_num":3,"item_concur_num":4}`).Error)
+	require.NoError(t, conn.Exec("INSERT INTO experiment(id,space_id,latest_run_id,status,expt_type,created_by,eval_conf,eval_set_id,eval_set_version_id) VALUES(?,?,?,?,?,?,?,?,?)", expt, space, run, entity.ExptStatus_Processing, entity.ExptType_Offline, "original", `{"item_retry_num":3,"item_concur_num":4}`, base+80, base+81).Error)
 	raw, err := json.Marshal([]entity.ExptRunLogItems{{ItemIDs: []int64{item}}})
 	require.NoError(t, err)
 	require.NoError(t, conn.Create(&model.ExptRunLog{ID: run, SpaceID: space, ExptID: expt, ExptRunID: run, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(entity.EvaluationModeSubmit)), CreatedBy: "original", ItemIds: &raw, FailCnt: 1}).Error)

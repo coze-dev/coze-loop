@@ -184,7 +184,7 @@ func TestCancelCleanupLeaseCancelDuringResourceIOPreservesBindings(t *testing.T)
 	store := &filterStore{}
 	f.svc.exptTurnResultFilterRepo = store
 	target := svcmocks.NewMockIEvalTargetService(gomock.NewController(t))
-	target.EXPECT().TerminateAsyncRecordsAndDestroySandbox(gomock.Any(), f.space, []int64{f.base + 41}, gomock.Any(), gomock.Any(), false).Do(func(ioCtx context.Context, _ int64, ids []int64, _ int32, _ string, _ bool) {
+	target.EXPECT().TerminateAsyncRecordsAndDestroySandbox(gomock.Any(), f.space, []int64{f.base + 41}, gomock.Any(), gomock.Any(), false).Do(func(ioCtx context.Context, _ int64, ids []int64, _ int32, _ string, _ bool, _ ...bool) {
 		require.NoError(t, ioCtx.Err())
 		deadline, ok := ioCtx.Deadline()
 		require.True(t, ok)
