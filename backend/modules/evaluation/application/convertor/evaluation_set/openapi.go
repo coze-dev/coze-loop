@@ -730,12 +730,13 @@ func OpenAPIContentDTO2DO(content *common.Content) *entity.Content {
 		}
 	}
 	return &entity.Content{
-		ContentType: gptr.Of(convertOpenAPIContentTypeToDO(content.ContentType)),
-		Text:        content.Text,
-		Image:       ConvertImageDTO2DO(content.Image),
-		Audio:       ConvertAudioDTO2DO(content.Audio),
-		Video:       ConvertVideoDTO2DO(content.Video),
-		MultiPart:   multiPart,
+		ContentType:    gptr.Of(convertOpenAPIContentTypeToDO(content.ContentType)),
+		Text:           content.Text,
+		Image:          ConvertImageDTO2DO(content.Image),
+		Audio:          ConvertAudioDTO2DO(content.Audio),
+		Video:          ConvertVideoDTO2DO(content.Video),
+		MultiPart:      multiPart,
+		ContentOmitted: content.ContentOmitted,
 	}
 }
 
