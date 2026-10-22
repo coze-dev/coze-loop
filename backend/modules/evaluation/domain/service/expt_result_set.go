@@ -106,6 +106,32 @@ func (e *ExptMangerImpl) normalizeResultSetApplication(ctx context.Context, req 
 	if req.ExptConf == nil {
 		req.ExptConf = &entity.EvaluationConfiguration{}
 	}
+	if req.EvalSetSourceType != entity.ExptEvalSetSourceType_MultiSetConfig {
+		if (req.EvalSetSourceType != 0 && req.EvalSetSourceType != entity.ExptEvalSetSourceType_SingleSet) || len(req.EvalSetConfigs) != 0 {
+			return fmt.Errorf("result_set single-set selection conflicts with eval_set_configs")
+		}
+		if req.EvalSetID <= 0 || req.EvalSetVersionID <= 0 {
+			return fmt.Errorf("result_set requires a fixed evaluation set version")
+		}
+		if !e.configer.GetExptMultiSetWhiteList(ctx).IsSpaceAllowed(req.WorkspaceID) {
+			return fmt.Errorf("space %d is not allowed to create multi-set experiments", req.WorkspaceID)
+		}
+		binding := &entity.ExptTargetConf{TargetID: gptr.Indirect(req.TargetID), TargetVersionID: req.TargetVersionID, RuntimeParam: make(map[string]string)}
+		if target := req.ExptConf.ConnectorConf.TargetConf; target != nil && target.IngressConf != nil {
+			if adapter := target.IngressConf.EvalSetAdapter; adapter != nil {
+				binding.FieldMapping = adapter.FieldConfs
+			}
+			if custom := target.IngressConf.CustomConf; custom != nil {
+				for _, field := range custom.FieldConfs {
+					if field != nil {
+						binding.RuntimeParam[field.FieldName] = field.Value
+					}
+				}
+			}
+		}
+		req.EvalSetConfigs = []*entity.EvalSetConfig{{EvalSetID: req.EvalSetID, EvalSetVersionID: req.EvalSetVersionID, SharedOption: req.EvalSetSharedOption, TargetConfs: []*entity.ExptTargetConf{binding}}}
+		req.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
+	}
 	cfg := req.ExptConf.RunModeConfig
 	if cfg == nil {
 		cfg = &entity.RunModeConfig{}
