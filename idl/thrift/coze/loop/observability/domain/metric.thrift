@@ -11,6 +11,10 @@ const DrillDownValueType DrillDownValueType_ToolName= "tool_name"
 const DrillDownValueType DrillDownValueType_InnerModelName= "inner_model_name"
 const DrillDownValueType DrillDownValueType_AnnotationKey= "annotation_key"
 const DrillDownValueType DrillDownValueType_FeedbackSource= "feedback_source"
+const DrillDownValueType DrillDownValueType_FluxUser = "flux_user"
+const DrillDownValueType DrillDownValueType_FluxAgent = "flux_agent"
+const DrillDownValueType DrillDownValueType_FluxModelName = "flux_model_name"
+const DrillDownValueType DrillDownValueType_FluxProjectName = "flux_project_name"
 
 struct Metric {
     1: optional string summary
