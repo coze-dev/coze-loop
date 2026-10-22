@@ -1074,61 +1074,6 @@ func TestSpansCkDaoImpl_buildMetricsSql(t *testing.T) {
 		assert.Contains(t, sql, "ORDER BY")
 	})
 
-	t.Run("build metrics sql with expression group by", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		t.Cleanup(ctrl.Finish)
-
-		sqlDB, _, err := sqlmock.New()
-		if err != nil {
-			t.Fatal("Failed to create mock")
-		}
-		defer func() {
-			_ = sqlDB.Close()
-		}()
-
-		db, err := gorm.Open(clickhouse.New(clickhouse.Config{
-			Conn:                      sqlDB,
-			SkipInitializeWithVersion: true,
-		}), &gorm.Config{})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		mockProvider := ck_mocks.NewMockProvider(ctrl)
-		mockProvider.EXPECT().NewSession(gomock.Any()).Return(db)
-
-		ckDao := &SpansCkDaoImpl{db: mockProvider}
-		param := &dao.GetMetricsParam{
-			Tables: []string{"test_table"},
-			Aggregations: []*entity.Dimension{
-				{
-					Expression: &entity.Expression{Expression: "count(*)"},
-					Alias:      "count",
-				},
-			},
-			GroupBys: []*entity.Dimension{
-				{
-					Expression: &entity.Expression{
-						Expression: "if(notEmpty(%s), %s, %s)",
-						Fields: []*loop_span.FilterField{
-							{FieldName: "project_name", FieldType: loop_span.FieldTypeString, IsCustom: true},
-							{FieldName: "project_name", FieldType: loop_span.FieldTypeString, IsCustom: true},
-							{FieldName: "git_path", FieldType: loop_span.FieldTypeString, IsCustom: true},
-						},
-					},
-					Alias: "project",
-				},
-			},
-			StartAt: 1,
-			EndAt:   2,
-		}
-
-		sql, err := ckDao.buildMetricsSql(context.Background(), param)
-		assert.NoError(t, err)
-		assert.Contains(t, sql, "if(notEmpty(tags_string['project_name']), tags_string['project_name'], tags_string['git_path']) AS project")
-		assert.Contains(t, sql, "GROUP BY if(notEmpty(tags_string['project_name']), tags_string['project_name'], tags_string['git_path'])")
-	})
-
 	t.Run("build metrics sql without granularity", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		t.Cleanup(ctrl.Finish)

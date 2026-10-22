@@ -48,55 +48,6 @@ func TestNewMetricsService(t *testing.T) {
 		assert.NotNil(t, svc)
 	})
 
-	t.Run("success with expression group by", func(t *testing.T) {
-		t.Parallel()
-		projectNameField := &loop_span.FilterField{
-			FieldName: "project_name",
-			FieldType: loop_span.FieldTypeString,
-			IsCustom:  true,
-		}
-		gitPathField := &loop_span.FilterField{
-			FieldName: "git_path",
-			FieldType: loop_span.FieldTypeString,
-			IsCustom:  true,
-		}
-		defs := []entity.IMetricDefinition{
-			&testMetricDefinition{
-				name:       "metric_expression_group_by",
-				metricType: entity.MetricTypeSummary,
-				groupBy: []*entity.Dimension{
-					{
-						Expression: &entity.Expression{
-							Expression: "if(notEmpty(%s), %s, %s)",
-							Fields:     []*loop_span.FilterField{projectNameField, projectNameField, gitPathField},
-						},
-						Alias: "project",
-					},
-				},
-			},
-		}
-		pMetrics := &entity.PlatformMetrics{
-			MetricGroups: map[string]*entity.MetricGroup{
-				"test_group": {
-					MetricDefinitions: defs,
-				},
-			},
-			DrillDownObjects: map[string]*loop_span.FilterField{
-				"project_name": projectNameField,
-				"git_path":     gitPathField,
-			},
-			PlatformMetricDefs: map[loop_span.PlatformType]*entity.PlatformMetricDef{
-				loop_span.PlatformType("test"): {
-					MetricGroups: []string{"test_group"},
-				},
-			},
-		}
-
-		svc, err := NewMetricsService(nil, nil, nil, nil, nil, pMetrics)
-		assert.NoError(t, err)
-		assert.NotNil(t, svc)
-	})
-
 	t.Run("duplicate metric name", func(t *testing.T) {
 		t.Parallel()
 		defs := []entity.IMetricDefinition{

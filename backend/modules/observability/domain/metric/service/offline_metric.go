@@ -361,11 +361,7 @@ func (m *MetricsService) extractMetrics(metricName string, metric *entity.Metric
 	}
 	objectKeys := make(map[string]string)
 	for _, obj := range def.GroupBy() {
-		if obj.Field != nil {
-			objectKeys[obj.Alias] = obj.Field.FieldName
-		} else {
-			objectKeys[obj.Alias] = obj.Alias
-		}
+		objectKeys[obj.Alias] = obj.Field.FieldName
 	}
 	for _, obj := range m.pMetrics.DrillDownObjects {
 		objectKeys[obj.FieldName] = obj.FieldName

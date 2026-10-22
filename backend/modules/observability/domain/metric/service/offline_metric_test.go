@@ -484,46 +484,6 @@ func TestMetricsService_extractMetrics(t *testing.T) {
 		assert.Equal(t, "group1", events[0].ObjectKeys["group_field"])
 	})
 
-	t.Run("time series metric with expression group by", func(t *testing.T) {
-		t.Parallel()
-		svc := &MetricsService{
-			metricDefMap: map[string]entity.IMetricDefinition{
-				"test_metric": &testMetricDefinition{
-					name:       "test_metric",
-					metricType: entity.MetricTypeTimeSeries,
-					groupBy: []*entity.Dimension{
-						{
-							Expression: &entity.Expression{
-								Expression: "if(notEmpty(%s), %s, %s)",
-								Fields: []*loop_span.FilterField{
-									{FieldName: "project_name", FieldType: loop_span.FieldTypeString, IsCustom: true},
-									{FieldName: "project_name", FieldType: loop_span.FieldTypeString, IsCustom: true},
-									{FieldName: "git_path", FieldType: loop_span.FieldTypeString, IsCustom: true},
-								},
-							},
-							Alias: "project",
-						},
-					},
-				},
-			},
-			pMetrics: &entity.PlatformMetrics{
-				DrillDownObjects: map[string]*loop_span.FilterField{},
-			},
-		}
-		metric := &entity.Metric{
-			TimeSeries: map[string][]*entity.MetricPoint{
-				`{"project":"repo/path"}`: {
-					{Timestamp: "1", Value: "100"},
-				},
-			},
-		}
-
-		events := svc.extractMetrics("test_metric", metric)
-
-		assert.Len(t, events, 1)
-		assert.Equal(t, "repo/path", events[0].ObjectKeys["project"])
-	})
-
 	t.Run("summary metric", func(t *testing.T) {
 		t.Parallel()
 		svc := &MetricsService{
