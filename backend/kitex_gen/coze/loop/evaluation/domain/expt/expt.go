@@ -2841,7 +2841,8 @@ type RunModeConfig struct {
 	// skills 实验级 Agent Skills 声明, 原样透传到 case-file experiment_info.skills。
 	// 与 skills_mode 同容器同链路; 结构对齐 runtime testcase.Skill, 由 runtime 按
 	// skills_mode 与题目级 dataset_item.skills 合并安装。
-	Skills []*AgentSkillDeclare `thrift:"skills,12,optional" frugal:"12,optional,list<AgentSkillDeclare>" json:"skills" form:"skills" query:"skills"`
+	Skills             []*AgentSkillDeclare `thrift:"skills,12,optional" frugal:"12,optional,list<AgentSkillDeclare>" json:"skills" form:"skills" query:"skills"`
+	MaxAgentRunMinutes *int32               `thrift:"max_agent_run_minutes,13,optional" frugal:"13,optional,i32" json:"max_agent_run_minutes,omitempty" form:"max_agent_run_minutes" query:"max_agent_run_minutes"`
 }
 
 func NewRunModeConfig() *RunModeConfig {
@@ -2982,6 +2983,18 @@ func (p *RunModeConfig) GetSkills() (v []*AgentSkillDeclare) {
 	}
 	return p.Skills
 }
+
+var RunModeConfig_MaxAgentRunMinutes_DEFAULT int32
+
+func (p *RunModeConfig) GetMaxAgentRunMinutes() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMaxAgentRunMinutes() {
+		return RunModeConfig_MaxAgentRunMinutes_DEFAULT
+	}
+	return *p.MaxAgentRunMinutes
+}
 func (p *RunModeConfig) SetRunMode(val *ExptRunMode) {
 	p.RunMode = val
 }
@@ -3015,6 +3028,9 @@ func (p *RunModeConfig) SetSkillsMode(val *string) {
 func (p *RunModeConfig) SetSkills(val []*AgentSkillDeclare) {
 	p.Skills = val
 }
+func (p *RunModeConfig) SetMaxAgentRunMinutes(val *int32) {
+	p.MaxAgentRunMinutes = val
+}
 
 var fieldIDToName_RunModeConfig = map[int16]string{
 	1:  "run_mode",
@@ -3028,6 +3044,7 @@ var fieldIDToName_RunModeConfig = map[int16]string{
 	10: "max_turns",
 	11: "skills_mode",
 	12: "skills",
+	13: "max_agent_run_minutes",
 }
 
 func (p *RunModeConfig) IsSetRunMode() bool {
@@ -3072,6 +3089,10 @@ func (p *RunModeConfig) IsSetSkillsMode() bool {
 
 func (p *RunModeConfig) IsSetSkills() bool {
 	return p.Skills != nil
+}
+
+func (p *RunModeConfig) IsSetMaxAgentRunMinutes() bool {
+	return p.MaxAgentRunMinutes != nil
 }
 
 func (p *RunModeConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -3175,6 +3196,14 @@ func (p *RunModeConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3344,6 +3373,17 @@ func (p *RunModeConfig) ReadField12(iprot thrift.TProtocol) error {
 	p.Skills = _field
 	return nil
 }
+func (p *RunModeConfig) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.MaxAgentRunMinutes = _field
+	return nil
+}
 
 func (p *RunModeConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3393,6 +3433,10 @@ func (p *RunModeConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 	}
@@ -3619,6 +3663,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
+func (p *RunModeConfig) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMaxAgentRunMinutes() {
+		if err = oprot.WriteFieldBegin("max_agent_run_minutes", thrift.I32, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.MaxAgentRunMinutes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
 
 func (p *RunModeConfig) String() string {
 	if p == nil {
@@ -3665,6 +3727,9 @@ func (p *RunModeConfig) DeepEqual(ano *RunModeConfig) bool {
 		return false
 	}
 	if !p.Field12DeepEqual(ano.Skills) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.MaxAgentRunMinutes) {
 		return false
 	}
 	return true
@@ -3800,6 +3865,18 @@ func (p *RunModeConfig) Field12DeepEqual(src []*AgentSkillDeclare) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *RunModeConfig) Field13DeepEqual(src *int32) bool {
+
+	if p.MaxAgentRunMinutes == src {
+		return true
+	} else if p.MaxAgentRunMinutes == nil || src == nil {
+		return false
+	}
+	if *p.MaxAgentRunMinutes != *src {
+		return false
 	}
 	return true
 }

@@ -36,6 +36,11 @@ func (p *VerificationConfig) IsValid() error {
 	return nil
 }
 func (p *RunModeConfig) IsValid() error {
+	if p.MaxAgentRunMinutes != nil {
+		if *p.MaxAgentRunMinutes < int32(0) {
+			return fmt.Errorf("field MaxAgentRunMinutes ge rule failed, current value: %v", *p.MaxAgentRunMinutes)
+		}
+	}
 	return nil
 }
 func (p *ExpectedResourceConsumption) IsValid() error {

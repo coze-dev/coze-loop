@@ -158,6 +158,7 @@ struct RunModeConfig {
     // 与 skills_mode 同容器同链路; 结构对齐 runtime testcase.Skill, 由 runtime 按
     // skills_mode 与题目级 dataset_item.skills 合并安装。
     12: optional list<AgentSkillDeclare> skills (go.tag = 'json:"skills"')
+    13: optional i32 max_agent_run_minutes (go.tag = 'json:"max_agent_run_minutes,omitempty"', vt.ge = "0")
 }
 
 typedef string Visibility(ts.enum="true")

@@ -600,9 +600,10 @@ const (
 // 字段名与 runtime orchestration.RunModeConfig 的 json tag 对齐 (sua_goal / sua_persona /
 // sua_behavioral_constraints / sua_pe_template / max_turns), 便于逐段对账。
 type RunModeConfig struct {
-	RunMode       RunMode `json:"run_mode,omitempty"`
-	MaxRunMinutes int     `json:"max_run_minutes,omitempty"`
-	SuaMode       SuaMode `json:"sua_mode,omitempty"`
+	MaxAgentRunMinutes *int32  `json:"max_agent_run_minutes,omitempty"`
+	RunMode            RunMode `json:"run_mode,omitempty"`
+	MaxRunMinutes      int     `json:"max_run_minutes,omitempty"`
+	SuaMode            SuaMode `json:"sua_mode,omitempty"`
 	// SuaModelID **不再来自调用方**: 对外的 sua_model_id 入口已从 IDL 移除 (SUA 用哪个模型
 	// 是运维配置, 归 TCC)。字段保留是因为 TCC 劫持规则 sandbox_sua_model_replace 自带
 	// model_id, commercial 侧仍要经 modelCredByID 解析密钥。**不要在 convertor 里重新接上**。
@@ -658,6 +659,7 @@ type AgentSkillDeclare struct {
 // 字段名与 runtime testcase.RunConf 逐一对齐, 供 SandboxAgent 算子透传 case-file dataset_item.run_conf。
 // SUA 相关字段对被测 Agent 不可见。
 type ItemRunConf struct {
+	MaxAgentRunMinutes       *int32        `json:"max_agent_run_minutes,omitempty"`
 	MaxTurns                 int           `json:"max_turns,omitempty"`
 	MaxRunMinutes            int           `json:"max_run_minutes,omitempty"`
 	FixedQueryList           []*FixedQuery `json:"fixed_query_list,omitempty"`
