@@ -198,3 +198,19 @@ func TestPlainRateLimiterImpl_AllowInvokeWithKeyLimit(t *testing.T) {
 		})
 	}
 }
+
+func TestRateLimiterImpl_AllowInvokeUsesSpaceScope(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	underlying := limiterMocks.NewMockIRateLimiter(ctrl)
+	underlying.EXPECT().AllowN(gomock.Any(), "run_evaluator", 1, gomock.Any()).DoAndReturn(
+		func(_ context.Context, _ string, _ int, options ...limiter.LimitOptionFn) (*limiter.Result, error) {
+			option := &limiter.LimitOption{}
+			for _, apply := range options {
+				apply(option)
+			}
+			assert.Equal(t, []limiter.Tag{{K: "space_id", V: int64(1001)}}, option.Tags)
+			return &limiter.Result{Allowed: false}, nil
+		},
+	)
+	assert.False(t, (&RateLimiterImpl{limiter: underlying}).AllowInvoke(context.Background(), 1001))
+}

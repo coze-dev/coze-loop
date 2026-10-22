@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 	"unicode/utf8"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
@@ -2144,7 +2143,6 @@ func buildAsyncRunEvaluatorRequest(evaluatorName string, request *evaluatorservi
 }
 
 func (e *EvaluatorHandlerImpl) AsyncDebugEvaluator(ctx context.Context, req *evaluatorservice.AsyncDebugEvaluatorRequest) (r *evaluatorservice.AsyncDebugEvaluatorResponse, err error) {
-	startTime := time.Now()
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
 		SpaceID:       req.WorkspaceID,
@@ -2153,11 +2151,26 @@ func (e *EvaluatorHandlerImpl) AsyncDebugEvaluator(ctx context.Context, req *eva
 	if err != nil {
 		return nil, err
 	}
+	if req.EvaluatorType == evaluatordto.EvaluatorType_CustomRPC {
+		// Async debugging must not inherit the synchronous management-space exception.
+		allowed, policyErr := e.configer.CheckCustomRPCEvaluatorWritable(ctx, strconv.FormatInt(req.WorkspaceID, 10), nil)
+		if policyErr != nil {
+			return nil, policyErr
+		}
+		if !allowed {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("current app does not support async custom RPC evaluator"))
+		}
+	}
 	if req.InputData != nil {
-		err = e.transformURIsToURLs(ctx, req.InputData.InputFields)
-		if err != nil {
-			logs.CtxError(ctx, "failed to transform URIs to URLs: %v", err)
-			return nil, err
+		inputMaps := []map[string]*evaluatorcommon.Content{req.InputData.InputFields}
+		if req.EvaluatorType == evaluatordto.EvaluatorType_CustomRPC {
+			inputMaps = append(inputMaps, req.InputData.EvaluateDatasetFields, req.InputData.EvaluateTargetOutputFields)
+		}
+		for _, fields := range inputMaps {
+			if err = e.transformURIsToURLs(ctx, fields); err != nil {
+				logs.CtxError(ctx, "failed to transform URIs to URLs: %v", err)
+				return nil, err
+			}
 		}
 	}
 	dto := &evaluatordto.Evaluator{
@@ -2190,17 +2203,6 @@ func (e *EvaluatorHandlerImpl) AsyncDebugEvaluator(ctx context.Context, req *eva
 		EvaluatorRunConf: evaluatorRunConf,
 	})
 	if err != nil {
-		return nil, err
-	}
-
-	asyncCtxKey := fmt.Sprintf("evaluator:%d", resp.InvokeID)
-	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
-		RecordID:           resp.InvokeID,
-		AsyncUnixMS:        startTime.UnixMilli(),
-		Session:            &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)},
-		EvaluatorVersionID: do.GetEvaluatorVersionID(),
-	}); err != nil {
-		logs.CtxError(ctx, "[AsyncDebugEvaluator] SetEvalAsyncCtx fail, invokeID: %d, err: %v", resp.InvokeID, err)
 		return nil, err
 	}
 

@@ -6626,6 +6626,34 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 36:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField36(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 37:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField37(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 50:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField50(buf[offset:])
@@ -7092,6 +7120,34 @@ func (p *Experiment) FastReadField35(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField36(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EvalSetID = _field
+	return offset, nil
+}
+
+func (p *Experiment) FastReadField37(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EvalSetVersionID = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastReadField50(buf []byte) (int, error) {
 	offset := 0
 	_field := NewExperimentStatistics()
@@ -7336,6 +7392,8 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField15(buf[offset:], w)
+		offset += p.fastWriteField36(buf[offset:], w)
+		offset += p.fastWriteField37(buf[offset:], w)
 		offset += p.fastWriteField60(buf[offset:], w)
 		offset += p.fastWriteField113(buf[offset:], w)
 		offset += p.fastWriteField114(buf[offset:], w)
@@ -7385,6 +7443,8 @@ func (p *Experiment) BLength() int {
 		l += p.field33Length()
 		l += p.field34Length()
 		l += p.field35Length()
+		l += p.field36Length()
+		l += p.field37Length()
 		l += p.field50Length()
 		l += p.field60Length()
 		l += p.field62Length()
@@ -7551,6 +7611,24 @@ func (p *Experiment) fastWriteField35(buf []byte, w thrift.NocopyWriter) int {
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField36(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSetID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 36)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.EvalSetID)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField37(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSetVersionID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 37)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.EvalSetVersionID)
 	}
 	return offset
 }
@@ -7856,6 +7934,24 @@ func (p *Experiment) field35Length() int {
 	return l
 }
 
+func (p *Experiment) field36Length() int {
+	l := 0
+	if p.IsSetEvalSetID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *Experiment) field37Length() int {
+	l := 0
+	if p.IsSetEvalSetVersionID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
 func (p *Experiment) field50Length() int {
 	l := 0
 	if p.IsSetExptStats() {
@@ -8132,6 +8228,16 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 
 			p.EvaluatorIDVersionList = append(p.EvaluatorIDVersionList, _elem)
 		}
+	}
+
+	if src.EvalSetID != nil {
+		tmp := *src.EvalSetID
+		p.EvalSetID = &tmp
+	}
+
+	if src.EvalSetVersionID != nil {
+		tmp := *src.EvalSetVersionID
+		p.EvalSetVersionID = &tmp
 	}
 
 	var _exptStats *ExperimentStatistics

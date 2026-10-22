@@ -15,8 +15,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	infraredis "github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
 	evaluation "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
+	domainEvalSet "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	domainexpt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
@@ -38,6 +40,7 @@ import (
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	experimentredisdao "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/redis/dao"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
@@ -3344,8 +3347,9 @@ type fakeExperimentApp struct {
 	submitErr  error
 	lastReq    *exptpb.SubmitExperimentRequest
 
-	listExperimentsResp *exptpb.ListExperimentsResponse
-	listExperimentsErr  error
+	listExperimentsResp    *exptpb.ListExperimentsResponse
+	listExperimentsErr     error
+	lastListExperimentsReq *exptpb.ListExperimentsRequest
 
 	retryResp    *exptpb.RetryExperimentResponse
 	retryErr     error
@@ -3381,7 +3385,8 @@ func (f *fakeExperimentApp) SubmitExperiment(ctx context.Context, req *exptpb.Su
 	return &exptpb.SubmitExperimentResponse{}, nil
 }
 
-func (f *fakeExperimentApp) ListExperiments(_ context.Context, _ *exptpb.ListExperimentsRequest) (*exptpb.ListExperimentsResponse, error) {
+func (f *fakeExperimentApp) ListExperiments(_ context.Context, req *exptpb.ListExperimentsRequest) (*exptpb.ListExperimentsResponse, error) {
+	f.lastListExperimentsReq = req
 	if f.listExperimentsErr != nil {
 		return nil, f.listExperimentsErr
 	}
@@ -7704,11 +7709,12 @@ func TestEvalOpenAPIApplication_ListExperimentsOApi(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
-		req     *openapi.ListExperimentsOApiRequest
-		setup   func(auth *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp)
-		wantErr int32
-		check   func(t *testing.T, resp *openapi.ListExperimentsOApiResponse)
+		name     string
+		req      *openapi.ListExperimentsOApiRequest
+		setup    func(auth *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp)
+		wantErr  int32
+		check    func(t *testing.T, resp *openapi.ListExperimentsOApiResponse)
+		checkReq func(t *testing.T, req *exptpb.ListExperimentsRequest)
 	}{
 		{
 			name:    "nil request",
@@ -7752,19 +7758,63 @@ func TestEvalOpenAPIApplication_ListExperimentsOApi(t *testing.T) {
 				WorkspaceID: gptr.Of(int64(1)),
 				PageNumber:  gptr.Of(int32(1)),
 				PageSize:    gptr.Of(int32(10)),
+				FilterOption: &openapiExperiment.ExperimentFilterOption{
+					FuzzyName: gptr.Of("experiment"),
+				},
+				OrderBys: []*common.OrderBy{{
+					Field: gptr.Of("start_time"),
+					IsAsc: gptr.Of(false),
+				}},
 			},
 			setup: func(_ *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp) {
-				total := int32(1)
+				total := int32(2)
+				evalSetID := int64(100)
+				boundVersionID := int64(200)
 				fakeApp.listExperimentsResp = &exptpb.ListExperimentsResponse{
-					Experiments: []*domainexpt.Experiment{{ID: gptr.Of(int64(42))}},
-					Total:       &total,
+					Experiments: []*domainexpt.Experiment{
+						{
+							ID:               gptr.Of(int64(42)),
+							EvalSetID:        &evalSetID,
+							EvalSetVersionID: &boundVersionID,
+							EvalSet: &domainEvalSet.EvaluationSet{
+								ID:            &evalSetID,
+								LatestVersion: gptr.Of("v3"),
+								EvaluationSetVersion: &domainEvalSet.EvaluationSetVersion{
+									ID:      &boundVersionID,
+									Version: gptr.Of("v2"),
+								},
+							},
+						},
+						{ID: gptr.Of(int64(43))},
+					},
+					Total: &total,
 				}
 			},
 			check: func(t *testing.T, resp *openapi.ListExperimentsOApiResponse) {
 				require.NotNil(t, resp)
 				require.NotNil(t, resp.Data)
-				require.Len(t, resp.Data.Experiments, 1)
-				assert.NotNil(t, resp.Data.Total)
+				require.Len(t, resp.Data.Experiments, 2)
+				assert.Equal(t, int64(42), resp.Data.Experiments[0].GetID())
+				assert.Equal(t, int64(43), resp.Data.Experiments[1].GetID())
+				assert.Equal(t, int64(2), resp.Data.GetTotal())
+				assert.Equal(t, int64(100), resp.Data.Experiments[0].GetEvalSetID())
+				assert.Equal(t, int64(200), resp.Data.Experiments[0].GetEvalSetVersionID())
+				require.NotNil(t, resp.Data.Experiments[0].EvalSet)
+				require.NotNil(t, resp.Data.Experiments[0].EvalSet.CurrentVersion)
+				assert.Equal(t, int64(200), resp.Data.Experiments[0].EvalSet.CurrentVersion.GetID())
+				assert.Equal(t, "v2", resp.Data.Experiments[0].EvalSet.CurrentVersion.GetVersion())
+				assert.Equal(t, "v3", resp.Data.Experiments[0].EvalSet.GetLatestVersion())
+			},
+			checkReq: func(t *testing.T, req *exptpb.ListExperimentsRequest) {
+				require.NotNil(t, req)
+				assert.Equal(t, int64(1), req.GetWorkspaceID())
+				assert.Equal(t, int32(1), req.GetPageNumber())
+				assert.Equal(t, int32(10), req.GetPageSize())
+				require.NotNil(t, req.FilterOption)
+				assert.Equal(t, "experiment", req.FilterOption.GetFuzzyName())
+				require.Len(t, req.OrderBys, 1)
+				assert.Equal(t, "start_time", req.OrderBys[0].GetField())
+				assert.False(t, req.OrderBys[0].GetIsAsc())
 			},
 		},
 		{
@@ -7831,6 +7881,9 @@ func TestEvalOpenAPIApplication_ListExperimentsOApi(t *testing.T) {
 				if tc.check != nil {
 					tc.check(t, resp)
 				}
+			}
+			if tc.checkReq != nil {
+				tc.checkReq(t, fakeApp.lastListExperimentsReq)
 			}
 
 			if tc.req != nil {
@@ -9714,4 +9767,33 @@ func TestEvalOpenAPIApplication_ListEvaluationSetVersionsOApi_SharedExecuteHides
 	assert.Equal(t, versionID, resp.Data.Versions[0].GetID())
 	assert.Nil(t, resp.Data.Versions[0].EvaluationSetSchema)
 	assert.NotNil(t, version.EvaluationSetSchema)
+}
+
+func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult_ExpiredDebugContext(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	redisClient := infraredis.NewTestRedis(t)
+	asyncRepo := experimentredisdao.NewEvalAsyncDAO(redisClient, nil)
+	ctx := context.Background()
+	require.NoError(t, asyncRepo.SetEvalAsyncCtx(ctx, "evaluator:42", &entity.EvalAsyncCtx{RecordID: 42, ResumeReady: true}))
+	fresh, err := asyncRepo.GetEvalAsyncCtxStrong(ctx, "evaluator:42")
+	require.NoError(t, err)
+	require.Equal(t, int64(42), fresh.RecordID)
+	raw, ok := infraredis.Unwrap(redisClient)
+	require.True(t, ok)
+	expired, err := raw.Expire(ctx, "[experiment]item_turn_eval_async_ctx:evaluator:42", 0).Result()
+	require.NoError(t, err)
+	require.True(t, expired)
+	app := &EvalOpenAPIApplication{
+		auth: auth, asyncRepo: asyncRepo,
+		evaluatorService: servicemocks.NewMockEvaluatorService(ctrl),
+		publisher:        eventmocks.NewMockExptEventPublisher(ctrl),
+	}
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	resp, err := app.ReportEvaluatorInvokeResult_(ctx, &openapi.ReportEvaluatorInvokeResultRequest{
+		WorkspaceID: gptr.Of(int64(1001)), InvokeID: gptr.Of(int64(42)), Status: gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
+		Output: &spi.InvokeEvaluatorOutputData{EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(1.0)}},
+	})
+	require.ErrorContains(t, err, "eval async context not found after bounded retry")
+	require.Nil(t, resp)
 }

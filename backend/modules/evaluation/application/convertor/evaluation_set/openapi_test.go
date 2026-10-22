@@ -11,7 +11,11 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/tag"
+	domain_common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	domain_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapi_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
 	datafilter "github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
@@ -484,6 +488,111 @@ func TestEvaluationSetConversions(t *testing.T) {
 	assert.Nil(t, OpenAPIEvaluationSetDO2DTOs(nil))
 	assert.Equal(t, expected.CurrentVersion, OpenAPIEvaluationSetVersionDO2DTO(versionDO))
 	assert.Equal(t, []*openapi_eval_set.EvaluationSetVersion{expected.CurrentVersion}, OpenAPIEvaluationSetVersionDO2DTOs([]*entity.EvaluationSetVersion{versionDO}))
+}
+
+func TestDomainEvaluationSetDTO2OpenAPI(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, DomainEvaluationSetDTO2OpenAPI(nil))
+
+	createdAt := int64(100)
+	updatedAt := int64(200)
+	versionCreatedAt := int64(300)
+	tagKeyID := int64(12)
+	tagContentType := tag.TagContentType("option")
+	tagStatus := tag.TagStatus("active")
+	datasetType := domain_eval_set.EvaluationSetTypeVersionedItem
+	accessLevel := "read_only"
+	versionPolicy := "fixed"
+	templateDatasetID := int64(99)
+
+	dto := &domain_eval_set.EvaluationSet{
+		ID:                gptr.Of[int64](1),
+		AppID:             gptr.Of[int32](2),
+		WorkspaceID:       gptr.Of[int64](3),
+		Name:              gptr.Of("evaluation"),
+		Description:       gptr.Of("description"),
+		Status:            gptr.Of(dataset.DatasetStatus_Available),
+		ItemCount:         gptr.Of[int64](4),
+		ChangeUncommitted: gptr.Of(true),
+		Type:              &datasetType,
+		Tags: []*domain_eval_set.ResourceTag{
+			nil,
+			{
+				TagName:     "tag-a",
+				TagKeyID:    &tagKeyID,
+				ContentType: &tagContentType,
+				Status:      &tagStatus,
+			},
+		},
+		DatasetKey:        gptr.Of("dataset-key"),
+		TemplateDatasetID: &templateDatasetID,
+		EvaluationSetVersion: &domain_eval_set.EvaluationSetVersion{
+			ID:              gptr.Of[int64](10),
+			AppID:           gptr.Of[int32](11),
+			WorkspaceID:     gptr.Of[int64](12),
+			EvaluationSetID: gptr.Of[int64](1),
+			Version:         gptr.Of("v2"),
+			VersionNum:      gptr.Of[int64](2),
+			Description:     gptr.Of("bound version"),
+			ItemCount:       gptr.Of[int64](5),
+			BaseInfo: &domain_common.BaseInfo{
+				CreatedAt: &versionCreatedAt,
+			},
+		},
+		LatestVersion:  gptr.Of("v3"),
+		NextVersionNum: gptr.Of[int64](4),
+		BaseInfo: &domain_common.BaseInfo{
+			CreatedAt: &createdAt,
+			UpdatedAt: &updatedAt,
+		},
+		SharedInfo: &domain_common.SharedResourceInfo{
+			IsShared:      gptr.Of(true),
+			SourceSpaceID: gptr.Of[int64](13),
+			AccessLevel:   &accessLevel,
+			VersionPolicy: &versionPolicy,
+		},
+	}
+
+	assert.Equal(t, &openapi_eval_set.EvaluationSet{
+		ID:                  gptr.Of[int64](1),
+		Name:                gptr.Of("evaluation"),
+		Description:         gptr.Of("description"),
+		Status:              gptr.Of[openapi_eval_set.EvaluationSetStatus](openapi_eval_set.EvaluationSetStatusActive),
+		ItemCount:           gptr.Of[int64](4),
+		LatestVersion:       gptr.Of("v3"),
+		IsChangeUncommitted: gptr.Of(true),
+		Type:                gptr.Of[openapi_eval_set.EvaluationSetType](openapi_eval_set.EvaluationSetTypeVersionedItem),
+		DatasetKey:          gptr.Of("dataset-key"),
+		TemplateDatasetID:   &templateDatasetID,
+		CurrentVersion: &openapi_eval_set.EvaluationSetVersion{
+			ID:          gptr.Of[int64](10),
+			Version:     gptr.Of("v2"),
+			Description: gptr.Of("bound version"),
+			ItemCount:   gptr.Of[int64](5),
+			BaseInfo: &common.BaseInfo{
+				CreatedAt: &versionCreatedAt,
+			},
+		},
+		BaseInfo: &common.BaseInfo{
+			CreatedAt: &createdAt,
+			UpdatedAt: &updatedAt,
+		},
+		Tags: []*openapi_eval_set.ResourceTag{
+			{
+				TagName:     "tag-a",
+				TagKeyID:    &tagKeyID,
+				ContentType: gptr.Of(tagContentType),
+				Status:      gptr.Of(tagStatus),
+			},
+		},
+		SharedInfo: &common.SharedResourceInfo{
+			IsShared:      gptr.Of(true),
+			SourceSpaceID: gptr.Of[int64](13),
+			AccessLevel:   &accessLevel,
+			VersionPolicy: &versionPolicy,
+		},
+	}, DomainEvaluationSetDTO2OpenAPI(dto))
 }
 
 func TestBaseInfoAndUserInfoConversions(t *testing.T) {
