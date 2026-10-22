@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/require"
@@ -22,15 +23,23 @@ import (
 
 func TestBatchCreateOmittedCandidateReachesPreparation(t *testing.T) {
 	t.Parallel()
+	asciiText := `{"detail":{},"rounds":{"source_round_1":{}}}`
+	utf8Text := `{"detail":{"text":"完整内容"},"rounds":{"source_round_1":{}}}`
 
 	for _, tt := range []struct {
-		name    string
-		omitted *bool
-		wantErr bool
+		name      string
+		text      string
+		omitted   *bool
+		fullBytes *int32
+		wantErr   bool
 	}{
-		{name: "absent"},
-		{name: "explicit false", omitted: gptr.Of(false)},
-		{name: "omitted", omitted: gptr.Of(true), wantErr: true},
+		{name: "absent", text: asciiText},
+		{name: "explicit false", text: asciiText, omitted: gptr.Of(false)},
+		{name: "omitted without byte count", text: asciiText, omitted: gptr.Of(true), wantErr: true},
+		{name: "hydrated ASCII", text: asciiText, omitted: gptr.Of(true), fullBytes: gptr.Of(int32(len(asciiText)))},
+		{name: "mismatched ASCII bytes", text: asciiText, omitted: gptr.Of(true), fullBytes: gptr.Of(int32(len(asciiText) + 1)), wantErr: true},
+		{name: "hydrated UTF8", text: utf8Text, omitted: gptr.Of(true), fullBytes: gptr.Of(int32(len(utf8Text)))},
+		{name: "UTF8 rune count is not bytes", text: utf8Text, omitted: gptr.Of(true), fullBytes: gptr.Of(int32(utf8.RuneCountInString(utf8Text))), wantErr: true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
@@ -65,9 +74,10 @@ func TestBatchCreateOmittedCandidateReachesPreparation(t *testing.T) {
 					Turns: []*eval_set.Turn{{FieldDatas: []*eval_set.FieldData{{
 						Name: gptr.Of("FORNAX_output"),
 						Content: &common.Content{
-							ContentType:    gptr.Of(common.ContentTypeText),
-							Text:           gptr.Of(`{"detail":{},"rounds":{"source_round_1":{}}}`),
-							ContentOmitted: tt.omitted,
+							ContentType:      gptr.Of(common.ContentTypeText),
+							Text:             gptr.Of(tt.text),
+							ContentOmitted:   tt.omitted,
+							FullContentBytes: tt.fullBytes,
 						},
 					}}}},
 				}},
