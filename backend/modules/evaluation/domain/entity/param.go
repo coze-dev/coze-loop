@@ -160,15 +160,16 @@ type BatchGetEvaluationSetVersionsResult struct {
 type Option func(option *Opt)
 
 type Opt struct {
-	PublishVersion       *string
-	BotInfoType          CozeBotInfoType
-	CustomEvalTarget     *CustomEvalTarget
-	Region               *Region
-	Env                  *string
-	OperationInstruction *string
-	Cluster              *string
-	AgentConnection      *AgentConnection
-	SandboxAgent         *SandboxAgent
+	PublishVersion         *string
+	BotInfoType            CozeBotInfoType
+	CustomEvalTarget       *CustomEvalTarget
+	Region                 *Region
+	Env                    *string
+	OperationInstruction   *string
+	Cluster                *string
+	AgentConnection        *AgentConnection
+	SandboxAgent           *SandboxAgent
+	ResultSetSourceSpaceID int64
 }
 
 func WithCozeBotPublishVersion(publishVersion *string) Option {
@@ -408,6 +409,7 @@ type UpdateRunConfParam struct {
 }
 
 type CreateExptParam struct {
+	ResultSetApplication  bool                     `json:"-"`
 	WorkspaceID           int64                    `json:"workspace_id"`
 	EvalSetVersionID      int64                    `json:"eval_set_version_id"`
 	TargetVersionID       int64                    `json:"target_version_id"`

@@ -1177,6 +1177,11 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 				createTargetSpaceID = tgtAccessCtx.ResourceSpaceID
 			}
 		}
+		if req.ResultSetApplication {
+			lookupSpaceID := createTargetSpaceID
+			opts = append(opts, func(o *entity.Opt) { o.ResultSetSourceSpaceID = lookupSpaceID })
+			createTargetSpaceID = req.WorkspaceID
+		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, createTargetSpaceID, gptr.Indirect(req.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(req.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType),
 			opts...)
 		if err != nil {
@@ -1505,7 +1510,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 				}
 			}
 			// per-set 评测对象来源空间 (target_confs 本期 len<=1)
-			if setConf.TargetSharedOption != nil && setConf.TargetSharedOption.Enabled() {
+			if !req.ResultSetApplication && setConf.TargetSharedOption != nil && setConf.TargetSharedOption.Enabled() {
 				var setTargetID int64
 				var setTargetVerID *int64
 				if len(setConf.TargetConfs) > 0 && setConf.TargetConfs[0] != nil {

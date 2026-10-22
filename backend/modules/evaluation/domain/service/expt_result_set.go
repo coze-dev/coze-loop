@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -33,6 +34,9 @@ func (e *ExptMangerImpl) checkResultSetAdmission(ctx context.Context, spaceID in
 
 // Resolve a system default only during creation; retries consume the frozen pin.
 func (e *ExptMangerImpl) prepareResultSetCreation(ctx context.Context, req *entity.CreateExptParam) error {
+	if err := e.normalizeResultSetApplication(ctx, req); err != nil {
+		return err
+	}
 	if !req.ExptConf.IsResultSet() {
 		return nil
 	}
@@ -60,4 +64,71 @@ func (e *ExptMangerImpl) prepareResultSetCreation(ctx context.Context, req *enti
 		return err
 	}
 	return e.checkResultSetAdmission(ctx, req.WorkspaceID, req.ExptConf)
+}
+
+func (e *ExptMangerImpl) normalizeResultSetApplication(ctx context.Context, req *entity.CreateExptParam) error {
+	gate, ok := e.configer.(component.ResultSetApplicationAdmission)
+	if !ok {
+		return nil
+	}
+	id := ""
+	if !req.CreateEvalTargetParam.IsNull() {
+		id = gptr.Indirect(req.CreateEvalTargetParam.SourceTargetID)
+	} else if gptr.Indirect(req.TargetID) > 0 {
+		target, err := e.evalTargetService.GetEvalTarget(ctx, *req.TargetID)
+		if err != nil {
+			return err
+		}
+		if target != nil {
+			id = target.SourceTargetID
+		}
+	}
+	if !gate.IsResultSetApplication(ctx, id) {
+		return nil
+	}
+	if !req.CreateEvalTargetParam.IsNull() {
+		if gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType) != entity.EvalTargetTypeSandboxAgent {
+			return fmt.Errorf("result_set application requires SandboxAgent target type")
+		}
+		req.CreateEvalTargetParam.SandboxAgent = nil
+		if sourceSpaceID := entity.ResultSetApplicationSourceSpace(gptr.Indirect(req.CreateEvalTargetParam.SourceTargetVersion)); sourceSpaceID > 0 && sourceSpaceID != req.WorkspaceID && !req.TargetSharedOption.Enabled() {
+			req.TargetSharedOption = &entity.SharedResourceOption{IsShared: true, SourceSpaceID: gptr.Of(sourceSpaceID)}
+		}
+	}
+	for _, set := range req.EvalSetConfigs {
+		if set == nil || !set.TargetSharedOption.Enabled() {
+			continue
+		}
+		if !req.TargetSharedOption.Enabled() || *set.TargetSharedOption.SourceSpaceID != *req.TargetSharedOption.SourceSpaceID {
+			return fmt.Errorf("result_set requires one authorized application source")
+		}
+	}
+	if req.ExptConf == nil {
+		req.ExptConf = &entity.EvaluationConfiguration{}
+	}
+	cfg := req.ExptConf.RunModeConfig
+	if cfg == nil {
+		cfg = &entity.RunModeConfig{}
+	}
+	copy := *cfg
+	if copy.RunMode == entity.RunModeSingleTurn && copy.MaxTurns == 1 {
+		copy.MaxTurns = 0
+	}
+	copy.RunMode = entity.RunModeResultSet
+	if copy.MaxRunMinutes == 0 {
+		copy.MaxRunMinutes = 30
+	}
+	req.ExptConf.RunModeConfig = &copy
+	req.ResultSetApplication = true
+	return nil
+}
+
+func (e *ExptMangerImpl) resultSetApplicationIDs(ctx context.Context, target *entity.EvalTarget) []string {
+	if target == nil {
+		return nil
+	}
+	if gate, ok := e.configer.(component.ResultSetApplicationAdmission); ok && gate.IsResultSetApplication(ctx, target.SourceTargetID) {
+		return []string{target.SourceTargetID}
+	}
+	return nil
 }

@@ -21,6 +21,12 @@ type ResultSetRuntimePolicy struct {
 	SpaceIDs                []string `json:"space_ids"`
 	Environments            []string `json:"environments"`
 	SupportedBinaryVersions []string `json:"supported_binary_versions"`
+	ApplicationIDs          []string `json:"application_ids,omitempty"`
+}
+
+func (p *ResultSetRuntimePolicy) IsApplication(id string) bool {
+	n, err := strconv.ParseInt(id, 10, 64)
+	return p != nil && err == nil && n > 0 && slices.Contains(p.ApplicationIDs, id)
 }
 
 func (p *ResultSetRuntimePolicy) Validate(spaceID int64, environment, binaryVersion string, isDevelopmentEnvironment bool) error {
@@ -190,7 +196,7 @@ func (p *CreateExptParam) PrepareResultSetTarget() error {
 	if cfg.SuaMode != "" || cfg.SuaModelID != 0 || cfg.SuaModelName != "" || cfg.SuaGoal != "" || cfg.SuaPersona != "" || cfg.SuaBehavioralConstraints != "" || cfg.SuaPETemplate != "" || cfg.MaxTurns != 0 || cfg.SkillsMode != "" || len(cfg.Skills) != 0 {
 		return fmt.Errorf("result_set only accepts max_run_minutes in run_mode_config")
 	}
-	if p.TargetSharedOption != nil && p.TargetSharedOption.Enabled() {
+	if !p.ResultSetApplication && p.TargetSharedOption != nil && p.TargetSharedOption.Enabled() {
 		return fmt.Errorf("result_set cannot use a shared Agent target")
 	}
 	for _, set := range p.EvalSetConfigs {
@@ -200,12 +206,15 @@ func (p *CreateExptParam) PrepareResultSetTarget() error {
 		if len(set.EvaluatorConfs) > 0 {
 			return fmt.Errorf("result_set reads evaluators from each item evaluator_conf")
 		}
-		if set.TargetSharedOption != nil && set.TargetSharedOption.Enabled() {
+		if !p.ResultSetApplication && set.TargetSharedOption != nil && set.TargetSharedOption.Enabled() {
 			return fmt.Errorf("result_set cannot use a shared Agent target")
 		}
 	}
 	off := false
 	p.ExptConf.EnableExtractTrajectory = &off
+	if p.ResultSetApplication {
+		return nil
+	}
 	if p.TargetVersionID != 0 || (p.TargetID != nil && *p.TargetID != 0) {
 		return nil
 	}
@@ -232,9 +241,51 @@ func isResultSetEnvironment(a *SandboxAgent) bool {
 	return a != nil && a.SandboxCountMode == SandboxCountModeDual && a.ModelID == 0 && a.ModelName == "" && a.AgentSetupCmd == "" && a.AgentRunCmd == "" && len(a.Envs) == 0 && !a.EnableAnalysis && len(a.CustomFieldSchemas) == 0 && a.Image == ""
 }
 
-func ValidateResultSetTarget(target *EvalTarget, spaceID int64) error {
-	if target == nil || target.SourceTargetID != BuiltinResultSetTargetID || target.SpaceID != spaceID || target.EvalTargetType != EvalTargetTypeSandboxAgent || target.EvalTargetVersion == nil || target.EvalTargetVersion.SpaceID != spaceID || target.EvalTargetVersion.SandboxAgent == nil || target.EvalTargetVersion.SandboxAgent.Type != SandboxAgentTypeSingleRunCLI || !isResultSetEnvironment(target.EvalTargetVersion.SandboxAgent) {
+func ValidateResultSetTarget(target *EvalTarget, spaceID int64, applicationIDs ...string) error {
+	if target == nil || (target.SourceTargetID != BuiltinResultSetTargetID && !slices.Contains(applicationIDs, target.SourceTargetID)) || target.SpaceID != spaceID || target.EvalTargetType != EvalTargetTypeSandboxAgent || target.EvalTargetVersion == nil || target.EvalTargetVersion.SpaceID != spaceID || target.EvalTargetVersion.SandboxAgent == nil || target.EvalTargetVersion.SandboxAgent.Type != SandboxAgentTypeSingleRunCLI {
 		return fmt.Errorf("result_set requires its system Runtime snapshot in the experiment workspace")
 	}
+	agent := *target.EvalTargetVersion.SandboxAgent
+	if target.SourceTargetID != BuiltinResultSetTargetID {
+		if ResultSetApplicationSourceSpace(target.EvalTargetVersion.SourceTargetVersion) == 0 {
+			return fmt.Errorf("result_set requires a registered application snapshot")
+		}
+		for _, field := range agent.CustomFieldSchemas {
+			if field == nil || !slices.Contains(ResultSetOutputFields, field.Name) {
+				return fmt.Errorf("result_set snapshot has unsupported output fields")
+			}
+		}
+		agent.CustomFieldSchemas = nil
+	}
+	if !isResultSetEnvironment(&agent) {
+		return fmt.Errorf("result_set requires an isolated Runtime snapshot")
+	}
 	return nil
+}
+
+var ResultSetOutputFields = []string{"FORNAX_output", "FORNAX_eval", "FORNAX_extra"}
+
+func NewResultSetApplicationSnapshot(name string) *SandboxAgent {
+	a := &SandboxAgent{Name: name, Type: SandboxAgentTypeSingleRunCLI, SandboxCountMode: SandboxCountModeDual}
+	for _, field := range ResultSetOutputFields {
+		a.CustomFieldSchemas = append(a.CustomFieldSchemas, &CustomFieldSchema{Name: field, ContentType: ContentTypeText, TextSchema: `{"type":"object"}`})
+	}
+	return a
+}
+
+// The existing source version records where the immutable application snapshot was read.
+func ResultSetApplicationSourceSpace(version string) int64 {
+	parts := strings.Split(version, ":")
+	if len(parts) != 3 || parts[0] != "result-set-app" {
+		return 0
+	}
+	spaceID, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil || spaceID <= 0 {
+		return 0
+	}
+	versionID, err := strconv.ParseInt(parts[2], 10, 64)
+	if err != nil || versionID <= 0 {
+		return 0
+	}
+	return spaceID
 }

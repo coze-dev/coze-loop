@@ -36,7 +36,7 @@ func (e *ExptMangerImpl) CheckRun(ctx context.Context, expt *entity.Experiment, 
 		return err
 	}
 	if expt.EvalConf.IsResultSet() {
-		if err := entity.ValidateResultSetTarget(expt.Target, spaceID); err != nil {
+		if err := entity.ValidateResultSetTarget(expt.Target, spaceID, e.resultSetApplicationIDs(ctx, expt.Target)...); err != nil {
 			return err
 		}
 	}

@@ -77,3 +77,22 @@ func TestResultSetRuntimeParameterRejectsAgentSecrets(t *testing.T) {
 		require.Error(t, err, raw)
 	}
 }
+
+func TestResultSetApplicationSnapshotRequiresTrustedIdentityAndProvenance(t *testing.T) {
+	target := &EvalTarget{SpaceID: 1001, SourceTargetID: "101", EvalTargetType: EvalTargetTypeSandboxAgent, EvalTargetVersion: &EvalTargetVersion{SpaceID: 1001, SourceTargetVersion: "result-set-app:2002:99", SandboxAgent: NewResultSetApplicationSnapshot("renamed")}}
+	require.NoError(t, ValidateResultSetTarget(target, 1001, "101"))
+	require.Error(t, ValidateResultSetTarget(target, 1001))
+	require.Error(t, ValidateResultSetTarget(target, 2002, "101"))
+	target.EvalTargetVersion.SandboxAgent.Envs = []*SandboxEnvVar{{Key: "agent_id", Value: "result-set-evaluation"}}
+	require.Error(t, ValidateResultSetTarget(target, 1001, "101"))
+	target.EvalTargetVersion.SandboxAgent.Envs = nil
+	target.EvalTargetVersion.SourceTargetVersion = "user-version"
+	require.Error(t, ValidateResultSetTarget(target, 1001, "101"))
+}
+
+func TestResultSetApplicationProvenanceRejectsInlineFingerprints(t *testing.T) {
+	require.Equal(t, int64(2002), ResultSetApplicationSourceSpace("result-set-app:2002:99"))
+	for _, version := range []string{"result-set-app:2002:99#fake", "result-set-app:0:99", "result-set-app:2002:0", "result-set-app:2002:unknown"} {
+		require.Zero(t, ResultSetApplicationSourceSpace(version))
+	}
+}

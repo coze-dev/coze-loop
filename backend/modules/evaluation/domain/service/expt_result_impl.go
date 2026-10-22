@@ -632,10 +632,60 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 
 	res.ItemResults = itemResults
 	res.Total = total
+	completeResultSetOutputColumns(res, exptMap)
 	// ★ 跨空间共享脱敏: 冻结 access_level=execute 的评测集为黑盒, 抹评测集题目内容 (列定义 + 每条 Payload.EvalSet),
 	// 保留 evaluator/target/system 列. per-set 判定: 单评测集看主表冻结级别, 多评测集看对应 EvalSetConfig.
 	desensitizeSharedEvalSetResult(res, exptMap)
 	return res, nil
+}
+
+func completeResultSetOutputColumns(res *entity.MGetExperimentReportResult, expts map[int64]*entity.Experiment) {
+	columns := make(map[int64]*entity.ExptColumnEvalTarget)
+	seen := make(map[int64]map[string]bool)
+	for _, column := range res.ExptColumnsEvalTarget {
+		if column == nil || expts[column.ExptID] == nil || !expts[column.ExptID].EvalConf.IsResultSet() {
+			continue
+		}
+		columns[column.ExptID] = column
+		seen[column.ExptID] = make(map[string]bool)
+		for _, field := range column.Columns {
+			if field != nil {
+				seen[column.ExptID][field.Name] = true
+			}
+		}
+	}
+	for _, item := range res.ItemResults {
+		if item == nil {
+			continue
+		}
+		for _, turn := range item.TurnResults {
+			if turn == nil {
+				continue
+			}
+			for _, result := range turn.ExperimentResults {
+				if result == nil || columns[result.ExperimentID] == nil || result.Payload == nil || result.Payload.TargetOutput == nil {
+					continue
+				}
+				record := result.Payload.TargetOutput.EvalTargetRecord
+				if record == nil || record.EvalTargetOutputData == nil {
+					continue
+				}
+				for _, name := range entity.ResultSetOutputFields {
+					value := record.EvalTargetOutputData.OutputFields[name]
+					if value == nil || seen[result.ExperimentID][name] {
+						continue
+					}
+					contentType := entity.ContentTypeText
+					if value.ContentType != nil {
+						contentType = *value.ContentType
+					}
+					column := columns[result.ExperimentID]
+					column.Columns = append(column.Columns, &entity.ColumnEvalTarget{Name: name, ContentType: gptr.Of(contentType), TextSchema: gptr.Of(`{"type":"object"}`), Label: gptr.Of(consts.ReportColumnLabelEvalTargetExtOutput)})
+					seen[result.ExperimentID][name] = true
+				}
+			}
+		}
+	}
 }
 
 // newEvalSetExecuteDesensitizer 针对某实验判断某评测集是否需脱敏 (execute 黑盒).
