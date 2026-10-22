@@ -481,7 +481,7 @@ func (e *ExptSchedulerImpl) sweepCurrentSandboxItems(ctx context.Context, event 
 			if err := lockCtx.Err(); err != nil {
 				return false, errno.WrapMQRetryErr(err)
 			}
-			e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(lockCtx, space, stopped, int32(errno.SandboxTerminatedBeforeReportCode), fmt.Sprintf("sandbox execute reached terminal state (%s) before result was reported", state), false)
+			_ = e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(lockCtx, space, stopped, int32(errno.SandboxTerminatedBeforeReportCode), fmt.Sprintf("sandbox execute reached terminal state (%s) before result was reported", state), false)
 			applied, err := port.CompleteCurrentItemRun(lockCtx, item.Source, write)
 			if err != nil || !applied {
 				return false, err

@@ -309,7 +309,7 @@ func (e *ExptMangerImpl) releaseTerminationResources(ctx context.Context, expt *
 	}
 	if e.evalTargetService != nil && len(records) > 0 {
 		releaseCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
-		e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(releaseCtx, resolveLoadSpaceID(expt.SpaceID, expt.TargetSpaceID), records, int32(errno.AsyncEvalTargetTerminatedCode), "async eval target terminated: experiment cancelled", false)
+		_ = e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(releaseCtx, resolveLoadSpaceID(expt.SpaceID, expt.TargetSpaceID), records, int32(errno.AsyncEvalTargetTerminatedCode), "async eval target terminated: experiment cancelled", false)
 		err := releaseCtx.Err()
 		cancel()
 		if err != nil {
