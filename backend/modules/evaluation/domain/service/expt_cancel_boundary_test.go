@@ -468,7 +468,7 @@ func TestRunCancelSandboxUsesCapturedOriginalRecordIDs(t *testing.T) {
 	original := f.base + 17000
 	require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=?", f.space).Update("target_result_id", original).Error)
 	target := svcmocks.NewMockIEvalTargetService(gomock.NewController(t))
-	target.EXPECT().TerminateAsyncRecordsAndDestroySandbox(gomock.Any(), f.space, []int64{original}, int32(errno.AsyncEvalTargetTerminatedCode), gomock.Any(), false).Do(func(ctx context.Context, _ int64, ids []int64, _ int32, _ string, _ bool) {
+	target.EXPECT().TerminateAsyncRecordsAndDestroySandbox(gomock.Any(), f.space, []int64{original}, int32(errno.AsyncEvalTargetTerminatedCode), gomock.Any(), false).Do(func(ctx context.Context, _ int64, ids []int64, _ int32, _ string, _ bool, _ ...bool) {
 		require.NoError(t, ctx.Err())
 		require.Equal(t, []int64{original}, ids)
 	})
