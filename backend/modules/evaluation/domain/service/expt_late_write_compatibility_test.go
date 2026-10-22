@@ -233,7 +233,7 @@ func TestLateCompatDebtFinishedAndPreExec(t *testing.T) {
 			event.RetryTimes = 3
 			ctx := ctxcache.Init(context.Background())
 			event.WithCtxCentralQuotaHeld(ctx, "frozen-scope")
-			svc := &ExptItemEventEvalServiceImpl{exptItemResultRepo: f.itemRepo(), exptTurnResultRepo: f.turnRepo(), configer: config, manager: manager, centralGuard: guard, itemLocker: lateWriteLocker(t, ctrl)}
+			svc := &ExptItemEventEvalServiceImpl{experimentRepo: f.experimentRepo(), exptItemResultRepo: f.itemRepo(), exptTurnResultRepo: f.turnRepo(), configer: config, manager: manager, centralGuard: guard, itemLocker: lateWriteLocker(t, ctrl)}
 			expected := kind == "completed_debt" || kind == "preexec_debt"
 			finishes, releases := 0, 0
 

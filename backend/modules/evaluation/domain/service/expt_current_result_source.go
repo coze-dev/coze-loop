@@ -259,12 +259,23 @@ func (e *ExptItemEventEvalServiceImpl) handleCurrentEventErr(ctx context.Context
 		if !valid {
 			return nil
 		}
+		if e.experimentRepo == nil {
+			return errno.NewMQRetryErr("frozen experiment reader unavailable")
+		}
+		expt, err := e.experimentRepo.GetByID(contexts.WithCtxWriteDB(lockCtx), event.ExptID, event.SpaceID)
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
 		event = event.Clone()
 		event.RetryTimes = max(event.RetryTimes, int(current.Current.RetryTimes))
 		conf := e.configer.GetErrRetryConf(lockCtx, event.SpaceID, evalErr)
 		maxRetry := conf.GetRetryTimes()
 		if event.MaxRetryTimes > 0 {
 			maxRetry = event.MaxRetryTimes
+		}
+		// The frozen pointer distinguishes an explicit zero from an absent budget.
+		if expt != nil && expt.EvalConf != nil && expt.EvalConf.ItemRetryNum != nil {
+			maxRetry = *expt.EvalConf.ItemRetryNum
 		}
 		retry := event.RetryTimes < maxRetry && !event.CtxForceNoRetry(ctx)
 		if e.metric != nil {
