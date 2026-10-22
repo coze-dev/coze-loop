@@ -226,23 +226,31 @@ func (m *MetricsService) checkMetricValid(def entity.IMetricDefinition) error {
 		// check group by valid
 		dimensions := def.GroupBy()
 		for _, dimension := range dimensions {
-			filedName := dimension.Field.FieldName
-			fieldType := dimension.Field.FieldType
-			isValidFieldName := false
-			for _, field := range m.pMetrics.DrillDownObjects {
-				if filedName != field.FieldName {
-					continue
-				} else if fieldType != field.FieldType {
-					continue
-				} else {
-					isValidFieldName = true
-					break
+			fields := []*loop_span.FilterField{dimension.Field}
+			if dimension.Expression != nil {
+				fields = dimension.Expression.Fields
+			}
+			aliasFieldName := ""
+			for _, dimensionField := range fields {
+				if dimensionField == nil {
+					return fmt.Errorf("metric name %s group by field not valid", def.Name())
+				}
+				if aliasFieldName == "" {
+					aliasFieldName = dimensionField.FieldName
+				}
+				isValidField := false
+				for _, field := range m.pMetrics.DrillDownObjects {
+					if dimensionField.FieldName == field.FieldName && dimensionField.FieldType == field.FieldType {
+						isValidField = true
+						break
+					}
+				}
+				if !isValidField {
+					return fmt.Errorf("metric name %s group by field %s not valid", def.Name(), dimensionField.FieldName)
 				}
 			}
-			if !isValidFieldName {
-				return fmt.Errorf("metric name %s group by field %s not valid", def.Name(), filedName)
-			} else if dimension.Alias == "" {
-				return fmt.Errorf("metric name %s group by field %s alias not valid", def.Name(), filedName)
+			if dimension.Alias == "" {
+				return fmt.Errorf("metric name %s group by field %s alias not valid", def.Name(), aliasFieldName)
 			}
 		}
 		// check offline expression valid

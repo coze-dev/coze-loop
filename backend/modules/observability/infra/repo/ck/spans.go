@@ -145,13 +145,13 @@ func (s *SpansCkDaoImpl) buildMetricsSql(ctx context.Context, param *dao.GetMetr
 			fmt.Sprintf("%s AS %s", expr, dimension.Alias))
 	}
 	for _, dimension := range param.GroupBys {
-		fieldName, err := s.convertFieldName(ctx, dimension.Field)
+		groupByExpression, err := s.formatGroupByExpression(ctx, dimension)
 		if err != nil {
 			return "", errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
 		}
 		selectClauses = append(selectClauses,
-			fmt.Sprintf("%s AS %s", fieldName, dimension.Alias))
-		groupByClauses = append(groupByClauses, fieldName)
+			fmt.Sprintf("%s AS %s", groupByExpression, dimension.Alias))
+		groupByClauses = append(groupByClauses, groupByExpression)
 	}
 	wholeSql := fmt.Sprintf(metricsSqlTemplate,
 		strings.Join(selectClauses, ", "),
@@ -162,6 +162,13 @@ func (s *SpansCkDaoImpl) buildMetricsSql(ctx context.Context, param *dao.GetMetr
 			"", "ORDER BY "+strings.Join(orderByClauses, ", ")),
 	)
 	return wholeSql, nil
+}
+
+func (s *SpansCkDaoImpl) formatGroupByExpression(ctx context.Context, dimension *metrics_entity.Dimension) (string, error) {
+	if dimension.Expression != nil {
+		return s.formatAggregationExpression(ctx, dimension)
+	}
+	return s.convertFieldName(ctx, dimension.Field)
 }
 
 func (s *SpansCkDaoImpl) formatAggregationExpression(ctx context.Context, dimension *metrics_entity.Dimension) (string, error) {
