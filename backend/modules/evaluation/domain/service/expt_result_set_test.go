@@ -143,3 +143,17 @@ func TestResultSetApplicationSharedDenialCannotCreateSnapshot(t *testing.T) {
 	_, err := manager.CreateExpt(context.Background(), param, nil)
 	require.ErrorIs(t, err, denied)
 }
+
+func TestResultSetApplicationExplicitModeStillRejectsTurnOverrides(t *testing.T) {
+	manager := &ExptMangerImpl{configer: resultSetApplicationConfig{}}
+	param := &entity.CreateExptParam{
+		WorkspaceID:           1001,
+		EvalSetSourceType:     entity.ExptEvalSetSourceType_MultiSetConfig,
+		EvalSetConfigs:        []*entity.EvalSetConfig{{EvalSetID: 10, EvalSetVersionID: 11}},
+		CreateEvalTargetParam: &entity.CreateEvalTargetParam{SourceTargetID: gptr.Of("101"), EvalTargetType: gptr.Of(entity.EvalTargetTypeSandboxAgent)},
+		ExptConf:              &entity.EvaluationConfiguration{RunModeConfig: &entity.RunModeConfig{RunMode: entity.RunModeResultSet, MaxTurns: 10}},
+	}
+	require.NoError(t, manager.prepareResultSetCreation(context.Background(), param))
+	require.Equal(t, 10, param.ExptConf.RunModeConfig.MaxTurns)
+	require.ErrorContains(t, param.PrepareResultSetTarget(), "only accepts max_run_minutes")
+}

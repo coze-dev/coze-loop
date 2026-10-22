@@ -137,7 +137,8 @@ func (e *ExptMangerImpl) normalizeResultSetApplication(ctx context.Context, req 
 		cfg = &entity.RunModeConfig{}
 	}
 	copy := *cfg
-	if copy.RunMode == entity.RunModeSingleTurn && copy.MaxTurns == 1 {
+	// Fixed-query scoring takes its turn bounds from the original item's run_conf.
+	if copy.RunMode == entity.RunModeFixedScriptMultiTurn || (copy.RunMode == entity.RunModeSingleTurn && copy.MaxTurns == 1) {
 		copy.MaxTurns = 0
 	}
 	copy.RunMode = entity.RunModeResultSet
