@@ -2768,7 +2768,7 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing
 		defer ctrl.Finish()
 		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
 		svc := &EvalTargetServiceImpl{evalTargetRepo: mockRepo}
-		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, nil, 100, "msg", false)
+		_ = svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, nil, 100, "msg", false)
 		// 无任何 mock 期望
 	})
 
@@ -2780,7 +2780,7 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing
 
 		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
 			Return(nil, errors.New("db error"))
-		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
+		_ = svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
 	})
 
 	t.Run("无 versionID 提前返回, 不调 BatchGetEvalTargetVersion", func(t *testing.T) {
@@ -2792,7 +2792,7 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing
 		// 所有 record 的 TargetVersionID 都是 0
 		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
 			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 0}}, nil)
-		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
+		_ = svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
 	})
 
 	t.Run("BatchGetEvalTargetVersion 失败安静返回", func(t *testing.T) {
@@ -2805,7 +2805,7 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing
 			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 20, SpaceID: 1, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)}}, nil)
 		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
 			Return(nil, errors.New("db error"))
-		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
+		_ = svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
 	})
 
 	t.Run("非 SandboxAgent 类型不写 Save", func(t *testing.T) {
@@ -2824,7 +2824,7 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing
 				EvalTargetType:    entity.EvalTargetTypeCozeBot,
 				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20},
 			}}, nil)
-		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
+		_ = svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
 	})
 
 	t.Run("SandboxAgent + AsyncInvoking 落 Fail 状态并销毁", func(t *testing.T) {
@@ -2878,7 +2878,7 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing
 				return &rpc.SandboxDestroyResponse{}, nil
 			}).Times(1)
 
-		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10, 11}, 100, "msg", false)
+		_ = svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10, 11}, 100, "msg", false)
 
 		select {
 		case <-destroyDone:
@@ -2942,7 +2942,7 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing
 				return &rpc.SandboxDestroyResponse{}, nil
 			}).Times(2)
 
-		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
+		_ = svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
 
 		for i := 0; i < 2; i++ {
 			select {
@@ -3211,7 +3211,7 @@ func TestSandboxExecuteIDsOf_BothExtKeyShapes(t *testing.T) {
 func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T) {
 	t.Run("nil adapter 不触发", func(t *testing.T) {
 		svc := &EvalTargetServiceImpl{}
-		svc.destroySandboxExecute(context.Background(), "task", 1, []string{"id"}, false)
+		_ = svc.destroySandboxExecute(context.Background(), "task", 1, []string{"id"}, false)
 	})
 
 	t.Run("空列表不触发", func(t *testing.T) {
@@ -3219,7 +3219,7 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 		defer ctrl.Finish()
 		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
 		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched}
-		svc.destroySandboxExecute(context.Background(), "task", 1, nil, false)
+		_ = svc.destroySandboxExecute(context.Background(), "task", 1, nil, false)
 		// 无 EXPECT: 一次 RPC 都不该发
 	})
 
@@ -3238,7 +3238,7 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 				close(done)
 				return &rpc.SandboxDestroyResponse{}, nil
 			})
-		svc.destroySandboxExecute(context.Background(), "T", 9, []string{"exec-1", "extra-2"}, false)
+		_ = svc.destroySandboxExecute(context.Background(), "T", 9, []string{"exec-1", "extra-2"}, false)
 		select {
 		case <-done:
 		case <-time.After(2 * time.Second):
@@ -3267,7 +3267,7 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 				return &rpc.SandboxDestroyResponse{}, nil
 			})
 
-		svc.destroySandboxExecute(context.Background(), "T", 9, []string{"T-orch", "T-macvm"}, false)
+		_ = svc.destroySandboxExecute(context.Background(), "T", 9, []string{"T-orch", "T-macvm"}, false)
 		for i := 0; i < 2; i++ {
 			select {
 			case <-done:
@@ -3299,7 +3299,7 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 		// 于是重试落在测试结束之后, 撞 gomock 在已完成的 *testing.T 上 Fatalf ——
 		// -race 下整包 exit=1 却没有任何 --- FAIL 行, 极难定位。同步调用天然无悬空 goroutine。
 		assert.NotPanics(t, func() {
-			svc.destroySandboxExecuteSync(context.Background(), "T", 9, []string{"e"}, false)
+			_ = svc.destroySandboxExecuteSync(context.Background(), "T", 9, []string{"e"}, false)
 		})
 		assert.GreaterOrEqual(t, atomic.LoadInt32(&calls), int32(1), "至少尝试一次 Destroy")
 	})
@@ -3321,7 +3321,7 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 				assert.Equal(t, []string{"e"}, req.ExecuteIDs)
 				return &rpc.SandboxDestroyResponse{}, nil
 			})
-		svc.destroySandboxExecuteSync(context.Background(), "T", 9, []string{"e"}, false)
+		_ = svc.destroySandboxExecuteSync(context.Background(), "T", 9, []string{"e"}, false)
 		assert.Equal(t, int32(2), atomic.LoadInt32(&calls), "第一次失败后必须重试一次并成功")
 	})
 
@@ -3348,7 +3348,7 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 				return &rpc.SandboxDestroyResponse{}, nil
 			})
 
-		svc.destroySandboxExecute(canceled, "T", 9, []string{"e"}, false)
+		_ = svc.destroySandboxExecute(canceled, "T", 9, []string{"e"}, false)
 		select {
 		case <-done:
 		case <-time.After(5 * time.Second):
@@ -3382,7 +3382,7 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ZombieTimeoutFlag(t *testin
 					close(done)
 					return &rpc.SandboxDestroyResponse{}, nil
 				})
-			svc.destroySandboxExecute(context.Background(), "t", 1, []string{"2"}, tc.zombie)
+			_ = svc.destroySandboxExecute(context.Background(), "t", 1, []string{"2"}, tc.zombie)
 			select {
 			case <-done:
 			case <-time.After(2 * time.Second):
@@ -3427,7 +3427,7 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox_ZombieTime
 			return &rpc.SandboxDestroyResponse{}, nil
 		}).Times(1)
 
-	svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", true)
+	_ = svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", true)
 	select {
 	case <-destroyDone:
 	case <-time.After(2 * time.Second):
