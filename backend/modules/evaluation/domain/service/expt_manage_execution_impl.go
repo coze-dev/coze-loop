@@ -317,6 +317,11 @@ func (e *ExptMangerImpl) prepareRun(ctx context.Context, exptID, runID, spaceID 
 	if err != nil {
 		return nil, err
 	}
+	if expt.Target != nil && expt.Target.EvalTargetVersion != nil {
+		if agent := expt.Target.EvalTargetVersion.SandboxAgent; agent != nil && agent.SandboxCountMode == entity.SandboxCountModeWindowsPlusSandbox {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("unsupported execution mode: windows_plus_sandbox"))
+		}
+	}
 	err = NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session)
 	return expt, err
 }
