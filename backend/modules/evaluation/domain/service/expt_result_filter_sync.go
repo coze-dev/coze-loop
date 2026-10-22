@@ -254,6 +254,10 @@ func (e ExptResultServiceImpl) compareMaterializedFilterLocked(ctx context.Conte
 		return false, nil
 	}
 	byTurn := e.createTurnKeyToFilterMap(actual)
+	compareItemVersion := true
+	if storage, ok := e.exptTurnResultFilterRepo.(repo.IExptMaterializedItemVersionRepo); ok {
+		compareItemVersion = storage.PersistsMaterializedItemVersion()
+	}
 	for _, want := range expected {
 		got := byTurn[GenerateTurnKey(space, expt, item, want.TurnID)]
 		// Both repositories' current compare contract returns these filter fields.
@@ -261,7 +265,7 @@ func (e ExptResultServiceImpl) compareMaterializedFilterLocked(ctx context.Conte
 		if got == nil || got.ItemIdx != want.ItemIdx || got.Status != want.Status || got.EvaluatorScoreCorrected != want.EvaluatorScoreCorrected || !maps.Equal(got.EvaluatorScore, want.EvaluatorScore) || got.EvalTargetData["actual_output"] != want.EvalTargetData["actual_output"] {
 			return false, nil
 		}
-		if fullRead && (got.ItemVersionID != want.ItemVersionID || got.EvalSetID != want.EvalSetID || got.EvalSetVersionID != want.EvalSetVersionID || !maps.Equal(got.EvalTargetData, want.EvalTargetData) || !maps.Equal(got.AnnotationFloat, want.AnnotationFloat) || !maps.Equal(got.AnnotationBool, want.AnnotationBool) || !maps.Equal(got.AnnotationString, want.AnnotationString) || !maps.Equal(got.EvalTargetMetrics, want.EvalTargetMetrics) || !filterWeightedScoreEqual(got.EvaluatorWeightedScore, want.EvaluatorWeightedScore)) {
+		if fullRead && (compareItemVersion && got.ItemVersionID != want.ItemVersionID || got.EvalSetID != want.EvalSetID || got.EvalSetVersionID != want.EvalSetVersionID || !maps.Equal(got.EvalTargetData, want.EvalTargetData) || !maps.Equal(got.AnnotationFloat, want.AnnotationFloat) || !maps.Equal(got.AnnotationBool, want.AnnotationBool) || !maps.Equal(got.AnnotationString, want.AnnotationString) || !maps.Equal(got.EvalTargetMetrics, want.EvalTargetMetrics) || !filterWeightedScoreEqual(got.EvaluatorWeightedScore, want.EvaluatorWeightedScore)) {
 			return false, nil
 		}
 	}

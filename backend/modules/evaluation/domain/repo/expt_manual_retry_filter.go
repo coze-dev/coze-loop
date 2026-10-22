@@ -23,3 +23,8 @@ type IExptManualRetryFilterRepo interface {
 type IExptMaterializedFilterRepo interface {
 	GetMaterializedByExptIDItemIDs(context.Context, string, string, string, []string) ([]*entity.ExptTurnResultFilterEntity, error)
 }
+
+// Repositories without this optional declaration must compare item versions.
+type IExptMaterializedItemVersionRepo interface {
+	PersistsMaterializedItemVersion() bool
+}

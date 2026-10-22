@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -80,30 +81,56 @@ func TestRunningRetryFilterSync_ResultedNeedsCalibration(t *testing.T) {
 // This test catches a calibration that only compares scores/status while an
 // old per-item snapshot or target field remains materialized.
 func TestRunningRetryFilterSync_FullProjectionMismatch(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	turns := repomocks.NewMockIExptTurnResultRepo(ctrl)
-	items := repomocks.NewMockIExptItemResultRepo(ctrl)
-	filters := repomocks.NewMockIExptTurnResultFilterRepo(ctrl)
-	experiments := repomocks.NewMockIExperimentRepo(ctrl)
-	annotations := repomocks.NewMockIExptAnnotateRepo(ctrl)
-	records := svcmocks.NewMockEvaluatorRecordService(ctrl)
-	target := svcmocks.NewMockIEvalTargetService(ctrl)
-	now := time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC)
-	turns.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(3), int64(1), []int64{10}, gomock.Any(), false).Return([]*entity.ExptTurnResult{{ID: 101, ItemID: 10, ItemVersionID: 222, TurnID: 0, WeightedScore: gptr.Of(0.0)}}, int64(1), nil)
-	items.EXPECT().BatchGet(gomock.Any(), int64(3), int64(1), []int64{10}).Return([]*entity.ExptItemResult{{ItemID: 10, Status: entity.ItemRunState_Success}}, nil)
-	filters.EXPECT().GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(3), int64(1)).Return(nil, nil)
-	experiments.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, StartAt: &now, EvalSetID: 55, EvalSetVersionID: 66}, nil)
-	turns.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(3), []int64{101}).Return(nil, nil)
-	records.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).Return(nil, nil)
-	target.EXPECT().BatchGetRecordByIDs(gomock.Any(), int64(3), gomock.Any()).Return(nil, nil)
-	annotations.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), int64(3), []int64{101}).Return(nil, nil)
-	annotations.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), int64(3), gomock.Any()).Return(nil, nil)
-	filters.EXPECT().GetByExptIDItemIDs(gomock.Any(), "3", "1", "2026-10-20", []string{"10"}).Return([]*entity.ExptTurnResultFilterEntity{{SpaceID: 3, ExptID: 1, ItemID: 10, TurnID: 0, Status: entity.ItemRunState_Success, ItemVersionID: 111, EvalSetID: 55, EvalSetVersionID: 66}}, nil)
-	sink := &fullFilterTestSink{IExptTurnResultFilterRepo: filters}
-	svc := ExptResultServiceImpl{ExptTurnResultRepo: turns, ExptItemResultRepo: items, ExperimentRepo: experiments, ExptAnnotateRepo: annotations, evaluatorRecordService: records, evalTargetService: target, exptTurnResultFilterRepo: sink}
-	equal, err := svc.materializedFilterMatchesLocked(context.Background(), 3, 1, 10)
-	require.NoError(t, err)
-	require.False(t, equal, "different item snapshot must keep calibration pending")
+	for _, tc := range []struct {
+		name          string
+		version       int64
+		missingWeight bool
+		ready         bool
+	}{{"nonzero_correct_default_strict", 222, false, true}, {"stale_nonzero_default_strict", 111, false, false}, {"missing_version_default_strict", 0, false, false}, {"missing_weight_zero", 222, true, false}} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			turns := repomocks.NewMockIExptTurnResultRepo(ctrl)
+			items := repomocks.NewMockIExptItemResultRepo(ctrl)
+			filters := repomocks.NewMockIExptTurnResultFilterRepo(ctrl)
+			experiments := repomocks.NewMockIExperimentRepo(ctrl)
+			annotations := repomocks.NewMockIExptAnnotateRepo(ctrl)
+			records := svcmocks.NewMockEvaluatorRecordService(ctrl)
+			target := svcmocks.NewMockIEvalTargetService(ctrl)
+			now := time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC)
+			turns.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(3), int64(1), []int64{10}, gomock.Any(), false).Return([]*entity.ExptTurnResult{{ID: 101, ItemID: 10, ItemVersionID: 222, TurnID: 0, WeightedScore: gptr.Of(0.0)}}, int64(1), nil)
+			items.EXPECT().BatchGet(gomock.Any(), int64(3), int64(1), []int64{10}).Return([]*entity.ExptItemResult{{ItemID: 10, Status: entity.ItemRunState_Success}}, nil)
+			filters.EXPECT().GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(3), int64(1)).Return(nil, nil)
+			experiments.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, StartAt: &now, EvalSetID: 55, EvalSetVersionID: 66}, nil)
+			turns.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(3), []int64{101}).Return(nil, nil)
+			records.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).Return(nil, nil)
+			target.EXPECT().BatchGetRecordByIDs(gomock.Any(), int64(3), gomock.Any()).Return(nil, nil)
+			annotations.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), int64(3), []int64{101}).Return(nil, nil)
+			annotations.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), int64(3), gomock.Any()).Return(nil, nil)
+			filters.EXPECT().GetByExptIDItemIDs(gomock.Any(), "3", "1", "2026-10-20", []string{"10"}).Return([]*entity.ExptTurnResultFilterEntity{{SpaceID: 3, ExptID: 1, ItemID: 10, TurnID: 0, Status: entity.ItemRunState_Success, ItemVersionID: tc.version, EvaluatorWeightedScore: func() *float64 {
+				if tc.missingWeight {
+					return nil
+				}
+				return gptr.Of(0.0)
+			}(), EvalSetID: 55, EvalSetVersionID: 66}}, nil)
+			sink := &fullFilterTestSink{IExptTurnResultFilterRepo: filters}
+			svc := ExptResultServiceImpl{ExptTurnResultRepo: turns, ExptItemResultRepo: items, ExperimentRepo: experiments, ExptAnnotateRepo: annotations, evaluatorRecordService: records, evalTargetService: target, exptTurnResultFilterRepo: sink}
+			filters.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil)
+			publication := repomocks.NewMockIExptResultPublishRepo(ctrl)
+			retryJSON, err := json.Marshal(&entity.ManualRetryContext{RunID: 2, RequestID: "rq1", Mode: entity.EvaluationModeFailRetry})
+			require.NoError(t, err)
+			publication.EXPECT().GetItemResultPublishSource(gomock.Any(), int64(3), int64(1), int64(2), int64(10)).Return(&entity.ExptItemResultPublishSource{Source: &entity.ExptCurrentItemRunSource{Current: entity.ExptItemCurrentRequest{RequestID: "rq1"}}, Item: &entity.ExptItemResult{Status: entity.ItemRunState_Success, Ext: map[string]string{entity.ManualRetryExtKey: string(retryJSON)}}, ItemLog: &entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Success), ResultState: int32(entity.ExptItemResultStateResulted)}}, nil)
+			svc.ExptItemResultRepo = &versionCalibrationScanner{items}
+			svc.resultPublishRepo = publication
+			equal, err := svc.ReconcileManualRetryFilterBeforeFinish(context.Background(), 3, 1, 2)
+			require.Equal(t, tc.ready, equal)
+			if tc.ready {
+				require.NoError(t, err)
+			} else {
+				require.True(t, errno.NeedMQRetry(err))
+			}
+		})
+	}
+
 }
 
 type fullFilterTestSink struct{ repo.IExptTurnResultFilterRepo }
@@ -396,4 +423,10 @@ func filterRealTestLocker(client infraredis.Cmdable) lock.ILocker {
 	observed := &filterTestRedis{Cmdable: client, unlocks: map[string]int{}, changed: make(chan struct{})}
 	holder := fmt.Sprint("filter-test-", filterTestHolderSequence.Add(1))
 	return &filterTestLocker{ILocker: lock.NewRedisLockerWithHolder(observed, holder), client: observed, holder: holder}
+}
+
+type versionCalibrationScanner struct{ repo.IExptItemResultRepo }
+
+func (*versionCalibrationScanner) ScanManualRetryFilterItems(context.Context, int64, int64, int64, int64, int) ([]int64, int64, error) {
+	return []int64{10}, 0, nil
 }
