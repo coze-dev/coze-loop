@@ -176,7 +176,7 @@ func TestDebtOriginalSourceRecheckedAfterItemLeaseReleased(t *testing.T) {
 					}
 				}}
 			}
-			svc := &ExptItemEventEvalServiceImpl{manager: p.manager, configer: config, itemLocker: func() lock.ILocker { return factory() }, exptItemResultRepo: f.itemRepo()}
+			svc := &ExptItemEventEvalServiceImpl{experimentRepo: p.manager.exptRepo, manager: p.manager, configer: config, itemLocker: func() lock.ILocker { return factory() }, exptItemResultRepo: f.itemRepo()}
 			before := f.snapshot()
 			err := svc.handleCurrentEventErr(context.Background(), event, errors.New("debt"), f.port, &currentItemExecution{Source: source})
 			require.NoError(t, err)

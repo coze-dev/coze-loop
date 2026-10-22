@@ -277,7 +277,7 @@ func TestGuardSourceMySQLDebtFinishThenCancelStillReleases(t *testing.T) {
 		}
 		return true, errno.WrapMQRetryErr(ctx.Err())
 	}}
-	svc := &ExptItemEventEvalServiceImpl{centralGuard: guard, exptItemResultRepo: f.itemRepo(), exptTurnResultRepo: f.turnRepo(), manager: terminator, configer: config, itemLocker: lateWriteLocker(t, ctrl)}
+	svc := &ExptItemEventEvalServiceImpl{experimentRepo: f.experimentRepo(), centralGuard: guard, exptItemResultRepo: f.itemRepo(), exptTurnResultRepo: f.turnRepo(), manager: terminator, configer: config, itemLocker: lateWriteLocker(t, ctrl)}
 	var completed map[string]string
 	err := svc.HandleEventErr(func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
 		executionSource(ctx).Source = source
