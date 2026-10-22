@@ -52,7 +52,7 @@ func newPendingRunFixture(t *testing.T, initMode entity.ExptRunMode) *pendingRun
 	for _, table := range []string{"expt_turn_evaluator_result_ref", "expt_turn_result_run_log", "expt_turn_result", "expt_item_result_run_log", "expt_item_result", "expt_run_log"} {
 		require.NoError(t, f.conn.Exec("DELETE FROM "+table+" WHERE space_id=? AND expt_id=?", f.space, f.expt).Error)
 	}
-	require.NoError(t, f.conn.Model(&model.Experiment{}).Where("space_id=?", f.space).Updates(map[string]any{"status": int32(entity.ExptStatus_Pending), "latest_run_id": 0}).Error)
+	require.NoError(t, f.conn.Model(&model.Experiment{}).Where("space_id=?", f.space).Updates(map[string]any{"status": int32(entity.ExptStatus_Pending), "latest_run_id": 0, "eval_set_id": f.base + 80, "eval_set_version_id": f.base + 81}).Error)
 	require.NoError(t, f.conn.Model(&model.ExptStats{}).Where("space_id=?", f.space).Updates(map[string]any{"pending_cnt": 0, "processing_cnt": 0, "success_cnt": 0}).Error)
 	factory, server := finishRealLockerFactory(t)
 	client, err := infraredis.NewClient(&redis.Options{Addr: server.Addr()})

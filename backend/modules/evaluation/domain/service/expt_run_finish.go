@@ -160,7 +160,7 @@ func (e *ExptMangerImpl) cleanupNaturallyFinishedRun(ctx context.Context, event 
 			}
 		}
 		if len(ids) > 0 {
-			e.terminateSandboxExecutesForCancelledItems(cleanupCtx, event.SpaceID, current.TargetSpaceID, event.ExptID, &event.ExptRunID, ids)
+			_ = e.terminateSandboxExecutesForCancelledItems(cleanupCtx, event.SpaceID, current.TargetSpaceID, event.ExptID, &event.ExptRunID, ids)
 		}
 	}
 	if err := cleanupCtx.Err(); err != nil {
