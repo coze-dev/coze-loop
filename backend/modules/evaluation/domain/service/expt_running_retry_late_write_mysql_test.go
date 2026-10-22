@@ -40,6 +40,10 @@ type lateWriteFixture struct {
 	base, space, expt, run, item, version int64
 }
 
+func (f *lateWriteFixture) experimentRepo() repo.IExperimentRepo {
+	return experimentrepo.NewExptRepo(experimentmysql.NewExptDAO(f.provider), experimentmysql.NewExptEvaluatorRefDAO(f.provider), nil)
+}
+
 func newLateWriteFixture(t *testing.T, token string) *lateWriteFixture {
 	t.Helper()
 	dsn := os.Getenv("EXPT_RETRY_MYSQL_DSN")
@@ -248,7 +252,7 @@ func TestLateWriteMySQLManualBudget(t *testing.T) {
 					require.Equal(t, "rq1", event.RequestID)
 					return nil
 				}).Times(expectedPublish)
-				svc := &ExptItemEventEvalServiceImpl{exptItemResultRepo: f.itemRepo(), exptTurnResultRepo: f.turnRepo(), configer: config, publisher: publisher, itemLocker: lateWriteLocker(t, ctrl)}
+				svc := &ExptItemEventEvalServiceImpl{experimentRepo: f.experimentRepo(), exptItemResultRepo: f.itemRepo(), exptTurnResultRepo: f.turnRepo(), configer: config, publisher: publisher, itemLocker: lateWriteLocker(t, ctrl)}
 				event := f.event()
 				event.RetryTimes = 0
 				if yield {
