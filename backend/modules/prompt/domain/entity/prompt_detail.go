@@ -206,9 +206,10 @@ type ModelConfig struct {
 
 // ThinkingConfig 配置thinking/reasoning相关参数
 type ThinkingConfig struct {
-	BudgetTokens    *int64           `json:"budget_tokens,omitempty"`    // thinking内容的最大输出token
-	ThinkingOption  *ThinkingOption  `json:"thinking_option,omitempty"`  // thinking开关选项
-	ReasoningEffort *ReasoningEffort `json:"reasoning_effort,omitempty"` // 思考长度
+	BudgetTokens         *int64           `json:"budget_tokens,omitempty"`    // thinking内容的最大输出token
+	ThinkingOption       *ThinkingOption  `json:"thinking_option,omitempty"`  // thinking开关选项
+	ReasoningEffort      *ReasoningEffort `json:"reasoning_effort,omitempty"` // 思考长度
+	ReasoningEffortValue *string          `json:"reasoning_effort_value,omitempty"`
 }
 
 // ThinkingOption thinking开关选项
