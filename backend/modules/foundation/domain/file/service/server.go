@@ -13,7 +13,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
-	"path/filepath"
+	"path"
 	"time"
 
 	"github.com/google/uuid"
@@ -50,7 +50,7 @@ func (fs fileService) UploadLoopFile(ctx context.Context, fileHeader *multipart.
 	if fileName == "" {
 		return "", errorx.NewByCode(errno.CommonInvalidParamCode)
 	}
-	fileName = filepath.Join(spaceID, "/", fileName)
+	fileName = path.Join(spaceID, "/", fileName)
 
 	f, err := fileHeader.Open()
 	if err != nil {
@@ -131,7 +131,7 @@ func (fs fileService) UploadFileForServer(ctx context.Context, mimeType string, 
 	}
 
 	// Build full path with workspace ID
-	fullPath := filepath.Join(spaceID, "/", fileName)
+	fullPath := path.Join(spaceID, "/", fileName)
 
 	// Detect content type from file data
 	fileContentType := http.DetectContentType(body)
