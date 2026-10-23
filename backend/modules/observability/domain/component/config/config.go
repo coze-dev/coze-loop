@@ -5,6 +5,7 @@ package config
 
 import (
 	"context"
+	"slices"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -249,6 +250,8 @@ type TrajectoryMetadataConfig struct {
 	// Spaces 按 workspace_id 配置允许写入的 metadata key 规则列表
 	Spaces            map[int64][]loop_span.MetaKeyRule `mapstructure:"spaces" json:"spaces"`
 	EnableSingleQuery bool                              `mapstructure:"enable_single_query" json:"enable_single_query"`
+	// EnableDoubleQuerySpaces 白名单：命中的 workspace_id 强制走双查询，即使全局开启了单查询
+	EnableDoubleQuerySpaces []int64 `mapstructure:"enable_double_query_spaces" json:"enable_double_query_spaces"`
 }
 
 func (c *TrajectoryMetadataConfig) IsSingleQueryEnabled() bool {
@@ -256,6 +259,13 @@ func (c *TrajectoryMetadataConfig) IsSingleQueryEnabled() bool {
 		return false
 	}
 	return c.EnableSingleQuery
+}
+
+func (c *TrajectoryMetadataConfig) IsDoubleQueryEnabled(workspaceID int64) bool {
+	if c == nil {
+		return false
+	}
+	return slices.Contains(c.EnableDoubleQuerySpaces, workspaceID)
 }
 
 //go:generate mockgen -destination=mocks/config.go -package=mocks . ITraceConfig
