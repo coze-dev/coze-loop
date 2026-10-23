@@ -283,10 +283,18 @@ func TestAbilityMultiModalDO2DTO(t *testing.T) {
 			AbilityImage: &entity.AbilityImage{
 				URLEnabled: true,
 			},
+			Video: true,
+			AbilityVideo: &entity.AbilityVideo{
+				MaxVideoSizeInMB:      200,
+				SupportedVideoFormats: []entity.VideoFormat{"mp4", "webm"},
+			},
 		}
 		got := AbilityMultiModalDO2DTO(a)
 		assert.True(t, *got.Image)
 		assert.True(t, *got.AbilityImage.URLEnabled)
+		assert.True(t, *got.Video)
+		assert.Equal(t, int32(200), *got.AbilityVideo.MaxVideoSizeInMb)
+		assert.Equal(t, []manage.VideoFormat{"mp4", "webm"}, got.AbilityVideo.SupportedVideoFormats)
 	})
 }
 
