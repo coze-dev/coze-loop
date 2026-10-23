@@ -53,6 +53,11 @@ func (t *SandboxAgentSourceEvalTargetServiceImpl) Execute(ctx context.Context, s
 
 // AsyncExecute 仅生成 invokeID 占位，实际执行由外部沙箱通过 ReportEvalTargetInvokeResult 回调上报。
 func (t *SandboxAgentSourceEvalTargetServiceImpl) AsyncExecute(ctx context.Context, spaceID int64, param *entity.ExecuteEvalTargetParam) (int64, string, map[string]string, error) {
+	if param != nil && param.EvalTarget != nil && param.EvalTarget.EvalTargetVersion != nil {
+		if agent := param.EvalTarget.EvalTargetVersion.SandboxAgent; agent != nil && agent.SandboxCountMode == entity.SandboxCountModeWindowsPlusSandbox {
+			return 0, "", nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("unsupported execution mode: windows_plus_sandbox"))
+		}
+	}
 	invokeID, err := t.idgen.GenID(ctx)
 	if err != nil {
 		return 0, "", nil, err

@@ -3846,7 +3846,7 @@ func sandboxTenantForAsyncDebug(mode entity.SandboxCountMode) rpc.SandboxTenant 
 		// 新链路租户只由实验提交/重试链路按 run_mode 推导, 见 experiment_app.go
 		// dualSandboxTenantByRunMode。
 		return rpc.SandboxTenantFornaxTraeEvalDualSandbox
-	case entity.SandboxCountModeMacVMPlusSandbox, entity.SandboxCountModeMacVMPlusSSH:
+	case entity.SandboxCountModeMacVMPlusSandbox, entity.SandboxCountModeArmMacVMPlusSandbox, entity.SandboxCountModeMacVMPlusSSH:
 		return rpc.SandboxTenantFornaxEvalGeneralGUI
 	case entity.SandboxCountModeShared:
 		// 共享沙箱走通用评测租户, 与实验链路一致 —— 它用的是同一套 runtime 编排,
@@ -3929,6 +3929,9 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 			},
 		}, nil
 	case openapiEvalTarget.EvalTargetTypeSandboxAgent:
+		if err := validateSandboxExecutionMode(entity.SandboxCountMode(req.GetSandboxAgent().GetSandboxCountMode())); err != nil {
+			return nil, err
+		}
 		if e.sandboxSchedulerAdapter != nil {
 			mode := entity.SandboxCountModeSingle
 			if agent := req.GetSandboxAgent(); agent != nil {
