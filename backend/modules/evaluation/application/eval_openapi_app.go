@@ -39,6 +39,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -1311,6 +1312,7 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		logs.CtxWarn(ctx, "report target record, actx missing, invoke_id: %v, space_id: %v", req.GetInvokeID(), req.GetWorkspaceID())
 		return nil, errorx.New("eval async context not found, invoke_id: %v", req.GetInvokeID())
 	}
+	actx = actx.Clone()
 
 	// 调试场景（actx.Event == nil）：无论成功失败都 best-effort 销毁沙箱执行。
 	//
@@ -1340,6 +1342,19 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	} else {
 		logs.CtxInfo(ctx, "report target record, record_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v, item_id: %v", req.GetInvokeID(), req.GetWorkspaceID(), actx.Event.ExptID, actx.Event.ExptRunID, actx.Event.EvalSetItemID)
 	}
+	var resumeEvent *entity.ExptItemEvalEvent
+	if actx.Event != nil {
+		// Prepare the original source before the terminal write, so a read failure
+		// can be retried while ReportInvokeRecords still accepts this invocation.
+		record, err := e.targetSvc.GetRecordByID(contexts.WithCtxWriteDB(ctx), req.GetWorkspaceID(), req.GetInvokeID())
+		if err != nil {
+			return nil, err
+		}
+		if record == nil || record.ID != req.GetInvokeID() || record.TurnID < 0 {
+			return nil, errorx.New("target resume source unavailable, invoke_id: %v", req.GetInvokeID())
+		}
+		resumeEvent = actx.Event.CloneWithResumeSource("target", record.ID, record.TurnID)
+	}
 	outputData := target.ToInvokeOutputDataDO(req)
 	outputData.TimeConsumingMS = gptr.Of(time.Now().UnixMilli() - actx.AsyncUnixMS)
 	if err := e.targetSvc.ReportInvokeRecords(ctx, &entity.ReportTargetRecordParam{
@@ -1360,8 +1375,8 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	// 用 AsyncCtx.AsyncUnixMS 与当前时间差计算端到端异步耗时。仅对沙箱 agent 目标上报的调用生效。
 	e.emitSandboxAgentInvokeFinished(ctx, req, actx)
 
-	if actx.Event != nil {
-		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(req.GetWorkspaceID())+time.Second*35),
+	if resumeEvent != nil {
+		if err := e.publisher.PublishExptRecordEvalEvent(ctx, resumeEvent, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(req.GetWorkspaceID())+time.Second*35),
 			func(event *entity.ExptItemEvalEvent) {
 				event.AsyncReportTrigger = true
 			}); err != nil {
@@ -3772,6 +3787,7 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 		logs.CtxWarn(ctx, "[ExptTurnEval] report evaluator record, actx missing, invoke_id: %v, space_id: %v", req.GetInvokeID(), req.GetWorkspaceID())
 		return nil, errorx.New("eval async context not found, invoke_id: %v", req.GetInvokeID())
 	}
+	actx = actx.Clone()
 
 	logs.CtxInfo(ctx, "[ExptTurnEval] report evaluator record, invoke_id: %v, evaluator_version_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v, item_id: %v， status: %v",
 		req.GetInvokeID(), actx.EvaluatorVersionID, req.GetWorkspaceID(), actx.Event.GetExptID(), actx.Event.GetExptRunID(), actx.Event.GetEvalSetItemID(), req.GetStatus())
@@ -3793,26 +3809,37 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	}
 	var resumeErr error
 	if actx.Event != nil {
+		// Refresh readiness alone; source and notification settings stay frozen.
 		if !actx.ResumeReady {
 			latestCtx, ctxErr := e.asyncRepo.GetEvalAsyncCtxStrong(ctx, asyncCtxKey)
 			if ctxErr != nil {
-				return nil, ctxErr
-			}
-			if latestCtx != nil {
-				actx = latestCtx
+				resumeErr = ctxErr
+			} else if latestCtx != nil {
+				actx.ResumeReady = latestCtx.ResumeReady
 			}
 		}
-		if !actx.ResumeReady {
+		if resumeErr == nil && !actx.ResumeReady {
 			resumeErr = errorx.New("evaluator resume is not ready, invoke_id: %v", req.GetInvokeID())
-		} else {
-			if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
-				event.AsyncEvaluatorReportTrigger = true
-			}); err != nil {
-				return nil, err
+		}
+		if resumeErr == nil {
+			record, err := e.evaluatorRecordService.GetEvaluatorRecord(contexts.WithCtxWriteDB(ctx), req.GetInvokeID(), false)
+			if err != nil {
+				resumeErr = err
+			} else if record == nil || record.ID != req.GetInvokeID() || record.TurnID < 0 {
+				resumeErr = errorx.New("evaluator resume source unavailable, invoke_id: %v", req.GetInvokeID())
+			} else if record.Status == entity.EvaluatorRunStatusAsyncInvoking {
+				resumeErr = errorx.New("evaluator record is still invoking, invoke_id: %v", req.GetInvokeID())
+			} else {
+				event := actx.Event.CloneWithResumeSource("evaluator", record.ID, record.TurnID)
+				resumeErr = e.publisher.PublishExptRecordEvalEvent(ctx, event, gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
+					event.AsyncEvaluatorReportTrigger = true
+				})
 			}
 		}
 	}
 
+	// An Applied result only occurs once; deliver its best-effort notification
+	// before returning a recovery error that the provider may retry as Duplicate.
 	if outcome == entity.ReportEvaluatorResultApplied && actx.CallbackURL != "" {
 		payload := &openapi.EvaluatorCallbackPayloadOApi{
 			InvokeID:           gptr.Of(req.GetInvokeID()),
@@ -3846,7 +3873,7 @@ func sandboxTenantForAsyncDebug(mode entity.SandboxCountMode) rpc.SandboxTenant 
 		// 新链路租户只由实验提交/重试链路按 run_mode 推导, 见 experiment_app.go
 		// dualSandboxTenantByRunMode。
 		return rpc.SandboxTenantFornaxTraeEvalDualSandbox
-	case entity.SandboxCountModeMacVMPlusSandbox, entity.SandboxCountModeMacVMPlusSSH:
+	case entity.SandboxCountModeMacVMPlusSandbox, entity.SandboxCountModeArmMacVMPlusSandbox, entity.SandboxCountModeMacVMPlusSSH:
 		return rpc.SandboxTenantFornaxEvalGeneralGUI
 	case entity.SandboxCountModeShared:
 		// 共享沙箱走通用评测租户, 与实验链路一致 —— 它用的是同一套 runtime 编排,
@@ -3929,6 +3956,9 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 			},
 		}, nil
 	case openapiEvalTarget.EvalTargetTypeSandboxAgent:
+		if err := validateSandboxExecutionMode(entity.SandboxCountMode(req.GetSandboxAgent().GetSandboxCountMode())); err != nil {
+			return nil, err
+		}
 		if e.sandboxSchedulerAdapter != nil {
 			mode := entity.SandboxCountModeSingle
 			if agent := req.GetSandboxAgent(); agent != nil {

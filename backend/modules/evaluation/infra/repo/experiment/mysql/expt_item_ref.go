@@ -8,10 +8,12 @@ import (
 
 	"gorm.io/gen/field"
 	"gorm.io/gorm/clause"
+	"gorm.io/plugin/dbresolver"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/query"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
@@ -76,6 +78,9 @@ func (dao *exptItemRefDAOImpl) ListByExptID(ctx context.Context, spaceID, exptID
 
 func (dao *exptItemRefDAOImpl) GetByExptIDAndItemID(ctx context.Context, spaceID, exptID, itemID int64, opts ...db.Option) (*model.ExptItemRef, error) {
 	dbConn := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		dbConn = dbConn.Clauses(dbresolver.Write)
+	}
 	q := query.Use(dbConn).ExptItemRef
 	item, err := q.WithContext(ctx).
 		Where(q.SpaceID.Eq(spaceID), q.ExptID.Eq(exptID), q.ItemID.Eq(itemID), q.DeletedAt.IsNull()).
@@ -91,6 +96,9 @@ func (dao *exptItemRefDAOImpl) MGetByExptIDAndItemIDs(ctx context.Context, space
 		return nil, nil
 	}
 	dbConn := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		dbConn = dbConn.Clauses(dbresolver.Write)
+	}
 	q := query.Use(dbConn).ExptItemRef
 	items, err := q.WithContext(ctx).
 		Where(q.SpaceID.Eq(spaceID), q.ExptID.Eq(exptID), q.ItemID.In(itemIDs...), q.DeletedAt.IsNull()).

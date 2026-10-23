@@ -562,6 +562,12 @@ error_code:
     description: the async eval target was terminated because the experiment was manually cancelled
     no_affect_stability: true
 
+  - name: ExptMultiSetSpaceNotAllowed
+    code: 5072
+    message: "the space is not allowed to create multi-set experiments"
+    description: the space is not in the gray-release whitelist for multi-set experiments
+    no_affect_stability: true
+
   # 沙箱 agent 评测对象上报结果错误码 (5073-5083)。5072 由既有 gray-release 白名单占用，
   # 沙箱侧上报时用下列细分码替代通用 CallTargetFail，便于 metrics classifier / 前端展示分类。
   - name: SandboxAgentModelNotFound
@@ -649,6 +655,18 @@ error_code:
     description: 'sandbox agent target sandbox execute reached terminal state (Failed/Canceled) before the async result was reported (sweep triggered by ExptSchedulerImpl.sweepTerminatedSandboxItems)'
     no_affect_stability: false
 
+  - name: ItemQuotaImpossible
+    code: 5087
+    message: "实验行申报的资源量超过调度域上限，任何配置下都无法调度，已被置为失败"
+    description: '实验行申报的资源量超过调度域登记上限，任何配置下都无法调度（central scheduler 每拍授予点触发）'
+    no_affect_stability: true
+
+  - name: ItemManuallyTerminated
+    code: 5088
+    message: "该行被用户主动终止"
+    description: '行级终止（TerminateExperimentItems 触发）；用户主动终止，不计入稳定性口径'
+    no_affect_stability: true
+
   # SandboxAgent 评测对象阶段性错误码 (6xxx)：按沙箱内执行阶段划分，便于按阶段做 metrics 分类与用户前端展示。
   - name: SandboxAgentSetupError
     code: 6001
@@ -691,3 +709,40 @@ error_code:
     message: "sandbox agent: unknown error"
     description: 'sandbox agent target unknown error: 未能归类到上述阶段的兜底错误'
     no_affect_stability: false
+
+  # Same-run manual retry admission refusals (7384603622).
+  - name: ManualRetryRunConflict
+    code: 4101
+    message: run_conflict
+    description: same-run manual retry run_conflict
+    no_affect_stability: true
+
+  - name: ManualRetryRunFinished
+    code: 4102
+    message: run_finished
+    description: same-run manual retry run_finished
+    no_affect_stability: true
+
+  - name: ManualRetryRequestConflict
+    code: 4103
+    message: request_conflict
+    description: same-run manual retry request_conflict
+    no_affect_stability: true
+
+  - name: ManualRetryCapacity
+    code: 4104
+    message: receipt_capacity
+    description: same-run manual retry receipt_capacity
+    no_affect_stability: true
+
+  - name: ManualRetryBusy
+    code: 4105
+    message: retry_busy
+    description: same-run manual retry retry_busy
+    no_affect_stability: true
+
+  - name: ManualRetryDisabled
+    code: 4106
+    message: running retry disabled
+    description: same-run manual retry running retry disabled
+    no_affect_stability: true

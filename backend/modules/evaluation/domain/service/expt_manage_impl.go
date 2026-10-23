@@ -76,6 +76,10 @@ func NewExptManager(
 	// centralGuard 额度闸。CompleteExpt 用它释放实验终态时仍未跑完的 item 预占。
 	// 开源部署注入 noop（Release 直接返回 nil）。
 	centralGuard component.ICentralReservationGuard,
+	manualRetryRepo repo.IExptManualRetryRepo,
+	evaluatorRecords EvaluatorRecordService,
+	currentRunWaker component.ICurrentRunSchedulerWaker,
+	manualRetryLocker ManualRetryLockerFactory,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -111,10 +115,21 @@ func NewExptManager(
 		centralScopeProvider:        centralScopeProvider,
 		centralAdmissionPolicy:      centralAdmissionPolicy,
 		centralGuard:                centralGuard,
+		manualRetryRepo:             manualRetryRepo,
+		evaluatorRecords:            evaluatorRecords,
+		currentRunWaker:             currentRunWaker,
+		manualRetryLocker:           manualRetryLocker,
 	}
 }
 
+type ManualRetryLockerFactory func() lock.ILocker
+
 type ExptMangerImpl struct {
+	runFinishRepo     repo.IExptRunFinishRepo
+	manualRetryLocker ManualRetryLockerFactory
+	manualRetryRepo   repo.IExptManualRetryRepo
+	evaluatorRecords  EvaluatorRecordService
+	currentRunWaker   component.ICurrentRunSchedulerWaker
 	// tupleSvc       IExptTupleService
 	exptResultService           ExptResultService
 	exptAggrResultService       ExptAggrResultService

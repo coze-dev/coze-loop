@@ -272,6 +272,7 @@ struct Experiment {
     118: optional ExpectedQuotaConsumption expected_quota_consumption
     // 从 experiment.eval_conf 回显；缺省表示普通评测。
     119: optional VerificationConfig verification_config
+    120: optional i64 latest_run_id (api.js_conv='true', go.tag='json:"latest_run_id,omitempty"')
 
     // 注: scheduler_scope **刻意不进读视图**。它是不透明调度域 ID (形如 fornax_cn_prod),
     // 对调用方没有可用语义却泄露部署拓扑; 业务代码本就不允许解析该字符串, 回显只会诱使

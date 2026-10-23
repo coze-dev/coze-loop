@@ -1189,7 +1189,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords(t *testing.T) {
 }
 
 func TestEvalTargetServiceImpl_ReportInvokeRecords_Trajectory(t *testing.T) {
-	// do not run in parallel, this test involves time.Sleep
+	// Keep each asynchronous extraction within its own mock lifetime.
 
 	ctx := context.Background()
 	spaceID := int64(1)
@@ -1234,6 +1234,16 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_Trajectory(t *testing.T) {
 			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 			trajectoryAdapter := trajectorymocks.NewMockITrajectoryAdapter(ctrl)
+			extractionDone := make(chan struct{})
+			waitCtx, cancelWait := context.WithTimeout(ctx, 5*time.Second)
+			defer cancelWait()
+			defer func() {
+				select {
+				case <-extractionDone:
+				case <-waitCtx.Done():
+					t.Error("trajectory extraction did not finish before mock teardown")
+				}
+			}()
 
 			record := &entity.EvalTargetRecord{
 				ID:                   10,
@@ -1284,12 +1294,25 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_Trajectory(t *testing.T) {
 			})
 			trajectoryAdapter.EXPECT().
 				ListTrajectory(gomock.Any(), spaceID, gomock.Any(), gomock.AssignableToTypeOf((*int64)(nil))).
-				Return(tt.trajectories, tt.err)
+				DoAndReturn(func(extractCtx context.Context, _ int64, _ []string, _ *int64) ([]*entity.Trajectory, error) {
+					// Production cancels this context after extraction and persistence.
+					context.AfterFunc(extractCtx, func() { close(extractionDone) })
+					if tt.expectHasField {
+						// A valid response may arrive after the old 1100ms observation.
+						timer := time.NewTimer(300 * time.Millisecond)
+						defer timer.Stop()
+						select {
+						case <-timer.C:
+						case <-extractCtx.Done():
+							return nil, extractCtx.Err()
+						}
+					}
+					return tt.trajectories, tt.err
+				})
 
 			// use channel to safely observe async UpdateEvalTargetRecord calls from goroutine
 			updatedCh := make(chan *entity.EvalTargetRecord, 1)
-			deps.repo.EXPECT().UpdateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).
-				AnyTimes().
+			updateCall := deps.repo.EXPECT().UpdateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).
 				DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord, _ *bool) error {
 					// non-blocking send in case of multiple updates
 					select {
@@ -1298,6 +1321,9 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_Trajectory(t *testing.T) {
 					}
 					return nil
 				})
+			if !tt.expectHasField {
+				updateCall.Times(0)
+			}
 
 			svc := &EvalTargetServiceImpl{
 				evalTargetRepo:    deps.repo,
@@ -1314,17 +1340,26 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_Trajectory(t *testing.T) {
 			assert.Equal(t, param.OutputData, saved.EvalTargetOutputData)
 			assert.Equal(t, param.Status, gptr.Indirect(saved.Status))
 
-			// wait for trajectory goroutine to complete
-			time.Sleep(1100 * time.Millisecond)
 			var updated *entity.EvalTargetRecord
-			select {
-			case updated = <-updatedCh:
-			default:
-			}
-
 			if !tt.expectHasField {
+				select {
+				case <-extractionDone:
+				case <-waitCtx.Done():
+					t.Fatal("trajectory extraction did not finish")
+				}
+				select {
+				case updated = <-updatedCh:
+				default:
+				}
 				assert.Nil(t, updated)
 				return
+			}
+
+			// Observe persistence, rather than guessing when the worker is scheduled.
+			select {
+			case updated = <-updatedCh:
+			case <-waitCtx.Done():
+				t.Fatal("trajectory update did not arrive")
 			}
 
 			require.NotNil(t, updated)

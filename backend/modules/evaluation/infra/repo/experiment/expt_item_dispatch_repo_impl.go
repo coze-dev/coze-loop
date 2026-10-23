@@ -20,24 +20,24 @@ func NewExptItemDispatchRepo(dispatchDAO mysql.IExptItemDispatchDAO) repo.IExptI
 	return &ExptItemDispatchRepoImpl{dispatchDAO: dispatchDAO}
 }
 
-func (e *ExptItemDispatchRepoImpl) ClaimQuotaReserved(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64) ([]int64, error) {
-	return e.dispatchDAO.ClaimQuotaReserved(ctx, spaceID, exptID, exptRunID, itemIDs)
+func (e *ExptItemDispatchRepoImpl) ClaimQuotaReserved(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, itemRequestIDs map[int64]string) ([]repo.ClaimedDispatchItem, error) {
+	return e.dispatchDAO.ClaimQuotaReserved(ctx, spaceID, exptID, exptRunID, itemIDs, itemRequestIDs)
 }
 
-func (e *ExptItemDispatchRepoImpl) ResetQuotaReserved(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64) ([]int64, error) {
-	return e.dispatchDAO.ResetQuotaReserved(ctx, spaceID, exptID, exptRunID, itemIDs)
+func (e *ExptItemDispatchRepoImpl) ResetQuotaReserved(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, itemRequestIDs map[int64]string) ([]int64, error) {
+	return e.dispatchDAO.ResetQuotaReserved(ctx, spaceID, exptID, exptRunID, itemIDs, itemRequestIDs)
 }
 
 func (e *ExptItemDispatchRepoImpl) LoadDispatchRuntime(ctx context.Context, spaceID, exptID, exptRunID int64, candidateLimit int) (*repo.ExptDispatchRuntime, error) {
 	return e.dispatchDAO.LoadDispatchRuntime(ctx, spaceID, exptID, exptRunID, candidateLimit)
 }
 
-func (e *ExptItemDispatchRepoImpl) StartReservedItem(ctx context.Context, spaceID, exptID, exptRunID, itemID int64) (bool, error) {
-	return e.dispatchDAO.StartReservedItem(ctx, spaceID, exptID, exptRunID, itemID)
+func (e *ExptItemDispatchRepoImpl) StartReservedItem(ctx context.Context, spaceID, exptID, exptRunID, itemID int64, expectedRequestID string) (repo.StartReservedItemResult, error) {
+	return e.dispatchDAO.StartReservedItem(ctx, spaceID, exptID, exptRunID, itemID, expectedRequestID)
 }
 
-func (e *ExptItemDispatchRepoImpl) RequeueProcessingItem(ctx context.Context, spaceID, exptID, exptRunID, itemID int64) (bool, error) {
-	return e.dispatchDAO.RequeueProcessingItem(ctx, spaceID, exptID, exptRunID, itemID)
+func (e *ExptItemDispatchRepoImpl) RequeueProcessingItem(ctx context.Context, spaceID, exptID, exptRunID, itemID int64, expectedRequestID string) (bool, error) {
+	return e.dispatchDAO.RequeueProcessingItem(ctx, spaceID, exptID, exptRunID, itemID, expectedRequestID)
 }
 
 func (e *ExptItemDispatchRepoImpl) MGetDispatchObservations(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64) ([]*repo.ExptDispatchObservation, error) {

@@ -329,6 +329,9 @@ func (p *RetryExperimentRequest) IsValid() error {
 	}
 	return nil
 }
+func (p *RetryRejectedItem) IsValid() error {
+	return nil
+}
 func (p *RetryExperimentResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {

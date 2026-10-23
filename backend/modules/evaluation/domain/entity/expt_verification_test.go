@@ -41,6 +41,8 @@ func TestResolveVerificationConfig(t *testing.T) {
 		{"legacy wrong target", nil, &SandboxAgent{Name: "normal"}, `{"verification":{"mode":"f2p"}}`, true, nil},
 		{"missing mode", &VerificationConfig{}, agent, "", true, nil},
 		{"invalid mode", &VerificationConfig{Mode: "auto"}, agent, "", true, nil},
+		{"ARM topology unsupported", cfg, &SandboxAgent{SandboxCountMode: "arm_mac_vm_plus_sandbox"}, "", true, nil},
+		{"Windows topology unsupported", cfg, &SandboxAgent{SandboxCountMode: "windows_plus_sandbox"}, "", true, nil},
 		{"invalid topology", cfg, &SandboxAgent{SandboxCountMode: "invalid"}, "", true, nil},
 		{"missing snapshot", cfg, nil, "", true, nil},
 		{"null runtime", cfg, agent, "null", true, nil},

@@ -775,6 +775,10 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
+	if err := validateSandboxExecutionMode(sandboxCountModeForExperimentDTO(cresp.GetExperiment())); err != nil {
+		return nil, err
+	}
+
 	// SandboxAgent 评测对象：在 RunExperiment 前同步初始化沙箱任务。
 	// Concurrency 沿用实验并发度（ItemConcurNum）且做 NormalizeSubmitItemConcurNum 兜底，
 	// 再按实际 task 拓扑计算：Dual 与 mac_vm_plus_ssh 的基础 task 每 item 占 2 个 execution；
@@ -1760,6 +1764,25 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return nil, err
 	}
 
+	if req.ExpectedRunID != nil {
+		if req.GetExpectedRunID() <= 0 || req.GetRequestID() == "" {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid current run retry identity"))
+		}
+		receipt, err := e.manager.RetryInCurrentRun(ctx, &entity.RetryInCurrentRunRequest{SpaceID: req.GetWorkspaceID(), ExptID: req.GetExptID(), ExpectedRunID: req.GetExpectedRunID(), RequestID: req.GetRequestID(), Mode: runMode, ItemIDs: req.GetItemIds(), Ext: req.GetExt(), Session: session})
+		if err != nil {
+			return nil, err
+		}
+		rejected := make([]*expt.RetryRejectedItem, 0, len(receipt.RejectedItems))
+		for _, item := range receipt.RejectedItems {
+			rejected = append(rejected, &expt.RetryRejectedItem{ItemID: gptr.Of(item.ItemID), Reason: gptr.Of(item.Reason)})
+		}
+		return &expt.RetryExperimentResponse{RunID: req.ExpectedRunID, RequestID: gptr.Of(receipt.RequestID), AcceptedCount: gptr.Of(receipt.AcceptedCount), RejectedItems: rejected, SnapshotAtMs: gptr.Of(receipt.SnapshotAtMS), BaseResp: base.NewBaseResp()}, nil
+	}
+
+	if (got.Status == entity.ExptStatus_Processing || got.Status == entity.ExptStatus_Pending || entity.IsExptFinishing(got.Status)) && e.configer != nil && e.configer.GetExptExecConf(ctx, req.GetWorkspaceID()).IsRunningRetryEnabled() {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("current run retry identity required"))
+	}
+
 	// SandboxAgent 评测对象：重试前重新初始化沙箱任务。
 	// 首次运行结束后每条 execute 已被 destroy，沙箱侧任务不再持有可用 execute，Retry 必须重跑一次 Init 才能继续 SandboxRun。
 	// 与 Submit 保持一致：并发度先归一化，再按实际 task 的 execution 数分别计算。
@@ -1890,6 +1913,9 @@ func reinitSandboxTaskForExperiment(
 	if err := ensureSandboxExperimentTarget(ctx, targetSvc, expt, workspaceID); err != nil {
 		return err
 	}
+	if err := validateSandboxExecutionMode(sandboxCountModeForExperimentEntity(expt)); err != nil {
+		return err
+	}
 	tenant := sandboxTenantForExperimentEntity(expt)
 	concurrency := sandboxTaskConcurrencyForMode(itemConcurNum, sandboxCountModeForExperimentEntity(expt))
 	return initSandboxTasks(ctx, adapter, scene, expt.ID, concurrency, workspaceID, tenant)
@@ -2007,7 +2033,7 @@ func sandboxTenantForExperimentEntity(expt *entity.Experiment) rpc.SandboxTenant
 	// 共用 GUI 专用租户、靠 ResourceType 区分。mac_vm_plus_ssh 的 orchestrator+SSH sandbox
 	// 共用 sandbox task（同 ResourceType=Sandbox），mac_vm 走 -macvm task，与本分支的两 task
 	// Init 列表一致，故同样路由到 GUI 租户。
-	if countMode == entity.SandboxCountModeMacVMPlusSandbox || countMode == entity.SandboxCountModeMacVMPlusSSH {
+	if countMode == entity.SandboxCountModeMacVMPlusSandbox || countMode == entity.SandboxCountModeArmMacVMPlusSandbox || countMode == entity.SandboxCountModeMacVMPlusSSH {
 		return rpc.SandboxTenantFornaxEvalGeneralGUI
 	}
 	// shared（远程 FaaS 对象的单沙箱拓扑）：只 Init 一个 sandbox task，走与新双沙箱链路
@@ -2036,7 +2062,7 @@ func sandboxTenantForExperimentDTO(expt *domain_expt.Experiment) rpc.SandboxTena
 	countMode := sandboxCountModeForExperimentDTO(expt)
 	// mac_vm_plus_sandbox / mac_vm_plus_ssh: 都要 Init 一对 task（sandbox + -macvm），
 	// 共用 GUI 专用租户、靠 ResourceType 区分（见 entity 版同处注释）。
-	if countMode == entity.SandboxCountModeMacVMPlusSandbox || countMode == entity.SandboxCountModeMacVMPlusSSH {
+	if countMode == entity.SandboxCountModeMacVMPlusSandbox || countMode == entity.SandboxCountModeArmMacVMPlusSandbox || countMode == entity.SandboxCountModeMacVMPlusSSH {
 		return rpc.SandboxTenantFornaxEvalGeneralGUI
 	}
 	// shared（远程 FaaS 对象的单沙箱拓扑）：只 Init 一个 sandbox task，走与新双沙箱链路
@@ -2143,6 +2169,10 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 	}
 
 	kill := func(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
+		if terminate, ok := e.manager.(service.IExptCurrentRunTerminator); ok && got.ExptType == entity.ExptType_Offline {
+			_, err := terminate.TerminateCurrentRun(ctx, exptID, exptRunID, spaceID, session, nil, entity.WithStatus(entity.ExptStatus_Terminated), entity.NoAggrCalculate())
+			return err
+		}
 		if err := e.manager.CompleteRun(ctx, exptID, exptRunID, spaceID, session, entity.WithStatus(entity.ExptStatus_Terminated)); err != nil {
 			return err
 		}
@@ -3142,5 +3172,12 @@ func (e *experimentApplication) transformExtraOutputURIsToURLs(ctx context.Conte
 		}
 	}
 
+	return nil
+}
+
+func validateSandboxExecutionMode(mode entity.SandboxCountMode) error {
+	if mode == entity.SandboxCountModeWindowsPlusSandbox {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("unsupported execution mode: windows_plus_sandbox"))
+	}
 	return nil
 }
