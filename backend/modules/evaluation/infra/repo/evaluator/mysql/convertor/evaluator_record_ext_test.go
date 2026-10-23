@@ -4,10 +4,12 @@
 package convertor
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
@@ -49,6 +51,30 @@ func TestConvertEvaluatorRecord_Ext(t *testing.T) {
 		_, err := ConvertEvaluatorRecordPO2DO(po)
 		assert.Error(t, err)
 	})
+}
+
+func TestEvaluatorOutputData_EvidenceArchiveJSONRoundTrip(t *testing.T) {
+	raw := []byte(`{"evidence_archive":{"schema_version":"v1","object_key":"evaluation/1/2/evidence.tar.gz","status":"complete","trigger":"success","size_bytes":123,"sha256":"abc","truncated_files":1,"deadline_at_unix_ms":456,"last_phase":"checkpoint","last_progress_at":400,"termination_source":"normal","archive_executor":"ago-daemon","agent_termination_result":"not_needed","error":"","fornax_evaluator_log_url":"https://must-not-be-persisted.example"}}`)
+
+	var output entity.EvaluatorOutputData
+	require.NoError(t, json.Unmarshal(raw, &output))
+	assert.Empty(t, output.EvidenceArchive.FornaxEvaluatorLogURL, "read-only signed URL must not be loaded from persisted JSON")
+	encoded, err := json.Marshal(&output)
+	require.NoError(t, err)
+
+	var got map[string]any
+	require.NoError(t, json.Unmarshal(encoded, &got))
+	archive, ok := got["evidence_archive"].(map[string]any)
+	require.True(t, ok, "evidence_archive must remain an independent output field")
+	assert.Equal(t, "evaluation/1/2/evidence.tar.gz", archive["object_key"])
+	assert.NotContains(t, archive, "last_phase")
+	assert.NotContains(t, archive, "deadline_at_unix_ms")
+	assert.NotContains(t, archive, "last_progress_at")
+	assert.NotContains(t, archive, "termination_source")
+	assert.NotContains(t, archive, "archive_executor")
+	assert.NotContains(t, archive, "agent_termination_result")
+	_, persistedSignedURL := archive["fornax_evaluator_log_url"]
+	assert.False(t, persistedSignedURL, "read-only signed URL must not be written to evaluator_record output_data")
 }
 
 func TestConvertEvaluatorRecordPO2AggrDO(t *testing.T) {
