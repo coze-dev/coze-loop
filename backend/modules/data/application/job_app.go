@@ -5,6 +5,7 @@ package application
 
 import (
 	"context"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -58,6 +59,9 @@ func (h *DatasetApplicationImpl) checkImportDatasetReq(ctx context.Context, req 
 
 	// check file
 	provider := convertor.StorageProviderDTO2DO(req.GetFile().GetProvider())
+	if err := validateImportFilePath(req.GetWorkspaceID(), provider, req.GetFile().GetPath()); err != nil {
+		return nil, err
+	}
 	stat, err := h.svc.StatFile(ctx, provider, req.GetFile().GetPath())
 	if err != nil {
 		return nil, err
@@ -75,6 +79,20 @@ func (h *DatasetApplicationImpl) checkImportDatasetReq(ctx context.Context, req 
 	}
 
 	return ds, nil
+}
+
+func validateImportFilePath(workspaceID int64, provider entity.Provider, filePath string) error {
+	if provider != entity.ProviderS3 {
+		return nil
+	}
+	if filePath == "" || strings.HasPrefix(filePath, "/") || strings.Contains(filePath, "\\") {
+		return errno.BadReqErrorf("invalid file path")
+	}
+	clean := path.Clean(filePath)
+	if clean == "." || clean != filePath || !strings.HasPrefix(clean, strconv.FormatInt(workspaceID, 10)+"/") {
+		return errno.BadReqErrorf("invalid file path")
+	}
+	return nil
 }
 
 func (h *DatasetApplicationImpl) buildJob(ctx context.Context, req *dataset.ImportDatasetRequest, ds *service.DatasetWithSchema) *dataset_job.DatasetIOJob {
