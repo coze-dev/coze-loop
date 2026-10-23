@@ -1439,8 +1439,12 @@ func runModeConfigDTO2DO(dto *domain_expt.RunModeConfig) *entity.RunModeConfig {
 		SuaBehavioralConstraints: dto.GetSuaBehavioralConstraints(),
 		SuaPETemplate:            dto.GetSuaPeTemplate(),
 		MaxTurns:                 int(dto.GetMaxTurns()),
-		SkillsMode:               dto.GetSkillsMode(),
-		Skills:                   skillsDTO2DO(dto.GetSkills()),
+		// QA 两项同为两级配置的实验级一半: 指针/空值**原样**透传, 不做任何默认值填充 ——
+		// "未配置" 与 "显式配了 0/负数" 在下游是两种不同处置(后者要被 runtime 拒绝)。
+		MaxQATurns:         dto.MaxQaTurns,
+		SuaQAReplyTemplate: dto.GetSuaQaReplyTemplate(),
+		SkillsMode:         dto.GetSkillsMode(),
+		Skills:             skillsDTO2DO(dto.GetSkills()),
 	}
 	if dto.IsSetRunMode() {
 		do.RunMode = suaRunModeDTO2DO(dto.GetRunMode())
@@ -1534,6 +1538,14 @@ func runModeConfigDO2DTO(do *entity.RunModeConfig) *domain_expt.RunModeConfig {
 	}
 	if do.MaxTurns != 0 {
 		dto.MaxTurns = gptr.Of(int32(do.MaxTurns))
+	}
+	// 回显判据与上面几项不同: MaxQATurns 用**指针判空**而不是 != 0 —— 显式配的 0/负数也是
+	// 用户填过的值, 判 0 会把它显示成"没配"(而它恰恰是 runtime 会拒绝的那一种)。
+	if do.MaxQATurns != nil {
+		dto.MaxQaTurns = do.MaxQATurns
+	}
+	if do.SuaQAReplyTemplate != "" {
+		dto.SuaQaReplyTemplate = gptr.Of(do.SuaQAReplyTemplate)
 	}
 	if do.SkillsMode != "" {
 		dto.SkillsMode = gptr.Of(do.SkillsMode)

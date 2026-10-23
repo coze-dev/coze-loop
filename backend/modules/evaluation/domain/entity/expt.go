@@ -619,6 +619,15 @@ type RunModeConfig struct {
 	// SuaPETemplate loop 跑法必需的 PE 模板, **必须含 {{eval_result}} 占位符** ——
 	// sua-cli 用它把上轮评估结果拼成下一轮追问; 缺它 loop 直接 INVALID_CONFIG。
 	SuaPETemplate string `json:"sua_pe_template,omitempty"`
+	// MaxQATurns 实验级 QA(被测 Agent 反问)次数上限, 文本与工具提问共用同一额度。
+	//
+	// **指针是刻意的**: nil = 未配置(题目级或 runtime 默认接管), 0/负数 = 用户显式配了非法值,
+	// 必须原样落到 case-file 由 runtime 拒绝。用值类型 + omitempty 会把"显式 0"吞回"未配置",
+	// 非法配置就再也报不出来。题目级同名字段在 ItemRunConf, 题目级优先。
+	MaxQATurns *int32 `json:"max_qa_turns,omitempty"`
+	// SuaQAReplyTemplate 实验级 QA 回答设定(长 PE): 只回答当前主任务的澄清问题, 与正常续轮
+	// 模板 (SuaPETemplate / resume) 相互独立。空 = 未配置, runtime 用内置默认答复。
+	SuaQAReplyTemplate string `json:"sua_qa_reply_template,omitempty"`
 	// MaxTurns 实验级轮数上限 (题目级同名字段在 ItemRunConf, 题目级优先)。
 	MaxTurns int `json:"max_turns,omitempty"`
 	// SkillsMode SandboxAgent 跑法的技能模式 (merge / disable_test_case / merge_exp_first)。
@@ -679,6 +688,11 @@ type ItemRunConf struct {
 	// 硬编码成 TriggerByTestCase, 所以另外三个值配了完全无效 —— 枚举、ShouldEvaluate 的
 	// switch 分支都在, 唯独读 wire 的那一行不存在。runtime 侧已补读, 本字段是它的生产端。
 	EvaluatorTrigger string `json:"evaluator_trigger,omitempty"`
+	// MaxQATurns 题目级 QA 次数上限。与实验级同名字段构成两级配置 (题目级优先), 指针语义
+	// 与 RunModeConfig.MaxQATurns 一致: nil = 未配置, 0/负数 = 显式非法值, 都由 runtime 裁决。
+	MaxQATurns *int32 `json:"max_qa_turns,omitempty"`
+	// SuaQAReplyTemplate 题目级 QA 回答设定(长 PE), 题目级优先于实验级。
+	SuaQAReplyTemplate string `json:"sua_qa_reply_template,omitempty"`
 }
 
 // FixedQuery 固定脚本多轮的一轮 query (fixed_script 跑法依赖)。

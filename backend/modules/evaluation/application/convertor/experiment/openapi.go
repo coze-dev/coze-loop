@@ -3160,6 +3160,9 @@ func OpenAPIRunModeConfigDTO2Domain(c *openapiExperiment.RunModeConfig) (*domain
 		SuaBehavioralConstraints: c.SuaBehavioralConstraints,
 		SuaPeTemplate:            c.SuaPeTemplate,
 		MaxTurns:                 c.MaxTurns,
+		// QA 两项与 SUA 四项同路: 原样透传, 平台不裁决 (未配置 / 显式 0·负数的区分留给 runtime)。
+		MaxQaTurns:         c.MaxQaTurns,
+		SuaQaReplyTemplate: c.SuaQaReplyTemplate,
 	}
 	if c.RunMode != nil {
 		rm, ok := openAPIRunModeToDomain(*c.RunMode)
@@ -3318,6 +3321,9 @@ func RunModeConfigDomain2OpenAPI(c *domainExpt.RunModeConfig) *openapiExperiment
 		SuaPeTemplate:            c.SuaPeTemplate,
 		// skills_mode 是受控枚举, 但存量落库的值都经过入口白名单校验, 回显原样带出即可。
 		SkillsMode: c.SkillsMode,
+		// QA 两项原样回显 (含显式 0/负值: 那是用户配过的内容, 读路径不替调用方改写成"未配置")。
+		MaxQaTurns:         c.MaxQaTurns,
+		SuaQaReplyTemplate: c.SuaQaReplyTemplate,
 	}
 	if len(c.Skills) > 0 {
 		out.Skills = domainSkillsToOpenAPI(c.Skills)
