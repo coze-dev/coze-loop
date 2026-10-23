@@ -22,6 +22,14 @@ const (
 	DrillDownValueTypeAnnotationKey = "annotation_key"
 
 	DrillDownValueTypeFeedbackSource = "feedback_source"
+
+	DrillDownValueTypeFluxUser = "flux_user"
+
+	DrillDownValueTypeFluxAgent = "flux_agent"
+
+	DrillDownValueTypeFluxModelName = "flux_model_name"
+
+	DrillDownValueTypeFluxProjectName = "flux_project_name"
 )
 
 type CompareType = string
