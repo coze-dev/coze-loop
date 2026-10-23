@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 )
 
@@ -117,8 +118,12 @@ func preserveModelConfig(next, old *ModelConfig) *ModelConfig {
 		return &result
 	}
 	sameModelID := next.GetModelID() == old.GetModelID()
+	sameProviderModelID := sameString(next.ProviderModelID, old.ProviderModelID)
+	// Public DTOs project canonical numeric ProviderModelID onto ModelID.
+	providerIDProjectedToModelID := old.GetModelID() == 0 && next.GetModelID() > 0 && old.ProviderModelID != nil &&
+		strconv.FormatInt(next.GetModelID(), 10) == *old.ProviderModelID && (next.ProviderModelID == nil || sameProviderModelID)
 	providerOmittedForKnownModel := next.GetModelID() != 0 && next.ProviderModelID == nil
-	if !sameModelID || (!providerOmittedForKnownModel && !sameString(next.ProviderModelID, old.ProviderModelID)) {
+	if (!sameModelID && !providerIDProjectedToModelID) || (!providerOmittedForKnownModel && !sameProviderModelID) {
 		return next
 	}
 	if next.JSONExt == nil {

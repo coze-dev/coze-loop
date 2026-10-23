@@ -593,9 +593,10 @@ func OpenAPIThinkingConfigDTO2DO(dto *domainopenapi.ThinkingConfig) *entity.Thin
 		return nil
 	}
 	return &entity.ThinkingConfig{
-		BudgetTokens:    dto.BudgetTokens,
-		ThinkingOption:  OpenAPIThinkingOptionDTO2DO(dto.ThinkingOption),
-		ReasoningEffort: OpenAPIReasoningEffortDTO2DO(dto.ReasoningEffort),
+		BudgetTokens:         dto.BudgetTokens,
+		ThinkingOption:       OpenAPIThinkingOptionDTO2DO(dto.ThinkingOption),
+		ReasoningEffort:      OpenAPIReasoningEffortDTO2DO(dto.ReasoningEffort),
+		ReasoningEffortValue: ptr.PtrConvert(dto.ReasoningEffortValue, func(value string) string { return value }),
 	}
 }
 
@@ -633,9 +634,10 @@ func OpenAPIThinkingConfigDO2DTO(do *entity.ThinkingConfig) *domainopenapi.Think
 		return nil
 	}
 	return &domainopenapi.ThinkingConfig{
-		BudgetTokens:    do.BudgetTokens,
-		ThinkingOption:  OpenAPIThinkingOptionDO2DTO(do.ThinkingOption),
-		ReasoningEffort: OpenAPIReasoningEffortDO2DTO(do.ReasoningEffort),
+		BudgetTokens:         do.BudgetTokens,
+		ThinkingOption:       OpenAPIThinkingOptionDO2DTO(do.ThinkingOption),
+		ReasoningEffort:      OpenAPIReasoningEffortDO2DTO(do.ReasoningEffort),
+		ReasoningEffortValue: ptr.PtrConvert(do.ReasoningEffortValue, func(value string) string { return value }),
 	}
 }
 
