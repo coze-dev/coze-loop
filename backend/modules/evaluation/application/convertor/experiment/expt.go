@@ -22,6 +22,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
@@ -34,6 +36,9 @@ func NewEvalConfConvert() *EvalConfConvert {
 type EvalConfConvert struct{}
 
 func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig) (*entity.EvaluationConfiguration, error) {
+	if c := cer.GetRunModeConfig(); c != nil && c.MaxAgentRunMinutes != nil && *c.MaxAgentRunMinutes < 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("run_mode_config.max_agent_run_minutes must be a non-negative integer"))
+	}
 	ec := &entity.EvaluationConfiguration{
 		VerificationConfig: verificationConfigDTO2DO(cer.GetVerificationConfig()),
 		ItemConcurNum:      entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
@@ -866,6 +871,9 @@ func ExptType2EvalMode(exptType domain_expt.ExptType, trialRunItemCount *int64) 
 }
 
 func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig) (param *entity.CreateExptParam, err error) {
+	if c := cer.GetRunModeConfig(); c != nil && c.MaxAgentRunMinutes != nil && *c.MaxAgentRunMinutes < 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("run_mode_config.max_agent_run_minutes must be a non-negative integer"))
+	}
 	param = &entity.CreateExptParam{
 		WorkspaceID:           cer.WorkspaceID,
 		EvalSetVersionID:      cer.GetEvalSetVersionID(),
@@ -1427,6 +1435,7 @@ func runModeConfigDTO2DO(dto *domain_expt.RunModeConfig) *entity.RunModeConfig {
 		return nil
 	}
 	do := &entity.RunModeConfig{
+		MaxAgentRunMinutes: dto.MaxAgentRunMinutes,
 		// SuaModelID 刻意不从 DTO 取: sua_model_id 已从 IDL 移除 —— SUA 用哪个模型是运维
 		// 配置 (TCC sandbox_sua_model_replace + orch_env), 不该是实验入参。entity 上该字段
 		// 保留, 只服务 TCC 劫持规则那条路 (规则自带 model_id → modelCredByID 解析密钥)。
@@ -1505,7 +1514,8 @@ func runModeConfigDO2DTO(do *entity.RunModeConfig) *domain_expt.RunModeConfig {
 		return nil
 	}
 	dto := &domain_expt.RunModeConfig{
-		RunMode: gptr.Of(suaRunModeDO2DTO(do.RunMode)),
+		MaxAgentRunMinutes: do.MaxAgentRunMinutes,
+		RunMode:            gptr.Of(suaRunModeDO2DTO(do.RunMode)),
 		// 不回显 SuaModelID: sua_model_id 已从 IDL 移除, DTO 上没有这个字段了。
 		// 它现在只可能来自 TCC 劫持规则 (运维配置), 回显运维配置给调用方也没有意义。
 	}
