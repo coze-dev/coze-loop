@@ -518,6 +518,26 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 
 	nextTick, err := mode.ExptEnd(ctx, event, exptDetail, len(toSubmit), len(incomplete))
 	if err != nil {
+		if _, current := e.Manager.(IExptNaturalRunFinisher); current && errno.NeedMQRetry(err) &&
+			event.ExptType == entity.ExptType_Offline && exptDetail.ExptType == entity.ExptType_Offline &&
+			exptDetail.LatestRunID == event.ExptRunID &&
+			event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun {
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return errno.WrapMQRetryErr(ctxErr)
+			}
+			if e.Publisher == nil {
+				return err
+			}
+			// Keep publication ticking while the finish gate remains blocked.
+			fresh := *event
+			if pubErr := mode.NextTick(ctx, &fresh, true); pubErr != nil {
+				return errno.WrapMQRetryErr(pubErr)
+			}
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return errno.WrapMQRetryErr(ctxErr)
+			}
+			return nil
+		}
 		return err
 	}
 
