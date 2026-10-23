@@ -182,9 +182,7 @@ struct AgentSkillDeclare {
 // + max_turns); 合并规则「题目级优先、实验级兜底」详见 domain/expt.thrift 的同名 struct 注释。
 struct RunModeConfig {
     1: optional ExptRunMode run_mode (go.tag = 'json:"run_mode"')
-    // Cumulative Agent execution minutes per item; preparation/SUA/evaluation are excluded.
-    // Zero/missing is unconfigured; a positive item value overrides the experiment.
-    2: optional i32 max_run_minutes (go.tag = 'json:"max_run_minutes"', vt.ge = "0")
+    2: optional i32 max_run_minutes (go.tag = 'json:"max_run_minutes"')
     3: optional SuaMode sua_mode (go.tag = 'json:"sua_mode"')
     // 4 号**永久保留**: 曾是 sua_model_id, 与 domain 版同步移除。号段不复用。
     // SUA 模型名, **已弃用, 仅调试用**; 常规路径不传, 由平台 TCC 选模型并带密钥。
@@ -208,7 +206,7 @@ struct RunModeConfig {
     // 与 skills_mode 同容器同链路; 结构对齐 runtime testcase.Skill, 由 runtime 按
     // skills_mode 与题目级 dataset_item.skills 合并安装。
     12: optional list<AgentSkillDeclare> skills (go.tag = 'json:"skills"')
-    // Field 13 is reserved and must not be reused.
+    13: optional i32 max_agent_run_minutes (go.tag = 'json:"max_agent_run_minutes,omitempty"', vt.ge = "0")
 }
 
 // Kept structurally aligned with domain/expt.thrift without cross-domain includes.

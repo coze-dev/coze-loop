@@ -159,7 +159,7 @@ func TestItemRunConfFromRunModeConfig(t *testing.T) {
 		assert.Nil(t, itemRunConfFromRunModeConfig(&entity.RunModeConfig{}))
 	})
 
-	t.Run("non_positive_max_run_minutes_is_not_seeded", func(t *testing.T) {
+	t.Run("non_positive_max_run_minutes_returns_nil", func(t *testing.T) {
 		assert.Nil(t, itemRunConfFromRunModeConfig(&entity.RunModeConfig{MaxRunMinutes: 0}))
 		assert.Nil(t, itemRunConfFromRunModeConfig(&entity.RunModeConfig{MaxRunMinutes: -1}))
 	})

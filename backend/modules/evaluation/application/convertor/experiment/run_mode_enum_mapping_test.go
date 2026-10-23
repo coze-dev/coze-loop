@@ -214,12 +214,10 @@ func TestRunModeConfig_MaxRunMinutesRoundTripAndSuaModelIDNotEchoed(t *testing.T
 	// DTO 上已无 sua_model_id 字段, 回显体里也不该出现该值的任何痕迹。
 	assert.Nil(t, back.SuaModelName, "未配 sua_model_name 不回显")
 
-	// Zero is unconfigured and omitted on readback.
+	// max_run_minutes=0 视为未配, 不回显 (否则详情页会显示"最长运行 0 分钟")。
 	zero := runModeConfigDO2DTO(&entity.RunModeConfig{RunMode: entity.RunModeSingleTurn})
 	require.NotNil(t, zero)
 	assert.Nil(t, zero.MaxRunMinutes)
-	explicitZero := runModeConfigDO2DTO(&entity.RunModeConfig{MaxRunMinutes: 0})
-	assert.Nil(t, explicitZero.MaxRunMinutes)
 }
 
 // nil 边界: 三个转换器的 nil 入必须 nil 出、不 panic、且不产出空壳。

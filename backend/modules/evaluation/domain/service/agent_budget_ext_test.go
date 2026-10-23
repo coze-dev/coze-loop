@@ -29,13 +29,13 @@ func TestAgentBudgetCallTargetFrozenExt(t *testing.T) {
 	svc := &DefaultExptTurnEvaluationImpl{metric: metric, evalTargetService: target, benefitService: benefits}
 	itemConfig := &entity.ExptItemConfig{EvalTargetConf: &entity.ItemTargetConf{
 		TargetVersionID: 1,
-		RunConf:         &entity.ItemRunConf{MaxRunMinutes: 0},
+		RunConf:         &entity.ItemRunConf{MaxAgentRunMinutes: gptr.Of(int32(0))},
 	}}
 	raw, err := json.Marshal(itemConfig)
 	require.NoError(t, err)
 	var frozen entity.ExptItemConfig
 	require.NoError(t, json.Unmarshal(raw, &frozen))
-	etec := newRunConfEtec(&frozen, &entity.RunModeConfig{MaxRunMinutes: 20})
+	etec := newRunConfEtec(&frozen, &entity.RunModeConfig{MaxAgentRunMinutes: gptr.Of(int32(20))})
 	etec.Expt.TargetVersionID = 1
 	etec.ExptTurnRunResult = &entity.ExptTurnRunResult{}
 	benefits.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
@@ -45,8 +45,8 @@ func TestAgentBudgetCallTargetFrozenExt(t *testing.T) {
 			var item, experiment map[string]json.RawMessage
 			require.NoError(t, json.Unmarshal([]byte(in.Ext[consts.TargetExecuteExtRunConfKey]), &item))
 			require.NoError(t, json.Unmarshal([]byte(in.Ext[consts.TargetExecuteExtRunModeConfigKey]), &experiment))
-			require.NotContains(t, item, "max_run_minutes")
-			require.JSONEq(t, "20", string(experiment["max_run_minutes"]))
+			require.JSONEq(t, "0", string(item["max_agent_run_minutes"]))
+			require.JSONEq(t, "20", string(experiment["max_agent_run_minutes"]))
 			return &entity.EvalTargetRecord{ID: 1}, nil
 		})
 	record, err := svc.CallTarget(context.Background(), etec)
@@ -54,7 +54,7 @@ func TestAgentBudgetCallTargetFrozenExt(t *testing.T) {
 	require.Equal(t, int64(1), record.ID)
 }
 
-func TestAgentBudgetExptStartDoesNotSeedZero(t *testing.T) {
+func TestAgentBudgetExptStartFreezesExplicitZero(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	exec, items, refs := newExptStartMultiSetTestExec(ctrl)
 	exec.idem.(*idemmocks.MockIdempotentService).EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
@@ -66,13 +66,14 @@ func TestAgentBudgetExptStartDoesNotSeedZero(t *testing.T) {
 			require.Len(t, values, 1)
 			converter := store.NewExptItemRefConvertor()
 			saved := converter.PO2DO(converter.DO2PO(values[0]))
-			require.Nil(t, saved.ItemConfig.EvalTargetConf.RunConf)
+			require.NotNil(t, saved.ItemConfig.EvalTargetConf.RunConf)
+			require.Equal(t, gptr.Of(int32(0)), saved.ItemConfig.EvalTargetConf.RunConf.MaxAgentRunMinutes)
 			return nil
 		})
 	expt := &entity.Experiment{
 		ID: 1, SpaceID: 3, EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
 		EvalConf: &entity.EvaluationConfiguration{
-			RunModeConfig: &entity.RunModeConfig{MaxRunMinutes: 0},
+			RunModeConfig: &entity.RunModeConfig{MaxAgentRunMinutes: gptr.Of(int32(0))},
 			EvalSetConfigs: []*entity.EvalSetConfig{{
 				EvalSetID: 10, EvalSetVersionID: 100,
 				TargetConfs: []*entity.ExptTargetConf{{TargetVersionID: 1}},

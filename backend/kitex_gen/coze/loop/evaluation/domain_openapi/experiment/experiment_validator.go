@@ -86,9 +86,9 @@ func (p *AgentSkillDeclare) IsValid() error {
 	return nil
 }
 func (p *RunModeConfig) IsValid() error {
-	if p.MaxRunMinutes != nil {
-		if *p.MaxRunMinutes < int32(0) {
-			return fmt.Errorf("field MaxRunMinutes ge rule failed, current value: %v", *p.MaxRunMinutes)
+	if p.MaxAgentRunMinutes != nil {
+		if *p.MaxAgentRunMinutes < int32(0) {
+			return fmt.Errorf("field MaxAgentRunMinutes ge rule failed, current value: %v", *p.MaxAgentRunMinutes)
 		}
 	}
 	return nil

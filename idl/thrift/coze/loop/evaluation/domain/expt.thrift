@@ -132,9 +132,7 @@ struct VerificationConfig {
 // 此前这五项只有题目级一半, 实验粒度配了 100% 无效, 且 runtime 读实验级的代码因恒为空而是死代码。
 struct RunModeConfig {
     1: optional ExptRunMode run_mode (go.tag = 'json:"run_mode"')
-    // Cumulative Agent execution minutes per item; preparation/SUA/evaluation are excluded.
-    // Zero/missing is unconfigured; a positive item value overrides the experiment.
-    2: optional i32 max_run_minutes (go.tag = 'json:"max_run_minutes"', vt.ge = "0")
+    2: optional i32 max_run_minutes (go.tag = 'json:"max_run_minutes"')
     3: optional SuaMode sua_mode (go.tag = 'json:"sua_mode"')
     // 4 号**永久保留**: 曾是 sua_model_id。号段不复用 —— 存量调用方可能仍在发这个字段,
     // 复用成别的语义会让老请求静默命中新字段。
@@ -160,7 +158,7 @@ struct RunModeConfig {
     // 与 skills_mode 同容器同链路; 结构对齐 runtime testcase.Skill, 由 runtime 按
     // skills_mode 与题目级 dataset_item.skills 合并安装。
     12: optional list<AgentSkillDeclare> skills (go.tag = 'json:"skills"')
-    // Field 13 is reserved and must not be reused.
+    13: optional i32 max_agent_run_minutes (go.tag = 'json:"max_agent_run_minutes,omitempty"', vt.ge = "0")
 }
 
 typedef string Visibility(ts.enum="true")

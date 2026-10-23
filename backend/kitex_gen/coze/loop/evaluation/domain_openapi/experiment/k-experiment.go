@@ -3159,6 +3159,20 @@ func (p *RunModeConfig) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 13:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -3342,6 +3356,20 @@ func (p *RunModeConfig) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *RunModeConfig) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.MaxAgentRunMinutes = _field
+	return offset, nil
+}
+
 func (p *RunModeConfig) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -3351,6 +3379,7 @@ func (p *RunModeConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	if p != nil {
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
+		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
@@ -3379,6 +3408,7 @@ func (p *RunModeConfig) BLength() int {
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
+		l += p.field13Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -3490,6 +3520,15 @@ func (p *RunModeConfig) fastWriteField12(buf []byte, w thrift.NocopyWriter) int 
 	return offset
 }
 
+func (p *RunModeConfig) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMaxAgentRunMinutes() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 13)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.MaxAgentRunMinutes)
+	}
+	return offset
+}
+
 func (p *RunModeConfig) field1Length() int {
 	l := 0
 	if p.IsSetRunMode() {
@@ -3593,6 +3632,15 @@ func (p *RunModeConfig) field12Length() int {
 	return l
 }
 
+func (p *RunModeConfig) field13Length() int {
+	l := 0
+	if p.IsSetMaxAgentRunMinutes() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *RunModeConfig) DeepCopy(s interface{}) error {
 	src, ok := s.(*RunModeConfig)
 	if !ok {
@@ -3680,6 +3728,11 @@ func (p *RunModeConfig) DeepCopy(s interface{}) error {
 
 			p.Skills = append(p.Skills, _elem)
 		}
+	}
+
+	if src.MaxAgentRunMinutes != nil {
+		tmp := *src.MaxAgentRunMinutes
+		p.MaxAgentRunMinutes = &tmp
 	}
 
 	return nil

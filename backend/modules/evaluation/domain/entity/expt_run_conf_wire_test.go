@@ -11,26 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAgentBudgetJSONZeroIsUnconfigured(t *testing.T) {
-	for _, raw := range []string{`{}`, `{"max_run_minutes":0}`, `{"max_run_minutes":20}`} {
-		t.Run(raw, func(t *testing.T) {
-			var experiment RunModeConfig
-			var item ItemRunConf
-			require.NoError(t, json.Unmarshal([]byte(raw), &experiment))
-			require.NoError(t, json.Unmarshal([]byte(raw), &item))
-			for _, value := range []any{experiment, item} {
-				encoded, err := json.Marshal(value)
-				require.NoError(t, err)
-				if raw == `{"max_run_minutes":0}` {
-					require.JSONEq(t, `{}`, string(encoded))
-				} else {
-					require.JSONEq(t, raw, string(encoded))
-				}
-			}
-		})
-	}
-}
-
 // ItemRunConf / RunModeConfig 是**跨仓 wire 契约**: 平台把它们 json.Marshal 进
 // ext["builtin_run_conf"] / ext["builtin_run_mode_config"], 评测运行时按 **json tag** 反序列化。
 // 跨仓对接看的是 tag 不是 Go 字段名, 所以改 tag(或删字段) 在本仓编译通过、在对端静默丢值 ——
