@@ -254,7 +254,7 @@ func (p *PromptOpenAPIApplicationImpl) SaveDraftOApi(ctx context.Context, req *o
 		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("Draft is not specified"))
 	}
 
-	promptDO, err := p.promptManageRepo.GetPrompt(ctx, repo.GetPromptParam{PromptID: req.GetPromptID()})
+	promptDO, err := p.promptManageRepo.GetPrompt(ctx, repo.GetPromptParam{PromptID: req.GetPromptID(), WithDraft: true, UserID: userID})
 	if err != nil {
 		return r, err
 	}
@@ -282,6 +282,9 @@ func (p *PromptOpenAPIApplicationImpl) SaveDraftOApi(ctx context.Context, req *o
 		},
 	}
 
+	if err := preserveDraftModelConfig(ctx, p.promptManageRepo, promptDO, savingPromptDO); err != nil {
+		return r, err
+	}
 	draftInfoDO, err := p.promptService.SaveDraft(ctx, savingPromptDO)
 	if err != nil {
 		return r, err

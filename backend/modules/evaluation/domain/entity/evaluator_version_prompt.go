@@ -153,5 +153,8 @@ func (do *PromptEvaluatorVersion) ValidateBaseInfo() error {
 	if do.ModelConfig.ModelID == nil && do.ModelConfig.ProviderModelID == nil {
 		return errorx.NewByCode(errno.InvalidModelConfigCode, errorx.WithExtraMsg("model id is empty"))
 	}
+	if err := do.ModelConfig.ValidateThinking(); err != nil {
+		return errorx.NewByCode(errno.InvalidModelConfigCode, errorx.WithExtraMsg(err.Error()))
+	}
 	return nil
 }

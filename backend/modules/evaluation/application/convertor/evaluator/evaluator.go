@@ -60,6 +60,9 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) (*evaluatordo.
 			evaluatorDO.AgentEvaluatorVersion = ConvertAgentEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
 		}
 	}
+	if err := evaluatorDO.ValidateVersionSettings(); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	return evaluatorDO, nil
 }
 
@@ -391,6 +394,9 @@ func ConvertEvaluatorContent2DO(content *evaluatordto.EvaluatorContent, evaluato
 		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("unsupported evaluator type"))
 	}
 
+	if err := evaluator.ValidateVersionSettings(); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	return evaluator, nil
 }
 
@@ -692,7 +698,9 @@ func ConvertAgentConfigDTO2DO(dto *commondto.AgentConfig) *evaluatordo.AgentConf
 		return nil
 	}
 	return &evaluatordo.AgentConfig{
-		AgentType: evaluatordo.AgentType(dto.GetAgentType()),
+		AgentType:      evaluatordo.AgentType(dto.GetAgentType()),
+		Runtime:        dto.Runtime,
+		SearchProvider: dto.SearchProvider,
 	}
 }
 
@@ -701,7 +709,9 @@ func ConvertAgentConfigDO2DTO(do *evaluatordo.AgentConfig) *commondto.AgentConfi
 		return nil
 	}
 	return &commondto.AgentConfig{
-		AgentType: gptr.Of(string(do.AgentType)),
+		AgentType:      gptr.Of(string(do.AgentType)),
+		Runtime:        do.Runtime,
+		SearchProvider: do.SearchProvider,
 	}
 }
 

@@ -130,5 +130,11 @@ func (do *AgentEvaluatorVersion) ValidateBaseInfo() error {
 	if do == nil {
 		return errorx.NewByCode(errno.EvaluatorNotExistCode, errorx.WithExtraMsg("evaluator_version is nil"))
 	}
+	if err := do.AgentConfig.Validate(); err != nil {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
+	if err := do.ModelConfig.ValidateThinking(); err != nil {
+		return errorx.NewByCode(errno.InvalidModelConfigCode, errorx.WithExtraMsg(err.Error()))
+	}
 	return nil
 }

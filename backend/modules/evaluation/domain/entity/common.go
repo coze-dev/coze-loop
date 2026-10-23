@@ -306,7 +306,14 @@ type ModelConfig struct {
 
 	ProviderModelID *string `json:"provider_model_id,omitempty" jsonschema:"-"`
 
-	JSONExt *string `json:"json_ext,omitempty"`
+	JSONExt  *string         `json:"json_ext,omitempty"`
+	Thinking *ThinkingConfig `json:"thinking,omitempty"`
+}
+
+type ThinkingConfig struct {
+	ThinkingOption  *string `json:"thinking_option,omitempty"`
+	ReasoningEffort *string `json:"reasoning_effort,omitempty"`
+	BudgetTokens    *int64  `json:"budget_tokens,omitempty"`
 }
 
 func (m *ModelConfig) GetModelID() int64 {
@@ -478,7 +485,9 @@ type AgentType string
 const AgentType_Vibe AgentType = "vibe"
 
 type AgentConfig struct {
-	AgentType AgentType `json:"agent_type,omitempty"`
+	AgentType      AgentType `json:"agent_type,omitempty"`
+	Runtime        *string   `json:"runtime,omitempty"`
+	SearchProvider *string   `json:"search_provider,omitempty"`
 }
 
 type SkillConfig struct {

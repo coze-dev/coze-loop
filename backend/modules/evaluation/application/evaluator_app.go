@@ -529,12 +529,15 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorDraft(ctx context.Context, request
 		}
 	}
 	evaluatorDTO := evaluatorconvertor.ConvertEvaluatorDO2DTO(evaluatorDO)
+	previous := evaluatorDO
 	evaluatorDTO.CurrentVersion.EvaluatorContent = request.EvaluatorContent
 	evaluatorDTO.DraftSubmitted = ptr.Of(false)
 	evaluatorDO, err = evaluatorconvertor.ConvertEvaluatorDTO2DO(evaluatorDTO)
 	if err != nil {
 		return nil, err
 	}
+	evaluatorDO.PreserveDraftConfig(previous)
+	evaluatorDTO = evaluatorconvertor.ConvertEvaluatorDO2DTO(evaluatorDO)
 	err = e.evaluatorService.UpdateEvaluatorDraft(ctx, evaluatorDO)
 	if err != nil {
 		return nil, err

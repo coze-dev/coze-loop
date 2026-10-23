@@ -560,6 +560,9 @@ func OpenAPIEvaluatorContentDTO2DO(dto *openapiEvaluator.EvaluatorContent, evalT
 			res.AgentEvaluatorVersion.PromptConfig = OpenAPIAgentEvaluatorPromptConfigDTO2DO(a.PromptConfig)
 		}
 	}
+	if err := res.ValidateVersionSettings(); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	return res, nil
 }
 
@@ -635,7 +638,9 @@ func OpenAPIAgentConfigDO2DTO(do *entity.AgentConfig) *openapiCommon.AgentConfig
 		return nil
 	}
 	return &openapiCommon.AgentConfig{
-		AgentType: gptr.Of(openapiCommon.AgentType(do.AgentType)),
+		AgentType:      gptr.Of(openapiCommon.AgentType(do.AgentType)),
+		Runtime:        do.Runtime,
+		SearchProvider: do.SearchProvider,
 	}
 }
 
@@ -644,7 +649,9 @@ func OpenAPIAgentConfigDTO2DO(dto *openapiCommon.AgentConfig) *entity.AgentConfi
 		return nil
 	}
 	return &entity.AgentConfig{
-		AgentType: entity.AgentType(dto.GetAgentType()),
+		AgentType:      entity.AgentType(dto.GetAgentType()),
+		Runtime:        dto.Runtime,
+		SearchProvider: dto.SearchProvider,
 	}
 }
 

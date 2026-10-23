@@ -623,19 +623,7 @@ func OpenAPIReasoningEffortDTO2DO(dto *domainopenapi.ReasoningEffort) *entity.Re
 	if dto == nil {
 		return nil
 	}
-	var result entity.ReasoningEffort
-	switch *dto {
-	case domainopenapi.ReasoningEffortMinimal:
-		result = entity.ReasoningEffortMinimal
-	case domainopenapi.ReasoningEffortLow:
-		result = entity.ReasoningEffortLow
-	case domainopenapi.ReasoningEffortMedium:
-		result = entity.ReasoningEffortMedium
-	case domainopenapi.ReasoningEffortHigh:
-		result = entity.ReasoningEffortHigh
-	default:
-		return nil
-	}
+	result := entity.ReasoningEffort(*dto)
 	return &result
 }
 
@@ -675,19 +663,7 @@ func OpenAPIReasoningEffortDO2DTO(do *entity.ReasoningEffort) *domainopenapi.Rea
 	if do == nil {
 		return nil
 	}
-	var result domainopenapi.ReasoningEffort
-	switch *do {
-	case entity.ReasoningEffortMinimal:
-		result = domainopenapi.ReasoningEffortMinimal
-	case entity.ReasoningEffortLow:
-		result = domainopenapi.ReasoningEffortLow
-	case entity.ReasoningEffortMedium:
-		result = domainopenapi.ReasoningEffortMedium
-	case entity.ReasoningEffortHigh:
-		result = domainopenapi.ReasoningEffortHigh
-	default:
-		return nil
-	}
+	result := domainopenapi.ReasoningEffort(*do)
 	return &result
 }
 
