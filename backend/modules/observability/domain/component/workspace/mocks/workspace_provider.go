@@ -57,17 +57,18 @@ func (mr *MockIWorkSpaceProviderMockRecorder) ClipTableByWorkspace(ctx, workspac
 }
 
 // GetIngestWorkSpaceID mocks base method.
-func (m *MockIWorkSpaceProvider) GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan, claim *rpc.Claim) string {
+func (m *MockIWorkSpaceProvider) GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan, headerWorkspaceID string, claim *rpc.Claim) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetIngestWorkSpaceID", ctx, spans, claim)
+	ret := m.ctrl.Call(m, "GetIngestWorkSpaceID", ctx, spans, headerWorkspaceID, claim)
 	ret0, _ := ret[0].(string)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // GetIngestWorkSpaceID indicates an expected call of GetIngestWorkSpaceID.
-func (mr *MockIWorkSpaceProviderMockRecorder) GetIngestWorkSpaceID(ctx, spans, claim any) *gomock.Call {
+func (mr *MockIWorkSpaceProviderMockRecorder) GetIngestWorkSpaceID(ctx, spans, headerWorkspaceID, claim any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIngestWorkSpaceID", reflect.TypeOf((*MockIWorkSpaceProvider)(nil).GetIngestWorkSpaceID), ctx, spans, claim)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIngestWorkSpaceID", reflect.TypeOf((*MockIWorkSpaceProvider)(nil).GetIngestWorkSpaceID), ctx, spans, headerWorkspaceID, claim)
 }
 
 // GetThirdPartyQueryWorkSpaceID mocks base method.

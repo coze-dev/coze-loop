@@ -12,12 +12,7 @@ import (
 
 //go:generate mockgen -destination=mocks/workspace_provider.go -package=mocks . IWorkSpaceProvider
 type IWorkSpaceProvider interface {
-	GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan, claim *rpc.Claim) string
+	GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan, headerWorkspaceID string, claim *rpc.Claim) (string, error)
 	GetThirdPartyQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) string
 	ClipTableByWorkspace(ctx context.Context, workspaceID string, tables []string, isGetTraceByID bool, queryStartTimeMs int64) []string
-}
-
-// IIngestWorkspaceResolver optionally resolves explicit JSON ingestion targets.
-type IIngestWorkspaceResolver interface {
-	ResolveIngestWorkspaceID(ctx context.Context, inputSpan *span.InputSpan, headerWorkspaceID string, claim *rpc.Claim) (string, error)
 }

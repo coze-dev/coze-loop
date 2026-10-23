@@ -17,22 +17,13 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc/mocks"
 	tenantmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
 	workspacemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
-
-type testIngestWorkspaceResolver struct {
-	workspace.IWorkSpaceProvider
-	resolve func(*span.InputSpan, string) (string, error)
-}
-
-func (r *testIngestWorkspaceResolver) ResolveIngestWorkspaceID(_ context.Context, input *span.InputSpan, header string, _ *rpc.Claim) (string, error) {
-	return r.resolve(input, header)
-}
 
 func TestIngestTracesExplicitWorkspace(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -61,15 +52,18 @@ func TestIngestTracesExplicitWorkspace(t *testing.T) {
 		}
 		return nil
 	}).Times(2)
-	resolver := &testIngestWorkspaceResolver{resolve: func(input *span.InputSpan, gotHeader string) (string, error) {
+	provider := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+	provider.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), header, gomock.Any()).DoAndReturn(func(_ context.Context, inputs []*span.InputSpan, gotHeader string, _ *rpc.Claim) (string, error) {
+		require.Len(t, inputs, 1)
+		input := inputs[0]
 		require.Equal(t, header, gotHeader)
 		if id := input.TagsString["target"]; id != "" {
 			return id, nil
 		}
 		return gotHeader, nil
-	}}
+	}).Times(2)
 	application := &OpenAPIApplication{
-		auth: auth, workspace: resolver, benefit: benefits, tenant: tenant, traceConfig: config,
+		auth: auth, workspace: provider, benefit: benefits, tenant: tenant, traceConfig: config,
 		traceService: traces, spanContextExtractor: newSpanContextExtractorMock(ctrl),
 	}
 	_, err := application.IngestTraces(context.Background(), &openapi.IngestTracesRequest{
@@ -95,7 +89,10 @@ func TestIngestTracesWorkspacePreflight(t *testing.T) {
 			}
 			traces := servicemocks.NewMockITraceService(ctrl)
 			traces.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).Times(0)
-			resolver := &testIngestWorkspaceResolver{resolve: func(input *span.InputSpan, _ string) (string, error) {
+			provider := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+			provider.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), "", gomock.Any()).DoAndReturn(func(_ context.Context, inputs []*span.InputSpan, _ string, _ *rpc.Claim) (string, error) {
+				require.Len(t, inputs, 1)
+				input := inputs[0]
 				if input.SpanID == "valid" {
 					return "200", nil
 				}
@@ -107,8 +104,8 @@ func TestIngestTracesWorkspacePreflight(t *testing.T) {
 				default:
 					return "300", nil
 				}
-			}}
-			application := &OpenAPIApplication{auth: auth, workspace: resolver, traceService: traces}
+			}).Times(2)
+			application := &OpenAPIApplication{auth: auth, workspace: provider, traceService: traces}
 			resp, err := application.IngestTraces(context.Background(), &openapi.IngestTracesRequest{
 				Spans: []*span.InputSpan{{WorkspaceID: "100", SpanID: "valid"}, {WorkspaceID: "100", SpanID: "invalid"}},
 			})
@@ -118,13 +115,13 @@ func TestIngestTracesWorkspacePreflight(t *testing.T) {
 	}
 }
 
-func TestIngestTracesLegacyProviderIgnoresHeader(t *testing.T) {
+func TestIngestTracesEmptyWorkspaceIsSkipped(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	auth := rpcmocks.NewMockIAuthProvider(ctrl)
 	auth.EXPECT().GetClaim(gomock.Any()).Return(nil)
 	provider := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-	provider.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), gomock.Any()).Return("")
 	header := "200"
+	provider.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), header, gomock.Any()).Return("", nil)
 	application := &OpenAPIApplication{auth: auth, workspace: provider}
 	resp, err := application.IngestTraces(context.Background(), &openapi.IngestTracesRequest{
 		WorkspaceID: &header, Spans: []*span.InputSpan{{WorkspaceID: "100"}},
@@ -151,4 +148,29 @@ func TestIngestTracesWorkspaceHeaderBinding(t *testing.T) {
 	require.Equal(t, "200", req.GetWorkspaceID())
 	require.Len(t, req.Spans, 1)
 	require.Equal(t, "100", req.Spans[0].WorkspaceID)
+}
+
+func TestOpenAPIApplication_OtelIngestTracesWorkspaceError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	claim := &rpc.Claim{AuthType: "third_party"}
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	auth.EXPECT().GetClaim(gomock.Any()).Return(claim)
+	auth.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Times(0)
+	provider := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+	resolveErr := errors.New("missing target workspace")
+	provider.EXPECT().GetIngestWorkSpaceID(gomock.Any(), []*span.InputSpan{{
+		TagsString: map[string]string{"application_id": "app-1"},
+	}}, "", claim).Return("", resolveErr)
+	traces := servicemocks.NewMockITraceService(ctrl)
+	traces.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).Times(0)
+	application := &OpenAPIApplication{auth: auth, workspace: provider, traceService: traces}
+	resp, err := application.OtelIngestTraces(context.Background(), &openapi.OtelIngestTracesRequest{
+		ContentType: otel.ContentTypeJson,
+		Body: []byte(`{"resourceSpans":[{"scopeSpans":[{"spans":[
+			{"attributes":[{"key":"cozeloop.workspace_id","value":{"stringValue":"200"}}]},
+			{"attributes":[{"key":"application_id","value":{"stringValue":"app-1"}}]}
+		]}]}]}`),
+	})
+	require.ErrorIs(t, err, resolveErr)
+	require.Nil(t, resp)
 }

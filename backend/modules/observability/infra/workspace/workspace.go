@@ -18,11 +18,11 @@ func NewWorkspaceProvider() workspace.IWorkSpaceProvider {
 
 type WorkspaceProviderImpl struct{}
 
-func (t *WorkspaceProviderImpl) GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan, claim *rpc.Claim) string {
+func (t *WorkspaceProviderImpl) GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan, headerWorkspaceID string, claim *rpc.Claim) (string, error) {
 	if len(spans) == 0 {
-		return ""
+		return "", nil
 	}
-	return spans[0].WorkspaceID
+	return spans[0].WorkspaceID, nil
 }
 
 func (t *WorkspaceProviderImpl) GetThirdPartyQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) string {
