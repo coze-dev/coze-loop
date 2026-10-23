@@ -206,6 +206,18 @@ func TestTrajectoryMetadataConfig_IsSingleQueryEnabled(t *testing.T) {
 	assert.True(t, (&config.TrajectoryMetadataConfig{EnableSingleQuery: true}).IsSingleQueryEnabled())
 }
 
+func TestTrajectoryMetadataConfig_IsDoubleQueryEnabled(t *testing.T) {
+	var nilCfg *config.TrajectoryMetadataConfig
+	assert.False(t, nilCfg.IsDoubleQueryEnabled(123))
+
+	assert.False(t, (&config.TrajectoryMetadataConfig{}).IsDoubleQueryEnabled(123))
+
+	cfg := &config.TrajectoryMetadataConfig{EnableDoubleQuerySpaces: []int64{123, 456}}
+	assert.True(t, cfg.IsDoubleQueryEnabled(123))
+	assert.True(t, cfg.IsDoubleQueryEnabled(456))
+	assert.False(t, cfg.IsDoubleQueryEnabled(789))
+}
+
 func TestTraceServiceImpl_GetTrajectories_SingleQuery_MaxBytesExceeded(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
