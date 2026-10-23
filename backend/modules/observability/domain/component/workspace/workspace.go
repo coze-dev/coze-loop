@@ -16,3 +16,8 @@ type IWorkSpaceProvider interface {
 	GetThirdPartyQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) string
 	ClipTableByWorkspace(ctx context.Context, workspaceID string, tables []string, isGetTraceByID bool, queryStartTimeMs int64) []string
 }
+
+// IIngestWorkspaceResolver optionally resolves explicit JSON ingestion targets.
+type IIngestWorkspaceResolver interface {
+	ResolveIngestWorkspaceID(ctx context.Context, inputSpan *span.InputSpan, headerWorkspaceID string, claim *rpc.Claim) (string, error)
+}

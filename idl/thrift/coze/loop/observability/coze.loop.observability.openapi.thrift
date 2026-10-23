@@ -12,6 +12,7 @@ include "../trajectory.thrift"
 
 struct IngestTracesRequest {
     1: optional list<span.InputSpan> spans (api.body='spans')
+    2: optional string workspace_id (api.header="cozeloop-workspace-id", agw.source="header")
 
     255: optional base.Base Base
 }
