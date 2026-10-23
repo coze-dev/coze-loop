@@ -59,7 +59,7 @@ const SecurityLevel SecurityLevel_L2 = "L2"
 const SecurityLevel SecurityLevel_L3 = "L3"
 const SecurityLevel SecurityLevel_L4 = "L4"
 
-typedef string ReasoningEffort (ts.enum="true")
+typedef string ReasoningEffort
 const ReasoningEffort ReasoningEffort_Minimal = "minimal"
 const ReasoningEffort ReasoningEffort_Low = "low"
 const ReasoningEffort ReasoningEffort_Medium = "medium"

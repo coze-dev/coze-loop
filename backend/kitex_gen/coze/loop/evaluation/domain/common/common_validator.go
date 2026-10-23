@@ -112,7 +112,15 @@ func (p *SharedResourceOption) IsValid() error {
 func (p *SharedResourceInfo) IsValid() error {
 	return nil
 }
+func (p *ThinkingConfig) IsValid() error {
+	return nil
+}
 func (p *ModelConfig) IsValid() error {
+	if p.Thinking != nil {
+		if err := p.Thinking.IsValid(); err != nil {
+			return fmt.Errorf("field Thinking not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *Session) IsValid() error {
