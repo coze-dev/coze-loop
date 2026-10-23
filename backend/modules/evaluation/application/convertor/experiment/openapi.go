@@ -3148,12 +3148,11 @@ func OpenAPIRunModeConfigDTO2Domain(c *openapiExperiment.RunModeConfig) (*domain
 	if c == nil {
 		return nil, nil
 	}
-	if c.MaxAgentRunMinutes != nil && *c.MaxAgentRunMinutes < 0 {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("run_mode_config.max_agent_run_minutes must be a non-negative integer"))
+	if c.MaxRunMinutes != nil && *c.MaxRunMinutes < 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("run_mode_config.max_run_minutes must be a non-negative integer"))
 	}
 	out := &domainExpt.RunModeConfig{
-		MaxAgentRunMinutes: c.MaxAgentRunMinutes,
-		MaxRunMinutes:      c.MaxRunMinutes,
+		MaxRunMinutes: c.MaxRunMinutes,
 		// SuaModelID 不再从入参取: sua_model_id 已从 OpenAPI 契约移除 (SUA 模型由平台
 		// TCC 控制, 不是调用方的参数)。SuaModelName 尚存但已弃用, 仅调试用。
 		SuaModelName: c.SuaModelName,
@@ -3311,9 +3310,8 @@ func RunModeConfigDomain2OpenAPI(c *domainExpt.RunModeConfig) *openapiExperiment
 		return nil
 	}
 	out := &openapiExperiment.RunModeConfig{
-		MaxAgentRunMinutes: c.MaxAgentRunMinutes,
-		MaxRunMinutes:      c.MaxRunMinutes,
-		MaxTurns:           c.MaxTurns,
+		MaxRunMinutes: c.MaxRunMinutes,
+		MaxTurns:      c.MaxTurns,
 		// SuaModelName 已弃用, 仅调试用; 原样回显便于排查"配了什么"。
 		// sua_model_id 在两套契约里都已移除, 无可回显。
 		SuaModelName:             c.SuaModelName,

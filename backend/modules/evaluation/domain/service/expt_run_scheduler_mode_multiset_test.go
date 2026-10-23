@@ -9,6 +9,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
@@ -112,7 +113,7 @@ func TestBuildItemConfigFromSetConf(t *testing.T) {
 		}
 		cfg := buildItemConfigFromSetConf(setConf, &entity.RunModeConfig{
 			RunMode:       entity.RunModeSUAMultiTurn,
-			MaxRunMinutes: 30,
+			MaxRunMinutes: gptr.Of(int32(30)),
 			// 实验级字段一并给上: 它们绝不该被搬进题目级 RunConf。
 			SuaGoal:  "goal",
 			MaxTurns: 9,
@@ -120,7 +121,7 @@ func TestBuildItemConfigFromSetConf(t *testing.T) {
 		assert.NotNil(t, cfg)
 		assert.NotNil(t, cfg.EvalTargetConf)
 		assert.NotNil(t, cfg.EvalTargetConf.RunConf)
-		assert.Equal(t, 30, cfg.EvalTargetConf.RunConf.MaxRunMinutes)
+		assert.Equal(t, gptr.Of(int32(30)), cfg.EvalTargetConf.RunConf.MaxRunMinutes)
 		// 实验级字段绝不搬进题目级: 否则实验级值伪装成题目级下发, runtime 无法实现题目优先。
 		assert.Zero(t, cfg.EvalTargetConf.RunConf.MaxTurns)
 		assert.Empty(t, cfg.EvalTargetConf.RunConf.SuaGoal)
@@ -159,15 +160,16 @@ func TestItemRunConfFromRunModeConfig(t *testing.T) {
 		assert.Nil(t, itemRunConfFromRunModeConfig(&entity.RunModeConfig{}))
 	})
 
-	t.Run("non_positive_max_run_minutes_returns_nil", func(t *testing.T) {
-		assert.Nil(t, itemRunConfFromRunModeConfig(&entity.RunModeConfig{MaxRunMinutes: 0}))
-		assert.Nil(t, itemRunConfFromRunModeConfig(&entity.RunModeConfig{MaxRunMinutes: -1}))
+	t.Run("explicit_zero_max_run_minutes_is_preserved", func(t *testing.T) {
+		rc := itemRunConfFromRunModeConfig(&entity.RunModeConfig{MaxRunMinutes: gptr.Of(int32(0))})
+		require.NotNil(t, rc)
+		assert.Equal(t, gptr.Of(int32(0)), rc.MaxRunMinutes)
 	})
 
 	t.Run("max_run_minutes_moved", func(t *testing.T) {
-		rc := itemRunConfFromRunModeConfig(&entity.RunModeConfig{MaxRunMinutes: 45})
+		rc := itemRunConfFromRunModeConfig(&entity.RunModeConfig{MaxRunMinutes: gptr.Of(int32(45))})
 		assert.NotNil(t, rc)
-		assert.Equal(t, 45, rc.MaxRunMinutes)
+		assert.Equal(t, gptr.Of(int32(45)), rc.MaxRunMinutes)
 		// 只搬 max_run_minutes, 其余保持零值。
 		assert.Zero(t, rc.MaxTurns)
 		assert.Empty(t, rc.SuaPersona)

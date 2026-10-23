@@ -2862,12 +2862,8 @@ func itemRunConfFromRunModeConfig(sc *entity.RunModeConfig) *entity.ItemRunConf 
 	// 不可比较; 也不用 reflect.DeepEqual, 免得以后新增字段时零值判断悄悄漂移。
 	rc := &entity.ItemRunConf{}
 	moved := false
-	if sc.MaxAgentRunMinutes != nil {
-		rc.MaxAgentRunMinutes = gptr.Of(*sc.MaxAgentRunMinutes)
-		moved = true
-	}
-	if sc.MaxRunMinutes > 0 {
-		rc.MaxRunMinutes = sc.MaxRunMinutes
+	if sc.MaxRunMinutes != nil {
+		rc.MaxRunMinutes = gptr.Of(*sc.MaxRunMinutes)
 		moved = true
 	}
 	if !moved {

@@ -36,8 +36,8 @@ func NewEvalConfConvert() *EvalConfConvert {
 type EvalConfConvert struct{}
 
 func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig) (*entity.EvaluationConfiguration, error) {
-	if c := cer.GetRunModeConfig(); c != nil && c.MaxAgentRunMinutes != nil && *c.MaxAgentRunMinutes < 0 {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("run_mode_config.max_agent_run_minutes must be a non-negative integer"))
+	if c := cer.GetRunModeConfig(); c != nil && c.MaxRunMinutes != nil && *c.MaxRunMinutes < 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("run_mode_config.max_run_minutes must be a non-negative integer"))
 	}
 	ec := &entity.EvaluationConfiguration{
 		VerificationConfig: verificationConfigDTO2DO(cer.GetVerificationConfig()),
@@ -871,8 +871,8 @@ func ExptType2EvalMode(exptType domain_expt.ExptType, trialRunItemCount *int64) 
 }
 
 func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig) (param *entity.CreateExptParam, err error) {
-	if c := cer.GetRunModeConfig(); c != nil && c.MaxAgentRunMinutes != nil && *c.MaxAgentRunMinutes < 0 {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("run_mode_config.max_agent_run_minutes must be a non-negative integer"))
+	if c := cer.GetRunModeConfig(); c != nil && c.MaxRunMinutes != nil && *c.MaxRunMinutes < 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("run_mode_config.max_run_minutes must be a non-negative integer"))
 	}
 	param = &entity.CreateExptParam{
 		WorkspaceID:           cer.WorkspaceID,
@@ -1435,12 +1435,11 @@ func runModeConfigDTO2DO(dto *domain_expt.RunModeConfig) *entity.RunModeConfig {
 		return nil
 	}
 	do := &entity.RunModeConfig{
-		MaxAgentRunMinutes: dto.MaxAgentRunMinutes,
 		// SuaModelID 刻意不从 DTO 取: sua_model_id 已从 IDL 移除 —— SUA 用哪个模型是运维
 		// 配置 (TCC sandbox_sua_model_replace + orch_env), 不该是实验入参。entity 上该字段
 		// 保留, 只服务 TCC 劫持规则那条路 (规则自带 model_id → modelCredByID 解析密钥)。
 		SuaModelName:  dto.GetSuaModelName(),
-		MaxRunMinutes: int(dto.GetMaxRunMinutes()),
+		MaxRunMinutes: dto.MaxRunMinutes,
 		// SUA 行为四项 + max_turns: 两级配置的实验级一半, 原样透传 (题目级优先的合并在
 		// runtime 侧做, 平台不在这里裁决)。空值即"实验级没配", 由题目级或默认值接管。
 		SuaGoal:                  dto.GetSuaGoal(),
@@ -1514,16 +1513,13 @@ func runModeConfigDO2DTO(do *entity.RunModeConfig) *domain_expt.RunModeConfig {
 		return nil
 	}
 	dto := &domain_expt.RunModeConfig{
-		MaxAgentRunMinutes: do.MaxAgentRunMinutes,
-		RunMode:            gptr.Of(suaRunModeDO2DTO(do.RunMode)),
+		MaxRunMinutes: do.MaxRunMinutes,
+		RunMode:       gptr.Of(suaRunModeDO2DTO(do.RunMode)),
 		// 不回显 SuaModelID: sua_model_id 已从 IDL 移除, DTO 上没有这个字段了。
 		// 它现在只可能来自 TCC 劫持规则 (运维配置), 回显运维配置给调用方也没有意义。
 	}
 	if do.SuaModelName != "" {
 		dto.SuaModelName = gptr.Of(do.SuaModelName)
-	}
-	if do.MaxRunMinutes != 0 {
-		dto.MaxRunMinutes = gptr.Of(int32(do.MaxRunMinutes))
 	}
 	if do.SuaMode != "" {
 		dto.SuaMode = gptr.Of(suaModeDO2DTO(do.SuaMode))

@@ -199,14 +199,14 @@ func TestRunModeConfig_MaxRunMinutesRoundTripAndSuaModelIDNotEchoed(t *testing.T
 
 	do := runModeConfigDTO2DO(dom)
 	require.NotNil(t, do)
-	assert.Equal(t, 45, do.MaxRunMinutes)
+	assert.Equal(t, gptr.Of(int32(45)), do.MaxRunMinutes)
 	assert.Equal(t, "debug-model", do.SuaModelName)
 	assert.Zero(t, do.SuaModelID, "sua_model_id 已从入口移除, 不该从请求里被重新接上")
 
 	// 回显: max_run_minutes 带回, 而运维侧注入的 sua_model_id 不带回。
 	back := runModeConfigDO2DTO(&entity.RunModeConfig{
 		RunMode:       entity.RunModeSUAMultiTurn,
-		MaxRunMinutes: 45,
+		MaxRunMinutes: gptr.Of(int32(45)),
 		SuaModelID:    987654,
 	})
 	require.NotNil(t, back)
@@ -214,10 +214,12 @@ func TestRunModeConfig_MaxRunMinutesRoundTripAndSuaModelIDNotEchoed(t *testing.T
 	// DTO 上已无 sua_model_id 字段, 回显体里也不该出现该值的任何痕迹。
 	assert.Nil(t, back.SuaModelName, "未配 sua_model_name 不回显")
 
-	// max_run_minutes=0 视为未配, 不回显 (否则详情页会显示"最长运行 0 分钟")。
+	// Missing remains absent; explicit zero remains visible to disable Agent timing.
 	zero := runModeConfigDO2DTO(&entity.RunModeConfig{RunMode: entity.RunModeSingleTurn})
 	require.NotNil(t, zero)
 	assert.Nil(t, zero.MaxRunMinutes)
+	explicitZero := runModeConfigDO2DTO(&entity.RunModeConfig{MaxRunMinutes: gptr.Of(int32(0))})
+	assert.Equal(t, gptr.Of(int32(0)), explicitZero.MaxRunMinutes)
 }
 
 // nil 边界: 三个转换器的 nil 入必须 nil 出、不 panic、且不产出空壳。

@@ -7,9 +7,26 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestAgentBudgetJSONPresence(t *testing.T) {
+	for _, raw := range []string{`{}`, `{"max_run_minutes":0}`, `{"max_run_minutes":20}`} {
+		t.Run(raw, func(t *testing.T) {
+			var experiment RunModeConfig
+			var item ItemRunConf
+			require.NoError(t, json.Unmarshal([]byte(raw), &experiment))
+			require.NoError(t, json.Unmarshal([]byte(raw), &item))
+			for _, value := range []any{experiment, item} {
+				encoded, err := json.Marshal(value)
+				require.NoError(t, err)
+				require.JSONEq(t, raw, string(encoded))
+			}
+		})
+	}
+}
 
 // ItemRunConf / RunModeConfig 是**跨仓 wire 契约**: 平台把它们 json.Marshal 进
 // ext["builtin_run_conf"] / ext["builtin_run_mode_config"], 评测运行时按 **json tag** 反序列化。
@@ -84,7 +101,7 @@ func TestItemRunConf_WireTagsAreTheCrossRepoContract(t *testing.T) {
 
 	rc := &ItemRunConf{
 		MaxTurns:                 4,
-		MaxRunMinutes:            30,
+		MaxRunMinutes:            gptr.Of(int32(30)),
 		SuaGoal:                  "g",
 		SuaPersona:               "p",
 		SuaBehavioralConstraints: "c",
@@ -150,7 +167,7 @@ func TestRunModeConfig_WireTagsAreTheCrossRepoContract(t *testing.T) {
 
 	cfg := &RunModeConfig{
 		RunMode:                  RunModeSUAMultiTurn,
-		MaxRunMinutes:            30,
+		MaxRunMinutes:            gptr.Of(int32(30)),
 		SuaMode:                  SuaModeLoop,
 		SuaModelID:               123,
 		SuaModelName:             "m",
