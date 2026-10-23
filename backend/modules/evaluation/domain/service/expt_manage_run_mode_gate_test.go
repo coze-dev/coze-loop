@@ -108,7 +108,7 @@ func TestExptMangerImpl_CheckExpt_MultiTurnRunModeGate(t *testing.T) {
 		{
 			// run_mode 空 = 没配跑法 (透传丢字段也是这个形态): 不该因此拒绝一个普通实验。
 			name:      "RunModeConfig 在但 run_mode 空 → 不触发",
-			expt:      buildExpt(promptTarget(), entity.ExptEvalSetSourceType_SingleSet, &entity.RunModeConfig{MaxRunMinutes: gptr.Of(int32(30))}),
+			expt:      buildExpt(promptTarget(), entity.ExptEvalSetSourceType_SingleSet, &entity.RunModeConfig{MaxRunMinutes: 30}),
 			wantError: false,
 		},
 		{

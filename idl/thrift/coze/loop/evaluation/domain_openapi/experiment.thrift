@@ -183,7 +183,7 @@ struct AgentSkillDeclare {
 struct RunModeConfig {
     1: optional ExptRunMode run_mode (go.tag = 'json:"run_mode"')
     // Cumulative Agent execution minutes per item; preparation/SUA/evaluation are excluded.
-    // Missing inherits the item/experiment default; explicit 0 disables Agent timing.
+    // Zero/missing is unconfigured; a positive item value overrides the experiment.
     2: optional i32 max_run_minutes (go.tag = 'json:"max_run_minutes"', vt.ge = "0")
     3: optional SuaMode sua_mode (go.tag = 'json:"sua_mode"')
     // 4 号**永久保留**: 曾是 sua_model_id, 与 domain 版同步移除。号段不复用。

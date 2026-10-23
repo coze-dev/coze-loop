@@ -4354,7 +4354,7 @@ func (p *AgentSkillDeclare) Field5DeepEqual(src []string) bool {
 type RunModeConfig struct {
 	RunMode *ExptRunMode `thrift:"run_mode,1,optional" frugal:"1,optional,string" json:"run_mode" form:"run_mode" query:"run_mode"`
 	// Cumulative Agent execution minutes per item; preparation/SUA/evaluation are excluded.
-	// Missing inherits the item/experiment default; explicit 0 disables Agent timing.
+	// Zero/missing is unconfigured; a positive item value overrides the experiment.
 	MaxRunMinutes *int32   `thrift:"max_run_minutes,2,optional" frugal:"2,optional,i32" json:"max_run_minutes" form:"max_run_minutes" query:"max_run_minutes"`
 	SuaMode       *SuaMode `thrift:"sua_mode,3,optional" frugal:"3,optional,string" json:"sua_mode" form:"sua_mode" query:"sua_mode"`
 	// 4 号**永久保留**: 曾是 sua_model_id, 与 domain 版同步移除。号段不复用。

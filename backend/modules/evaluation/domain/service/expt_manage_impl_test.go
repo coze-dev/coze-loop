@@ -2766,7 +2766,7 @@ func TestExptMangerImpl_UpdateRunConf_PreservesCreationConfig(t *testing.T) {
 					if configKind == "run_mode" {
 						expt.EvalConf.RunModeConfig = &entity.RunModeConfig{
 							RunMode: entity.RunModeSUALoopMultiTurn, SuaMode: entity.SuaModeLoop,
-							MaxRunMinutes: gptr.Of(int32(20)), MaxTurns: 3, SuaGoal: "finish the task",
+							MaxRunMinutes: 20, MaxTurns: 3, SuaGoal: "finish the task",
 							SuaPersona: "tester", SuaBehavioralConstraints: "one question per turn",
 							SuaPETemplate: "{{eval_result}}", SkillsMode: "merge",
 							Skills: []*entity.AgentSkillDeclare{{SkillKey: "test-skill"}},

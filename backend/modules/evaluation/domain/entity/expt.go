@@ -601,8 +601,8 @@ const (
 // sua_behavioral_constraints / sua_pe_template / max_turns), 便于逐段对账。
 type RunModeConfig struct {
 	RunMode RunMode `json:"run_mode,omitempty"`
-	// Cumulative Agent execution minutes; nil inherits, explicit zero disables timing.
-	MaxRunMinutes *int32  `json:"max_run_minutes,omitempty"`
+	// Cumulative Agent execution minutes; zero means unconfigured.
+	MaxRunMinutes int     `json:"max_run_minutes,omitempty"`
 	SuaMode       SuaMode `json:"sua_mode,omitempty"`
 	// SuaModelID **不再来自调用方**: 对外的 sua_model_id 入口已从 IDL 移除 (SUA 用哪个模型
 	// 是运维配置, 归 TCC)。字段保留是因为 TCC 劫持规则 sandbox_sua_model_replace 自带
@@ -660,8 +660,8 @@ type AgentSkillDeclare struct {
 // SUA 相关字段对被测 Agent 不可见。
 type ItemRunConf struct {
 	MaxTurns int `json:"max_turns,omitempty"`
-	// A present item value, including zero, overrides the experiment's Agent budget.
-	MaxRunMinutes            *int32        `json:"max_run_minutes,omitempty"`
+	// A positive item value overrides the experiment's Agent budget; zero inherits.
+	MaxRunMinutes            int           `json:"max_run_minutes,omitempty"`
 	FixedQueryList           []*FixedQuery `json:"fixed_query_list,omitempty"`
 	SuaGoal                  string        `json:"sua_goal,omitempty"`
 	SuaPersona               string        `json:"sua_persona,omitempty"`

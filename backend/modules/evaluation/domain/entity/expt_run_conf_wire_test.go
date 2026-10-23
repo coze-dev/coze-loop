@@ -7,12 +7,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestAgentBudgetJSONPresence(t *testing.T) {
+func TestAgentBudgetJSONZeroIsUnconfigured(t *testing.T) {
 	for _, raw := range []string{`{}`, `{"max_run_minutes":0}`, `{"max_run_minutes":20}`} {
 		t.Run(raw, func(t *testing.T) {
 			var experiment RunModeConfig
@@ -22,7 +21,11 @@ func TestAgentBudgetJSONPresence(t *testing.T) {
 			for _, value := range []any{experiment, item} {
 				encoded, err := json.Marshal(value)
 				require.NoError(t, err)
-				require.JSONEq(t, raw, string(encoded))
+				if raw == `{"max_run_minutes":0}` {
+					require.JSONEq(t, `{}`, string(encoded))
+				} else {
+					require.JSONEq(t, raw, string(encoded))
+				}
 			}
 		})
 	}
@@ -101,7 +104,7 @@ func TestItemRunConf_WireTagsAreTheCrossRepoContract(t *testing.T) {
 
 	rc := &ItemRunConf{
 		MaxTurns:                 4,
-		MaxRunMinutes:            gptr.Of(int32(30)),
+		MaxRunMinutes:            30,
 		SuaGoal:                  "g",
 		SuaPersona:               "p",
 		SuaBehavioralConstraints: "c",
@@ -167,7 +170,7 @@ func TestRunModeConfig_WireTagsAreTheCrossRepoContract(t *testing.T) {
 
 	cfg := &RunModeConfig{
 		RunMode:                  RunModeSUAMultiTurn,
-		MaxRunMinutes:            gptr.Of(int32(30)),
+		MaxRunMinutes:            30,
 		SuaMode:                  SuaModeLoop,
 		SuaModelID:               123,
 		SuaModelName:             "m",

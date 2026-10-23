@@ -38,7 +38,7 @@ func TestAgentBudgetAPISaveReadback(t *testing.T) {
 			require.NoError(t, err)
 			var got map[string]json.RawMessage
 			require.NoError(t, json.Unmarshal(wire, &got))
-			if value == "" || value == "null" {
+			if value == "" || value == "null" || value == "0" {
 				require.True(t, len(got["max_run_minutes"]) == 0 || string(got["max_run_minutes"]) == "null")
 			} else {
 				require.JSONEq(t, value, string(got["max_run_minutes"]))
