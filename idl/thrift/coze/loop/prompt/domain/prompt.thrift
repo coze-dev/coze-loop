@@ -150,7 +150,7 @@ struct ThinkingConfig {
      3: optional ReasoningEffort reasoning_effort (agw.key="reasoning_effort") // 思考长度
 }
 
-typedef string ReasoningEffort (ts.enum="true")
+typedef string ReasoningEffort
 const ReasoningEffort ReasoningEffort_Minimal = "minimal"
 const ReasoningEffort ReasoningEffort_Low = "low"
 const ReasoningEffort ReasoningEffort_Medium = "medium"

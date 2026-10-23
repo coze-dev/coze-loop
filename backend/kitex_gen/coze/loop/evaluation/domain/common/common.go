@@ -5736,6 +5736,343 @@ func (p *SharedResourceInfo) Field4DeepEqual(src *string) bool {
 	return true
 }
 
+type ThinkingConfig struct {
+	// enabled / disabled / auto
+	ThinkingOption *string `thrift:"thinking_option,1,optional" frugal:"1,optional,string" form:"thinking_option" json:"thinking_option,omitempty" query:"thinking_option"`
+	// 未传沿用旧配置，空串为Auto，非空原样透传
+	ReasoningEffort *string `thrift:"reasoning_effort,2,optional" frugal:"2,optional,string" form:"reasoning_effort" json:"reasoning_effort,omitempty" query:"reasoning_effort"`
+	BudgetTokens    *int64  `thrift:"budget_tokens,3,optional" frugal:"3,optional,i64" form:"budget_tokens" json:"budget_tokens,omitempty" query:"budget_tokens"`
+}
+
+func NewThinkingConfig() *ThinkingConfig {
+	return &ThinkingConfig{}
+}
+
+func (p *ThinkingConfig) InitDefault() {
+}
+
+var ThinkingConfig_ThinkingOption_DEFAULT string
+
+func (p *ThinkingConfig) GetThinkingOption() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetThinkingOption() {
+		return ThinkingConfig_ThinkingOption_DEFAULT
+	}
+	return *p.ThinkingOption
+}
+
+var ThinkingConfig_ReasoningEffort_DEFAULT string
+
+func (p *ThinkingConfig) GetReasoningEffort() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReasoningEffort() {
+		return ThinkingConfig_ReasoningEffort_DEFAULT
+	}
+	return *p.ReasoningEffort
+}
+
+var ThinkingConfig_BudgetTokens_DEFAULT int64
+
+func (p *ThinkingConfig) GetBudgetTokens() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBudgetTokens() {
+		return ThinkingConfig_BudgetTokens_DEFAULT
+	}
+	return *p.BudgetTokens
+}
+func (p *ThinkingConfig) SetThinkingOption(val *string) {
+	p.ThinkingOption = val
+}
+func (p *ThinkingConfig) SetReasoningEffort(val *string) {
+	p.ReasoningEffort = val
+}
+func (p *ThinkingConfig) SetBudgetTokens(val *int64) {
+	p.BudgetTokens = val
+}
+
+var fieldIDToName_ThinkingConfig = map[int16]string{
+	1: "thinking_option",
+	2: "reasoning_effort",
+	3: "budget_tokens",
+}
+
+func (p *ThinkingConfig) IsSetThinkingOption() bool {
+	return p.ThinkingOption != nil
+}
+
+func (p *ThinkingConfig) IsSetReasoningEffort() bool {
+	return p.ReasoningEffort != nil
+}
+
+func (p *ThinkingConfig) IsSetBudgetTokens() bool {
+	return p.BudgetTokens != nil
+}
+
+func (p *ThinkingConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ThinkingConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ThinkingConfig) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ThinkingOption = _field
+	return nil
+}
+func (p *ThinkingConfig) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ReasoningEffort = _field
+	return nil
+}
+func (p *ThinkingConfig) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.BudgetTokens = _field
+	return nil
+}
+
+func (p *ThinkingConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ThinkingConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ThinkingConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetThinkingOption() {
+		if err = oprot.WriteFieldBegin("thinking_option", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ThinkingOption); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ThinkingConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetReasoningEffort() {
+		if err = oprot.WriteFieldBegin("reasoning_effort", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ReasoningEffort); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ThinkingConfig) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBudgetTokens() {
+		if err = oprot.WriteFieldBegin("budget_tokens", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.BudgetTokens); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *ThinkingConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ThinkingConfig(%+v)", *p)
+
+}
+
+func (p *ThinkingConfig) DeepEqual(ano *ThinkingConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ThinkingOption) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ReasoningEffort) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.BudgetTokens) {
+		return false
+	}
+	return true
+}
+
+func (p *ThinkingConfig) Field1DeepEqual(src *string) bool {
+
+	if p.ThinkingOption == src {
+		return true
+	} else if p.ThinkingOption == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ThinkingOption, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ThinkingConfig) Field2DeepEqual(src *string) bool {
+
+	if p.ReasoningEffort == src {
+		return true
+	} else if p.ReasoningEffort == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ReasoningEffort, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ThinkingConfig) Field3DeepEqual(src *int64) bool {
+
+	if p.BudgetTokens == src {
+		return true
+	} else if p.BudgetTokens == nil || src == nil {
+		return false
+	}
+	if *p.BudgetTokens != *src {
+		return false
+	}
+	return true
+}
+
 // 评测模型配置
 type ModelConfig struct {
 	// 模型id
@@ -5748,6 +6085,7 @@ type ModelConfig struct {
 	Protocol       *manage.Protocol `thrift:"protocol,6,optional" frugal:"6,optional,string" form:"protocol" json:"protocol,omitempty" query:"protocol"`
 	Identification *string          `thrift:"identification,7,optional" frugal:"7,optional,string" form:"identification" json:"identification,omitempty" query:"identification"`
 	PresetModel    *bool            `thrift:"preset_model,8,optional" frugal:"8,optional,bool" form:"preset_model" json:"preset_model,omitempty" query:"preset_model"`
+	Thinking       *ThinkingConfig  `thrift:"thinking,9,optional" frugal:"9,optional,ThinkingConfig" form:"thinking" json:"thinking,omitempty" query:"thinking"`
 	JSONExt        *string          `thrift:"json_ext,50,optional" frugal:"50,optional,string" form:"json_ext" json:"json_ext,omitempty" query:"json_ext"`
 }
 
@@ -5854,6 +6192,18 @@ func (p *ModelConfig) GetPresetModel() (v bool) {
 	return *p.PresetModel
 }
 
+var ModelConfig_Thinking_DEFAULT *ThinkingConfig
+
+func (p *ModelConfig) GetThinking() (v *ThinkingConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetThinking() {
+		return ModelConfig_Thinking_DEFAULT
+	}
+	return p.Thinking
+}
+
 var ModelConfig_JSONExt_DEFAULT string
 
 func (p *ModelConfig) GetJSONExt() (v string) {
@@ -5889,6 +6239,9 @@ func (p *ModelConfig) SetIdentification(val *string) {
 func (p *ModelConfig) SetPresetModel(val *bool) {
 	p.PresetModel = val
 }
+func (p *ModelConfig) SetThinking(val *ThinkingConfig) {
+	p.Thinking = val
+}
 func (p *ModelConfig) SetJSONExt(val *string) {
 	p.JSONExt = val
 }
@@ -5902,6 +6255,7 @@ var fieldIDToName_ModelConfig = map[int16]string{
 	6:  "protocol",
 	7:  "identification",
 	8:  "preset_model",
+	9:  "thinking",
 	50: "json_ext",
 }
 
@@ -5935,6 +6289,10 @@ func (p *ModelConfig) IsSetIdentification() bool {
 
 func (p *ModelConfig) IsSetPresetModel() bool {
 	return p.PresetModel != nil
+}
+
+func (p *ModelConfig) IsSetThinking() bool {
+	return p.Thinking != nil
 }
 
 func (p *ModelConfig) IsSetJSONExt() bool {
@@ -6018,6 +6376,14 @@ func (p *ModelConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6148,6 +6514,14 @@ func (p *ModelConfig) ReadField8(iprot thrift.TProtocol) error {
 	p.PresetModel = _field
 	return nil
 }
+func (p *ModelConfig) ReadField9(iprot thrift.TProtocol) error {
+	_field := NewThinkingConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Thinking = _field
+	return nil
+}
 func (p *ModelConfig) ReadField50(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -6196,6 +6570,10 @@ func (p *ModelConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 		if err = p.writeField50(oprot); err != nil {
@@ -6364,6 +6742,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
+func (p *ModelConfig) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetThinking() {
+		if err = oprot.WriteFieldBegin("thinking", thrift.STRUCT, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Thinking.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
 func (p *ModelConfig) writeField50(oprot thrift.TProtocol) (err error) {
 	if p.IsSetJSONExt() {
 		if err = oprot.WriteFieldBegin("json_ext", thrift.STRING, 50); err != nil {
@@ -6419,6 +6815,9 @@ func (p *ModelConfig) DeepEqual(ano *ModelConfig) bool {
 		return false
 	}
 	if !p.Field8DeepEqual(ano.PresetModel) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.Thinking) {
 		return false
 	}
 	if !p.Field50DeepEqual(ano.JSONExt) {
@@ -6519,6 +6918,13 @@ func (p *ModelConfig) Field8DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.PresetModel != *src {
+		return false
+	}
+	return true
+}
+func (p *ModelConfig) Field9DeepEqual(src *ThinkingConfig) bool {
+
+	if !p.Thinking.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -7390,6 +7796,10 @@ func (p *RateLimit) Field3DeepEqual(src *string) bool {
 type AgentConfig struct {
 	// Agent type
 	AgentType *AgentType `thrift:"agent_type,1,optional" frugal:"1,optional,string" form:"agent_type" json:"agent_type,omitempty" query:"agent_type"`
+	// claude_code / codex_cli
+	Runtime *string `thrift:"runtime,2,optional" frugal:"2,optional,string" form:"runtime" json:"runtime,omitempty" query:"runtime"`
+	// search_api / serp_api
+	SearchProvider *string `thrift:"search_provider,3,optional" frugal:"3,optional,string" form:"search_provider" json:"search_provider,omitempty" query:"search_provider"`
 }
 
 func NewAgentConfig() *AgentConfig {
@@ -7410,16 +7820,56 @@ func (p *AgentConfig) GetAgentType() (v AgentType) {
 	}
 	return *p.AgentType
 }
+
+var AgentConfig_Runtime_DEFAULT string
+
+func (p *AgentConfig) GetRuntime() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRuntime() {
+		return AgentConfig_Runtime_DEFAULT
+	}
+	return *p.Runtime
+}
+
+var AgentConfig_SearchProvider_DEFAULT string
+
+func (p *AgentConfig) GetSearchProvider() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSearchProvider() {
+		return AgentConfig_SearchProvider_DEFAULT
+	}
+	return *p.SearchProvider
+}
 func (p *AgentConfig) SetAgentType(val *AgentType) {
 	p.AgentType = val
+}
+func (p *AgentConfig) SetRuntime(val *string) {
+	p.Runtime = val
+}
+func (p *AgentConfig) SetSearchProvider(val *string) {
+	p.SearchProvider = val
 }
 
 var fieldIDToName_AgentConfig = map[int16]string{
 	1: "agent_type",
+	2: "runtime",
+	3: "search_provider",
 }
 
 func (p *AgentConfig) IsSetAgentType() bool {
 	return p.AgentType != nil
+}
+
+func (p *AgentConfig) IsSetRuntime() bool {
+	return p.Runtime != nil
+}
+
+func (p *AgentConfig) IsSetSearchProvider() bool {
+	return p.SearchProvider != nil
 }
 
 func (p *AgentConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -7443,6 +7893,22 @@ func (p *AgentConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7488,6 +7954,28 @@ func (p *AgentConfig) ReadField1(iprot thrift.TProtocol) error {
 	p.AgentType = _field
 	return nil
 }
+func (p *AgentConfig) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Runtime = _field
+	return nil
+}
+func (p *AgentConfig) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SearchProvider = _field
+	return nil
+}
 
 func (p *AgentConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -7497,6 +7985,14 @@ func (p *AgentConfig) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -7535,6 +8031,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *AgentConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRuntime() {
+		if err = oprot.WriteFieldBegin("runtime", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Runtime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *AgentConfig) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSearchProvider() {
+		if err = oprot.WriteFieldBegin("search_provider", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SearchProvider); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *AgentConfig) String() string {
 	if p == nil {
@@ -7553,6 +8085,12 @@ func (p *AgentConfig) DeepEqual(ano *AgentConfig) bool {
 	if !p.Field1DeepEqual(ano.AgentType) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.Runtime) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.SearchProvider) {
+		return false
+	}
 	return true
 }
 
@@ -7564,6 +8102,30 @@ func (p *AgentConfig) Field1DeepEqual(src *AgentType) bool {
 		return false
 	}
 	if strings.Compare(*p.AgentType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *AgentConfig) Field2DeepEqual(src *string) bool {
+
+	if p.Runtime == src {
+		return true
+	} else if p.Runtime == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Runtime, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *AgentConfig) Field3DeepEqual(src *string) bool {
+
+	if p.SearchProvider == src {
+		return true
+	} else if p.SearchProvider == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SearchProvider, *src) != 0 {
 		return false
 	}
 	return true
