@@ -59,7 +59,7 @@ const SecurityLevel SecurityLevel_L2 = "L2"
 const SecurityLevel SecurityLevel_L3 = "L3"
 const SecurityLevel SecurityLevel_L4 = "L4"
 
-typedef string ReasoningEffort
+typedef string ReasoningEffort (ts.enum="true")
 const ReasoningEffort ReasoningEffort_Minimal = "minimal"
 const ReasoningEffort ReasoningEffort_Low = "low"
 const ReasoningEffort ReasoningEffort_Medium = "medium"
@@ -253,6 +253,7 @@ struct ThinkingConfig {
      1: optional i64 budget_tokens (agw.key="budget_tokens", api.js_conv='true', go.tag='json:"budget_tokens"') // thinking内容的最大输出token
      2: optional ThinkingOption thinking_option (agw.key="thinking_option")
      3: optional ReasoningEffort reasoning_effort (agw.key="reasoning_effort") // 思考长度
+     4: optional string reasoning_effort_value (agw.key="reasoning_effort_value")
 }
 
 struct ModelConfig {

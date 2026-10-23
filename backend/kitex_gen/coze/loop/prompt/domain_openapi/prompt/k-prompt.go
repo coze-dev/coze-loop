@@ -7343,6 +7343,20 @@ func (p *ThinkingConfig) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -7403,6 +7417,20 @@ func (p *ThinkingConfig) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ThinkingConfig) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ReasoningEffortValue = _field
+	return offset, nil
+}
+
 func (p *ThinkingConfig) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -7413,6 +7441,7 @@ func (p *ThinkingConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int 
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -7424,6 +7453,7 @@ func (p *ThinkingConfig) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -7456,6 +7486,15 @@ func (p *ThinkingConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int 
 	return offset
 }
 
+func (p *ThinkingConfig) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetReasoningEffortValue() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ReasoningEffortValue)
+	}
+	return offset
+}
+
 func (p *ThinkingConfig) field1Length() int {
 	l := 0
 	if p.IsSetBudgetTokens() {
@@ -7483,6 +7522,15 @@ func (p *ThinkingConfig) field3Length() int {
 	return l
 }
 
+func (p *ThinkingConfig) field4Length() int {
+	l := 0
+	if p.IsSetReasoningEffortValue() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ReasoningEffortValue)
+	}
+	return l
+}
+
 func (p *ThinkingConfig) DeepCopy(s interface{}) error {
 	src, ok := s.(*ThinkingConfig)
 	if !ok {
@@ -7502,6 +7550,14 @@ func (p *ThinkingConfig) DeepCopy(s interface{}) error {
 	if src.ReasoningEffort != nil {
 		tmp := *src.ReasoningEffort
 		p.ReasoningEffort = &tmp
+	}
+
+	if src.ReasoningEffortValue != nil {
+		var tmp string
+		if *src.ReasoningEffortValue != "" {
+			tmp = kutils.StringDeepCopy(*src.ReasoningEffortValue)
+		}
+		p.ReasoningEffortValue = &tmp
 	}
 
 	return nil
