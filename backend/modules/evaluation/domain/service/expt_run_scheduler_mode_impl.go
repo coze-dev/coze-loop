@@ -312,11 +312,12 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		maxLoop = 10000
 		itemIdx = int32(0)
 
-		pageSize  = int32(100)
-		itemCnt   = 0
-		total     = int64(0)
-		limit     = int(expt.TrialRunItemCount)
-		pageToken *string
+		pageSize   = int32(100)
+		itemCnt    = 0
+		runItemCnt = 0
+		total      = int64(0)
+		limit      = int(expt.TrialRunItemCount)
+		pageToken  *string
 	)
 	if limit > 0 && int(pageSize) > limit {
 		pageSize = int32(limit)
@@ -364,20 +365,31 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		itemCnt += len(items)
 		pageToken = nextPageToken
 
+		runItems := dropItemsWithoutTurns(ctx, event.ExptID, items)
+		runItemCnt += len(runItems)
+
+		lastPage := itemCnt >= limit || len(items) == 0 || itemCnt >= int(total) || pageToken == nil || *pageToken == ""
+		if len(runItems) == 0 {
+			if lastPage {
+				break
+			}
+			continue
+		}
+
 		turnCnt := 0
-		for _, item := range items {
+		for _, item := range runItems {
 			turnCnt += len(item.Turns)
 		}
 
-		ids, err := e.idgenerator.GenMultiIDs(ctx, len(items)+turnCnt)
+		ids, err := e.idgenerator.GenMultiIDs(ctx, len(runItems)+turnCnt)
 		if err != nil {
 			return err
 		}
 
 		idIdx := 0
-		eirs := make([]*entity.ExptItemResult, 0, len(items))
-		etrs := make([]*entity.ExptTurnResult, 0, len(items))
-		for _, item := range items {
+		eirs := make([]*entity.ExptItemResult, 0, len(runItems))
+		etrs := make([]*entity.ExptTurnResult, 0, len(runItems))
+		for _, item := range runItems {
 			eir := &entity.ExptItemResult{
 				ID:            ids[idIdx],
 				SpaceID:       event.SpaceID,
@@ -413,14 +425,14 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 			return err
 		}
 
-		if itemCnt >= limit || len(items) == 0 || itemCnt >= int(total) || pageToken == nil || *pageToken == "" {
+		if lastPage {
 			break
 		}
 
 		time.Sleep(time.Millisecond * 30)
 	}
 
-	return e.finishExptStart(ctx, event, expt, itemCnt, idemKey)
+	return e.finishExptStart(ctx, event, expt, runItemCnt, idemKey)
 }
 
 // exptStartByItemIds 按指定的 item_ids 获取评测集条目并创建执行记录
@@ -465,6 +477,10 @@ func (e *ExptTrialRunExec) exptStartByItemIds(ctx context.Context, event *entity
 			return err
 		}
 
+		items = dropItemsWithoutTurns(ctx, event.ExptID, items)
+		if len(items) == 0 {
+			continue
+		}
 		itemCnt += len(items)
 
 		turnCnt := 0
@@ -546,10 +562,11 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 		maxLoop = 10000
 		itemIdx = int32(0)
 
-		pageSize  = int32(100)
-		itemCnt   = 0
-		total     = int64(0)
-		pageToken *string
+		pageSize   = int32(100)
+		itemCnt    = 0
+		runItemCnt = 0
+		total      = int64(0)
+		pageToken  *string
 	)
 
 	for i := 0; i < maxLoop; i++ {
@@ -577,20 +594,31 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 		pageToken = nextPageToken
 		total = gptr.Indirect(t)
 
+		runItems := dropItemsWithoutTurns(ctx, event.ExptID, items)
+		runItemCnt += len(runItems)
+
+		lastPage := (total > 0 && itemCnt >= int(total)) || len(items) == 0 || pageToken == nil || *pageToken == ""
+		if len(runItems) == 0 {
+			if lastPage {
+				break
+			}
+			continue
+		}
+
 		turnCnt := 0
-		for _, item := range items {
+		for _, item := range runItems {
 			turnCnt += len(item.Turns)
 		}
 
-		ids, err := e.idgenerator.GenMultiIDs(ctx, len(items)+turnCnt)
+		ids, err := e.idgenerator.GenMultiIDs(ctx, len(runItems)+turnCnt)
 		if err != nil {
 			return err
 		}
 
 		idIdx := 0
-		eirs := make([]*entity.ExptItemResult, 0, len(items))
-		etrs := make([]*entity.ExptTurnResult, 0, len(items))
-		for _, item := range items {
+		eirs := make([]*entity.ExptItemResult, 0, len(runItems))
+		etrs := make([]*entity.ExptTurnResult, 0, len(runItems))
+		for _, item := range runItems {
 			eir := &entity.ExptItemResult{
 				ID:            ids[idIdx],
 				SpaceID:       event.SpaceID,
@@ -626,7 +654,7 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 			return err
 		}
 
-		if (total > 0 && itemCnt >= int(total)) || len(items) == 0 || pageToken == nil || *pageToken == "" {
+		if lastPage {
 			break
 		}
 
@@ -641,7 +669,7 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 		&entity.ExptStats{
 			ExptID:         event.ExptID,
 			SpaceID:        event.SpaceID,
-			PendingItemCnt: int32(itemCnt),
+			PendingItemCnt: int32(runItemCnt),
 		}); err != nil {
 		return err
 	}
@@ -1583,6 +1611,23 @@ type retryItemResetDeps struct {
 	idgenerator              idgen.IIDGenerator
 }
 
+// dropItemsWithoutTurns 剔除没有 turn 的 item：统计按 item_result 计、明细按 turn_result 查，
+// 空 turns 的 item 会空跑被标 Success，造成「成功 N、明细为空」。
+func dropItemsWithoutTurns(ctx context.Context, exptID int64, items []*entity.EvaluationSetItem) []*entity.EvaluationSetItem {
+	kept := make([]*entity.EvaluationSetItem, 0, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		if len(item.Turns) == 0 {
+			logs.CtxDebug(ctx, "skip eval set item without turns, expt_id: %v, item_id: %v", exptID, item.ItemID)
+			continue
+		}
+		kept = append(kept, item)
+	}
+	return kept
+}
+
 func itemVersionIDPtr(versionID int64) *int64 {
 	if versionID <= 0 {
 		return nil
@@ -1681,6 +1726,7 @@ func fetchEvaluationSetItemsByRefs(ctx context.Context, deps retryItemResetDeps,
 }
 
 func resetRetryRunLogsForItems(ctx context.Context, deps retryItemResetDeps, event *entity.ExptScheduleEvent, items []*entity.EvaluationSetItem, itemVersionByItemID map[int64]int64) ([]int64, error) {
+	items = dropItemsWithoutTurns(ctx, event.ExptID, items)
 	if len(items) == 0 {
 		return nil, nil
 	}
@@ -1866,6 +1912,15 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		pageToken = nextPageToken
 		total = gptr.Indirect(t)
 
+		lastPage := (total > 0 && itemCnt >= int(total)) || len(items) == 0 || pageToken == nil || *pageToken == ""
+		items = dropItemsWithoutTurns(ctx, event.ExptID, items)
+		if len(items) == 0 {
+			if lastPage {
+				break
+			}
+			continue
+		}
+
 		turnCnt := 0
 		for _, item := range items {
 			turnCnt += len(item.Turns)
@@ -1941,7 +1996,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 			}
 		}
 
-		if (total > 0 && itemCnt >= int(total)) || len(items) == 0 || pageToken == nil || *pageToken == "" {
+		if lastPage {
 			break
 		}
 
@@ -2274,6 +2329,12 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 			return err
 		}
 
+		items = dropItemsWithoutTurns(ctx, event.ExptID, items)
+		if len(items) == 0 {
+			continue
+		}
+		runItemIDs := gslice.Map(items, func(item *entity.EvaluationSetItem) int64 { return item.ItemID })
+
 		turnCnt := 0
 		for _, item := range items {
 			turnCnt += len(item.Turns)
@@ -2297,7 +2358,7 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 			}
 		}
 
-		irs, err := e.exptItemResultRepo.MGetItemResults(ctx, event.ExptID, chunk, event.SpaceID)
+		irs, err := e.exptItemResultRepo.MGetItemResults(ctx, event.ExptID, runItemIDs, event.SpaceID)
 		if err != nil {
 			return err
 		}
@@ -2419,7 +2480,13 @@ func (e *ExptRetryItemsExec) resetEvalItemsMultiSet(ctx context.Context, event *
 			return err
 		}
 
-		irs, err := e.exptItemResultRepo.MGetItemResults(ctx, event.ExptID, chunk, event.SpaceID)
+		items = dropItemsWithoutTurns(ctx, event.ExptID, items)
+		if len(items) == 0 {
+			continue
+		}
+		runItemIDs := gslice.Map(items, func(item *entity.EvaluationSetItem) int64 { return item.ItemID })
+
+		irs, err := e.exptItemResultRepo.MGetItemResults(ctx, event.ExptID, runItemIDs, event.SpaceID)
 		if err != nil {
 			return err
 		}
@@ -2446,8 +2513,8 @@ func (e *ExptRetryItemsExec) resetEvalItemsMultiSet(ctx context.Context, event *
 		}
 
 		// reset 后主动刷 CK expt_turn_result_filter,避免加速器读到重试前的旧终态
-		if e.resultSvc != nil && len(chunk) > 0 {
-			if ferr := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, chunk); ferr != nil {
+		if e.resultSvc != nil {
+			if ferr := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, runItemIDs); ferr != nil {
 				logs.CtxError(ctx, "ExptRetryItemsExec.resetEvalItemsMultiSet UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, ferr)
 			}
 		}
@@ -2580,6 +2647,7 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 
 		// 每批 item → 建 expt_item_ref / item_result / turn_result 并落库 (List 分页 / BatchGet 点选共用)
 		persistBatch := func(items []*entity.EvaluationSetItem) error {
+			items = dropItemsWithoutTurns(ctx, event.ExptID, items)
 			if len(items) == 0 {
 				return nil
 			}
