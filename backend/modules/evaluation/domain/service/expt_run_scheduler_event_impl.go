@@ -984,7 +984,7 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 
 	// 沙箱已经是终态，Destroy 不需要再发 EndCmd，zombieTimeout=false。
 	// targetSpaceID 复用上面 CheckSandboxTerminated 用的来源空间, 保持一致。
-	e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
+	_ = e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
 		ctx,
 		targetSpaceID,
 		terminatedRecordIDs,
@@ -1118,7 +1118,7 @@ func (e *ExptSchedulerImpl) terminateZombieEvalTargetRecords(ctx context.Context
 		targetSourceSpaceID = expt.TargetSpaceID
 	}
 	targetSpaceID := resolveLoadSpaceID(event.SpaceID, targetSourceSpaceID)
-	e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
+	_ = e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
 		ctx,
 		targetSpaceID,
 		recordIDs,

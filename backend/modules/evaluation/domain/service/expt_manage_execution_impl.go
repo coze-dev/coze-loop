@@ -729,7 +729,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 					logs.CtxWarn(ctx, "UpsertExptTurnResultFilter fail after terminateItemTurns, expt_id: %v, err: %v", exptID, err)
 				}
 				// SandboxAgent 评测对象：被取消的 turn 关联的 EvalTargetRecord 走 best-effort 销毁
-				e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, exptRunID, terminatedItemIDs)
+				_ = e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, exptRunID, terminatedItemIDs)
 			}
 		default:
 			// **Failed 等其它终态也必须销毁沙箱**。此前清理只挂在 Terminated 一个 case 上, 于是
@@ -749,7 +749,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 					itemIDSet[itemTurnID.ItemID] = true
 				}
 				itemIDs := maps.ToSlice(itemIDSet, func(k int64, v bool) int64 { return k })
-				e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, exptRunID, itemIDs)
+				_ = e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, exptRunID, itemIDs)
 			}
 		}
 	}
@@ -1289,7 +1289,7 @@ func (e *ExptMangerImpl) TerminateItems(ctx context.Context, exptID, exptRunID, 
 	if err != nil {
 		logs.CtxWarn(ctx, "[ExptItemTerminate] GetByID fail, skip sandbox destroy, expt_id: %v, err: %v", exptID, err)
 	} else {
-		e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, &exptRunID, targetIDs)
+		_ = e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, &exptRunID, targetIDs)
 	}
 
 	logs.CtxInfo(ctx, "[ExptItemTerminate] done, expt_id: %v, expt_run_id: %v, terminated_item_ids: %v", exptID, exptRunID, targetIDs)
@@ -1385,14 +1385,17 @@ func (e *ExptMangerImpl) listItemTurnIDs(ctx context.Context, spaceID, exptID in
 //
 // targetSourceSpaceID: 跨空间共享场景下评测对象的来源空间 (Expt.TargetSpaceID, 0=同消费方空间);
 // EvalTargetRecord 落库时 SpaceID = 来源空间, 用消费方 spaceID 查会漏, 沙箱清不掉。
-func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.Context, spaceID, targetSourceSpaceID, exptID int64, exptRunID *int64, terminatedItemIDs []int64) {
+func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.Context, spaceID, targetSourceSpaceID, exptID int64, exptRunID *int64, terminatedItemIDs []int64, waitForDestroy ...bool) error {
 	if e.evalTargetService == nil || exptRunID == nil || *exptRunID <= 0 || len(terminatedItemIDs) == 0 {
-		return
+		if len(terminatedItemIDs) > 0 && len(waitForDestroy) > 0 && waitForDestroy[0] {
+			return fmt.Errorf("sandbox cleanup unavailable")
+		}
+		return nil
 	}
 	turnRunLogs, err := e.turnResultRepo.MGetItemTurnRunLogs(ctx, exptID, *exptRunID, terminatedItemIDs, spaceID)
 	if err != nil {
 		logs.CtxWarn(ctx, "[SandboxDestroy] MGetItemTurnRunLogs fail on cancel, expt_id=%d, expt_run_id=%d, err=%v", exptID, *exptRunID, err)
-		return
+		return err
 	}
 	recordIDSet := make(map[int64]struct{})
 	for _, rl := range turnRunLogs {
@@ -1402,7 +1405,7 @@ func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.C
 		recordIDSet[rl.TargetResultID] = struct{}{}
 	}
 	if len(recordIDSet) == 0 {
-		return
+		return nil
 	}
 	recordIDs := make([]int64, 0, len(recordIDSet))
 	for id := range recordIDSet {
@@ -1411,13 +1414,14 @@ func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.C
 	// 跨空间: EvalTargetRecord.SpaceID = 来源空间, TerminateAsyncRecordsAndDestroySandbox 的
 	// List/Version/Destroy 全链路都用它，否则 space 过滤把 record 过滤空、Destroy RPC 发不出。
 	targetSpaceID := resolveLoadSpaceID(spaceID, targetSourceSpaceID)
-	e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
+	return e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
 		ctx,
 		targetSpaceID,
 		recordIDs,
 		int32(errno.AsyncEvalTargetTerminatedCode),
 		"async eval target terminated: experiment cancelled",
 		false,
+		waitForDestroy...,
 	)
 }
 

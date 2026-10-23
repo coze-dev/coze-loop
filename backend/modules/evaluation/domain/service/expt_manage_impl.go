@@ -461,6 +461,9 @@ func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID i
 		if expt == nil {
 			continue
 		}
+		if err := e.cancelSandboxBeforeDelete(ctx, expt, session); err != nil {
+			return err
+		}
 		e.releaseCentralQuotaForIncompleteItems(ctx, expt, nil, entity.ExptStatus_Terminated)
 	}
 
@@ -482,6 +485,27 @@ func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID i
 	}
 
 	return nil
+}
+
+// Resolve existing cleanup references while deletion has not hidden the experiment.
+func (e *ExptMangerImpl) cancelSandboxBeforeDelete(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
+	if expt == nil || expt.LatestRunID <= 0 || (expt.TargetType != entity.EvalTargetTypeSandboxAgent && !expt.IsSandboxAgentTarget()) {
+		return nil
+	}
+	turns, err := e.exptResultService.GetIncompleteTurns(ctx, expt.ID, expt.SpaceID, session)
+	if err != nil {
+		return err
+	}
+	seen := make(map[int64]bool, len(turns))
+	items := make([]int64, 0, len(turns))
+	for _, turn := range turns {
+		if turn == nil || seen[turn.ItemID] {
+			continue
+		}
+		seen[turn.ItemID] = true
+		items = append(items, turn.ItemID)
+	}
+	return e.terminateSandboxExecutesForCancelledItems(ctx, expt.SpaceID, expt.TargetSpaceID, expt.ID, &expt.LatestRunID, items, true)
 }
 
 func (e *ExptMangerImpl) makeExptMutexLockKey(exptID int64) string {
@@ -1842,6 +1866,9 @@ func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, sess
 	// ★ 与 MDelete 同理：软删前必须归还中心调度额度，且必须在删除之前。
 	// 完整论证见 MDelete 里那段注释（三条独立原因 + 为什么顺序不能反）。
 	// 两个删除入口都要改 —— 只改一个等于留一半泄漏。
+	if err := e.cancelSandboxBeforeDelete(ctx, expt, session); err != nil {
+		return err
+	}
 	e.releaseCentralQuotaForIncompleteItems(ctx, expt, nil, entity.ExptStatus_Terminated)
 
 	// 删除实验

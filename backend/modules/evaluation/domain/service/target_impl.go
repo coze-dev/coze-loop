@@ -685,7 +685,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 			executeIDs := sandboxExecuteIDsOf(ctx, record)
 			logs.CtxError(ctx, "[SandboxDestroy] create eval target record fail, destroying sandbox executes to avoid leak, invoke_id=%d, expt_id=%d, execute_ids=%v, err=%v",
 				record.ID, gptr.Indirect(param.ExperimentID), executeIDs, err)
-			e.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(param.ExperimentID), 10), spaceID, executeIDs, false)
+			_ = e.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(param.ExperimentID), 10), spaceID, executeIDs, false)
 		}
 		return nil, callee, err
 	}
@@ -851,7 +851,7 @@ func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Contex
 	executeIDs := sandboxExecuteIDsOf(ctx, record)
 	logs.CtxInfo(ctx, "[SandboxDestroy] destroying sandbox executes, record_id=%d, task_id=%s, expt_run_id=%d, execute_ids=%v",
 		record.ID, taskID, record.ExperimentRunID, executeIDs)
-	e.destroySandboxExecute(ctx, taskID, record.SpaceID, executeIDs, false)
+	_ = e.destroySandboxExecute(ctx, taskID, record.SpaceID, executeIDs, false)
 }
 
 // extractExtraSandboxExecuteID 从 record 的 outputData.Ext 里读取额外沙箱 execute id；
@@ -974,9 +974,12 @@ func (e *EvalTargetServiceImpl) resolveSandboxTaskIDByRunID(ctx context.Context,
 // cenk/backoff 的 backOffContext.NextBackOff 见 ctx.Done() 立即返回 Stop, 于是**第一次
 // Destroy 失败后一次都不会重试**, 整个重试形同虚设 (恰是本函数要修的那个泄漏)。
 // 与 ReportInvokeRecords 里落 record 的 persistCtx 同款处置: 剥离取消信号, 保留 logID 等值。
-func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID int64, executeIDs []string, zombieTimeout bool) {
+func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID int64, executeIDs []string, zombieTimeout bool, waitForDestroy ...bool) error {
 	if e.sandboxSchedulerAdapter == nil || len(executeIDs) == 0 {
-		return
+		if len(executeIDs) > 0 && len(waitForDestroy) > 0 && waitForDestroy[0] {
+			return fmt.Errorf("sandbox scheduler unavailable")
+		}
+		return nil
 	}
 	// 按所属 task 分组: "-macvm" 后缀的 execution 属 mac_vm task, 其余属基础 sandbox task。
 	// 每组各自一个带重试的 destroy goroutine，避免单 taskID 只销一个、另一个泄漏。
@@ -992,10 +995,17 @@ func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskI
 	destroyCtx := context.WithoutCancel(ctx)
 	for t, ids := range byTask {
 		t, ids := t, ids
+		if len(waitForDestroy) > 0 && waitForDestroy[0] {
+			if err := e.destroySandboxExecuteSync(destroyCtx, t, spaceID, ids, zombieTimeout); err != nil {
+				return err
+			}
+			continue
+		}
 		goroutine.Go(destroyCtx, func() {
-			e.destroySandboxExecuteSync(destroyCtx, t, spaceID, ids, zombieTimeout)
+			_ = e.destroySandboxExecuteSync(destroyCtx, t, spaceID, ids, zombieTimeout)
 		})
 	}
+	return nil
 }
 
 // destroySandboxExecuteSync 是 destroySandboxExecute 的同步本体（含重试与终局告警）。
@@ -1005,12 +1015,12 @@ func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskI
 // 返回, 后续重试落在测试结束之后, 撞 gomock 在已完成的 *testing.T 上 Fatalf → panic
 // "Fail in goroutine after ... has completed")。同步入口让"重试到用尽"能被确定性地断言完,
 // 不留悬空 goroutine。
-func (e *EvalTargetServiceImpl) destroySandboxExecuteSync(ctx context.Context, taskID string, spaceID int64, executeIDs []string, zombieTimeout bool) {
+func (e *EvalTargetServiceImpl) destroySandboxExecuteSync(ctx context.Context, taskID string, spaceID int64, executeIDs []string, zombieTimeout bool) error {
 	budget := e.sandboxDestroyRetryBudget
 	if budget <= 0 {
 		budget = defaultSandboxDestroyRetryBudget
 	}
-	if err := backoff.RetryWithElapsedTime(ctx, budget, func() error {
+	err := backoff.RetryWithElapsedTime(ctx, budget, func() error {
 		_, derr := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
 			TaskID:        taskID,
 			DestroyType:   rpc.SandboxDestroyTypeExecute,
@@ -1019,32 +1029,35 @@ func (e *EvalTargetServiceImpl) destroySandboxExecuteSync(ctx context.Context, t
 			ZombieTimeout: zombieTimeout,
 		})
 		return derr
-	}); err != nil {
+	})
+	if err != nil {
 		// 重试用尽仍失败 = 沙箱确定性泄漏 + 并发名额不归还, 且没有下一次机会 (见上)。
 		// 故打 Error 而非 Warn: 它需要人介入, 不是"可能有问题"。
 		logs.CtxError(ctx, "[SandboxDestroy] destroy sandbox execute fail after retries, sandboxes may leak, task_id=%s, execute_ids=%v, err=%v",
 			taskID, executeIDs, err)
 	}
+	return err
 }
 
 // destroySandboxExtraExecute 异步 best-effort 销毁指定字符串 executeID 的沙箱执行；用于双沙箱
 // 从沙箱这类没有 int64 ID 的额外销毁点。zombieTimeout 强制 false，避免向从沙箱下发收尾命令。
-func (e *EvalTargetServiceImpl) destroySandboxExtraExecute(ctx context.Context, taskID string, spaceID int64, executeID string) {
-	e.destroySandboxExecute(ctx, taskID, spaceID, []string{executeID}, false)
+func (e *EvalTargetServiceImpl) destroySandboxExtraExecute(ctx context.Context, taskID string, spaceID int64, executeID string, waitForDestroy ...bool) error {
+	return e.destroySandboxExecute(ctx, taskID, spaceID, []string{executeID}, false, waitForDestroy...)
 }
 
 // TerminateAsyncRecordsAndDestroySandbox 把仍处于 AsyncInvoking 状态的 SandboxAgent EvalTargetRecord 置为 Fail，
 // 并以 best-effort 方式触发沙箱 Execute 销毁。非 SandboxAgent / 非 AsyncInvoking 的 record 会被忽略。
 // zombieTimeout=true 时，Destroy 请求会带上 SandboxAgent 收尾命令 EndCmd（含 expt_id/invoke_id）；
 // 其余场景（如手动取消）不下发 EndCmd。
-func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx context.Context, spaceID int64, recordIDs []int64, errCode int32, errMessage string, zombieTimeout bool) {
+func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx context.Context, spaceID int64, recordIDs []int64, errCode int32, errMessage string, zombieTimeout bool, waitForDestroy ...bool) error {
+	wait := len(waitForDestroy) > 0 && waitForDestroy[0]
 	if len(recordIDs) == 0 {
-		return
+		return nil
 	}
 	records, err := e.evalTargetRepo.ListEvalTargetRecordByIDsAndSpaceID(ctx, spaceID, recordIDs)
 	if err != nil {
 		logs.CtxWarn(ctx, "[SandboxDestroy] batch get eval target records fail, space_id=%d, err=%v", spaceID, err)
-		return
+		return err
 	}
 
 	versionIDSet := make(map[int64]struct{})
@@ -1055,7 +1068,7 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 		versionIDSet[r.TargetVersionID] = struct{}{}
 	}
 	if len(versionIDSet) == 0 {
-		return
+		return nil
 	}
 	versionIDs := make([]int64, 0, len(versionIDSet))
 	for id := range versionIDSet {
@@ -1064,7 +1077,7 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 	versions, err := e.evalTargetRepo.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs)
 	if err != nil {
 		logs.CtxWarn(ctx, "[SandboxDestroy] batch get eval target versions fail, space_id=%d, err=%v", spaceID, err)
-		return
+		return err
 	}
 	sandboxVersionIDs := make(map[int64]struct{})
 	for _, v := range versions {
@@ -1076,7 +1089,7 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 		}
 	}
 	if len(sandboxVersionIDs) == 0 {
-		return
+		return nil
 	}
 
 	taskIDCache := make(map[int64]string)
@@ -1095,6 +1108,41 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 		// sandboxExecuteIDsOf 同时覆盖两种 ext 形态（完整列表 / 主 id + extra id），是 extra 单值的超集。
 		executeIDs := sandboxExecuteIDsOf(ctx, r)
 		extraExecuteID := extractExtraSandboxExecuteID(r)
+		destroy := func() error {
+			taskID, ok := taskIDCache[r.ExperimentRunID]
+			if !ok {
+				taskID = e.resolveSandboxTaskIDByRunID(ctx, r.ExperimentRunID)
+				taskIDCache[r.ExperimentRunID] = taskID
+			}
+			if wait && taskID == "" {
+				return fmt.Errorf("sandbox task unavailable for run %d", r.ExperimentRunID)
+			}
+			// ⚠️ 主 / 从沙箱必须**分两次**调用销毁，不能合成一次传 2 个 ExecuteIDs：
+			// commercial 侧 destroyReqDO2PO 只在 len(ExecuteIDs)==1 时才拼 zombie 收尾 EndCmd
+			// （见 infra/rpc/sandbox/sandbox_scheduler.go），合成一次会让 EndCmd 静默不下发。
+			// 主沙箱：executeIDs 里除 extra 之外的部分（通常即 record.ID），带 zombieTimeout。
+			for _, id := range executeIDs {
+				if id == extraExecuteID {
+					continue
+				}
+				if err := e.destroySandboxExecute(ctx, taskID, r.SpaceID, []string{id}, zombieTimeout, wait); err != nil {
+					return err
+				}
+			}
+			// 双沙箱：额外销毁从沙箱 execute，语义对齐 destroySandboxExecuteIfNeeded (success 分支)。
+			// 从沙箱 zombieTimeout 恒为 false，不需要下发 SandboxAgent EndCmd（EndCmd 只对主沙箱有意义）。
+			if extraExecuteID != "" {
+				if err := e.destroySandboxExtraExecute(ctx, taskID, r.SpaceID, extraExecuteID, wait); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		if wait {
+			if err := destroy(); err != nil {
+				return err
+			}
+		}
 		failOutput := &entity.EvalTargetOutputData{
 			EvalTargetRunError: &entity.EvalTargetRunError{
 				Code:    errCode,
@@ -1109,29 +1157,16 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 		r.EvalTargetOutputData = failOutput
 		if err := e.evalTargetRepo.SaveEvalTargetRecord(ctx, r, nil); err != nil {
 			logs.CtxWarn(ctx, "[SandboxDestroy] save terminated target record fail, record_id=%d, err=%v", r.ID, err)
+			if wait {
+				return err
+			}
 		}
 
-		taskID, ok := taskIDCache[r.ExperimentRunID]
-		if !ok {
-			taskID = e.resolveSandboxTaskIDByRunID(ctx, r.ExperimentRunID)
-			taskIDCache[r.ExperimentRunID] = taskID
-		}
-		// ⚠️ 主 / 从沙箱必须**分两次**调用销毁，不能合成一次传 2 个 ExecuteIDs：
-		// commercial 侧 destroyReqDO2PO 只在 len(ExecuteIDs)==1 时才拼 zombie 收尾 EndCmd
-		// （见 infra/rpc/sandbox/sandbox_scheduler.go），合成一次会让 EndCmd 静默不下发。
-		// 主沙箱：executeIDs 里除 extra 之外的部分（通常即 record.ID），带 zombieTimeout。
-		for _, id := range executeIDs {
-			if id == extraExecuteID {
-				continue
-			}
-			e.destroySandboxExecute(ctx, taskID, r.SpaceID, []string{id}, zombieTimeout)
-		}
-		// 双沙箱：额外销毁从沙箱 execute，语义对齐 destroySandboxExecuteIfNeeded (success 分支)。
-		// 从沙箱 zombieTimeout 恒为 false，不需要下发 SandboxAgent EndCmd（EndCmd 只对主沙箱有意义）。
-		if extraExecuteID != "" {
-			e.destroySandboxExtraExecute(ctx, taskID, r.SpaceID, extraExecuteID)
+		if !wait {
+			_ = destroy()
 		}
 	}
+	return nil
 }
 
 // sandboxStatusCheckConcurrency 单次 sweep 内并发调 sandbox.Get 的上限，避免打爆下游。
