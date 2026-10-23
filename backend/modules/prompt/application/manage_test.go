@@ -2691,7 +2691,7 @@ func TestPromptManageApplicationImpl_SaveDraft(t *testing.T) {
 			name: "get prompt error",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockIManageRepo(ctrl)
-				repoMock.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{PromptID: 3}).Return(nil, errorx.New("repo error"))
+				repoMock.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{PromptID: 3, WithDraft: true, UserID: "user"}).Return(nil, errorx.New("repo error"))
 				return fields{manageRepo: repoMock}
 			},
 			args: args{
@@ -2710,7 +2710,7 @@ func TestPromptManageApplicationImpl_SaveDraft(t *testing.T) {
 			name: "success",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockIManageRepo(ctrl)
-				repoMock.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{PromptID: 3}).Return(&entity.Prompt{ID: 3, SpaceID: 30}, nil)
+				repoMock.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{PromptID: 3, WithDraft: true, UserID: "user"}).Return(&entity.Prompt{ID: 3, SpaceID: 30}, nil)
 				auth := mocks.NewMockIAuthProvider(ctrl)
 				auth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(30), []int64{int64(3)}, consts.ActionLoopPromptEdit).Return(nil)
 				promptSvc := servicemocks.NewMockIPromptService(ctrl)

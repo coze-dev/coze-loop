@@ -417,7 +417,9 @@ func AgentConfigDTO2DO(dtoObj *commondto.AgentConfig) *do.AgentConfig {
 		return nil
 	}
 	return &do.AgentConfig{
-		AgentType: do.AgentType(gptr.Indirect(dtoObj.AgentType)),
+		AgentType:      do.AgentType(gptr.Indirect(dtoObj.AgentType)),
+		Runtime:        dtoObj.Runtime,
+		SearchProvider: dtoObj.SearchProvider,
 	}
 }
 
@@ -426,7 +428,9 @@ func AgentConfigDO2DTO(doObj *do.AgentConfig) *commondto.AgentConfig {
 		return nil
 	}
 	return &commondto.AgentConfig{
-		AgentType: gptr.Of(string(doObj.AgentType)),
+		AgentType:      gptr.Of(string(doObj.AgentType)),
+		Runtime:        doObj.Runtime,
+		SearchProvider: doObj.SearchProvider,
 	}
 }
 

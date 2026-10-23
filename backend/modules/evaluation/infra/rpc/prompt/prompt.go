@@ -58,12 +58,17 @@ func (p PromptRPCAdapter) ExecutePrompt(ctx context.Context, spaceID int64, para
 		logs.CtxError(ctx, "prompt execute parse runtime param fail, err=%v", err)
 	} else {
 		if runtimeParam != nil && runtimeParam.ModelConfig != nil {
+			if err := runtimeParam.ModelConfig.ValidateThinking(); err != nil {
+				return nil, err
+			}
 			req.OverridePromptParams = &prompt.OverridePromptParams{
 				ModelConfig: &prompt.ModelConfig{
 					ModelID:     runtimeParam.ModelConfig.ModelID,
 					MaxTokens:   runtimeParam.ModelConfig.MaxTokens,
 					Temperature: runtimeParam.ModelConfig.Temperature,
 					TopP:        runtimeParam.ModelConfig.TopP,
+					Extra:       runtimeParam.ModelConfig.JSONExt,
+					Thinking:    thinkingConfig(runtimeParam.ModelConfig.Thinking),
 				},
 			}
 		}
@@ -92,6 +97,13 @@ func (p PromptRPCAdapter) ExecutePrompt(ctx context.Context, spaceID int64, para
 	}
 	result.MultiContent = p.convMsgToContent(resp.Message)
 	return result, nil
+}
+
+func thinkingConfig(input *entity.ThinkingConfig) *prompt.ThinkingConfig {
+	if input == nil {
+		return nil
+	}
+	return &prompt.ThinkingConfig{ThinkingOption: input.ThinkingOption, ReasoningEffort: input.ReasoningEffort, BudgetTokens: input.BudgetTokens}
 }
 
 func (p PromptRPCAdapter) convMsgToContent(msg *prompt.Message) *entity.Content {

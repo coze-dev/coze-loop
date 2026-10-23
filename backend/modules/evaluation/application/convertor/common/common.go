@@ -442,6 +442,8 @@ func ConvertModelConfigDTO2DO(config *commondto.ModelConfig) *commonentity.Model
 		Protocol:       config.Protocol,
 		Identification: config.Identification,
 		PresetModel:    config.PresetModel,
+		Thinking:       ConvertThinkingConfigDTO2DO(config.Thinking),
+		JSONExt:        config.JSONExt,
 	}
 }
 
@@ -460,6 +462,8 @@ func ConvertModelConfigDO2DTO(config *commonentity.ModelConfig) *commondto.Model
 		Protocol:       config.Protocol,
 		Identification: config.Identification,
 		PresetModel:    config.PresetModel,
+		Thinking:       ConvertThinkingConfigDO2DTO(config.Thinking),
+		JSONExt:        config.JSONExt,
 	}
 	if config.GetModelID() > 0 {
 		dto.ModelID = config.ModelID
@@ -471,6 +475,20 @@ func ConvertModelConfigDO2DTO(config *commonentity.ModelConfig) *commondto.Model
 		dto.ModelID = gptr.Of(pModelID)
 	}
 	return dto
+}
+
+func ConvertThinkingConfigDTO2DO(config *commondto.ThinkingConfig) *commonentity.ThinkingConfig {
+	if config == nil {
+		return nil
+	}
+	return &commonentity.ThinkingConfig{ThinkingOption: config.ThinkingOption, ReasoningEffort: config.ReasoningEffort, BudgetTokens: config.BudgetTokens}
+}
+
+func ConvertThinkingConfigDO2DTO(config *commonentity.ThinkingConfig) *commondto.ThinkingConfig {
+	if config == nil {
+		return nil
+	}
+	return &commondto.ThinkingConfig{ThinkingOption: config.ThinkingOption, ReasoningEffort: config.ReasoningEffort, BudgetTokens: config.BudgetTokens}
 }
 
 // ConvertFieldDisplayFormatDTO2DO 将 DTO 类型的 int64 转换为 FieldDisplayFormat 枚举

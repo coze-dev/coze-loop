@@ -545,7 +545,9 @@ func (app *PromptManageApplicationImpl) SaveDraft(ctx context.Context, request *
 
 	// prompt
 	getPromptParam := repo.GetPromptParam{
-		PromptID: request.GetPromptID(),
+		PromptID:  request.GetPromptID(),
+		UserID:    userID,
+		WithDraft: true,
 	}
 	promptDO, err := app.manageRepo.GetPrompt(ctx, getPromptParam)
 	if err != nil {
@@ -565,6 +567,9 @@ func (app *PromptManageApplicationImpl) SaveDraft(ctx context.Context, request *
 	}
 	savingPromptDTO.PromptDraft.DraftInfo.UserID = ptr.Of(userID)
 	savingPromptDO := convertor.PromptDTO2DO(savingPromptDTO)
+	if err := preserveDraftModelConfig(ctx, app.manageRepo, promptDO, savingPromptDO); err != nil {
+		return r, err
+	}
 
 	// save draft
 	draftInfoDO, err := app.promptService.SaveDraft(ctx, savingPromptDO)

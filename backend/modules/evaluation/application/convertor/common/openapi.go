@@ -360,6 +360,8 @@ func OpenAPIModelConfigDO2DTO(config *commonentity.ModelConfig) *openapiCommon.M
 		Temperature: config.Temperature,
 		MaxTokens:   config.MaxTokens,
 		TopP:        config.TopP,
+		Thinking:    OpenAPIThinkingConfigDO2DTO(config.Thinking),
+		JSONExt:     config.JSONExt,
 	}
 }
 
@@ -373,7 +375,23 @@ func OpenAPIModelConfigDTO2DO(config *openapiCommon.ModelConfig) *commonentity.M
 		Temperature: config.Temperature,
 		MaxTokens:   config.MaxTokens,
 		TopP:        config.TopP,
+		Thinking:    OpenAPIThinkingConfigDTO2DO(config.Thinking),
+		JSONExt:     config.JSONExt,
 	}
+}
+
+func OpenAPIThinkingConfigDO2DTO(config *commonentity.ThinkingConfig) *openapiCommon.ThinkingConfig {
+	if config == nil {
+		return nil
+	}
+	return &openapiCommon.ThinkingConfig{ThinkingOption: config.ThinkingOption, ReasoningEffort: config.ReasoningEffort, BudgetTokens: config.BudgetTokens}
+}
+
+func OpenAPIThinkingConfigDTO2DO(config *openapiCommon.ThinkingConfig) *commonentity.ThinkingConfig {
+	if config == nil {
+		return nil
+	}
+	return &commonentity.ThinkingConfig{ThinkingOption: config.ThinkingOption, ReasoningEffort: config.ReasoningEffort, BudgetTokens: config.BudgetTokens}
 }
 
 func OpenAPIRuntimeParamDTO2DO(dto *openapiCommon.RuntimeParam) *commonentity.RuntimeParam {

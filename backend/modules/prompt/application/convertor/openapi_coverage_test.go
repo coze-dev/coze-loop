@@ -25,7 +25,7 @@ func TestOpenAPIReasoningEffortDTO2DO_DefaultBranch(t *testing.T) {
 	t.Parallel()
 	unknown := domainopenapi.ReasoningEffort("unknown")
 	result := OpenAPIReasoningEffortDTO2DO(&unknown)
-	assert.Nil(t, result)
+	assert.Equal(t, ptr.Of(entity.ReasoningEffort("unknown")), result)
 }
 
 func TestOpenAPIThinkingOptionDO2DTO_DefaultBranch(t *testing.T) {
@@ -39,7 +39,7 @@ func TestOpenAPIReasoningEffortDO2DTO_DefaultBranch(t *testing.T) {
 	t.Parallel()
 	unknown := entity.ReasoningEffort("unknown")
 	result := OpenAPIReasoningEffortDO2DTO(&unknown)
-	assert.Nil(t, result)
+	assert.Equal(t, ptr.Of(domainopenapi.ReasoningEffort("unknown")), result)
 }
 
 func TestOpenAPIContentPartDO2DTO_VideoURLEmptyString(t *testing.T) {

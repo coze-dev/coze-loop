@@ -2845,7 +2845,18 @@ func (e *EvalOpenAPIApplication) UpdateEvaluatorDraftOApi(ctx context.Context, r
 	if verDO == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_content is required"))
 	}
+	verDO.PreserveDraftConfig(evaluator)
+	verDO.SetEvaluatorVersionID(evaluator.GetEvaluatorVersionID())
+	verDO.SetVersion(evaluator.GetVersion())
+	verDO.SetSpaceID(evaluator.SpaceID)
+	verDO.SetEvaluatorID(evaluator.ID)
+	if baseInfo := evaluator.GetBaseInfo(); baseInfo != nil {
+		copiedBaseInfo := *baseInfo
+		verDO.SetBaseInfo(&copiedBaseInfo)
+	}
 
+	updated := *evaluator
+	evaluator = &updated
 	evaluator.EvaluatorType = evalType
 	evaluator.SetEvaluatorVersion(verDO)
 

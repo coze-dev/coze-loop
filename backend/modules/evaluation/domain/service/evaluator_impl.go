@@ -567,6 +567,9 @@ func (e *EvaluatorServiceImpl) validateUpdateEvaluatorMetaRequest(ctx context.Co
 
 // UpdateEvaluatorDraft 修改 evaluator_version
 func (e *EvaluatorServiceImpl) UpdateEvaluatorDraft(ctx context.Context, versionDO *entity.Evaluator) error {
+	if err := versionDO.ValidateVersionSettings(); err != nil {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	versionDO.BaseInfo.SetUpdatedAt(gptr.Of(time.Now().UnixMilli()))
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
 	versionDO.BaseInfo.SetUpdatedBy(&entity.UserInfo{
