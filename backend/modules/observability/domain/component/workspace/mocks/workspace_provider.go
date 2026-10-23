@@ -57,12 +57,11 @@ func (mr *MockIWorkSpaceProviderMockRecorder) ClipTableByWorkspace(ctx, workspac
 }
 
 // GetIngestWorkSpaceID mocks base method.
-func (m *MockIWorkSpaceProvider) GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan, headerWorkspaceID string, claim *rpc.Claim) (string, error) {
+func (m *MockIWorkSpaceProvider) GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan, headerWorkspaceID string, claim *rpc.Claim) string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetIngestWorkSpaceID", ctx, spans, headerWorkspaceID, claim)
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // GetIngestWorkSpaceID indicates an expected call of GetIngestWorkSpaceID.

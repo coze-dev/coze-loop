@@ -119,7 +119,7 @@ func TestOpenAPIApplication_unpackOtelSpace(t *testing.T) {
 				},
 				workspace: func(ctrl *gomock.Controller) *workspacemocks.MockIWorkSpaceProvider {
 					m := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-					m.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), "", gomock.Any()).Return("mocked", nil)
+					m.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), "", gomock.Any()).Return("mocked")
 					return m
 				},
 			},
@@ -163,8 +163,7 @@ func TestOpenAPIApplication_unpackOtelSpace(t *testing.T) {
 				auth:      authProvider,
 				workspace: workspaceProvider,
 			}
-			got, err := o.unpackOtelSpace(tt.args.ctx, tt.args.outerSpaceID, tt.args.reqSpanProto)
-			assert.NoError(t, err)
+			got := o.unpackOtelSpace(tt.args.ctx, tt.args.outerSpaceID, tt.args.reqSpanProto)
 			if tt.want == nil {
 				assert.Nil(t, got)
 			} else {
