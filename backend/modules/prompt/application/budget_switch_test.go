@@ -30,6 +30,13 @@ func TestSpecificValueSaveDraftWebAndOpenAPI(t *testing.T) {
 			mr := repomocks.NewMockIManageRepo(ctrl)
 			ps := servicemocks.NewMockIPromptService(ctrl)
 			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			queries := 0
+			models := promptEffortReaderFunc(func(_ context.Context, spaceID, modelID int64) (bool, []string, error) {
+				require.Equal(t, int64(100), spaceID)
+				require.Equal(t, int64(111), modelID)
+				queries++
+				return true, []string{"xhigh"}, nil
+			})
 			old := &entity.ModelConfig{ModelID: 111, Thinking: &entity.ThinkingConfig{ThinkingOption: ptr.Of(entity.ThinkingOptionEnabled), BudgetTokens: ptr.Of(int64(2048))}}
 			previous := &entity.Prompt{ID: 123, SpaceID: 100, PromptDraft: &entity.PromptDraft{DraftInfo: &entity.DraftInfo{UserID: "u"}, PromptDetail: &entity.PromptDetail{ModelConfig: old}}}
 			mr.EXPECT().GetPrompt(gomock.Any(), gomock.Any()).Return(previous, nil)
@@ -51,18 +58,19 @@ func TestSpecificValueSaveDraftWebAndOpenAPI(t *testing.T) {
 				auth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				user := rpcmocks.NewMockIUserProvider(ctrl)
 				user.EXPECT().GetUserIdInCtx(gomock.Any()).Return("u", true)
-				app := &PromptOpenAPIApplicationImpl{promptManageRepo: mr, promptService: ps, auth: auth, user: user}
+				app := &PromptOpenAPIApplicationImpl{promptManageRepo: mr, promptService: ps, auth: auth, user: user, modelReasoningEffortProvider: models}
 				_, err := app.SaveDraftOApi(ctx, &openapi.SaveDraftOApiRequest{PromptID: ptr.Of(int64(123)), PromptDraft: &oapiprompt.PromptDraft{DraftInfo: &oapiprompt.DraftInfo{}, Detail: &oapiprompt.PromptDetail{ModelConfig: &oapiprompt.ModelConfig{ModelID: ptr.Of(int64(111)), Thinking: &thinking}}}})
 				require.NoError(t, err)
 			} else {
 				var thinking webprompt.ThinkingConfig
 				require.NoError(t, json.Unmarshal([]byte(`{"reasoning_effort_value":"xhigh"}`), &thinking))
 				auth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				app := &PromptManageApplicationImpl{manageRepo: mr, promptService: ps, authRPCProvider: auth}
+				app := &PromptManageApplicationImpl{manageRepo: mr, promptService: ps, authRPCProvider: auth, modelReasoningEffortProvider: models}
 				_, err := app.SaveDraft(ctx, &manage.SaveDraftRequest{PromptID: ptr.Of(int64(123)), PromptDraft: &webprompt.PromptDraft{DraftInfo: &webprompt.DraftInfo{}, Detail: &webprompt.PromptDetail{ModelConfig: &webprompt.ModelConfig{ModelID: ptr.Of(int64(111)), Thinking: &thinking}}}})
 				require.NoError(t, err)
 			}
 			require.Equal(t, int64(2048), *old.Thinking.BudgetTokens)
+			require.Equal(t, 1, queries)
 		})
 	}
 }

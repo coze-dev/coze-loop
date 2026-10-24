@@ -66,21 +66,22 @@ func redactOpenAPIEvaluationSetVersionSchemas(accessCtx *entity.ResourceAccessCo
 }
 
 type EvalOpenAPIApplication struct {
-	targetSvc                   service.IEvalTargetService
-	evalTargetRepo              repo.IEvalTargetRepo
-	asyncRepo                   repo.IEvalAsyncRepo
-	publisher                   events.ExptEventPublisher
-	auth                        rpc.IAuthProvider
-	evaluationSetService        service.IEvaluationSetService
-	evaluationSetVersionService service.EvaluationSetVersionService
-	evaluationSetItemService    service.EvaluationSetItemService
-	evaluationSetSchemaService  service.EvaluationSetSchemaService
-	metric                      metrics.OpenAPIEvaluationMetrics
-	sandboxAgentMetric          metrics.SandboxAgentMetrics
-	userInfoService             userinfo.UserInfoService
-	experimentApp               IExperimentApplication
-	manager                     service.IExptManager
-	resultSvc                   service.ExptResultService
+	modelReasoningEffortProvider rpc.IModelReasoningEffortProvider
+	targetSvc                    service.IEvalTargetService
+	evalTargetRepo               repo.IEvalTargetRepo
+	asyncRepo                    repo.IEvalAsyncRepo
+	publisher                    events.ExptEventPublisher
+	auth                         rpc.IAuthProvider
+	evaluationSetService         service.IEvaluationSetService
+	evaluationSetVersionService  service.EvaluationSetVersionService
+	evaluationSetItemService     service.EvaluationSetItemService
+	evaluationSetSchemaService   service.EvaluationSetSchemaService
+	metric                       metrics.OpenAPIEvaluationMetrics
+	sandboxAgentMetric           metrics.SandboxAgentMetrics
+	userInfoService              userinfo.UserInfoService
+	experimentApp                IExperimentApplication
+	manager                      service.IExptManager
+	resultSvc                    service.ExptResultService
 	service.ExptAggrResultService
 	evaluatorService         service.EvaluatorService
 	evaluatorRecordService   service.EvaluatorRecordService
@@ -91,6 +92,36 @@ type EvalOpenAPIApplication struct {
 	callbackDispatcher       service.IEvaluatorCallbackDispatcher
 	resourceAccessAuthorizer service.ResourceAccessAuthorizer
 	sourceEvalTargetLister   SourceEvalTargetLister
+}
+
+func NewEvalOpenAPIApplicationWithModelReasoningEffortProvider(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
+	targetSvc service.IEvalTargetService,
+	evalTargetRepo repo.IEvalTargetRepo,
+	auth rpc.IAuthProvider,
+	evaluationSetService service.IEvaluationSetService,
+	evaluationSetVersionService service.EvaluationSetVersionService,
+	evaluationSetItemService service.EvaluationSetItemService,
+	evaluationSetSchemaService service.EvaluationSetSchemaService,
+	metric metrics.OpenAPIEvaluationMetrics,
+	sandboxAgentMetric metrics.SandboxAgentMetrics,
+	userInfoService userinfo.UserInfoService,
+	experimentApp IExperimentApplication,
+	manager service.IExptManager,
+	resultSvc service.ExptResultService,
+	aggResultSvc service.ExptAggrResultService,
+	evaluatorService service.EvaluatorService,
+	evaluatorRecordService service.EvaluatorRecordService,
+	exptTemplateManager service.IExptTemplateManager,
+	configer component.IConfiger,
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter,
+	fileProvider rpc.IFileProvider,
+	callbackDispatcher service.IEvaluatorCallbackDispatcher,
+	resourceAccessAuthorizer service.ResourceAccessAuthorizer,
+	models rpc.IModelReasoningEffortProvider,
+) IEvalOpenAPIApplication {
+	app := NewEvalOpenAPIApplication(asyncRepo, publisher, targetSvc, evalTargetRepo, auth, evaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, metric, sandboxAgentMetric, userInfoService, experimentApp, manager, resultSvc, aggResultSvc, evaluatorService, evaluatorRecordService, exptTemplateManager, configer, sandboxSchedulerAdapter, fileProvider, callbackDispatcher, resourceAccessAuthorizer).(*EvalOpenAPIApplication)
+	app.modelReasoningEffortProvider = models
+	return app
 }
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
@@ -2738,6 +2769,9 @@ func (e *EvalOpenAPIApplication) CreateEvaluatorOApi(ctx context.Context, req *o
 	}
 	do.SpaceID = workspaceID
 
+	if err := validateActiveEvaluatorReasoningEffort(ctx, e.modelReasoningEffortProvider, do.SpaceID, do, nil); err != nil {
+		return nil, err
+	}
 	id, err := e.evaluatorService.CreateEvaluator(ctx, do, "")
 	if err != nil {
 		return nil, err
@@ -2844,6 +2878,9 @@ func (e *EvalOpenAPIApplication) UpdateEvaluatorDraftOApi(ctx context.Context, r
 	}
 	if verDO == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_content is required"))
+	}
+	if err := validateActiveEvaluatorReasoningEffort(ctx, e.modelReasoningEffortProvider, evaluator.SpaceID, verDO, evaluator); err != nil {
+		return nil, err
 	}
 	verDO.PreserveDraftConfig(evaluator)
 	verDO.SetEvaluatorVersionID(evaluator.GetEvaluatorVersionID())
@@ -3048,6 +3085,9 @@ func (e *EvalOpenAPIApplication) SubmitEvaluatorVersionOApi(ctx context.Context,
 		return nil, err
 	}
 
+	if err := validateSubmittingEvaluatorReasoningEffort(ctx, e.modelReasoningEffortProvider, e.evaluatorService, evaluator); err != nil {
+		return nil, err
+	}
 	res, err := e.evaluatorService.SubmitEvaluatorVersion(ctx, evaluator, req.GetVersion(), req.GetDescription(), "")
 	if err != nil {
 		return nil, err
