@@ -4,10 +4,12 @@
 package entity
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/bytedance/gg/gptr"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/js_conv"
@@ -29,13 +31,28 @@ func NewPromptRuntimeParam(modelConfig *ModelConfig) IRuntimeParam {
 }
 
 type PromptRuntimeParam struct {
-	ModelConfig *ModelConfig `json:"model_config" jsonschema:"description:ModelConfig"`
+	ModelConfig       *ModelConfig `json:"model_config" jsonschema:"description:ModelConfig"`
+	PromptModelConfig *string      `json:"prompt_model_config,omitempty"`
 }
 
 func (p *PromptRuntimeParam) ParseFromJSON(val string) (IRuntimeParam, error) {
+	parsed, err := ParsePromptRuntimeParam(val)
+	if err != nil {
+		return nil, err
+	}
+	return parsed, nil
+}
+
+func ParsePromptRuntimeParam(val string) (*PromptRuntimeParam, error) {
+	if !strings.HasPrefix(strings.TrimSpace(val), "{") {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("PromptRuntimeParam must be an object"))
+	}
 	ppp := &PromptRuntimeParam{}
 	if err := js_conv.GetUnmarshaler()([]byte(val), ppp); err != nil {
 		return nil, errorx.Wrapf(err, "PromptRuntimeParam json unmarshal fail")
+	}
+	if ppp.ModelConfig != nil && ppp.PromptModelConfig != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("model_config conflicts with prompt_model_config"))
 	}
 	return ppp, nil
 }

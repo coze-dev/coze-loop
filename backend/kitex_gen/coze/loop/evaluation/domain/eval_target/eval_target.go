@@ -17074,7 +17074,8 @@ func (p *EvalTargetRunError) Field2DeepEqual(src *string) bool {
 }
 
 type PromptRuntimeParam struct {
-	ModelConfig *common.ModelConfig `thrift:"model_config,1,optional" frugal:"1,optional,common.ModelConfig" form:"model_config" json:"model_config,omitempty" query:"model_config"`
+	ModelConfig       *common.ModelConfig `thrift:"model_config,1,optional" frugal:"1,optional,common.ModelConfig" form:"model_config" json:"model_config,omitempty" query:"model_config"`
+	PromptModelConfig *string             `thrift:"prompt_model_config,2,optional" frugal:"2,optional,string" form:"prompt_model_config" json:"prompt_model_config,omitempty" query:"prompt_model_config"`
 }
 
 func NewPromptRuntimeParam() *PromptRuntimeParam {
@@ -17095,16 +17096,36 @@ func (p *PromptRuntimeParam) GetModelConfig() (v *common.ModelConfig) {
 	}
 	return p.ModelConfig
 }
+
+var PromptRuntimeParam_PromptModelConfig_DEFAULT string
+
+func (p *PromptRuntimeParam) GetPromptModelConfig() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPromptModelConfig() {
+		return PromptRuntimeParam_PromptModelConfig_DEFAULT
+	}
+	return *p.PromptModelConfig
+}
 func (p *PromptRuntimeParam) SetModelConfig(val *common.ModelConfig) {
 	p.ModelConfig = val
+}
+func (p *PromptRuntimeParam) SetPromptModelConfig(val *string) {
+	p.PromptModelConfig = val
 }
 
 var fieldIDToName_PromptRuntimeParam = map[int16]string{
 	1: "model_config",
+	2: "prompt_model_config",
 }
 
 func (p *PromptRuntimeParam) IsSetModelConfig() bool {
 	return p.ModelConfig != nil
+}
+
+func (p *PromptRuntimeParam) IsSetPromptModelConfig() bool {
+	return p.PromptModelConfig != nil
 }
 
 func (p *PromptRuntimeParam) Read(iprot thrift.TProtocol) (err error) {
@@ -17128,6 +17149,14 @@ func (p *PromptRuntimeParam) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -17170,6 +17199,17 @@ func (p *PromptRuntimeParam) ReadField1(iprot thrift.TProtocol) error {
 	p.ModelConfig = _field
 	return nil
 }
+func (p *PromptRuntimeParam) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PromptModelConfig = _field
+	return nil
+}
 
 func (p *PromptRuntimeParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -17179,6 +17219,10 @@ func (p *PromptRuntimeParam) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 	}
@@ -17217,6 +17261,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *PromptRuntimeParam) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPromptModelConfig() {
+		if err = oprot.WriteFieldBegin("prompt_model_config", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PromptModelConfig); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 
 func (p *PromptRuntimeParam) String() string {
 	if p == nil {
@@ -17235,12 +17297,27 @@ func (p *PromptRuntimeParam) DeepEqual(ano *PromptRuntimeParam) bool {
 	if !p.Field1DeepEqual(ano.ModelConfig) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.PromptModelConfig) {
+		return false
+	}
 	return true
 }
 
 func (p *PromptRuntimeParam) Field1DeepEqual(src *common.ModelConfig) bool {
 
 	if !p.ModelConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *PromptRuntimeParam) Field2DeepEqual(src *string) bool {
+
+	if p.PromptModelConfig == src {
+		return true
+	} else if p.PromptModelConfig == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.PromptModelConfig, *src) != 0 {
 		return false
 	}
 	return true

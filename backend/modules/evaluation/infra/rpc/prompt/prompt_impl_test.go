@@ -80,13 +80,8 @@ func TestPromptRPCAdapter_ExecutePrompt(t *testing.T) {
 		paramInvalid := &rpc.ExecutePromptParam{
 			RuntimeParam: gptr.Of(`{invalid}`),
 		}
-		// It logs the error but continues without override
-		mockExecute.EXPECT().ExecuteInternal(gomock.Any(), gomock.Any(), gomock.Any()).Return(&execute.ExecuteInternalResponse{
-			BaseResp: &base.BaseResp{StatusCode: 0},
-			Message:  &prompt.Message{Content: gptr.Of("resp")},
-		}, nil)
 		_, err := adapter.ExecutePrompt(ctx, 1, paramInvalid)
-		assert.NoError(t, err)
+		assert.Error(t, err)
 	})
 
 	t.Run("resp_nil", func(t *testing.T) {
