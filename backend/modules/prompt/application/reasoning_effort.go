@@ -25,10 +25,11 @@ func preserveDraftModelConfig(ctx context.Context, manageRepo repo.IManageRepo, 
 			previous = base.GetPromptDetail()
 		}
 	}
-	if previous == nil {
-		return nil
+	var previousModel *entity.ModelConfig
+	if previous != nil {
+		previousModel = previous.ModelConfig
 	}
-	config, err := entity.PreserveModelConfigForSave(incoming.PromptDraft.PromptDetail.ModelConfig, previous.ModelConfig)
+	config, err := entity.PreserveModelConfigForSave(incoming.PromptDraft.PromptDetail.ModelConfig, previousModel)
 	if err != nil {
 		return err
 	}

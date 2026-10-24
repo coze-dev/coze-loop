@@ -350,6 +350,10 @@ func (p *PromptServiceImpl) CreatePrompt(ctx context.Context, promptDO *entity.P
 	if promptDO.PromptBasic == nil {
 		return 0, errorx.New("promptBasic is empty")
 	}
+	promptDO, err = normalizeDraftModelForWrite(promptDO)
+	if err != nil {
+		return 0, err
+	}
 
 	err = p.parseAndValidateSnippets(ctx, promptDO)
 	if err != nil {
@@ -452,9 +456,13 @@ func (p *PromptServiceImpl) SaveDraft(ctx context.Context, promptDO *entity.Prom
 	if promptDO == nil || promptDO.PromptDraft == nil {
 		return nil, errorx.New("promptDO or promptDO.PromptDraft is empty")
 	}
+	promptDO, err := normalizeDraftModelForWrite(promptDO)
+	if err != nil {
+		return nil, err
+	}
 
 	// Parse and validate snippets in the draft content
-	err := p.parseAndValidateSnippets(ctx, promptDO)
+	err = p.parseAndValidateSnippets(ctx, promptDO)
 	if err != nil {
 		return nil, err
 	}
@@ -466,6 +474,23 @@ func (p *PromptServiceImpl) SaveDraft(ctx context.Context, promptDO *entity.Prom
 	}
 
 	return draftInfo, nil
+}
+
+func normalizeDraftModelForWrite(promptDO *entity.Prompt) (*entity.Prompt, error) {
+	if promptDO.PromptDraft == nil || promptDO.PromptDraft.PromptDetail == nil {
+		return promptDO, nil
+	}
+	model, err := entity.PreserveModelConfigForSave(promptDO.PromptDraft.PromptDetail.ModelConfig, nil)
+	if err != nil {
+		return nil, err
+	}
+	result := *promptDO
+	draft := *promptDO.PromptDraft
+	detail := *promptDO.PromptDraft.PromptDetail
+	detail.ModelConfig = model
+	draft.PromptDetail = &detail
+	result.PromptDraft = &draft
+	return &result, nil
 }
 
 // ExpandSnippets expands all snippet references in the prompt's messages
