@@ -49,13 +49,24 @@ func NewPromptManageApplication(
 }
 
 type PromptManageApplicationImpl struct {
-	manageRepo       repo.IManageRepo
-	labelRepo        repo.ILabelRepo
-	promptService    service.IPromptService
-	authRPCProvider  rpc.IAuthProvider
-	userRPCProvider  rpc.IUserProvider
-	auditRPCProvider rpc.IAuditProvider
-	configProvider   conf.IConfigProvider
+	modelReasoningEffortProvider rpc.IModelReasoningEffortProvider
+	manageRepo                   repo.IManageRepo
+	labelRepo                    repo.ILabelRepo
+	promptService                service.IPromptService
+	authRPCProvider              rpc.IAuthProvider
+	userRPCProvider              rpc.IUserProvider
+	auditRPCProvider             rpc.IAuditProvider
+	configProvider               conf.IConfigProvider
+}
+
+func NewPromptManageApplicationWithModelReasoningEffortProvider(
+	promptManageRepo repo.IManageRepo, labelRepo repo.ILabelRepo, promptService service.IPromptService,
+	authRPCProvider rpc.IAuthProvider, userRPCProvider rpc.IUserProvider, auditRPCProvider rpc.IAuditProvider,
+	configProvider conf.IConfigProvider, models rpc.IModelReasoningEffortProvider,
+) manage.PromptManageService {
+	app := NewPromptManageApplication(promptManageRepo, labelRepo, promptService, authRPCProvider, userRPCProvider, auditRPCProvider, configProvider).(*PromptManageApplicationImpl)
+	app.modelReasoningEffortProvider = models
+	return app
 }
 
 func (app *PromptManageApplicationImpl) ListParentPrompt(ctx context.Context, request *manage.ListParentPromptRequest) (r *manage.ListParentPromptResponse, err error) {
@@ -567,7 +578,7 @@ func (app *PromptManageApplicationImpl) SaveDraft(ctx context.Context, request *
 	}
 	savingPromptDTO.PromptDraft.DraftInfo.UserID = ptr.Of(userID)
 	savingPromptDO := convertor.PromptDTO2DO(savingPromptDTO)
-	if err := preserveDraftModelConfig(ctx, app.manageRepo, promptDO, savingPromptDO); err != nil {
+	if err := preserveDraftModelConfig(ctx, app.manageRepo, promptDO, savingPromptDO, app.modelReasoningEffortProvider); err != nil {
 		return r, err
 	}
 
@@ -631,6 +642,9 @@ func (app *PromptManageApplicationImpl) CommitDraft(ctx context.Context, request
 	}
 
 	// commit
+	if err := validatePublishingReasoningEffort(ctx, app.manageRepo, promptDO, app.modelReasoningEffortProvider); err != nil {
+		return r, err
+	}
 	commitDraftParam := repo.CommitDraftParam{
 		PromptID: request.GetPromptID(),
 

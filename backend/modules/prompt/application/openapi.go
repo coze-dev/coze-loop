@@ -69,13 +69,28 @@ func NewPromptOpenAPIApplication(
 }
 
 type PromptOpenAPIApplicationImpl struct {
-	promptService    service.IPromptService
-	promptManageRepo repo.IManageRepo
-	config           conf.IConfigProvider
-	auth             rpc.IAuthProvider
-	rateLimiter      limiter.IRateLimiter
-	collector        collector.ICollectorProvider
-	user             rpc.IUserProvider
+	modelReasoningEffortProvider rpc.IModelReasoningEffortProvider
+	promptService                service.IPromptService
+	promptManageRepo             repo.IManageRepo
+	config                       conf.IConfigProvider
+	auth                         rpc.IAuthProvider
+	rateLimiter                  limiter.IRateLimiter
+	collector                    collector.ICollectorProvider
+	user                         rpc.IUserProvider
+}
+
+func NewPromptOpenAPIApplicationWithModelReasoningEffortProvider(
+	promptService service.IPromptService, promptManageRepo repo.IManageRepo, config conf.IConfigProvider,
+	auth rpc.IAuthProvider, factory limiter.IRateLimiterFactory, collector collector.ICollectorProvider,
+	meter metrics.Meter, user rpc.IUserProvider, models rpc.IModelReasoningEffortProvider,
+) (openapi.PromptOpenAPIService, error) {
+	application, err := NewPromptOpenAPIApplication(promptService, promptManageRepo, config, auth, factory, collector, meter, user)
+	if err != nil {
+		return nil, err
+	}
+	app := application.(*PromptOpenAPIApplicationImpl)
+	app.modelReasoningEffortProvider = models
+	return app, nil
 }
 
 func (p *PromptOpenAPIApplicationImpl) getOpenAPIUserID(ctx context.Context) string {
@@ -282,7 +297,7 @@ func (p *PromptOpenAPIApplicationImpl) SaveDraftOApi(ctx context.Context, req *o
 		},
 	}
 
-	if err := preserveDraftModelConfig(ctx, p.promptManageRepo, promptDO, savingPromptDO); err != nil {
+	if err := preserveDraftModelConfig(ctx, p.promptManageRepo, promptDO, savingPromptDO, p.modelReasoningEffortProvider); err != nil {
 		return r, err
 	}
 	draftInfoDO, err := p.promptService.SaveDraft(ctx, savingPromptDO)
@@ -374,6 +389,9 @@ func (p *PromptOpenAPIApplicationImpl) CommitDraftOApi(ctx context.Context, req 
 		return r, err
 	}
 
+	if err := validatePublishingReasoningEffort(ctx, p.promptManageRepo, promptDO, p.modelReasoningEffortProvider); err != nil {
+		return r, err
+	}
 	err = p.promptManageRepo.CommitDraft(ctx, repo.CommitDraftParam{
 		PromptID:          req.GetPromptID(),
 		UserID:            userID,

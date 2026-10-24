@@ -44,6 +44,27 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+func NewEvaluatorHandlerImplWithModelReasoningEffortProvider(idgen idgen.IIDGenerator,
+	configer conf.IConfiger,
+	auth rpc.IAuthProvider,
+	evaluatorService service.EvaluatorService,
+	evaluatorRecordService service.EvaluatorRecordService,
+	evaluatorTemplateService service.EvaluatorTemplateService,
+	metrics metrics.EvaluatorExecMetrics,
+	userInfoService userinfo.UserInfoService,
+	auditClient audit.IAuditService,
+	benefitService benefit.IBenefitService,
+	fileProvider rpc.IFileProvider,
+	evaluatorSourceServices map[entity.EvaluatorType]service.EvaluatorSourceService,
+	exptResultService service.ExptResultService,
+	evalAsyncRepo repo.IEvalAsyncRepo,
+	models rpc.IModelReasoningEffortProvider,
+) evaluation.EvaluatorService {
+	app := NewEvaluatorHandlerImpl(idgen, configer, auth, evaluatorService, evaluatorRecordService, evaluatorTemplateService, metrics, userInfoService, auditClient, benefitService, fileProvider, evaluatorSourceServices, exptResultService, evalAsyncRepo).(*EvaluatorHandlerImpl)
+	app.modelReasoningEffortProvider = models
+	return app
+}
+
 // NewEvaluatorHandlerImpl 创建 EvaluatorService 实例
 func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 	configer conf.IConfiger,
@@ -81,20 +102,21 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 
 // EvaluatorHandlerImpl 实现 EvaluatorService 接口
 type EvaluatorHandlerImpl struct {
-	idgen                    idgen.IIDGenerator
-	auth                     rpc.IAuthProvider
-	auditClient              audit.IAuditService
-	configer                 conf.IConfiger
-	evaluatorService         service.EvaluatorService
-	evaluatorRecordService   service.EvaluatorRecordService
-	evaluatorTemplateService service.EvaluatorTemplateService
-	metrics                  metrics.EvaluatorExecMetrics
-	userInfoService          userinfo.UserInfoService
-	benefitService           benefit.IBenefitService
-	fileProvider             rpc.IFileProvider
-	evaluatorSourceServices  map[entity.EvaluatorType]service.EvaluatorSourceService
-	exptResultService        service.ExptResultService
-	evalAsyncRepo            repo.IEvalAsyncRepo
+	modelReasoningEffortProvider rpc.IModelReasoningEffortProvider
+	idgen                        idgen.IIDGenerator
+	auth                         rpc.IAuthProvider
+	auditClient                  audit.IAuditService
+	configer                     conf.IConfiger
+	evaluatorService             service.EvaluatorService
+	evaluatorRecordService       service.EvaluatorRecordService
+	evaluatorTemplateService     service.EvaluatorTemplateService
+	metrics                      metrics.EvaluatorExecMetrics
+	userInfoService              userinfo.UserInfoService
+	benefitService               benefit.IBenefitService
+	fileProvider                 rpc.IFileProvider
+	evaluatorSourceServices      map[entity.EvaluatorType]service.EvaluatorSourceService
+	exptResultService            service.ExptResultService
+	evalAsyncRepo                repo.IEvalAsyncRepo
 }
 
 // ListEvaluators 按查询条件查询 evaluator
@@ -312,6 +334,9 @@ func (e *EvaluatorHandlerImpl) CreateEvaluator(ctx context.Context, request *eva
 	}
 
 	// 统一走 CreateEvaluator，是否创建tag由repo层依据 do.Builtin 决定
+	if err := validateActiveEvaluatorReasoningEffort(ctx, e.modelReasoningEffortProvider, evaluatorDO.SpaceID, evaluatorDO, nil); err != nil {
+		return nil, err
+	}
 	var evaluatorID int64
 	evaluatorID, err = e.evaluatorService.CreateEvaluator(ctx, evaluatorDO, request.GetCid())
 	if err != nil {
@@ -534,6 +559,9 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorDraft(ctx context.Context, request
 	evaluatorDTO.DraftSubmitted = ptr.Of(false)
 	evaluatorDO, err = evaluatorconvertor.ConvertEvaluatorDTO2DO(evaluatorDTO)
 	if err != nil {
+		return nil, err
+	}
+	if err := validateActiveEvaluatorReasoningEffort(ctx, e.modelReasoningEffortProvider, previous.SpaceID, evaluatorDO, previous); err != nil {
 		return nil, err
 	}
 	evaluatorDO.PreserveDraftConfig(previous)
@@ -875,6 +903,9 @@ func (e *EvaluatorHandlerImpl) SubmitEvaluatorVersion(ctx context.Context, reque
 		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
 	})
 	if err != nil {
+		return nil, err
+	}
+	if err := validateSubmittingEvaluatorReasoningEffort(ctx, e.modelReasoningEffortProvider, e.evaluatorService, evaluatorDO); err != nil {
 		return nil, err
 	}
 	evaluatorDO, err = e.evaluatorService.SubmitEvaluatorVersion(ctx, evaluatorDO, request.GetVersion(), request.GetDescription(), request.GetCid())
