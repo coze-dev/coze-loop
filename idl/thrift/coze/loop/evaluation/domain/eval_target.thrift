@@ -437,4 +437,5 @@ struct EvalTargetRunError {
 
 struct PromptRuntimeParam {
     1: optional common.ModelConfig model_config
+    2: optional string prompt_model_config
 }

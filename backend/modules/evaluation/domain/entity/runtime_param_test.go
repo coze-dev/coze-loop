@@ -4,11 +4,37 @@
 package entity
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestPromptRuntimeParamNativeEnvelopeRoundtrip(t *testing.T) {
+	envelope := `{"protocol":"oss_prompt","model_config":{"model_id":"9007199254740993","json_mode":false,"thinking":{"reasoning_effort":"high"}}}`
+	raw, err := json.Marshal(map[string]string{"prompt_model_config": envelope})
+	require.NoError(t, err)
+	parsed, err := (&PromptRuntimeParam{}).ParseFromJSON(string(raw))
+	require.NoError(t, err)
+	var roundtrip struct {
+		PromptModelConfig *string `json:"prompt_model_config"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(parsed.GetJSONValue()), &roundtrip))
+	require.Equal(t, &envelope, roundtrip.PromptModelConfig)
+}
+
+func TestPromptRuntimeParamNativeConflictsWithEvaluationConfig(t *testing.T) {
+	raw, err := json.Marshal(map[string]json.RawMessage{
+		"model_config":        json.RawMessage(`{}`),
+		"prompt_model_config": json.RawMessage(`"{\"protocol\":\"oss_prompt\",\"model_config\":{}}"`),
+	})
+	require.NoError(t, err)
+	parsed, err := (&PromptRuntimeParam{}).ParseFromJSON(string(raw))
+	require.Error(t, err)
+	require.True(t, parsed == nil, "an invalid runtime param must return a nil interface")
+}
 
 func TestPromptRuntimeParam_GetJSONDemo(t *testing.T) {
 	param := &PromptRuntimeParam{}

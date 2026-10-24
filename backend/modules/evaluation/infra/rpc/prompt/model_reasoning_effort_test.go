@@ -20,7 +20,8 @@ func TestPromptATypedThinkingAndExtraCrossesOSSInternalRPC(t *testing.T) {
 	raw := `{"model_config":{"model_id":"7590122197455058946","thinking":{"reasoning_effort":"Tier_V2","thinking_option":"enabled"},"json_ext":"{\"reasoning\":{\"summary\":\"auto\"}}"}}`
 	client.EXPECT().ExecuteInternal(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *execute.ExecuteInternalRequest, _ ...callopt.Option) (*execute.ExecuteInternalResponse, error) {
 		require.NotNil(t, req.OverridePromptParams.ModelConfig.Thinking)
-		require.Equal(t, "Tier_V2", string(*req.OverridePromptParams.ModelConfig.Thinking.ReasoningEffort))
+		require.Equal(t, gptr.Of("Tier_V2"), req.OverridePromptParams.ModelConfig.Thinking.ReasoningEffortValue)
+		require.Nil(t, req.OverridePromptParams.ModelConfig.Thinking.ReasoningEffort)
 		require.Equal(t, gptr.Of(promptdto.ThinkingOption("enabled")), req.OverridePromptParams.ModelConfig.Thinking.ThinkingOption)
 		require.JSONEq(t, `{"reasoning":{"summary":"auto"}}`, gptr.Indirect(req.OverridePromptParams.ModelConfig.Extra))
 		return &execute.ExecuteInternalResponse{}, nil

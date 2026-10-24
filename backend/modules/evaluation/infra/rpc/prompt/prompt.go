@@ -18,8 +18,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/js_conv"
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 type PromptRPCAdapter struct {
@@ -54,24 +52,30 @@ func (p PromptRPCAdapter) ExecutePrompt(ctx context.Context, spaceID int64, para
 	}
 	req.Messages = ConvertMessages2Prompt(messages)
 
-	if runtimeParam, err := p.parseRuntimeParam(ctx, gptr.Indirect(param.RuntimeParam)); err != nil {
-		logs.CtxError(ctx, "prompt execute parse runtime param fail, err=%v", err)
-	} else {
-		if runtimeParam != nil && runtimeParam.ModelConfig != nil {
-			if err := runtimeParam.ModelConfig.ValidateThinking(); err != nil {
-				return nil, err
-			}
-			req.OverridePromptParams = &prompt.OverridePromptParams{
-				ModelConfig: &prompt.ModelConfig{
-					ModelID:     runtimeParam.ModelConfig.ModelID,
-					MaxTokens:   runtimeParam.ModelConfig.MaxTokens,
-					Temperature: runtimeParam.ModelConfig.Temperature,
-					TopP:        runtimeParam.ModelConfig.TopP,
-					Extra:       runtimeParam.ModelConfig.JSONExt,
-					Thinking:    thinkingConfig(runtimeParam.ModelConfig.Thinking),
-				},
-			}
+	runtimeParam, err := p.parseRuntimeParam(ctx, gptr.Indirect(param.RuntimeParam))
+	if err != nil {
+		return nil, err
+	}
+	if runtimeParam.ModelConfig != nil {
+		if err := runtimeParam.ModelConfig.ValidateThinking(); err != nil {
+			return nil, err
 		}
+		req.OverridePromptParams = &prompt.OverridePromptParams{
+			ModelConfig: &prompt.ModelConfig{
+				ModelID:     runtimeParam.ModelConfig.ModelID,
+				MaxTokens:   runtimeParam.ModelConfig.MaxTokens,
+				Temperature: runtimeParam.ModelConfig.Temperature,
+				TopP:        runtimeParam.ModelConfig.TopP,
+				Extra:       runtimeParam.ModelConfig.JSONExt,
+				Thinking:    thinkingConfig(runtimeParam.ModelConfig.Thinking),
+			},
+		}
+	} else if runtimeParam.PromptModelConfig != nil {
+		modelConfig, err := promptModelConfigFromNative(*runtimeParam.PromptModelConfig)
+		if err != nil {
+			return nil, err
+		}
+		req.OverridePromptParams = &prompt.OverridePromptParams{ModelConfig: modelConfig}
 	}
 
 	resp, err := p.executeClient.ExecuteInternal(ctx, req)
@@ -103,7 +107,7 @@ func thinkingConfig(input *entity.ThinkingConfig) *prompt.ThinkingConfig {
 	if input == nil {
 		return nil
 	}
-	return &prompt.ThinkingConfig{ThinkingOption: input.ThinkingOption, ReasoningEffort: input.ReasoningEffort, BudgetTokens: input.BudgetTokens}
+	return &prompt.ThinkingConfig{ThinkingOption: input.ThinkingOption, ReasoningEffortValue: input.ReasoningEffort, BudgetTokens: input.BudgetTokens}
 }
 
 func (p PromptRPCAdapter) convMsgToContent(msg *prompt.Message) *entity.Content {
@@ -123,11 +127,7 @@ func (p PromptRPCAdapter) parseRuntimeParam(ctx context.Context, rtp string) (*e
 	if len(rtp) == 0 {
 		return &entity.PromptRuntimeParam{}, nil
 	}
-	runtimeParam := new(entity.PromptRuntimeParam)
-	if err := js_conv.GetUnmarshaler()([]byte(rtp), runtimeParam); err != nil {
-		return runtimeParam, errorx.Wrapf(err, "PromptRuntimeParam json unmarshal fail, raw: %s", rtp)
-	}
-	return runtimeParam, nil
+	return entity.ParsePromptRuntimeParam(rtp)
 }
 
 func (p PromptRPCAdapter) GetPrompt(ctx context.Context, spaceID, promptID int64, params rpc.GetPromptParams) (prompt *rpc.LoopPrompt, err error) {
