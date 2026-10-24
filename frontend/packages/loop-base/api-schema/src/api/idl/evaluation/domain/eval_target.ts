@@ -342,5 +342,6 @@ export interface EvalTargetRunError {
   message?: string,
 }
 export interface PromptRuntimeParam {
-  model_config?: common.ModelConfig
+  model_config?: common.ModelConfig,
+  prompt_model_config?: string,
 }
