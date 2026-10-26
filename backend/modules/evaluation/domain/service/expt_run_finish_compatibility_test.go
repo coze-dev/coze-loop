@@ -66,6 +66,7 @@ type checkFinishProbe struct {
 func (p *checkFinishProbe) FinishCurrentRun(context.Context, *entity.ExptScheduleEvent) (*entity.ExptRunFinishResult, error) {
 	return p.result, p.err
 }
+
 func (p *checkFinishProbe) FinishCurrentRunWithHeldTickLock(context.Context, *entity.ExptScheduleEvent) (*entity.ExptRunFinishResult, error) {
 	return p.result, p.err
 }
@@ -81,6 +82,7 @@ func (i *cleanupTestIdem) Exist(_ context.Context, key string) (bool, error) {
 	i.keys = append(i.keys, key)
 	return i.seen, i.readErr
 }
+
 func (i *cleanupTestIdem) Set(_ context.Context, key string, ttl time.Duration) error {
 	i.keys = append(i.keys, key)
 	i.ttl = ttl
@@ -90,6 +92,7 @@ func (i *cleanupTestIdem) Set(_ context.Context, key string, ttl time.Duration) 
 	i.seen = true
 	return nil
 }
+
 func (i *cleanupTestIdem) SetNX(ctx context.Context, key string, ttl time.Duration) (bool, error) {
 	if i.seen {
 		return false, nil
@@ -198,6 +201,7 @@ func TestRunFinishCleanupSetFailureHasExplicitReplayWindow(t *testing.T) {
 	require.True(t, idem.seen)
 	require.Equal(t, 2, count, "marker failure after external success is a documented replay window")
 }
+
 func TestRunFinishCleanupMissingIdemFailsClosed(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	factory, _ := finishRealLockerFactory(t)

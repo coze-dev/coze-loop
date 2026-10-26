@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -17,7 +18,6 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"os"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -83,6 +83,7 @@ func newCurrentResultFixture(t *testing.T, token string) *currentResultFixture {
 	f.port = port
 	return f
 }
+
 func (f *currentResultFixture) token(token string) {
 	f.t.Helper()
 	ext := map[string]string{"other": "keep"}
@@ -95,6 +96,7 @@ func (f *currentResultFixture) token(token string) {
 	require.NoError(f.t, err)
 	require.NoError(f.t, f.conn.Model(&model.ExptItemResult{}).Where("space_id=? AND expt_id=? AND item_id=?", f.space, f.expt, f.item).Update("ext", raw).Error)
 }
+
 func (f *currentResultFixture) source() *entity.ExptCurrentItemRunSource {
 	f.t.Helper()
 	s, err := f.port.GetCurrentItemRunSource(context.Background(), f.space, f.expt, f.run, f.item)
@@ -102,6 +104,7 @@ func (f *currentResultFixture) source() *entity.ExptCurrentItemRunSource {
 	require.NotNil(f.t, s)
 	return s
 }
+
 func (f *currentResultFixture) snapshot() map[string]string {
 	f.t.Helper()
 	out := map[string]string{}
@@ -114,6 +117,7 @@ func (f *currentResultFixture) snapshot() map[string]string {
 	}
 	return out
 }
+
 func (f *currentResultFixture) result(source *entity.ExptCurrentItemRunSource) *entity.ExptTurnResultRunLog {
 	r := *source.Turns[0]
 	r.Status = entity.TurnRunState_Success
@@ -176,6 +180,7 @@ func TestCurrentResultMySQLLateSource(t *testing.T) {
 		})
 	}
 }
+
 func TestCurrentResultMySQLCurrentAtomic(t *testing.T) {
 	for _, kind := range []string{"store", "complete", "yield", "budget", "first_turn_failed", "terminal", "oldmap", "builtin0"} {
 		t.Run(kind, func(t *testing.T) {
@@ -237,6 +242,7 @@ func TestCurrentResultMySQLCurrentAtomic(t *testing.T) {
 		})
 	}
 }
+
 func TestCurrentResultMySQLRollback(t *testing.T) {
 	for _, kind := range []string{"store", "complete", "yield", "budget"} {
 		for _, table := range []string{"expt_item_result_run_log", "expt_turn_result_run_log", "expt_turn_result", "expt_item_result", "expt_stats"} {
@@ -272,6 +278,7 @@ func TestCurrentResultMySQLRollback(t *testing.T) {
 		}
 	}
 }
+
 func TestCurrentResultMySQLConcurrentAdmission(t *testing.T) {
 	f := newCurrentResultFixture(t, "rq1")
 	source := f.source()
