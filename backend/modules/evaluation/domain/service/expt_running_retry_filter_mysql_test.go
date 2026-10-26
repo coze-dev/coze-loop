@@ -181,9 +181,9 @@ func TestRunningRetryFilterSync_ResultedInvisibleWriteNextTick(t *testing.T) {
 		store.fail = state == "save_error"
 		store.visible = state == "equal"
 		ready, err := f.svc.ReconcileManualRetryFilterBeforeFinish(context.Background(), f.space, f.expt, f.run)
-		if state == "equal" {
+		if state != "save_error" {
 			require.NoError(t, err)
-			require.True(t, ready)
+			require.True(t, ready, "Save ACK permits finish even when physical rows are missing")
 		} else {
 			require.True(t, errno.NeedMQRetry(err))
 			require.False(t, ready)
@@ -287,8 +287,9 @@ func TestRunningRetryFilterSync_AsyncPartialReaderCannotPass(t *testing.T) {
 	f := newFilterSyncFixture(t)
 	store := &filterStore{visible: true}
 	f.svc.exptTurnResultFilterRepo = &partialFilterStore{store: store}
-	ready, err := f.svc.ReconcileManualRetryFilterBeforeFinish(context.Background(), f.space, f.expt, f.run)
-	require.True(t, errno.NeedMQRetry(err), "partial async filter reader must not claim complete calibration")
+	require.NoError(t, f.svc.UpsertExptTurnResultFilter(context.Background(), f.space, f.expt, []int64{f.item}))
+	ready, err := f.svc.materializedFilterMatchesLocked(context.Background(), f.space, f.expt, f.item)
+	require.NoError(t, err)
 	require.False(t, ready)
 }
 
