@@ -105,9 +105,10 @@ func TestResultPublishDirectNoOldScore(t *testing.T) {
 			before := f.snapshot()
 			var result []*entity.EvaluatorRecord
 			var fault error
-			if kind == "read_error" {
+			switch kind {
+			case "read_error":
 				fault = errors.New("evaluator storage unavailable")
-			} else if kind == "no_score" {
+			case "no_score":
 				result = []*entity.EvaluatorRecord{publicationRecord(f, nil)}
 			}
 			records.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).Return(result, fault).AnyTimes()
@@ -178,19 +179,21 @@ func TestResultPublishPreparedRealWritepoints(t *testing.T) {
 					_ = tx.AddError(fault)
 				}
 			}
-			if point == "delete_ref" {
+			switch point {
+			case "delete_ref":
 				require.NoError(t, f.conn.Callback().Delete().Before("gorm:delete").Register(hook, callback))
-			} else if point == "insert_ref" {
+			case "insert_ref":
 				require.NoError(t, f.conn.Callback().Create().Before("gorm:create").Register(hook, callback))
-			} else {
+			default:
 				require.NoError(t, f.conn.Callback().Update().Before("gorm:update").Register(hook, callback))
 			}
 			applied, err := svc.PublishPreparedItemResult(context.Background(), publication, nil)
-			if point == "delete_ref" {
+			switch point {
+			case "delete_ref":
 				require.NoError(t, f.conn.Callback().Delete().Remove(hook))
-			} else if point == "insert_ref" {
+			case "insert_ref":
 				require.NoError(t, f.conn.Callback().Create().Remove(hook))
-			} else {
+			default:
 				require.NoError(t, f.conn.Callback().Update().Remove(hook))
 			}
 			require.Positive(t, hits)
@@ -209,12 +212,13 @@ func TestResultPublishCurrentOnceAndFirstFailure(t *testing.T) {
 				require.NoError(t, f.conn.Model(&model.ExptItemResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", int32(entity.ItemRunState_Success)).Error)
 				require.NoError(t, f.conn.Model(&model.ExptStats{}).Where("space_id=?", f.space).Updates(map[string]any{"processing_cnt": 1, "success_cnt": 1}).Error)
 			}
-			if kind == "first_failed" {
+			switch kind {
+			case "first_failed":
 				require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", int32(entity.ItemRunState_Fail)).Error)
 				require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=?", f.space).Updates(map[string]any{"status": int32(entity.TurnRunState_Fail), "evaluator_result_ids": []byte(`null`)}).Error)
 				require.NoError(t, f.conn.Create(&model.ExptTurnResult{ID: f.base + 420, SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, ItemID: f.item, ItemVersionID: f.version, TurnID: f.base + 22, Status: int32(entity.TurnRunState_Processing), WeightedScore: gptr.Of(88.0)}).Error)
 				require.NoError(t, f.conn.Create(&model.ExptTurnResultRunLog{ID: f.base + 520, SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, ItemID: f.item, ItemVersionID: f.version, TurnID: f.base + 22, Status: int32(entity.TurnRunState_Queueing)}).Error)
-			} else if kind == "old_map" {
+			case "old_map":
 				raw, _ := json.Marshal(&entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{f.base + 51: f.base + 61}})
 				require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=?", f.space).Update("evaluator_result_ids", raw).Error)
 			}

@@ -125,14 +125,6 @@ func (f *lateWriteFixture) snapshot() map[string]string {
 	}
 	return out
 }
-func (f *lateWriteFixture) result(source *entity.ExptCurrentItemRunSource) *entity.ExptTurnResultRunLog {
-	r := *source.Turns[0]
-	r.Status = entity.TurnRunState_Success
-	r.TargetResultID = f.base + 71
-	r.EvaluatorResultIds = &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{{VersionID: f.base + 51, Alias: "alias", RecordID: f.base + 81}}}
-	return &r
-}
-
 func (f *lateWriteFixture) itemRepo() repo.IExptItemResultRepo {
 	return f.port.(repo.IExptItemResultRepo)
 }

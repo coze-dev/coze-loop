@@ -135,7 +135,7 @@ func TestHandleCurrentEventErrStaleBeforeFrozenBudgetRead(t *testing.T) {
 		t.Run(stale, func(t *testing.T) {
 			svc, port, _, source, event, held := retryBudgetHandler(t)
 			current := *source
-			var observed *entity.ExptCurrentItemRunSource = &current
+			observed := &current
 			switch stale {
 			case "request":
 				current.Current.RequestID = "replacement-request"

@@ -128,13 +128,13 @@ func TestRunFinishMySQLRollbackEveryWriteAndCommit(t *testing.T) {
 		t.Run(table, func(t *testing.T) {
 			f := terminalFinishFixture(t)
 			before := f.snapshot()
-			var provider db.Provider = f.provider
+			provider := f.provider
 			if table == "commit" {
 				provider = finishFaultProvider{provider}
 			} else {
 				require.NoError(t, f.conn.Callback().Update().Before("gorm:update").Register("finish_fault", func(tx *gorm.DB) {
 					if tx.Statement.Table == table {
-						tx.AddError(errors.New("finish write fault"))
+						_ = tx.AddError(errors.New("finish write fault"))
 					}
 				}))
 			}
@@ -283,7 +283,7 @@ type finishCommitFaultConnection struct {
 }
 
 func (c *finishCommitFaultConnection) Commit() error {
-	_ = c.TxCommitter.Rollback()
+	_ = c.Rollback()
 	return errors.New("commit fault at transaction commit boundary")
 }
 

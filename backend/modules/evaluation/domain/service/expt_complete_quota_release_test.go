@@ -66,7 +66,7 @@ func stubOriginalQuotaObservations(items *repoMocks.MockIExptItemResultRepo) {
 		for _, log := range logs {
 			if log != nil && !seen[log.ItemID] {
 				seen[log.ItemID] = true
-				out = append(out, &repo.ExptDispatchObservation{ItemID: log.ItemID, Status: int32(log.Status)})
+				out = append(out, &repo.ExptDispatchObservation{ItemID: log.ItemID, Status: log.Status})
 			}
 		}
 		return out, nil

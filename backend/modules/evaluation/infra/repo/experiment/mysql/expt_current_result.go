@@ -155,6 +155,7 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 	}
 	return source, nil
 }
+
 func validateCurrentEvaluatorRefs(refs *entity.EvaluatorResults) error {
 	if refs == nil {
 		return nil
@@ -187,6 +188,7 @@ func validateCurrentEvaluatorRefs(refs *entity.EvaluatorResults) error {
 	}
 	return nil
 }
+
 func currentSourceMatches(expected, actual *entity.ExptCurrentItemRunSource) bool {
 	if expected == nil || actual == nil {
 		return false
@@ -212,6 +214,7 @@ func currentSourceMatches(expected, actual *entity.ExptCurrentItemRunSource) boo
 	}
 	return true
 }
+
 func (dao *exptItemResultDAOImpl) StoreCurrentTurnRunResult(ctx context.Context, source *entity.ExptCurrentItemRunSource, result *entity.ExptTurnResultRunLog) (bool, error) {
 	if source == nil || result == nil {
 		return false, fmt.Errorf("execution source or turn result missing")
@@ -252,6 +255,7 @@ func (dao *exptItemResultDAOImpl) StoreCurrentTurnRunResult(ctx context.Context,
 	}, db.WithMaster())
 	return applied && err == nil, err
 }
+
 func (dao *exptItemResultDAOImpl) CompleteCurrentItemRun(ctx context.Context, source *entity.ExptCurrentItemRunSource, write *entity.ExptCurrentItemRunWrite) (bool, error) {
 	if source == nil || write == nil || write.RetryTimes < 0 {
 		return false, fmt.Errorf("execution source or write missing")
@@ -277,7 +281,7 @@ func (dao *exptItemResultDAOImpl) CompleteCurrentItemRun(ctx context.Context, so
 			}
 		}
 		c := actual.Current
-		if entity.IsItemRunFinished(c.Status) && !(c.Status == entity.ItemRunState_Terminal && c.ResultState == entity.ExptItemResultStateDefault) {
+		if entity.IsItemRunFinished(c.Status) && (c.Status != entity.ItemRunState_Terminal || c.ResultState != entity.ExptItemResultStateDefault) {
 			return nil
 		}
 		if !write.RetryOnly && len(actual.Turns) != len(actual.CanonicalTurns) {

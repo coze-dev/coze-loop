@@ -611,7 +611,7 @@ func (p *dispatchCommitFailurePool) BeginTx(ctx context.Context, options *sql.Tx
 type dispatchCommitFailureTx struct{ *sql.Tx }
 
 func (t *dispatchCommitFailureTx) Commit() error {
-	if err := t.Tx.Rollback(); err != nil {
+	if err := t.Rollback(); err != nil {
 		return err
 	}
 	return errors.New("injected MySQL commit failure")
