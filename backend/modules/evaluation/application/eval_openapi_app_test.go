@@ -6,11 +6,17 @@ package application
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net"
 	"strconv"
+	"syscall"
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/bytedance/gg/gptr"
+	"github.com/cloudwego/kitex/pkg/kerrors"
+	goredis "github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -40,6 +46,7 @@ import (
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	experimentredisdao "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/redis/dao"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -2199,6 +2206,102 @@ func TestEvalOpenAPIApplication_UpdateEvaluationSetSchemaOApi(t *testing.T) {
 	}
 }
 
+func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult_ContextErrors(t *testing.T) {
+	t.Parallel()
+
+	connectionErr := &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED}
+	tests := []struct {
+		name     string
+		actx     *entity.EvalAsyncCtx
+		repoErr  error
+		wantMiss bool
+	}{
+		{name: "redis nil", repoErr: goredis.Nil, wantMiss: true},
+		{name: "joined redis nil", repoErr: errors.Join(goredis.Nil, errors.New("redis: nil")), wantMiss: true},
+		{name: "wrapped redis nil", repoErr: fmt.Errorf("load async context: %w", goredis.Nil), wantMiss: true},
+		{name: "stack wrapped redis nil", repoErr: errorx.Wrapf(goredis.Nil, "redis get fail"), wantMiss: true},
+		{name: "nil context", wantMiss: true},
+		{name: "redis timeout", repoErr: context.DeadlineExceeded},
+		{name: "redis connection refused", repoErr: connectionErr},
+		{name: "wrapped redis connection refused", repoErr: errorx.Wrapf(connectionErr, "redis get fail")},
+		{name: "error takes precedence over context", actx: &entity.EvalAsyncCtx{}, repoErr: context.DeadlineExceeded},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+			req := newSuccessInvokeResultReq(11, 101)
+			asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "101").Return(tt.actx, tt.repoErr)
+			app := &EvalOpenAPIApplication{
+				asyncRepo: asyncRepo,
+				targetSvc: servicemocks.NewMockIEvalTargetService(ctrl),
+				publisher: eventmocks.NewMockExptEventPublisher(ctrl),
+			}
+
+			resp, err := app.ReportEvalTargetInvokeResult_(context.Background(), req)
+			require.Error(t, err)
+			assert.Nil(t, resp)
+			statusErr, isStatusErr := errorx.FromStatusError(err)
+			if tt.wantMiss {
+				require.True(t, isStatusErr, "missing context must return a business status error")
+				assert.Equal(t, int32(errno.ResourceNotFoundCode), statusErr.Code())
+				bizErr, isBizErr := kerrors.FromBizStatusError(err)
+				require.True(t, isBizErr)
+				assert.Equal(t, "0", bizErr.BizExtra()["biz_err_affect_stability"])
+				return
+			}
+			assert.True(t, err == tt.repoErr, "Redis failures must be returned unchanged")
+			assert.False(t, isStatusErr, "Redis failures must remain system errors")
+		})
+	}
+}
+
+func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult_RedisErrors(t *testing.T) {
+	t.Parallel()
+
+	for _, name := range []string{"missing key", "connection refused", "deadline exceeded"} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			server := miniredis.RunT(t)
+			client, err := infraredis.NewClient(&goredis.Options{
+				Addr: server.Addr(), MaxRetries: -1, DialTimeout: 100 * time.Millisecond,
+			})
+			require.NoError(t, err)
+			raw, ok := infraredis.Unwrap(client)
+			require.True(t, ok)
+			t.Cleanup(func() { _ = raw.Close() })
+			ctx := context.Background()
+			if name == "connection refused" {
+				server.Close()
+			} else if name == "deadline exceeded" {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithDeadline(ctx, time.Now().Add(-time.Second))
+				defer cancel()
+			}
+			app := &EvalOpenAPIApplication{
+				asyncRepo: experimentrepo.NewEvalAsyncRepo(experimentredisdao.NewEvalAsyncDAO(client, nil)),
+			}
+
+			resp, err := app.ReportEvalTargetInvokeResult_(ctx, newSuccessInvokeResultReq(11, 101))
+			require.Error(t, err)
+			assert.Nil(t, resp)
+			statusErr, isStatusErr := errorx.FromStatusError(err)
+			switch name {
+			case "missing key":
+				require.True(t, isStatusErr)
+				assert.Equal(t, int32(errno.ResourceNotFoundCode), statusErr.Code())
+			case "connection refused":
+				assert.ErrorIs(t, err, syscall.ECONNREFUSED)
+				assert.False(t, isStatusErr)
+			case "deadline exceeded":
+				assert.ErrorIs(t, err, context.DeadlineExceeded)
+				assert.False(t, isStatusErr)
+			}
+		})
+	}
+}
+
 func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 	t.Parallel()
 
@@ -2291,6 +2394,29 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantErr: false,
+		},
+		{
+			name: "success with event",
+			req:  successReq,
+			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher, configer *configermocks.MockIConfiger) {
+				event := &entity.ExptItemEvalEvent{SpaceID: 44, ExptID: 1, ExptRunID: 2, EvalSetItemID: 3}
+				actx := &entity.EvalAsyncCtx{AsyncUnixMS: time.Now().Add(-100 * time.Millisecond).UnixMilli(), Event: event}
+				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "404").Return(actx, nil)
+				report := targetSvc.EXPECT().ReportInvokeRecords(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *entity.ReportTargetRecordParam) error {
+					assert.Equal(t, int64(44), param.SpaceID)
+					assert.Equal(t, int64(404), param.RecordID)
+					assert.Equal(t, entity.EvalTargetRunStatusSuccess, param.Status)
+					return nil
+				})
+				configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(&entity.TargetTrajectoryConf{})
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).After(report).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration, option func(*entity.ExptItemEvalEvent)) error {
+					require.NotNil(t, duration)
+					assert.Equal(t, 50*time.Second, *duration)
+					option(evt)
+					assert.True(t, evt.AsyncReportTrigger)
+					return nil
+				})
+			},
 		},
 		{
 			name: "success with event on failure status",
