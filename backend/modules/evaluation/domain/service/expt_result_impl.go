@@ -873,9 +873,13 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 					})
 				}
 			}
+			// 如果errOccur为true，直接跳过后续filter流程，继续执行ListTurnResult
 			if errOccur {
-				// 筛选失败必须返回错误，避免用空 itemIDs 查询未筛选结果并覆盖原始错误。
-				return nil, nil, 0, err
+				// item_key 强筛选请求 fail-loud：继续走下去会用空 itemIDs + 原分页查 RDS，
+				// 等于未筛选全量，且覆盖原始错误
+				if filterAccelerator.HasItemKeyFilter() {
+					return nil, nil, 0, err
+				}
 			} else {
 				page = entity.Page{} // filter表查询后，后续无需再带分页条件
 			}

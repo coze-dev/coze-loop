@@ -175,8 +175,11 @@ func (e *ExptTurnResultFilterRepoImpl) QueryItemIDStates(ctx context.Context, fi
 	itemIDStates, total, err := e.exptTurnResultFilterDAO.QueryItemIDStates(ctx, cond)
 	if err != nil {
 		logs.CtxError(ctx, "QueryItemIDStates failed: %v", err)
-		// 查询失败不能当作筛选命中零条。
-		return nil, 0, err
+		// item_key 强筛选请求必须透传错误：吞错返回空集会被上层当真实零命中，
+		// 且触发 service 层无筛选回退，静默返回未筛选全量。
+		if filter.HasItemKeyFilter() {
+			return nil, 0, err
+		}
 	}
 	itemID2ItemRunState := make(map[int64]entity.ItemRunState)
 	for itemIDStr, status := range itemIDStates {
