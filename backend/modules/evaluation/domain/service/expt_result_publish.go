@@ -5,9 +5,10 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/bytedance/gg/gptr"
 	"sort"
 	"time"
+
+	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
@@ -38,9 +39,11 @@ func (e *ExptResultServiceImpl) GetItemResultPublishSource(ctx context.Context, 
 	}
 	return source, nil
 }
+
 func publicationReady(source *entity.ExptItemResultPublishSource) bool {
 	return source != nil && source.Source != nil && source.ItemLog != nil && source.ItemLog.ResultState == int32(entity.ExptItemResultStateLogged) && entity.IsItemRunFinished(entity.ItemRunState(source.ItemLog.Status))
 }
+
 func (e *ExptResultServiceImpl) PrepareItemResultPublication(ctx context.Context, source *entity.ExptItemResultPublishSource, expt *entity.Experiment) (*entity.ExptItemResultPublication, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, errno.WrapMQRetryErr(err)
@@ -212,6 +215,7 @@ func (e *ExptResultServiceImpl) PrepareItemResultPublication(ctx context.Context
 	}
 	return publication, nil
 }
+
 func (e *ExptResultServiceImpl) PublishPreparedItemResult(ctx context.Context, publication *entity.ExptItemResultPublication, beforeCommit func(context.Context, *entity.ExptItemResultPublishSource) error) (bool, error) {
 	if err := ctx.Err(); err != nil {
 		return false, errno.WrapMQRetryErr(err)

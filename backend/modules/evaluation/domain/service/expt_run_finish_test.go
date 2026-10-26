@@ -4,8 +4,10 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
@@ -20,9 +22,6 @@ import (
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	mysqlmodel "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/redis/go-redis/v9"
-
-	"errors"
-	"testing"
 
 	idemmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
 	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
@@ -44,6 +43,7 @@ type naturalFinishProbe struct {
 func (p *naturalFinishProbe) FinishCurrentRun(ctx context.Context, event *entity.ExptScheduleEvent) (*entity.ExptRunFinishResult, error) {
 	return p.FinishCurrentRunWithHeldTickLock(ctx, event)
 }
+
 func (p *naturalFinishProbe) FinishCurrentRunWithHeldTickLock(context.Context, *entity.ExptScheduleEvent) (*entity.ExptRunFinishResult, error) {
 	p.calls++
 	return &entity.ExptRunFinishResult{Disposition: p.disposition}, p.err
@@ -72,6 +72,7 @@ func TestRunFinishCommonEndpointUsesComposition(t *testing.T) {
 		})
 	}
 }
+
 func TestRunFinishCommonCalibrationBlocksComposition(t *testing.T) {
 	for _, fault := range []error{nil, errors.New("calibration unavailable")} {
 		ctrl := gomock.NewController(t)
@@ -84,6 +85,7 @@ func TestRunFinishCommonCalibrationBlocksComposition(t *testing.T) {
 		require.Zero(t, manager.calls)
 	}
 }
+
 func TestRunFinishRescanIncludesLogged(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	items := repomocks.NewMockIExptItemResultRepo(ctrl)
@@ -128,6 +130,7 @@ func TestRunFinishManagerCommitFailureAndPendingHaveZeroCleanup(t *testing.T) {
 		require.Equal(t, 1, port.calls)
 	}
 }
+
 func TestRunFinishManagerCurrentRepositoryFailsClosed(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	manager := &ExptMangerImpl{itemResultRepo: &finishCurrentItemRepo{IExptItemResultRepo: repomocks.NewMockIExptItemResultRepo(ctrl)}, mutex: lockmocks.NewMockILocker(ctrl)}
@@ -305,6 +308,7 @@ func TestRunFinishActualModesCommitThenCleanupRetry(t *testing.T) {
 		})
 	}
 }
+
 func lateWriteSnapshot(f *lateWriteFixture) map[string]any {
 	result := map[string]any{}
 	for _, table := range []string{"experiment", "expt_run_log", "expt_stats"} {
@@ -329,6 +333,7 @@ func TestRunFinishDirectAcquiresTickAndLeaseLossStopsSQL(t *testing.T) {
 	require.True(t, errno.NeedMQRetry(err))
 	require.Zero(t, port.calls)
 }
+
 func TestRunFinishHeldHelperCancelledLeaseStopsSQL(t *testing.T) {
 	port := &finishRepoProbe{}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -338,6 +343,7 @@ func TestRunFinishHeldHelperCancelledLeaseStopsSQL(t *testing.T) {
 	require.True(t, errno.NeedMQRetry(err))
 	require.Zero(t, port.calls)
 }
+
 func TestRunFinishCleanupLostLeaseStopsQuotaAndNotifications(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	locker := lockmocks.NewMockILocker(ctrl)

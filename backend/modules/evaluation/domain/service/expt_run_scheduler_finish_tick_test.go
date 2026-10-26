@@ -32,12 +32,15 @@ type finishTickMode struct {
 func (m *finishTickMode) ExptStart(context.Context, *entity.ExptScheduleEvent, *entity.Experiment) error {
 	return m.startErr
 }
+
 func (m *finishTickMode) ScheduleStart(context.Context, *entity.ExptScheduleEvent, *entity.Experiment) error {
 	return m.scheduleErr
 }
+
 func (m *finishTickMode) ScanEvalItems(context.Context, *entity.ExptScheduleEvent, *entity.Experiment) ([]*entity.ExptEvalItem, []*entity.ExptEvalItem, []*entity.ExptEvalItem, error) {
 	return nil, nil, nil, m.scanErr
 }
+
 func (m *finishTickMode) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (bool, error) {
 	if m.beforeEnd != nil {
 		m.beforeEnd()
@@ -73,9 +76,11 @@ type finishTickFixture struct {
 func newFinishTickFixture(t *testing.T, runMode entity.ExptRunMode, dispatch string) *finishTickFixture {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	event := &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2, ExptType: entity.ExptType_Offline, ExptRunMode: runMode,
+	event := &entity.ExptScheduleEvent{
+		SpaceID: 3, ExptID: 1, ExptRunID: 2, ExptType: entity.ExptType_Offline, ExptRunMode: runMode,
 		CreatedAt: time.Now().Unix(), Ext: map[string]string{"__item_ids": "[10,11]", "retry_yield_enabled": "false", "other": "keep"},
-		Session: &entity.Session{UserID: "operator", AppID: 7}, ItemRetryTimes: 4, InfraErrorRetryTimes: 6, ExecEvalSetItemIDs: []int64{10, 11}}
+		Session: &entity.Session{UserID: "operator", AppID: 7}, ItemRetryTimes: 4, InfraErrorRetryTimes: 6, ExecEvalSetItemIDs: []int64{10, 11},
+	}
 	expt := &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline, ExptDispatchMode: dispatch}
 	oldManager := svcmocks.NewMockIExptManager(ctrl)
 	oldManager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), event.Session).Return(expt, nil).AnyTimes()
