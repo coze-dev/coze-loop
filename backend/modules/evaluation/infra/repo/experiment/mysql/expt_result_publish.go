@@ -83,9 +83,11 @@ func readItemResultPublishSourceWithLocks(tx *gorm.DB, space, expt, run, item in
 	}
 	return result, nil
 }
+
 func validPublicationSource(source *entity.ExptItemResultPublishSource) bool {
 	return source != nil && source.Source != nil && source.Item != nil && source.ItemLog != nil && source.ItemLog.ResultState == int32(entity.ExptItemResultStateLogged) && entity.IsItemRunFinished(entity.ItemRunState(source.ItemLog.Status)) && (!entity.IsItemRunFinished(source.Item.Status) || source.Item.Status == entity.ItemRunState(source.ItemLog.Status))
 }
+
 func equalPublicationSource(a, b *entity.ExptItemResultPublishSource) bool {
 	if !validPublicationSource(a) || !validPublicationSource(b) || !currentSourceMatches(a.Source, b.Source) {
 		return false
@@ -95,6 +97,7 @@ func equalPublicationSource(a, b *entity.ExptItemResultPublishSource) bool {
 	}
 	return reflect.DeepEqual(a.Source.Turns, b.Source.Turns)
 }
+
 func (r *ExptResultPublishDAOImpl) GetItemResultPublishSource(ctx context.Context, space, expt, run, item int64) (*entity.ExptItemResultPublishSource, error) {
 	var result *entity.ExptItemResultPublishSource
 	err := r.provider.Transaction(ctx, func(tx *gorm.DB) error {
@@ -121,6 +124,7 @@ func (r *ExptResultPublishDAOImpl) IsItemResultPublishSourceCurrent(ctx context.
 	}, db.WithMaster())
 	return valid && err == nil, err
 }
+
 func (r *ExptResultPublishDAOImpl) CommitItemResult(ctx context.Context, publication *entity.ExptItemResultPublication) (bool, error) {
 	if publication == nil || publication.Source == nil || publication.Source.Source == nil {
 		return false, fmt.Errorf("publication source missing")
@@ -249,6 +253,7 @@ func (r *ExptResultPublishDAOImpl) CommitItemResult(ctx context.Context, publica
 	}, db.WithMaster())
 	return applied && err == nil, err
 }
+
 func publicationRefKey(turn, version int64, alias, key string) string {
 	return fmt.Sprintf("%d/%d/%s/%s", turn, version, alias, key)
 }
