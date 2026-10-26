@@ -249,7 +249,7 @@ func (e *ExptItemEventEvalServiceImpl) handleCurrentEventErr(ctx context.Context
 			return nil
 		}
 		finished := entity.IsItemRunFinished(current.Current.Status)
-		if finished && !(execution.Completed && current.Current.Status == entity.ItemRunState_Fail && current.Current.ResultState == entity.ExptItemResultStateLogged) {
+		if finished && (!execution.Completed || current.Current.Status != entity.ItemRunState_Fail || current.Current.ResultState != entity.ExptItemResultStateLogged) {
 			return nil
 		}
 		valid, err := e.validateResumeSource(lockCtx, event, &current.Current)
