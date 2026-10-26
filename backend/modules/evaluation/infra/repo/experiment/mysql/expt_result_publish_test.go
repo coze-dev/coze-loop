@@ -7,13 +7,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
-	"testing"
-	"time"
 )
 
 func TestResultPublishMySQLReuseRefsAndReceipt(t *testing.T) {

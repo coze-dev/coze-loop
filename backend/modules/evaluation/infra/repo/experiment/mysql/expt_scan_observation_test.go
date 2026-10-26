@@ -162,6 +162,7 @@ func (p *observationConnPool) BeginTx(ctx context.Context, options *sql.TxOption
 	}
 	return p.DB.BeginTx(ctx, options)
 }
+
 func (p *observationProvider) NewSession(ctx context.Context, options ...db.Option) *gorm.DB {
 	session := p.base.NewSession(ctx, options...)
 	if pool, ok := session.Statement.ConnPool.(*sql.DB); ok {
@@ -169,6 +170,7 @@ func (p *observationProvider) NewSession(ctx context.Context, options ...db.Opti
 	}
 	return session
 }
+
 func (p *observationProvider) Transaction(ctx context.Context, callback func(*gorm.DB) error, options ...db.Option) error {
 	return p.NewSession(ctx, options...).Transaction(callback)
 }

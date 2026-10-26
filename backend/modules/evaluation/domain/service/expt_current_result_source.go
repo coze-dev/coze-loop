@@ -24,6 +24,7 @@ import (
 var errExptNonCurrentSource = errors.New("execution source is no longer current")
 
 type currentItemSourceKey struct{}
+
 type currentItemExecution struct {
 	Source          *entity.ExptCurrentItemRunSource
 	LockLost        bool
@@ -190,6 +191,7 @@ func sourceForExecution(ctx context.Context, port repo.IExptCurrentResultRepo, e
 	}
 	return source, nil
 }
+
 func checkedCurrentWrite(ctx context.Context, applied bool, err error) error {
 	if err != nil {
 		return errno.WrapMQRetryErr(err)
@@ -334,6 +336,7 @@ func (e *ExptItemEventEvalServiceImpl) handleCurrentEventErr(ctx context.Context
 	}
 	return nil
 }
+
 func sameExecutionIdentity(expected, actual *entity.ExptCurrentItemRunSource) bool {
 	if expected == nil || actual == nil {
 		return false
@@ -459,6 +462,7 @@ func (e *ExptSchedulerImpl) handleCurrentZombies(ctx context.Context, event *ent
 	}
 	return alives, zombies, nil
 }
+
 func (e *ExptSchedulerImpl) sweepCurrentSandboxItems(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, expt *entity.Experiment) (alives, terminated []*entity.ExptEvalItem, err error) {
 	for _, item := range items {
 		if item == nil || item.State != entity.ItemRunState_Processing {
@@ -523,6 +527,7 @@ func (e *ExptSchedulerImpl) sweepCurrentSandboxItems(ctx context.Context, event 
 func (e *ExptItemEventEvalServiceImpl) prepareMissingRawTurnLogs(ctx context.Context, source *entity.ExptCurrentItemRunSource, write *entity.ExptCurrentItemRunWrite) error {
 	return prepareMissingRawTurnLogs(ctx, e.idgen, source, write)
 }
+
 func prepareMissingRawTurnLogs(ctx context.Context, gen idgen.IIDGenerator, source *entity.ExptCurrentItemRunSource, write *entity.ExptCurrentItemRunWrite) error {
 	if err := ctx.Err(); err != nil {
 		return errno.WrapMQRetryErr(err)

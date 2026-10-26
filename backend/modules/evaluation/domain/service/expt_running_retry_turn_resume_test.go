@@ -7,15 +7,16 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
-	fsmocks "github.com/coze-dev/coze-loop/backend/infra/fileserver/mocks"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
-	evalstorage "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/storage"
 	"io"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
+
+	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
+	fsmocks "github.com/coze-dev/coze-loop/backend/infra/fileserver/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
+	evalstorage "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/storage"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -75,6 +76,7 @@ func newTurnResumeFixture(t *testing.T, mode entity.ExptRunMode, turnIDs ...int6
 func resumeTarget(id, turnID int64) *entity.EvalTargetRecord {
 	return &entity.EvalTargetRecord{ID: id, TurnID: turnID, Status: gptr.Of(entity.EvalTargetRunStatusSuccess), EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{consts.OutputSchemaKey: {Text: gptr.Of("previous answer")}}}}
 }
+
 func resumeEvaluator(id, versionID, turnID int64, alias string) *entity.EvaluatorRecord {
 	return &entity.EvaluatorRecord{ID: id, ExperimentID: 1, ExperimentRunID: 103, SpaceID: 3, ItemID: 10, TurnID: turnID, EvaluatorVersionID: versionID, Alias: alias, SourceType: entity.EvaluatorRecordSourceTypeBuiltin, Status: entity.EvaluatorRunStatusSuccess}
 }

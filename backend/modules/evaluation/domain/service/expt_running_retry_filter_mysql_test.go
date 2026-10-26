@@ -82,6 +82,7 @@ func newFilterSyncFixture(t *testing.T) *filterSyncFixture {
 	svc := &ExptResultServiceImpl{ExptItemResultRepo: f.itemRepo(), ExptTurnResultRepo: f.turnRepo(), ExperimentRepo: experiments, evaluatorRecordService: records, evalTargetService: target, ExptAnnotateRepo: annotations, scoreCalculator: NewEvaluatorScoreCalculator(nil, nil), resultPublishRepo: experimentrepo.NewExptResultPublishRepo(f.provider), exptItemRefRepo: experimentrepo.NewExptItemRefRepo(experimentmysql.NewExptItemRefDAO(f.provider)), resultPublishLocker: func() lock.ILocker { return filterRealTestLocker(client) }}
 	return &filterSyncFixture{lateWriteFixture: f, svc: svc, client: client, server: server}
 }
+
 func (f *filterSyncFixture) key() string {
 	return fmt.Sprintf("expt_item_eval_run_lock:%d:%d", f.expt, f.item)
 }
@@ -98,6 +99,7 @@ type filterStore struct {
 func (s *filterStore) GetExptTurnResultFilterKeyMappings(context.Context, int64, int64) ([]*entity.ExptTurnResultFilterKeyMapping, error) {
 	return nil, nil
 }
+
 func (s *filterStore) Save(ctx context.Context, rows []*entity.ExptTurnResultFilterEntity) error {
 	if s.beforeSave != nil {
 		s.beforeSave(rows)
@@ -114,6 +116,7 @@ func (s *filterStore) Save(ctx context.Context, rows []*entity.ExptTurnResultFil
 	_ = json.Unmarshal(b, &s.rows)
 	return nil
 }
+
 func (s *filterStore) GetByExptIDItemIDs(ctx context.Context, _, _, _ string, _ []string) ([]*entity.ExptTurnResultFilterEntity, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -125,6 +128,7 @@ func (s *filterStore) GetByExptIDItemIDs(ctx context.Context, _, _, _ string, _ 
 	_ = json.Unmarshal(b, &out)
 	return out, nil
 }
+
 func (s *filterStore) GetMaterializedByExptIDItemIDs(ctx context.Context, a, b, c string, d []string) ([]*entity.ExptTurnResultFilterEntity, error) {
 	return s.GetByExptIDItemIDs(ctx, a, b, c, d)
 }
@@ -301,9 +305,11 @@ type partialFilterStore struct {
 func (s *partialFilterStore) Save(ctx context.Context, rows []*entity.ExptTurnResultFilterEntity) error {
 	return s.store.Save(ctx, rows)
 }
+
 func (s *partialFilterStore) GetByExptIDItemIDs(ctx context.Context, a, b, c string, d []string) ([]*entity.ExptTurnResultFilterEntity, error) {
 	return s.store.GetByExptIDItemIDs(ctx, a, b, c, d)
 }
+
 func (s *partialFilterStore) GetExptTurnResultFilterKeyMappings(ctx context.Context, a, b int64) ([]*entity.ExptTurnResultFilterKeyMapping, error) {
 	return s.store.GetExptTurnResultFilterKeyMappings(ctx, a, b)
 }

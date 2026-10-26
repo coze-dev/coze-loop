@@ -27,8 +27,10 @@ func TestRunFinishMySQLPendingDoesNotWrite(t *testing.T) {
 		state    int32
 		reserved int32
 	}{
-		{"queueing", entity.ItemRunState_Queueing, 0, 0}, {"reserved", entity.ItemRunState_Queueing, 0, 1},
-		{"processing", entity.ItemRunState_Processing, 0, 0}, {"logged", entity.ItemRunState_Fail, 2, 0},
+		{"queueing", entity.ItemRunState_Queueing, 0, 0},
+		{"reserved", entity.ItemRunState_Queueing, 0, 1},
+		{"processing", entity.ItemRunState_Processing, 0, 0},
+		{"logged", entity.ItemRunState_Fail, 2, 0},
 	} {
 		t.Run(pending.name, func(t *testing.T) {
 			f := newManualRetryFixture(t)
@@ -49,6 +51,7 @@ func terminalFinishFixture(t *testing.T) *manualRetryFixture {
 	require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND expt_id=?", f.space, f.expt).Updates(map[string]any{"status": int32(entity.ItemRunState_Success), "result_state": 1}).Error)
 	return f
 }
+
 func finishFixture(f *manualRetryFixture) (*entity.ExptRunFinishResult, error) {
 	return NewExptRunFinishDAO(f.provider).FinishCurrentRun(context.Background(), &entity.ExptRunFinishRequest{SpaceID: f.space, ExptID: f.expt, RunID: f.run})
 }
@@ -123,6 +126,7 @@ func (p finishFaultProvider) Transaction(ctx context.Context, fn func(*gorm.DB) 
 		return fn(tx)
 	}, opts...)
 }
+
 func TestRunFinishMySQLRollbackEveryWriteAndCommit(t *testing.T) {
 	for _, table := range []string{"expt_run_log", "experiment", "expt_stats", "commit"} {
 		t.Run(table, func(t *testing.T) {
@@ -145,6 +149,7 @@ func TestRunFinishMySQLRollbackEveryWriteAndCommit(t *testing.T) {
 		})
 	}
 }
+
 func TestRunFinishMySQLMissingBindingAndHalfTerminalFailClosed(t *testing.T) {
 	for _, which := range []string{"missing_run", "missing_experiment", "wrong_space", "noncurrent", "half_run", "half_expt", "missing_stats"} {
 		t.Run(which, func(t *testing.T) {
@@ -198,6 +203,7 @@ func (p finishBarrierProvider) Transaction(ctx context.Context, fn func(*gorm.DB
 		return nil
 	}, opts...)
 }
+
 func TestRunFinishMySQLConcurrentAdmissionAndReceiptReplay(t *testing.T) {
 	for _, first := range []string{"admission", "finish"} {
 		t.Run(first, func(t *testing.T) {

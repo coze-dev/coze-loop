@@ -7,6 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"sync/atomic"
+	"testing"
+	"time"
+
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
@@ -24,10 +29,6 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"os"
-	"sync/atomic"
-	"testing"
-	"time"
 )
 
 var lateWriteFixtureSeq atomic.Int64
@@ -94,6 +95,7 @@ func newLateWriteFixture(t *testing.T, token string) *lateWriteFixture {
 	f.port = port
 	return f
 }
+
 func (f *lateWriteFixture) token(token string) {
 	f.t.Helper()
 	ext := map[string]string{"other": "keep"}
@@ -106,6 +108,7 @@ func (f *lateWriteFixture) token(token string) {
 	require.NoError(f.t, err)
 	require.NoError(f.t, f.conn.Model(&model.ExptItemResult{}).Where("space_id=? AND expt_id=? AND item_id=?", f.space, f.expt, f.item).Update("ext", raw).Error)
 }
+
 func (f *lateWriteFixture) source() *entity.ExptCurrentItemRunSource {
 	f.t.Helper()
 	s, err := f.port.GetCurrentItemRunSource(context.Background(), f.space, f.expt, f.run, f.item)
@@ -113,6 +116,7 @@ func (f *lateWriteFixture) source() *entity.ExptCurrentItemRunSource {
 	require.NotNil(f.t, s)
 	return s
 }
+
 func (f *lateWriteFixture) snapshot() map[string]string {
 	f.t.Helper()
 	out := map[string]string{}
@@ -125,15 +129,19 @@ func (f *lateWriteFixture) snapshot() map[string]string {
 	}
 	return out
 }
+
 func (f *lateWriteFixture) itemRepo() repo.IExptItemResultRepo {
 	return f.port.(repo.IExptItemResultRepo)
 }
+
 func (f *lateWriteFixture) turnRepo() repo.IExptTurnResultRepo {
 	return experimentrepo.NewExptTurnResultRepo(nil, experimentmysql.NewExptTurnResultDAO(f.provider), experimentmysql.NewExptTurnEvaluatorResultRefDAO(f.provider))
 }
+
 func (f *lateWriteFixture) event() *entity.ExptItemEvalEvent {
 	return &entity.ExptItemEvalEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, EvalSetItemID: f.item, ExptRunMode: entity.EvaluationModeFailRetry, RequestID: "rq1", MaxRetryTimes: 3}
 }
+
 func lateWriteLocker(t *testing.T, ctrl *gomock.Controller) ManualRetryLockerFactory {
 	t.Helper()
 	return func() lock.ILocker {

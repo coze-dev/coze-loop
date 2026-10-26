@@ -70,11 +70,13 @@ func (e ExptResultServiceImpl) withFilterItemLock(ctx context.Context, exptID, i
 	}
 	return nil
 }
+
 func sortedFilterItems(ids []int64) []int64 {
 	ids = slices.Clone(ids)
 	slices.Sort(ids)
 	return slices.Compact(ids)
 }
+
 func (e ExptResultServiceImpl) filterCandidateItems(ctx context.Context, spaceID, exptID int64, ids []int64) ([]int64, error) {
 	if len(ids) > 0 {
 		return sortedFilterItems(ids), nil
@@ -91,6 +93,7 @@ func (e ExptResultServiceImpl) filterCandidateItems(ctx context.Context, spaceID
 	}
 	return sortedFilterItems(ids), nil
 }
+
 func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, spaceID, exptID int64, ids []int64) error {
 	if spaceID == 0 || exptID == 0 {
 		return fmt.Errorf("UpsertExptTurnResultFilter: invalid space_id or expt_id")
@@ -126,6 +129,7 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 	}
 	return firstErr
 }
+
 func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context, spaceID, exptID int64, ids []int64, retry int32) error {
 	if err := ctx.Err(); err != nil {
 		return errno.WrapMQRetryErr(err)
@@ -158,6 +162,7 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 	}
 	return firstErr
 }
+
 func (e ExptResultServiceImpl) ReconcileManualRetryFilterBeforeFinish(ctx context.Context, space, expt, run int64) (bool, error) {
 	scanner, ok := e.ExptItemResultRepo.(repo.IExptManualRetryFilterRepo)
 	if !ok {
@@ -267,6 +272,7 @@ func (e ExptResultServiceImpl) compareMaterializedFilterLocked(ctx context.Conte
 	} // Existing async readers cannot prove complete projection equality.
 	return true, ctx.Err()
 }
+
 func (e ExptResultServiceImpl) buildCurrentItemFilterLocked(ctx context.Context, space, expt, item int64) ([]*entity.ExptTurnResultFilterEntity, error) {
 	return e.buildExptTurnResultFiltersLocked(contexts.WithCtxWriteDB(ctx), space, expt, []int64{item})
 }
@@ -318,6 +324,7 @@ func (e ExptResultServiceImpl) readMaterializedItemFilterLocked(ctx context.Cont
 	}
 	return rows, complete, err
 }
+
 func (e ExptResultServiceImpl) compareCurrentItemFilterLocked(ctx context.Context, space, expt, item int64, retry int32) error {
 	expected, err := e.buildCurrentItemFilterLocked(ctx, space, expt, item)
 	if err != nil {

@@ -119,7 +119,6 @@ func TestRunningRetryFilterSync_FullProjectionMismatch(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
-
 }
 
 type fullFilterTestSink struct{ repo.IExptTurnResultFilterRepo }
@@ -541,6 +540,7 @@ func (r *filterTestRedis) Eval(ctx context.Context, script string, keys []string
 	}
 	return result
 }
+
 func (r *filterTestRedis) waitUnlocks(holder string, n int) {
 	deadline := time.NewTimer(2 * time.Second)
 	defer deadline.Stop()

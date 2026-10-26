@@ -6,13 +6,14 @@ package ck
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	ckprovidermocks "github.com/coze-dev/coze-loop/backend/infra/ck/mocks"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/clickhouse"
 	"gorm.io/gorm"
-	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"

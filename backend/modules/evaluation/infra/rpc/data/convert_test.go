@@ -35,25 +35,35 @@ func TestConvert2EvaluationSetItemReadTurns(t *testing.T) {
 		}}},
 	}
 	wantRepeated := []*entity.Turn{
-		{ID: 1, ItemID: 7590130073438429442, EvalSetID: 7590130228007518722,
+		{
+			ID: 1, ItemID: 7590130073438429442, EvalSetID: 7590130228007518722,
 			FieldDataList: []*entity.FieldData{{
 				Key: "case", Name: "case", TraceID: "trace-1",
-				Content: &entity.Content{ContentType: gptr.Of(entity.ContentTypeText),
-					Format: gptr.Of(entity.PlainText), Text: gptr.Of("S")},
-			}}},
-		{ID: 2, ItemID: 7590130073438429442, EvalSetID: 7590130228007518722,
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentTypeText),
+					Format:      gptr.Of(entity.PlainText), Text: gptr.Of("S"),
+				},
+			}},
+		},
+		{
+			ID: 2, ItemID: 7590130073438429442, EvalSetID: 7590130228007518722,
 			FieldDataList: []*entity.FieldData{{
 				Key: "case", Name: "case", TraceID: "trace-2",
-				Content: &entity.Content{ContentType: gptr.Of(entity.ContentTypeText),
-					Format: gptr.Of(entity.PlainText), Text: gptr.Of("A")},
-			}}},
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentTypeText),
+					Format:      gptr.Of(entity.PlainText), Text: gptr.Of("A"),
+				},
+			}},
+		},
 	}
 	wantSingular := []*entity.Turn{{
 		ID: 0, ItemID: 7590130073438429442, EvalSetID: 7590130228007518722,
 		FieldDataList: []*entity.FieldData{{
 			Key: "case", Name: "case",
-			Content: &entity.Content{ContentType: gptr.Of(entity.ContentTypeText),
-				Format: gptr.Of(entity.PlainText), Text: gptr.Of("legacy")},
+			Content: &entity.Content{
+				ContentType: gptr.Of(entity.ContentTypeText),
+				Format:      gptr.Of(entity.PlainText), Text: gptr.Of("legacy"),
+			},
 		}},
 	}}
 	tests := []struct {
@@ -66,10 +76,14 @@ func TestConvert2EvaluationSetItemReadTurns(t *testing.T) {
 		{name: "repeated_data_takes_precedence", data: singular, repeated: repeated, want: wantRepeated},
 		{name: "nil_turn_is_skipped", repeated: []*dataset.ItemData{repeated[0], nil, repeated[1]}, want: wantRepeated},
 		{name: "all_nil_turns_do_not_fall_back", data: singular, repeated: []*dataset.ItemData{nil}, want: []*entity.Turn{}},
-		{name: "empty_turn_keeps_original_id", repeated: []*dataset.ItemData{{ID: gptr.Of(int64(7))}},
-			want: []*entity.Turn{{ID: 7, ItemID: 7590130073438429442, EvalSetID: 7590130228007518722, FieldDataList: []*entity.FieldData{}}}},
-		{name: "nil_field_is_preserved", repeated: []*dataset.ItemData{{ID: gptr.Of(int64(9)), Data: []*dataset.FieldData{nil}}},
-			want: []*entity.Turn{{ID: 9, ItemID: 7590130073438429442, EvalSetID: 7590130228007518722, FieldDataList: []*entity.FieldData{nil}}}},
+		{
+			name: "empty_turn_keeps_original_id", repeated: []*dataset.ItemData{{ID: gptr.Of(int64(7))}},
+			want: []*entity.Turn{{ID: 7, ItemID: 7590130073438429442, EvalSetID: 7590130228007518722, FieldDataList: []*entity.FieldData{}}},
+		},
+		{
+			name: "nil_field_is_preserved", repeated: []*dataset.ItemData{{ID: gptr.Of(int64(9)), Data: []*dataset.FieldData{nil}}},
+			want: []*entity.Turn{{ID: 9, ItemID: 7590130073438429442, EvalSetID: 7590130228007518722, FieldDataList: []*entity.FieldData{nil}}},
+		},
 		{name: "single_turn_id_zero_is_unchanged", data: singular, want: wantSingular},
 		{name: "empty_repeated_data_falls_back", data: singular, repeated: []*dataset.ItemData{}, want: wantSingular},
 		{name: "no_data_returns_nil"},
@@ -106,8 +120,10 @@ func TestConvert2EvaluationSetItemReadTurns(t *testing.T) {
 	t.Run("nil_item_and_batch_entry_remain_nil", func(t *testing.T) {
 		assert.Nil(t, convert2EvaluationSetItem(ctx, nil))
 		assert.Nil(t, convert2EvaluationSetItems(ctx, nil))
-		got := convert2EvaluationSetItems(ctx, []*dataset.DatasetItem{nil, {ItemID: gptr.Of(int64(7590130073438429442)),
-			DatasetID: gptr.Of(int64(7590130228007518722)), RepeatedData: repeated}})
+		got := convert2EvaluationSetItems(ctx, []*dataset.DatasetItem{nil, {
+			ItemID:    gptr.Of(int64(7590130073438429442)),
+			DatasetID: gptr.Of(int64(7590130228007518722)), RepeatedData: repeated,
+		}})
 		if len(got) != 2 || got[1] == nil {
 			t.Fatal("batch conversion did not preserve both entries")
 		}
