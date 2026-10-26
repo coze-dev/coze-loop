@@ -207,7 +207,7 @@ func finishRealLockerFactory(t *testing.T) (ManualRetryLockerFactory, *miniredis
 func TestRunFinishCleanupDoesNotDeleteR2LifecycleOwner(t *testing.T) {
 	factory, server := finishRealLockerFactory(t)
 	key := "expt_run_mutex_lock:1"
-	server.Set(key, "99")
+	require.NoError(t, server.Set(key, "99"))
 	manager := &ExptMangerImpl{manualRetryLocker: factory}
 	err := manager.cleanupNaturallyFinishedRun(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, &entity.Experiment{ID: 1})
 	require.True(t, errno.NeedMQRetry(err))
@@ -215,7 +215,7 @@ func TestRunFinishCleanupDoesNotDeleteR2LifecycleOwner(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "99", owner)
 	// A pre-upgrade random owner cannot be safely migrated or force deleted.
-	server.Set(key, "legacy-random-holder")
+	require.NoError(t, server.Set(key, "legacy-random-holder"))
 	err = manager.cleanupNaturallyFinishedRun(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, &entity.Experiment{ID: 1})
 	require.Error(t, err)
 	owner, _ = server.Get(key)
@@ -235,7 +235,7 @@ func TestRunFinishActualModesCommitThenCleanupRetry(t *testing.T) {
 			require.NoError(t, f.conn.Model(&mysqlmodel.ExptItemResultRunLog{}).Where("space_id=?", f.space).Updates(map[string]any{"status": int32(entity.ItemRunState_Success), "result_state": 1}).Error)
 			require.NoError(t, f.conn.Model(&mysqlmodel.ExptTurnResult{}).Where("space_id=?", f.space).Update("status", int32(entity.TurnRunState_Success)).Error)
 			factory, server := finishRealLockerFactory(t)
-			server.Set(fmt.Sprintf("expt_run_mutex_lock:%d", f.expt), fmt.Sprint(f.run))
+			require.NoError(t, server.Set(fmt.Sprintf("expt_run_mutex_lock:%d", f.expt), fmt.Sprint(f.run)))
 			experiments := repomocks.NewMockIExperimentRepo(ctrl)
 			experiments.EXPECT().GetByID(gomock.Any(), f.expt, f.space).DoAndReturn(func(ctx context.Context, _, _ int64) (*entity.Experiment, error) {
 				var row mysqlmodel.Experiment
