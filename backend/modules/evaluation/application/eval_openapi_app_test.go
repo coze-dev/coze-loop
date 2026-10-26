@@ -2272,9 +2272,10 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult_RedisErrors(t *test
 			require.True(t, ok)
 			t.Cleanup(func() { _ = raw.Close() })
 			ctx := context.Background()
-			if name == "connection refused" {
+			switch name {
+			case "connection refused":
 				server.Close()
-			} else if name == "deadline exceeded" {
+			case "deadline exceeded":
 				var cancel context.CancelFunc
 				ctx, cancel = context.WithDeadline(ctx, time.Now().Add(-time.Second))
 				defer cancel()
