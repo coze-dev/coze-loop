@@ -63,7 +63,7 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, eva
 		}
 		ec.ConnectorConf.EvaluatorsConf = evalsConf
 	}
-	if cer.GetItemRetryNum() > 0 {
+	if cer.IsSetItemRetryNum() && cer.GetItemRetryNum() >= 0 {
 		ec.ItemRetryNum = gptr.Of(int(cer.GetItemRetryNum()))
 	}
 	if cer.IsSetEnableExtractTrajectory() {
@@ -1025,7 +1025,7 @@ func buildExptConfFromEvalSetConfigs(cer *expt.CreateExperimentRequest, runConfi
 		Ext:                cer.Ext,
 		RunModeConfig:      runModeConfigDTO2DO(cer.GetRunModeConfig()),
 	}
-	if cer.GetItemRetryNum() > 0 {
+	if cer.IsSetItemRetryNum() && cer.GetItemRetryNum() >= 0 {
 		ec.ItemRetryNum = gptr.Of(int(cer.GetItemRetryNum()))
 	}
 	if cer.IsSetEnableExtractTrajectory() {
