@@ -49,6 +49,7 @@ func (r *compatibilityTargetRepo) CreateEvalTargetRecord(ctx context.Context, re
 	}
 	return r.dao.Create(ctx, po)
 }
+
 func (r *compatibilityTargetRepo) GetEvalTargetRecordByIDAndSpaceID(ctx context.Context, space, id int64) (*entity.EvalTargetRecord, error) {
 	po, err := r.dao.GetByIDAndSpaceID(ctx, id, space)
 	if err != nil {

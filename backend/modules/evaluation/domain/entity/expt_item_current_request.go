@@ -4,8 +4,9 @@
 package entity
 
 import (
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"time"
+
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
 
 // ExptItemCurrentRequest is one primary database observation of the canonical item and run log.

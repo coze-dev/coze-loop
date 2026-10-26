@@ -6,14 +6,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/coze-dev/coze-loop/backend/infra/lock"
-	lockmocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
-	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/coze-dev/coze-loop/backend/infra/lock"
+	lockmocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
+	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 
 	"github.com/bytedance/gg/gptr"
 	idmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
@@ -59,6 +60,7 @@ func publicationFixture(t *testing.T) (*lateWriteFixture, *ExptResultServiceImpl
 	expt := &entity.Experiment{ID: f.expt, SpaceID: f.space, LatestRunID: f.run, EvalConf: &entity.EvaluationConfiguration{}}
 	return f, e, records, expt
 }
+
 func publicationRecord(f *lateWriteFixture, score *float64) *entity.EvaluatorRecord {
 	return &entity.EvaluatorRecord{ID: f.base + 61, SpaceID: f.space, ExperimentID: f.expt, ExperimentRunID: f.run, ItemID: f.item, TurnID: 0, EvaluatorVersionID: f.base + 51, Alias: "alias", Status: entity.EvaluatorRunStatusSuccess, EvaluatorOutputData: &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: score}}}
 }
@@ -86,6 +88,7 @@ func TestResultPublishDirectRealRollback(t *testing.T) {
 		})
 	}
 }
+
 func TestResultPublishDirectStalePreparation(t *testing.T) {
 	f, svc, records, expt := publicationFixture(t)
 	var afterMutation map[string]string
@@ -98,6 +101,7 @@ func TestResultPublishDirectStalePreparation(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, afterMutation, f.snapshot(), "old prepared record must not overwrite new request")
 }
+
 func TestResultPublishDirectNoOldScore(t *testing.T) {
 	for _, kind := range []string{"no_score", "read_error", "missing_record"} {
 		t.Run(kind, func(t *testing.T) {
