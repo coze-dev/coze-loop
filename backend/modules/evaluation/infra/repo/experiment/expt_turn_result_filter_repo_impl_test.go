@@ -551,9 +551,8 @@ func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_ItemKeyPassthrough(t *te
 	assert.NoError(t, err)
 }
 
-// item_key 强筛选请求：DAO 错误必须透传（吞错返回空集会被上层当真实零命中，
-// 且触发 service 层无筛选回退）；旧请求保持既有吞错容错。
-func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_ItemKeyErrorPropagation(t *testing.T) {
+// DAO 查询失败必须透传错误，不能伪装成筛选命中零条。
+func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_ErrorPropagation(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -568,7 +567,7 @@ func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_ItemKeyErrorPropagation(
 			ItemKey: &entity.FieldFilter{Key: "item_key", Op: "LIKE", Values: []any{"deepswe"}},
 		},
 	}
-	legacyFilter := &entity.ExptTurnResultFilterAccelerator{
+	itemIDFilter := &entity.ExptTurnResultFilterAccelerator{
 		SpaceID: 1, ExptID: 1,
 		ItemIDs: []*entity.FieldFilter{{Key: "item_id", Op: "=", Values: []any{"10"}}},
 	}
@@ -596,11 +595,55 @@ func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_ItemKeyErrorPropagation(
 		assert.Equal(t, daoErr, err)
 	})
 
-	t.Run("旧请求保持吞错返回空集", func(t *testing.T) {
-		mockDAO.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).Return(nil, int64(0), daoErr).Times(1)
-		states, total, err := repo.QueryItemIDStates(context.Background(), legacyFilter)
-		assert.NoError(t, err)
-		assert.Empty(t, states)
-		assert.Equal(t, int64(0), total)
+	filters := []struct {
+		name   string
+		filter *entity.ExptTurnResultFilterAccelerator
+	}{
+		{"item_id", itemIDFilter},
+		{"item_status", &entity.ExptTurnResultFilterAccelerator{ItemRunStatus: []*entity.FieldFilter{{Op: "=", Values: []any{int64(3)}}}}},
+		{"turn_status", &entity.ExptTurnResultFilterAccelerator{TurnRunStatus: []*entity.FieldFilter{{Op: "=", Values: []any{int64(2)}}}}},
+		{"eval_set_id", &entity.ExptTurnResultFilterAccelerator{EvalSetIDs: []*entity.FieldFilter{{Op: "=", Values: []any{int64(5)}}}}},
+		{"score_corrected", &entity.ExptTurnResultFilterAccelerator{EvaluatorScoreCorrected: &entity.FieldFilter{Op: "=", Values: []any{true}}}},
+		{"map", &entity.ExptTurnResultFilterAccelerator{MapCond: &entity.ExptTurnResultFilterMapCond{
+			EvaluatorScoreFilters: []*entity.FieldFilter{{Key: "float_key_1", Op: ">", Values: []any{0.5}}},
+		}}},
+		{"snapshot", &entity.ExptTurnResultFilterAccelerator{ItemSnapshotCond: &entity.ItemSnapshotFilter{
+			StringMapFilters: []*entity.FieldFilter{{Key: "string_key_1", Op: "=", Values: []any{"question"}}},
+		}}},
+		{"keyword", &entity.ExptTurnResultFilterAccelerator{KeywordSearch: &entity.KeywordFilter{
+			Keyword: ptr.Of("question"), ItemSnapshotFilter: &entity.ItemSnapshotFilter{
+				StringMapFilters: []*entity.FieldFilter{{Key: "string_key_1", Op: "LIKE", Values: []any{"question"}}},
+			},
+		}}},
+	}
+	for _, tt := range filters {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDAO.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).Return(nil, int64(0), daoErr).Times(1)
+			states, total, err := repo.QueryItemIDStates(context.Background(), tt.filter)
+			assert.ErrorIs(t, err, daoErr)
+			assert.Nil(t, states)
+			assert.Equal(t, int64(0), total)
+		})
+	}
+}
+
+func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_StatusSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	dao := ckmocks.NewMockIExptTurnResultFilterDAO(ctrl)
+	dao.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, cond *ck.ExptTurnResultFilterQueryCond) (map[string]int32, int64, error) {
+			require.Len(t, cond.ItemRunStatus, 1)
+			assert.Equal(t, []any{int64(3)}, cond.ItemRunStatus[0].Values)
+			assert.Equal(t, ck.Page{Offset: 4, Limit: 2}, cond.Page)
+			return map[string]int32{"10": 3, "11": 3}, 9, nil
+		},
+	).Times(1)
+	r := NewExptTurnResultFilterRepo(dao, mysqlmocks.NewMockIExptTurnResultFilterKeyMappingDAO(ctrl))
+	states, total, err := r.QueryItemIDStates(context.Background(), &entity.ExptTurnResultFilterAccelerator{
+		SpaceID: 100, ExptID: 1, Page: entity.NewPage(3, 2),
+		ItemRunStatus: []*entity.FieldFilter{{Op: "=", Values: []any{int64(3)}}},
 	})
+	require.NoError(t, err)
+	assert.Equal(t, map[int64]entity.ItemRunState{10: entity.ItemRunState_Fail, 11: entity.ItemRunState_Fail}, states)
+	assert.Equal(t, int64(9), total)
 }
