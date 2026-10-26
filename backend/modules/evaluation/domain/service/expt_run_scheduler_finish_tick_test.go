@@ -74,7 +74,7 @@ func newFinishTickFixture(t *testing.T, runMode entity.ExptRunMode, dispatch str
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	event := &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2, ExptType: entity.ExptType_Offline, ExptRunMode: runMode,
-		CreatedAt: 1792721488, Ext: map[string]string{"__item_ids": "[10,11]", "retry_yield_enabled": "false", "other": "keep"},
+		CreatedAt: time.Now().Unix(), Ext: map[string]string{"__item_ids": "[10,11]", "retry_yield_enabled": "false", "other": "keep"},
 		Session: &entity.Session{UserID: "operator", AppID: 7}, ItemRetryTimes: 4, InfraErrorRetryTimes: 6, ExecEvalSetItemIDs: []int64{10, 11}}
 	expt := &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline, ExptDispatchMode: dispatch}
 	oldManager := svcmocks.NewMockIExptManager(ctrl)
