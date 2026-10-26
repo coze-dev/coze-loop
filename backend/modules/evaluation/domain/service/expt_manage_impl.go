@@ -1081,13 +1081,6 @@ func (e *ExptMangerImpl) authorizeSharedResource(
 }
 
 func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error) {
-	if err := e.prepareResultSetCreation(ctx, req); err != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
-	}
-
-	if err := req.PrepareResultSetTarget(); err != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
-	}
 	if err := req.PrepareVerificationTarget(); err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
@@ -1176,11 +1169,6 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 			if tgtAccessCtx.ResourceSpaceID > 0 {
 				createTargetSpaceID = tgtAccessCtx.ResourceSpaceID
 			}
-		}
-		if req.ResultSetApplication {
-			lookupSpaceID := createTargetSpaceID
-			opts = append(opts, func(o *entity.Opt) { o.ResultSetSourceSpaceID = lookupSpaceID })
-			createTargetSpaceID = req.WorkspaceID
 		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, createTargetSpaceID, gptr.Indirect(req.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(req.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType),
 			opts...)
@@ -1510,7 +1498,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 				}
 			}
 			// per-set 评测对象来源空间 (target_confs 本期 len<=1)
-			if !req.ResultSetApplication && setConf.TargetSharedOption != nil && setConf.TargetSharedOption.Enabled() {
+			if setConf.TargetSharedOption != nil && setConf.TargetSharedOption.Enabled() {
 				var setTargetID int64
 				var setTargetVerID *int64
 				if len(setConf.TargetConfs) > 0 && setConf.TargetConfs[0] != nil {
@@ -1591,20 +1579,6 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		}
 		if do.EvalConf != nil && do.EvalConf.ConnectorConf.TargetConf != nil {
 			do.EvalConf.ConnectorConf.TargetConf.TargetVersionID = do.TargetVersionID
-		}
-	}
-
-	if do.EvalConf.IsResultSet() {
-		for _, set := range do.EvalConf.EvalSetConfigs {
-			if set == nil {
-				continue
-			}
-			for _, binding := range set.TargetConfs {
-				if binding != nil {
-					binding.TargetID = do.TargetID
-					binding.TargetVersionID = do.TargetVersionID
-				}
-			}
 		}
 	}
 

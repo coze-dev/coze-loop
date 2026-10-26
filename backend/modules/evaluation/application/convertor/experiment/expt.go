@@ -1501,7 +1501,7 @@ func suaModeDTO2DO(m domain_expt.SuaMode) entity.SuaMode {
 // ⚠️ 不回显 api_key/base_url: 那是运行时从 TCC 解析注入 case-file 的密钥, 领域实体本就不持有。
 // SUA 行为四项 + max_turns 是用户自己填的配置 (非密钥), 回显它们才能让详情页显示"这个实验配了什么"。
 func runModeConfigDO2DTO(do *entity.RunModeConfig) *domain_expt.RunModeConfig {
-	if do == nil || do.RunMode == entity.RunModeResultSet {
+	if do == nil {
 		return nil
 	}
 	dto := &domain_expt.RunModeConfig{

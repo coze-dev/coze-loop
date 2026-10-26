@@ -1036,7 +1036,7 @@ func (e *ExptSchedulerImpl) emitSandboxSweptInvokeFinished(
 	terminatedRecordIDs []int64,
 	recordIDToItemIDs map[int64][]int64,
 ) {
-	if (expt != nil && expt.EvalConf.IsResultSet()) || e.sandboxAgentMetrics == nil || len(terminatedRecordIDs) == 0 {
+	if e.sandboxAgentMetrics == nil || len(terminatedRecordIDs) == 0 {
 		return
 	}
 	var datasetID, datasetVersion int64
@@ -1151,7 +1151,7 @@ func (e *ExptSchedulerImpl) emitSandboxZombieInvokeFinished(
 	recordIDs []int64,
 	recordIDToItemIDs map[int64][]int64,
 ) {
-	if (expt != nil && expt.EvalConf.IsResultSet()) || e.sandboxAgentMetrics == nil || len(recordIDs) == 0 {
+	if e.sandboxAgentMetrics == nil || len(recordIDs) == 0 {
 		return
 	}
 	var datasetID, datasetVersion int64
