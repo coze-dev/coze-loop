@@ -6,6 +6,10 @@ package service
 import (
 	"context"
 	"errors"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/bytedance/gg/gptr"
 	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -14,9 +18,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"strconv"
-	"testing"
-	"time"
 )
 
 // Removing the source check would let the endpoint confirm quota or call providers.

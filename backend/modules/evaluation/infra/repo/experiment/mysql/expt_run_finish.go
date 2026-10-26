@@ -21,6 +21,7 @@ type ExptRunFinishDAOImpl struct{ provider db.Provider }
 func NewExptRunFinishDAO(provider db.Provider) repo.IExptRunFinishRepo {
 	return &ExptRunFinishDAOImpl{provider: provider}
 }
+
 func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.ExptRunFinishRequest) (*entity.ExptRunFinishResult, error) {
 	if r == nil || r.SpaceID <= 0 || r.ExptID <= 0 || r.RunID <= 0 {
 		return nil, fmt.Errorf("invalid finish identities")
@@ -158,6 +159,7 @@ func (c *finishCounts) add(status int32) {
 		c.terminal++
 	}
 }
+
 func (c finishCounts) fields(statusKey string, status any) map[string]any {
 	result := map[string]any{"pending_cnt": c.pending, "processing_cnt": c.processing, "success_cnt": c.success, "fail_cnt": c.fail, "terminated_cnt": c.terminal}
 	if statusKey != "" {

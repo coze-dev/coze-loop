@@ -13,6 +13,7 @@ const (
 
 // ExptRunFinishRequest carries identities only; final counts are read in SQL.
 type ExptRunFinishRequest struct{ SpaceID, ExptID, RunID int64 }
+
 type ExptRunFinishResult struct {
 	Disposition ExptRunFinishDisposition
 	Experiment  *Experiment
