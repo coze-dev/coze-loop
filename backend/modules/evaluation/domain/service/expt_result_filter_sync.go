@@ -219,14 +219,7 @@ func (e ExptResultServiceImpl) ReconcileManualRetryFilterBeforeFinish(ctx contex
 			if err := e.exptTurnResultFilterRepo.Save(ctx, filters); err != nil {
 				return err
 			}
-			equal, err := e.compareMaterializedFilterLocked(ctx, space, expt, item, filters)
-			if err != nil {
-				return err
-			}
-			if !equal {
-				return errno.NewMQRetryErr("filter calibration materialization pending")
-			}
-			return nil
+			return ctx.Err()
 		}); err != nil {
 			return false, errno.WrapMQRetryErr(err)
 		}

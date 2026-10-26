@@ -61,8 +61,8 @@ func TestRunningRetryFilterSync_BusyDoesNotReadPayload(t *testing.T) {
 	require.Zero(t, reads.Load(), "current payload was read before acquiring item mutex")
 }
 
-// A Resulted row must still pass through final calibration, and an invisible
-// asynchronous write must leave it pending rather than claim completion.
+// A Resulted row must still pass through final calibration; missing publication
+// dependencies must leave it pending rather than claim completion.
 func TestRunningRetryFilterSync_ResultedNeedsCalibration(t *testing.T) {
 	f := newLateWriteFixture(t, "rq1")
 	require.NoError(t, f.conn.Exec("UPDATE expt_item_result SET status=? WHERE space_id=? AND expt_id=? AND item_id=?", entity.ItemRunState_Success, f.space, f.expt, f.item).Error)
@@ -78,7 +78,7 @@ func TestRunningRetryFilterSync_ResultedNeedsCalibration(t *testing.T) {
 	}
 }
 
-// This test catches a calibration that only compares scores/status while an
+// This test catches a comparison that only checks scores/status while an
 // old per-item snapshot or target field remains materialized.
 func TestRunningRetryFilterSync_FullProjectionMismatch(t *testing.T) {
 	for _, tc := range []struct {
@@ -114,20 +114,9 @@ func TestRunningRetryFilterSync_FullProjectionMismatch(t *testing.T) {
 			}(), EvalSetID: 55, EvalSetVersionID: 66}}, nil)
 			sink := &fullFilterTestSink{IExptTurnResultFilterRepo: filters}
 			svc := ExptResultServiceImpl{ExptTurnResultRepo: turns, ExptItemResultRepo: items, ExperimentRepo: experiments, ExptAnnotateRepo: annotations, evaluatorRecordService: records, evalTargetService: target, exptTurnResultFilterRepo: sink}
-			filters.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil)
-			publication := repomocks.NewMockIExptResultPublishRepo(ctrl)
-			retryJSON, err := json.Marshal(&entity.ManualRetryContext{RunID: 2, RequestID: "rq1", Mode: entity.EvaluationModeFailRetry})
-			require.NoError(t, err)
-			publication.EXPECT().GetItemResultPublishSource(gomock.Any(), int64(3), int64(1), int64(2), int64(10)).Return(&entity.ExptItemResultPublishSource{Source: &entity.ExptCurrentItemRunSource{Current: entity.ExptItemCurrentRequest{RequestID: "rq1"}}, Item: &entity.ExptItemResult{Status: entity.ItemRunState_Success, Ext: map[string]string{entity.ManualRetryExtKey: string(retryJSON)}}, ItemLog: &entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Success), ResultState: int32(entity.ExptItemResultStateResulted)}}, nil)
-			svc.ExptItemResultRepo = &versionCalibrationScanner{items}
-			svc.resultPublishRepo = publication
-			equal, err := svc.ReconcileManualRetryFilterBeforeFinish(context.Background(), 3, 1, 2)
+			equal, err := svc.materializedFilterMatchesLocked(context.Background(), 3, 1, 10)
 			require.Equal(t, tc.ready, equal)
-			if tc.ready {
-				require.NoError(t, err)
-			} else {
-				require.True(t, errno.NeedMQRetry(err))
-			}
+			require.NoError(t, err)
 		})
 	}
 
@@ -137,6 +126,175 @@ type fullFilterTestSink struct{ repo.IExptTurnResultFilterRepo }
 
 func (s *fullFilterTestSink) GetMaterializedByExptIDItemIDs(ctx context.Context, space, expt, date string, ids []string) ([]*entity.ExptTurnResultFilterEntity, error) {
 	return s.GetByExptIDItemIDs(ctx, space, expt, date, ids)
+}
+
+func TestRunningRetryFilterSync_SaveACKAllowsFinishWithoutCKQuery(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		rows []*entity.ExptTurnResultFilterEntity
+		err  error
+	}{
+		{name: "absent"},
+		{name: "stale", rows: []*entity.ExptTurnResultFilterEntity{{SpaceID: 3, ExptID: 1, ItemID: 10, ItemVersionID: 111, Status: entity.ItemRunState_Fail}}},
+		{name: "query_unavailable", err: errors.New("CK query unavailable")},
+	} {
+		for _, composition := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/finish_composition=%t", tc.name, composition), func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				svc, filters := newFinishACKTestService(t, ctrl)
+				queries, saves := 0, 0
+				filters.EXPECT().GetByExptIDItemIDs(gomock.Any(), "3", "1", "2026-10-20", []string{"10"}).DoAndReturn(func(context.Context, string, string, string, []string) ([]*entity.ExptTurnResultFilterEntity, error) {
+					queries++
+					return tc.rows, tc.err
+				}).AnyTimes()
+				filters.EXPECT().Save(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rows []*entity.ExptTurnResultFilterEntity) error {
+					saves++
+					require.Len(t, rows, 1)
+					require.Equal(t, int64(10), rows[0].ItemID)
+					require.Equal(t, int64(222), rows[0].ItemVersionID)
+					require.Equal(t, entity.ItemRunState_Success, rows[0].Status)
+					return nil
+				})
+				if composition {
+					manager := &naturalFinishProbe{IExptManager: svcmocks.NewMockIExptManager(ctrl), disposition: entity.ExptRunFinishFinished}
+					idem := idemmocks.NewMockIdempotentService(ctrl)
+					idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
+					idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+					config := componentmocks.NewMockIConfiger(ctrl)
+					config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{}).AnyTimes()
+					base := &exptBaseExec{Manager: manager, idem: idem, configer: config, resultSvc: svc}
+					err := base.exptEnd(context.Background(), &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2, ExptRunMode: entity.EvaluationModeSubmit}, &entity.Experiment{ExptType: entity.ExptType_Offline})
+					require.NoError(t, err, "Save ACK must allow finish composition")
+					require.Equal(t, 1, manager.calls)
+				} else {
+					ready, err := svc.ReconcileManualRetryFilterBeforeFinish(context.Background(), 3, 1, 2)
+					require.NoError(t, err, "Save ACK must complete calibration")
+					require.True(t, ready)
+				}
+				require.Equal(t, 1, saves)
+				require.Zero(t, queries, "finish calibration must not query CK after Save ACK")
+			})
+		}
+	}
+}
+
+func newFinishACKTestService(t *testing.T, ctrl *gomock.Controller) (*ExptResultServiceImpl, *repomocks.MockIExptTurnResultFilterRepo) {
+	t.Helper()
+	turns := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	items := repomocks.NewMockIExptItemResultRepo(ctrl)
+	filters := repomocks.NewMockIExptTurnResultFilterRepo(ctrl)
+	experiments := repomocks.NewMockIExperimentRepo(ctrl)
+	annotations := repomocks.NewMockIExptAnnotateRepo(ctrl)
+	records := svcmocks.NewMockEvaluatorRecordService(ctrl)
+	target := svcmocks.NewMockIEvalTargetService(ctrl)
+	publication := repomocks.NewMockIExptResultPublishRepo(ctrl)
+	now := time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC)
+	turns.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(3), int64(1), []int64{10}, gomock.Any(), false).Return([]*entity.ExptTurnResult{{ID: 101, SpaceID: 3, ExptID: 1, ExptRunID: 2, ItemID: 10, ItemVersionID: 222, TurnID: 0, Status: int32(entity.TurnRunState_Success), WeightedScore: gptr.Of(0.0)}}, int64(1), nil)
+	items.EXPECT().BatchGet(gomock.Any(), int64(3), int64(1), []int64{10}).Return([]*entity.ExptItemResult{{SpaceID: 3, ExptID: 1, ExptRunID: 2, ItemID: 10, ItemVersionID: 222, Status: entity.ItemRunState_Success}}, nil)
+	filters.EXPECT().GetExptTurnResultFilterKeyMappings(gomock.Any(), int64(3), int64(1)).Return(nil, nil)
+	experiments.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, StartAt: &now, ExptType: entity.ExptType_Offline, EvalSetID: 55, EvalSetVersionID: 66}, nil)
+	turns.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(3), []int64{101}).Return(nil, nil)
+	records.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).Return(nil, nil)
+	target.EXPECT().BatchGetRecordByIDs(gomock.Any(), int64(3), gomock.Any()).Return(nil, nil)
+	annotations.EXPECT().GetExptTurnAnnotateRecordRefsByTurnResultIDs(gomock.Any(), int64(3), []int64{101}).Return(nil, nil)
+	annotations.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), int64(3), gomock.Any()).Return(nil, nil)
+	retryJSON, err := json.Marshal(&entity.ManualRetryContext{RunID: 2, RequestID: "rq1", Mode: entity.EvaluationModeFailRetry})
+	require.NoError(t, err)
+	source := &entity.ExptItemResultPublishSource{
+		Source:  &entity.ExptCurrentItemRunSource{Current: entity.ExptItemCurrentRequest{SpaceID: 3, ExptID: 1, RunID: 2, ItemID: 10, RequestID: "rq1"}},
+		Item:    &entity.ExptItemResult{SpaceID: 3, ExptID: 1, ExptRunID: 2, ItemID: 10, ItemVersionID: 222, Status: entity.ItemRunState_Success, Ext: map[string]string{entity.ManualRetryExtKey: string(retryJSON)}},
+		ItemLog: &entity.ExptItemResultRunLog{SpaceID: 3, ExptID: 1, ExptRunID: 2, ItemID: 10, ItemVersionID: 222, Status: int32(entity.ItemRunState_Success), ResultState: int32(entity.ExptItemResultStateResulted)},
+	}
+	publication.EXPECT().GetItemResultPublishSource(gomock.Any(), int64(3), int64(1), int64(2), int64(10)).Return(source, nil)
+	svc := &ExptResultServiceImpl{ExptTurnResultRepo: turns, ExptItemResultRepo: &versionCalibrationScanner{items}, ExperimentRepo: experiments, ExptAnnotateRepo: annotations, evaluatorRecordService: records, evalTargetService: target, exptTurnResultFilterRepo: &fullFilterTestSink{filters}, resultPublishRepo: publication}
+	return svc, filters
+}
+
+func TestRunningRetryFilterSync_SaveACKPreservesContextError(t *testing.T) {
+	for _, expired := range []bool{false, true} {
+		for _, leased := range []bool{false, true} {
+			t.Run(fmt.Sprintf("expired=%t/leased=%t", expired, leased), func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				svc, filters := newFinishACKTestService(t, ctrl)
+				ctx, cancel := context.WithCancel(context.Background())
+				want := context.Canceled
+				if expired {
+					cancel()
+					ctx, cancel = context.WithTimeout(context.Background(), time.Second)
+					want = context.DeadlineExceeded
+				}
+				defer cancel()
+				caller := ctx
+				if leased {
+					caller = context.Background()
+					locker := lockmocks.NewMockILocker(ctrl)
+					locker.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:1:10", gomock.Any(), gomock.Any()).Return(true, ctx, cancel, nil)
+					locker.EXPECT().Unlock("expt_item_eval_run_lock:1:10").Return(true, nil)
+					svc.resultPublishLocker = func() lock.ILocker { return locker }
+				}
+				filters.EXPECT().Save(gomock.Any(), gomock.Any()).DoAndReturn(func(savedCtx context.Context, _ []*entity.ExptTurnResultFilterEntity) error {
+					if expired {
+						<-savedCtx.Done()
+					} else {
+						cancel()
+					}
+					return nil
+				})
+				ready, err := svc.ReconcileManualRetryFilterBeforeFinish(caller, 3, 1, 2)
+				require.False(t, ready)
+				require.True(t, errno.NeedMQRetry(err))
+				require.ErrorIs(t, err, want)
+			})
+		}
+	}
+}
+
+func TestRunningRetryFilterSync_SaveErrorKeepsFinishPending(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	svc, filters := newFinishACKTestService(t, ctrl)
+	fault := errors.New("CK save unavailable")
+	filters.EXPECT().Save(gomock.Any(), gomock.Any()).Return(fault)
+	ready, err := svc.ReconcileManualRetryFilterBeforeFinish(context.Background(), 3, 1, 2)
+	require.False(t, ready)
+	require.True(t, errno.NeedMQRetry(err))
+	require.ErrorIs(t, err, fault)
+}
+
+func TestRunningRetryFilterSync_CalibrationSourcePending(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		run     int64
+		request string
+		item    entity.ItemRunState
+		log     entity.ItemRunState
+		result  entity.ExptItemResultState
+	}{
+		{"request_changed", 2, "rq2", entity.ItemRunState_Success, entity.ItemRunState_Success, entity.ExptItemResultStateResulted},
+		{"run_changed", 1, "rq1", entity.ItemRunState_Success, entity.ItemRunState_Success, entity.ExptItemResultStateResulted},
+		{"item_queueing", 2, "rq1", entity.ItemRunState_Queueing, entity.ItemRunState_Success, entity.ExptItemResultStateResulted},
+		{"item_processing", 2, "rq1", entity.ItemRunState_Processing, entity.ItemRunState_Success, entity.ExptItemResultStateResulted},
+		{"log_queueing", 2, "rq1", entity.ItemRunState_Success, entity.ItemRunState_Queueing, entity.ExptItemResultStateResulted},
+		{"log_processing", 2, "rq1", entity.ItemRunState_Success, entity.ItemRunState_Processing, entity.ExptItemResultStateResulted},
+		{"logged", 2, "rq1", entity.ItemRunState_Success, entity.ItemRunState_Success, entity.ExptItemResultStateLogged},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			items := repomocks.NewMockIExptItemResultRepo(ctrl)
+			publication := repomocks.NewMockIExptResultPublishRepo(ctrl)
+			filters := repomocks.NewMockIExptTurnResultFilterRepo(ctrl)
+			retryJSON, err := json.Marshal(&entity.ManualRetryContext{RunID: tc.run, RequestID: "rq1", Mode: entity.EvaluationModeFailRetry})
+			require.NoError(t, err)
+			publication.EXPECT().GetItemResultPublishSource(gomock.Any(), int64(3), int64(1), int64(2), int64(10)).Return(&entity.ExptItemResultPublishSource{
+				Source:  &entity.ExptCurrentItemRunSource{Current: entity.ExptItemCurrentRequest{RequestID: tc.request}},
+				Item:    &entity.ExptItemResult{Status: tc.item, Ext: map[string]string{entity.ManualRetryExtKey: string(retryJSON)}},
+				ItemLog: &entity.ExptItemResultRunLog{Status: int32(tc.log), ResultState: int32(tc.result)},
+			}, nil)
+			svc := &ExptResultServiceImpl{ExptItemResultRepo: &versionCalibrationScanner{items}, resultPublishRepo: publication, exptTurnResultFilterRepo: filters}
+			ready, err := svc.ReconcileManualRetryFilterBeforeFinish(context.Background(), 3, 1, 2)
+			require.False(t, ready)
+			require.True(t, errno.NeedMQRetry(err))
+		})
+	}
 }
 
 // A producer already owns the execution mutex; using the public refresh here
@@ -232,7 +390,7 @@ func TestRunningRetryFilterSync_IndependentItems(t *testing.T) {
 
 // All offline modes must carry the calibration result into the real completion
 // branch. Broker retries bypass the scheduler's business failure completion.
-func TestRunningRetryFilterSync_OfflineFinishBlocksUntilMaterialized(t *testing.T) {
+func TestRunningRetryFilterSync_OfflineFinishBlocksUntilCalibrated(t *testing.T) {
 	for _, mode := range []entity.ExptRunMode{entity.EvaluationModeSubmit, entity.EvaluationModeFailRetry, entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems} {
 		t.Run(fmt.Sprint(mode), func(t *testing.T) {
 			ctrl := gomock.NewController(t)
@@ -269,7 +427,7 @@ func TestRunningRetryFilterSync_OfflineFinishBlocksUntilMaterialized(t *testing.
 				manager.EXPECT().UnlockCompletingRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				end = (&ExptRetryItemsExec{manager: manager, idem: idem, configer: config, exptItemResultRepo: items, exptRunLogRepo: logs, resultSvc: result}).ExptEnd
 			}
-			for _, fault := range []error{errors.New("filter read unavailable"), nil} {
+			for _, fault := range []error{errors.New("filter publication unavailable"), nil} {
 				result.err = fault
 				result.ready = false
 				scheduler := &ExptSchedulerImpl{Manager: manager}
@@ -278,7 +436,7 @@ func TestRunningRetryFilterSync_OfflineFinishBlocksUntilMaterialized(t *testing.
 					return err
 				})(context.Background(), event)
 				require.True(t, errno.NeedMQRetry(err))
-				require.Zero(t, complete.Load(), "unmaterialized filter completed offline run")
+				require.Zero(t, complete.Load(), "uncalibrated filter completed offline run")
 			}
 			result.ready = true
 			result.err = nil
