@@ -21,4 +21,7 @@ const (
 	// 双沙箱一次调用会创建多个 (agent / orchestrator 各一个), id 命名规则属实现细节, 平台侧不做推断。
 	// 销毁沙箱时按此列表逐个 Destroy; 缺省 (老数据 / 单沙箱实现未回传) 退回用 record.ID。
 	OutputDataExtKeySandboxExecuteIDs = "sandbox_execute_ids"
+
+	// OutputDataExtKeySandboxWorkspaceID 保存执行时的调度空间，与对象来源空间独立。
+	OutputDataExtKeySandboxWorkspaceID = "sandbox_workspace_id"
 )

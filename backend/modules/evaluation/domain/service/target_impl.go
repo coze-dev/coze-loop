@@ -685,7 +685,11 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 			executeIDs := sandboxExecuteIDsOf(ctx, record)
 			logs.CtxError(ctx, "[SandboxDestroy] create eval target record fail, destroying sandbox executes to avoid leak, invoke_id=%d, expt_id=%d, execute_ids=%v, err=%v",
 				record.ID, gptr.Indirect(param.ExperimentID), executeIDs, err)
-			e.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(param.ExperimentID), 10), spaceID, executeIDs, false)
+			schedulerSpaceID := param.ExptSpaceID
+			if schedulerSpaceID <= 0 {
+				schedulerSpaceID = spaceID
+			}
+			e.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(param.ExperimentID), 10), schedulerSpaceID, spaceID, executeIDs, false)
 		}
 		return nil, callee, err
 	}
@@ -851,7 +855,17 @@ func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Contex
 	executeIDs := sandboxExecuteIDsOf(ctx, record)
 	logs.CtxInfo(ctx, "[SandboxDestroy] destroying sandbox executes, record_id=%d, task_id=%s, expt_run_id=%d, execute_ids=%v",
 		record.ID, taskID, record.ExperimentRunID, executeIDs)
-	e.destroySandboxExecute(ctx, taskID, record.SpaceID, executeIDs, false)
+	e.destroySandboxExecute(ctx, taskID, sandboxWorkspaceIDOf(record), record.SpaceID, executeIDs, false)
+}
+
+// sandboxWorkspaceIDOf 保留旧任务的来源空间归属，新任务使用 operator 记录的调度空间。
+func sandboxWorkspaceIDOf(record *entity.EvalTargetRecord) int64 {
+	if record.EvalTargetOutputData != nil {
+		if workspaceID, err := strconv.ParseInt(record.EvalTargetOutputData.Ext[consts.OutputDataExtKeySandboxWorkspaceID], 10, 64); err == nil && workspaceID > 0 {
+			return workspaceID
+		}
+	}
+	return record.SpaceID
 }
 
 // extractExtraSandboxExecuteID 从 record 的 outputData.Ext 里读取额外沙箱 execute id；
@@ -974,7 +988,7 @@ func (e *EvalTargetServiceImpl) resolveSandboxTaskIDByRunID(ctx context.Context,
 // cenk/backoff 的 backOffContext.NextBackOff 见 ctx.Done() 立即返回 Stop, 于是**第一次
 // Destroy 失败后一次都不会重试**, 整个重试形同虚设 (恰是本函数要修的那个泄漏)。
 // 与 ReportInvokeRecords 里落 record 的 persistCtx 同款处置: 剥离取消信号, 保留 logID 等值。
-func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID int64, executeIDs []string, zombieTimeout bool) {
+func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID, sourceSpaceID int64, executeIDs []string, zombieTimeout bool) {
 	if e.sandboxSchedulerAdapter == nil || len(executeIDs) == 0 {
 		return
 	}
@@ -993,7 +1007,7 @@ func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskI
 	for t, ids := range byTask {
 		t, ids := t, ids
 		goroutine.Go(destroyCtx, func() {
-			e.destroySandboxExecuteSync(destroyCtx, t, spaceID, ids, zombieTimeout)
+			e.destroySandboxExecuteSync(destroyCtx, t, spaceID, sourceSpaceID, ids, zombieTimeout)
 		})
 	}
 }
@@ -1005,18 +1019,19 @@ func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskI
 // 返回, 后续重试落在测试结束之后, 撞 gomock 在已完成的 *testing.T 上 Fatalf → panic
 // "Fail in goroutine after ... has completed")。同步入口让"重试到用尽"能被确定性地断言完,
 // 不留悬空 goroutine。
-func (e *EvalTargetServiceImpl) destroySandboxExecuteSync(ctx context.Context, taskID string, spaceID int64, executeIDs []string, zombieTimeout bool) {
+func (e *EvalTargetServiceImpl) destroySandboxExecuteSync(ctx context.Context, taskID string, spaceID, sourceSpaceID int64, executeIDs []string, zombieTimeout bool) {
 	budget := e.sandboxDestroyRetryBudget
 	if budget <= 0 {
 		budget = defaultSandboxDestroyRetryBudget
 	}
 	if err := backoff.RetryWithElapsedTime(ctx, budget, func() error {
 		_, derr := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
-			TaskID:        taskID,
-			DestroyType:   rpc.SandboxDestroyTypeExecute,
-			ExecuteIDs:    executeIDs,
-			WorkspaceID:   spaceID,
-			ZombieTimeout: zombieTimeout,
+			TaskID:            taskID,
+			DestroyType:       rpc.SandboxDestroyTypeExecute,
+			ExecuteIDs:        executeIDs,
+			WorkspaceID:       spaceID,
+			SourceWorkspaceID: sourceSpaceID,
+			ZombieTimeout:     zombieTimeout,
 		})
 		return derr
 	}); err != nil {
@@ -1029,8 +1044,8 @@ func (e *EvalTargetServiceImpl) destroySandboxExecuteSync(ctx context.Context, t
 
 // destroySandboxExtraExecute 异步 best-effort 销毁指定字符串 executeID 的沙箱执行；用于双沙箱
 // 从沙箱这类没有 int64 ID 的额外销毁点。zombieTimeout 强制 false，避免向从沙箱下发收尾命令。
-func (e *EvalTargetServiceImpl) destroySandboxExtraExecute(ctx context.Context, taskID string, spaceID int64, executeID string) {
-	e.destroySandboxExecute(ctx, taskID, spaceID, []string{executeID}, false)
+func (e *EvalTargetServiceImpl) destroySandboxExtraExecute(ctx context.Context, taskID string, spaceID, sourceSpaceID int64, executeID string) {
+	e.destroySandboxExecute(ctx, taskID, spaceID, sourceSpaceID, []string{executeID}, false)
 }
 
 // TerminateAsyncRecordsAndDestroySandbox 把仍处于 AsyncInvoking 状态的 SandboxAgent EvalTargetRecord 置为 Fail，
@@ -1095,6 +1110,7 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 		// sandboxExecuteIDsOf 同时覆盖两种 ext 形态（完整列表 / 主 id + extra id），是 extra 单值的超集。
 		executeIDs := sandboxExecuteIDsOf(ctx, r)
 		extraExecuteID := extractExtraSandboxExecuteID(r)
+		schedulerSpaceID := sandboxWorkspaceIDOf(r)
 		failOutput := &entity.EvalTargetOutputData{
 			EvalTargetRunError: &entity.EvalTargetRunError{
 				Code:    errCode,
@@ -1104,6 +1120,14 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 		// 保留 extra execute id 在落库的 fail record 上，便于事后审计 / 手动兜底销毁。
 		if extraExecuteID != "" {
 			failOutput.Ext = map[string]string{entity.SandboxAgentExtKeyExtraExecuteID: extraExecuteID}
+		}
+		if r.EvalTargetOutputData != nil {
+			if workspaceID, ok := r.EvalTargetOutputData.Ext[consts.OutputDataExtKeySandboxWorkspaceID]; ok {
+				if failOutput.Ext == nil {
+					failOutput.Ext = make(map[string]string)
+				}
+				failOutput.Ext[consts.OutputDataExtKeySandboxWorkspaceID] = workspaceID
+			}
 		}
 		r.Status = gptr.Of(entity.EvalTargetRunStatusFail)
 		r.EvalTargetOutputData = failOutput
@@ -1124,12 +1148,12 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 			if id == extraExecuteID {
 				continue
 			}
-			e.destroySandboxExecute(ctx, taskID, r.SpaceID, []string{id}, zombieTimeout)
+			e.destroySandboxExecute(ctx, taskID, schedulerSpaceID, r.SpaceID, []string{id}, zombieTimeout)
 		}
 		// 双沙箱：额外销毁从沙箱 execute，语义对齐 destroySandboxExecuteIfNeeded (success 分支)。
 		// 从沙箱 zombieTimeout 恒为 false，不需要下发 SandboxAgent EndCmd（EndCmd 只对主沙箱有意义）。
 		if extraExecuteID != "" {
-			e.destroySandboxExtraExecute(ctx, taskID, r.SpaceID, extraExecuteID)
+			e.destroySandboxExtraExecute(ctx, taskID, schedulerSpaceID, r.SpaceID, extraExecuteID)
 		}
 	}
 }
@@ -1242,7 +1266,7 @@ func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spac
 			var anyTerminal bool
 			labelParts := make([]string, 0, len(executeIDs))
 			for _, eid := range executeIDs {
-				terminal, status := e.querySandboxTerminalStatus(ctx, eid, spaceID, r.ID, sideForExecuteID(eid, r.ID))
+				terminal, status := e.querySandboxTerminalStatus(ctx, eid, sandboxWorkspaceIDOf(r), r.ID, sideForExecuteID(eid, r.ID))
 				if terminal {
 					anyTerminal = true
 					labelParts = append(labelParts, sandboxStatusText(status)+" ("+sideForExecuteID(eid, r.ID)+")")
@@ -1352,6 +1376,10 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		logs.CtxWarn(ctx, "[SandboxDestroy] ReportInvokeRecords skipped: record status is not AsyncInvoking, sandbox will NOT be destroyed, record_id=%d, space_id=%d, got_status=%d, want_status=%d",
 			param.RecordID, param.SpaceID, status, entity.EvalTargetRunStatusAsyncInvoking)
 		return errorx.NewByCode(errno.CommonBadRequestCode, errorx.WithExtraMsg(fmt.Sprintf("unexpected target result status %d", status)))
+	}
+	// 调度空间只能来自执行时保存的元数据，旧记录也不能由回调新增该字段。
+	if param.OutputData != nil && (record.EvalTargetOutputData == nil || record.EvalTargetOutputData.Ext[consts.OutputDataExtKeySandboxWorkspaceID] == "") {
+		delete(param.OutputData.Ext, consts.OutputDataExtKeySandboxWorkspaceID)
 	}
 	if record.EvalTargetOutputData != nil && len(record.EvalTargetOutputData.Ext) > 0 {
 		if param.OutputData == nil {
