@@ -13,6 +13,7 @@ import (
 	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
 	usersession "github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	domaincommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
@@ -1303,13 +1304,13 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	logs.CtxInfo(ctx, "ReportEvalTargetInvokeResult receive req: %v", json.Jsonify(req))
 
 	actx, err := e.asyncRepo.GetEvalAsyncCtx(ctx, strconv.FormatInt(req.GetInvokeID(), 10))
-	if err != nil {
+	if err != nil && !redis.IsNilError(err) {
 		return nil, err
 	}
 
-	if actx == nil {
+	if err != nil || actx == nil {
 		logs.CtxWarn(ctx, "report target record, actx missing, invoke_id: %v, space_id: %v", req.GetInvokeID(), req.GetWorkspaceID())
-		return nil, errorx.New("eval async context not found, invoke_id: %v", req.GetInvokeID())
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("eval async context not found, invoke_id: %v", req.GetInvokeID())))
 	}
 
 	// 调试场景（actx.Event == nil）：无论成功失败都 best-effort 销毁沙箱执行。
