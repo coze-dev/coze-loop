@@ -204,7 +204,7 @@ func TestBaselineDestroyRetryAcceptsReturnedErrors(t *testing.T) {
 	_, _, _, _, records, scheduler := deleteCoreFixture()
 	scheduler.failFirst = true
 	target := &EvalTargetServiceImpl{evalTargetRepo: records, sandboxSchedulerAdapter: scheduler, sandboxDestroyRetryBudget: 500 * time.Millisecond}
-	_ = target.destroySandboxExecuteSync(context.Background(), "701", 22, []string{"10-agent"}, false)
+	_ = target.destroySandboxExecuteSync(context.Background(), "701", 22, 22, []string{"10-agent"}, false)
 	require.Equal(t, 2, scheduler.calls)
 }
 

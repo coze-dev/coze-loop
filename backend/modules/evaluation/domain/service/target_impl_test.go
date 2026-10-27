@@ -3211,7 +3211,7 @@ func TestSandboxExecuteIDsOf_BothExtKeyShapes(t *testing.T) {
 func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T) {
 	t.Run("nil adapter 不触发", func(t *testing.T) {
 		svc := &EvalTargetServiceImpl{}
-		_ = svc.destroySandboxExecute(context.Background(), "task", 1, []string{"id"}, false)
+		_ = svc.destroySandboxExecute(context.Background(), "task", 1, 1, []string{"id"}, false)
 	})
 
 	t.Run("空列表不触发", func(t *testing.T) {
@@ -3219,7 +3219,7 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 		defer ctrl.Finish()
 		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
 		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched}
-		_ = svc.destroySandboxExecute(context.Background(), "task", 1, nil, false)
+		_ = svc.destroySandboxExecute(context.Background(), "task", 1, 1, nil, false)
 		// 无 EXPECT: 一次 RPC 都不该发
 	})
 
@@ -3238,7 +3238,7 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 				close(done)
 				return &rpc.SandboxDestroyResponse{}, nil
 			})
-		_ = svc.destroySandboxExecute(context.Background(), "T", 9, []string{"exec-1", "extra-2"}, false)
+		_ = svc.destroySandboxExecute(context.Background(), "T", 9, 9, []string{"exec-1", "extra-2"}, false)
 		select {
 		case <-done:
 		case <-time.After(2 * time.Second):
@@ -3267,7 +3267,7 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 				return &rpc.SandboxDestroyResponse{}, nil
 			})
 
-		_ = svc.destroySandboxExecute(context.Background(), "T", 9, []string{"T-orch", "T-macvm"}, false)
+		_ = svc.destroySandboxExecute(context.Background(), "T", 9, 9, []string{"T-orch", "T-macvm"}, false)
 		for i := 0; i < 2; i++ {
 			select {
 			case <-done:
@@ -3299,7 +3299,7 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 		// 于是重试落在测试结束之后, 撞 gomock 在已完成的 *testing.T 上 Fatalf ——
 		// -race 下整包 exit=1 却没有任何 --- FAIL 行, 极难定位。同步调用天然无悬空 goroutine。
 		assert.NotPanics(t, func() {
-			_ = svc.destroySandboxExecuteSync(context.Background(), "T", 9, []string{"e"}, false)
+			_ = svc.destroySandboxExecuteSync(context.Background(), "T", 9, 9, []string{"e"}, false)
 		})
 		assert.GreaterOrEqual(t, atomic.LoadInt32(&calls), int32(1), "至少尝试一次 Destroy")
 	})
@@ -3321,7 +3321,7 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 				assert.Equal(t, []string{"e"}, req.ExecuteIDs)
 				return &rpc.SandboxDestroyResponse{}, nil
 			})
-		_ = svc.destroySandboxExecuteSync(context.Background(), "T", 9, []string{"e"}, false)
+		_ = svc.destroySandboxExecuteSync(context.Background(), "T", 9, 9, []string{"e"}, false)
 		assert.Equal(t, int32(2), atomic.LoadInt32(&calls), "第一次失败后必须重试一次并成功")
 	})
 
@@ -3348,7 +3348,7 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 				return &rpc.SandboxDestroyResponse{}, nil
 			})
 
-		_ = svc.destroySandboxExecute(canceled, "T", 9, []string{"e"}, false)
+		_ = svc.destroySandboxExecute(canceled, "T", 9, 9, []string{"e"}, false)
 		select {
 		case <-done:
 		case <-time.After(5 * time.Second):
@@ -3382,7 +3382,7 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ZombieTimeoutFlag(t *testin
 					close(done)
 					return &rpc.SandboxDestroyResponse{}, nil
 				})
-			_ = svc.destroySandboxExecute(context.Background(), "t", 1, []string{"2"}, tc.zombie)
+			_ = svc.destroySandboxExecute(context.Background(), "t", 1, 1, []string{"2"}, tc.zombie)
 			select {
 			case <-done:
 			case <-time.After(2 * time.Second):
