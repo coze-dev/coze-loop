@@ -10,6 +10,7 @@ struct ListEvaluatorsRequest {
     3: optional list<i64> creator_ids (api.body='creator_ids', api.js_conv='true', go.tag='json:"creator_ids"')
     4: optional list<evaluator.EvaluatorType> evaluator_type (api.body='evaluator_type')
     5: optional bool with_version (api.body='with_version')
+    6: optional string search_description (api.body='search_description')
 
     11: optional bool builtin (api.body='builtin') // 是否查询预置评估器
     12: optional evaluator.EvaluatorFilterOption filter_option (api.body='filter_option', go.tag='json:"filter_option"') // 筛选器选项

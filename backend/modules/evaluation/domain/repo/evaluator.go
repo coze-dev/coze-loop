@@ -45,14 +45,15 @@ type IEvaluatorRepo interface {
 }
 
 type ListEvaluatorRequest struct {
-	SpaceID       int64
-	SearchName    string
-	CreatorIDs    []int64
-	EvaluatorType []entity.EvaluatorType
-	FilterOption  *entity.EvaluatorFilterOption `json:"filter_option,omitempty"` // 标签筛选条件
-	PageSize      int32
-	PageNum       int32
-	OrderBy       []*entity.OrderBy
+	SpaceID           int64
+	SearchName        string
+	SearchDescription string
+	CreatorIDs        []int64
+	EvaluatorType     []entity.EvaluatorType
+	FilterOption      *entity.EvaluatorFilterOption `json:"filter_option,omitempty"` // 标签筛选条件
+	PageSize          int32
+	PageNum           int32
+	OrderBy           []*entity.OrderBy
 }
 
 type ListEvaluatorResponse struct {

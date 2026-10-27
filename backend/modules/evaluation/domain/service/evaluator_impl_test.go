@@ -662,20 +662,22 @@ func TestEvaluatorServiceImpl_ListEvaluator(t *testing.T) {
 		{
 			name: "成功 - 不带版本信息 (WithVersion = false)",
 			request: &entity.ListEvaluatorRequest{
-				SpaceID:     1,
-				PageSize:    10,
-				PageNum:     1,
-				WithVersion: false,
+				SpaceID:           1,
+				SearchDescription: "Desc",
+				PageSize:          10,
+				PageNum:           1,
+				WithVersion:       false,
 			},
 			setupMock: func(mockRepo *repomocks.MockIEvaluatorRepo) {
 				// buildListEvaluatorRequest 会将 service.ListEvaluatorRequest 转换为 repo.ListEvaluatorRequest
 				// 这里我们模拟 repo.ListEvaluator 的行为，其输入参数是转换后的 repo.ListEvaluatorRequest
 				expectedRepoReq := &repo.ListEvaluatorRequest{
-					SpaceID:       1,
-					PageSize:      10,
-					PageNum:       1,
-					EvaluatorType: []entity.EvaluatorType{}, // 假设 request.EvaluatorType 为空
-					OrderBy:       []*entity.OrderBy{{Field: ptr.Of("updated_at"), IsAsc: ptr.Of(false)}},
+					SpaceID:           1,
+					SearchDescription: "Desc",
+					PageSize:          10,
+					PageNum:           1,
+					EvaluatorType:     []entity.EvaluatorType{}, // 假设 request.EvaluatorType 为空
+					OrderBy:           []*entity.OrderBy{{Field: ptr.Of("updated_at"), IsAsc: ptr.Of(false)}},
 				}
 				mockRepo.EXPECT().ListEvaluator(gomock.Any(), gomock.Eq(expectedRepoReq)).Return(
 					&repo.ListEvaluatorResponse{

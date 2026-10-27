@@ -141,12 +141,13 @@ func (e *EvaluatorServiceImpl) ListEvaluator(ctx context.Context, request *entit
 func buildListEvaluatorRequest(ctx context.Context, request *entity.ListEvaluatorRequest) (*repo.ListEvaluatorRequest, error) {
 	// 转换请求参数为repo层结构
 	req := &repo.ListEvaluatorRequest{
-		SpaceID:      request.SpaceID,
-		SearchName:   request.SearchName,
-		CreatorIDs:   request.CreatorIDs,
-		FilterOption: request.FilterOption, // 传递FilterOption
-		PageSize:     request.PageSize,
-		PageNum:      request.PageNum,
+		SpaceID:           request.SpaceID,
+		SearchName:        request.SearchName,
+		SearchDescription: request.SearchDescription,
+		CreatorIDs:        request.CreatorIDs,
+		FilterOption:      request.FilterOption, // 传递FilterOption
+		PageSize:          request.PageSize,
+		PageNum:           request.PageNum,
 	}
 	evaluatorType := make([]entity.EvaluatorType, 0, len(request.EvaluatorType))
 	evaluatorType = append(evaluatorType, request.EvaluatorType...)
