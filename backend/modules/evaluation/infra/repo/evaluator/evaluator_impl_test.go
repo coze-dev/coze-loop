@@ -1721,12 +1721,13 @@ func TestEvaluatorRepoImpl_ListEvaluator(t *testing.T) {
 		{
 			name: "成功获取评估器列表",
 			request: &repo.ListEvaluatorRequest{
-				SpaceID:       1,
-				SearchName:    "test",
-				CreatorIDs:    []int64{1},
-				EvaluatorType: []entity.EvaluatorType{entity.EvaluatorTypePrompt},
-				PageSize:      10,
-				PageNum:       1,
+				SpaceID:           1,
+				SearchName:        "test",
+				SearchDescription: "CeShI",
+				CreatorIDs:        []int64{1},
+				EvaluatorType:     []entity.EvaluatorType{entity.EvaluatorTypePrompt},
+				PageSize:          10,
+				PageNum:           1,
 				OrderBy: []*entity.OrderBy{
 					{
 						Field: gptr.Of("updated_at"),
@@ -1737,12 +1738,13 @@ func TestEvaluatorRepoImpl_ListEvaluator(t *testing.T) {
 			mockSetup: func() {
 				mockEvaluatorDAO.EXPECT().
 					ListEvaluator(gomock.Any(), &mysql.ListEvaluatorRequest{
-						SpaceID:       1,
-						SearchName:    "test",
-						CreatorIDs:    []int64{1},
-						EvaluatorType: []int32{int32(entity.EvaluatorTypePrompt)},
-						PageSize:      10,
-						PageNum:       1,
+						SpaceID:           1,
+						SearchName:        "test",
+						SearchDescription: "CeShI",
+						CreatorIDs:        []int64{1},
+						EvaluatorType:     []int32{int32(entity.EvaluatorTypePrompt)},
+						PageSize:          10,
+						PageNum:           1,
 						OrderBy: []*mysql.OrderBy{
 							{
 								Field:  "updated_at",
@@ -1776,12 +1778,13 @@ func TestEvaluatorRepoImpl_ListEvaluator(t *testing.T) {
 		{
 			name: "获取评估器列表失败",
 			request: &repo.ListEvaluatorRequest{
-				SpaceID:       1,
-				SearchName:    "test",
-				CreatorIDs:    []int64{1},
-				EvaluatorType: []entity.EvaluatorType{entity.EvaluatorTypePrompt},
-				PageSize:      10,
-				PageNum:       1,
+				SpaceID:           1,
+				SearchName:        "test",
+				SearchDescription: "CeShI",
+				CreatorIDs:        []int64{1},
+				EvaluatorType:     []entity.EvaluatorType{entity.EvaluatorTypePrompt},
+				PageSize:          10,
+				PageNum:           1,
 				OrderBy: []*entity.OrderBy{
 					{
 						Field: gptr.Of("updated_at"),
