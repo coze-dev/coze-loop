@@ -2405,18 +2405,23 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 				event := &entity.ExptItemEvalEvent{SpaceID: 44, ExptID: 1, ExptRunID: 2, EvalSetItemID: 3}
 				actx := &entity.EvalAsyncCtx{AsyncUnixMS: time.Now().Add(-100 * time.Millisecond).UnixMilli(), Event: event}
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "404").Return(actx, nil)
+				read := targetSvc.EXPECT().GetRecordByID(gomock.Any(), int64(44), int64(404)).Return(&entity.EvalTargetRecord{ID: 404, TurnID: 0}, nil)
 				report := targetSvc.EXPECT().ReportInvokeRecords(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *entity.ReportTargetRecordParam) error {
 					assert.Equal(t, int64(44), param.SpaceID)
 					assert.Equal(t, int64(404), param.RecordID)
 					assert.Equal(t, entity.EvalTargetRunStatusSuccess, param.Status)
 					return nil
-				})
+				}).After(read)
 				configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(&entity.TargetTrajectoryConf{})
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).After(report).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration, option func(*entity.ExptItemEvalEvent)) error {
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(report).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration, option func(*entity.ExptItemEvalEvent)) error {
+					assert.NotSame(t, event, evt)
+					assert.Equal(t, event.ExptRunID, evt.ExptRunID)
+					assertCallbackResumeSource(t, evt, "target", 404, 0)
 					require.NotNil(t, duration)
 					assert.Equal(t, 50*time.Second, *duration)
 					option(evt)
 					assert.True(t, evt.AsyncReportTrigger)
+					assert.False(t, event.AsyncReportTrigger)
 					return nil
 				})
 			},
