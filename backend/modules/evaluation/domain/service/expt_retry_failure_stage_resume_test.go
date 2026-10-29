@@ -91,7 +91,7 @@ func TestFailRetrySelectTurnRunLogRefs_TargetRequirementControlsEvaluatorReuse(t
 			}
 
 			targetID, evaluatorResults, selectErr := failRetrySelectTurnRunLogRefs(
-				context.Background(), 1, tt.targetRequired,
+				context.Background(), 1, 0, tt.targetRequired,
 				&entity.ExptTurnResult{
 					EvaluatorResults: &entity.EvaluatorResults{
 						EvalVerIDToResID: map[int64]int64{10: evaluatorRecordID},
@@ -425,6 +425,8 @@ func TestExptFailRetryExec_BuildPagePlan_MultiSetGroupsTargetReadsBySourceSpace(
 		{ItemID: 12, ItemConfig: &entity.ExptItemConfig{TargetSourceSpaceID: rowTargetSpace}},
 	}, nil)
 	success := entity.EvalTargetRunStatusSuccess
+	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), int64(3), []int64{110}).Return(nil, nil)
+	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), int64(3), []int64{100, 120}).Return(nil, nil)
 	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), topTargetSpace, []int64{110}).Return([]*entity.EvalTargetRecord{{ID: 110, Status: &success}}, nil)
 	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), rowTargetSpace, []int64{100, 120}).Return([]*entity.EvalTargetRecord{
 		{ID: 100, Status: &success},
@@ -483,6 +485,7 @@ func TestExptFailRetryExec_BuildPagePlan_MultiSetMissingItemRefFallsBackToExperi
 		ItemID: itemID, ItemConfig: nil,
 	}}, nil)
 	success := entity.EvalTargetRunStatusSuccess
+	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), int64(3), []int64{30}).Return(nil, nil)
 	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), int64(99), []int64{30}).Return([]*entity.EvalTargetRecord{{ID: 30, Status: &success}}, nil)
 	idgen.EXPECT().GenMultiIDs(gomock.Any(), 1).Return([]int64{900}, nil)
 

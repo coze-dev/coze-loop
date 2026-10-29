@@ -83,6 +83,9 @@ func runRetryGenerationPreEval(t *testing.T, f *retryGenerationFixture) ([]*enti
 	turnRepo.EXPECT().GetItemTurnResults(gomock.Any(), int64(1), int64(10), int64(3)).Return(f.turns, nil).Times(repeats)
 	turnRepo.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(3), turnIDs).Return(refs, nil).Times(2 * repeats)
 	idgen.EXPECT().GenMultiIDs(gomock.Any(), len(f.turns)).Return(turnIDs, nil).Times(repeats)
+	if f.targetSpace != 3 {
+		targetSvc.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(201)).Return(nil, nil).AnyTimes()
+	}
 	targetSvc.EXPECT().GetRecordByID(gomock.Any(), f.targetSpace, int64(201)).DoAndReturn(func(ctx context.Context, _, _ int64) (*entity.EvalTargetRecord, error) {
 		assert.True(t, contexts.CtxWriteDB(ctx))
 		return &entity.EvalTargetRecord{ID: 201, ExperimentRunID: 101, Status: gptr.Of(entity.EvalTargetRunStatusSuccess)}, nil
@@ -496,7 +499,7 @@ func TestRetryFailure_SourceLogMembershipPreservesNewFormatIdentity(t *testing.T
 			}, nil)
 			turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(101), []int64{10}, int64(3)).Return([]*entity.ExptTurnResultRunLog{nil, origin}, nil)
 			sources := &retryEvaluatorSourceLogs{repo: turnRepo, event: &entity.ExptItemEvalEvent{ExptID: 1, EvalSetItemID: 10, SpaceID: 3}, logsByRun: make(map[int64]map[int64]*entity.ExptTurnResultRunLog)}
-			targetID, got, selectErr := failRetrySelectTurnRunLogRefs(context.Background(), 3, true, tr, targetSvc, recordSvc, []*entity.ExptTurnEvaluatorResultRef{{ExptTurnResultID: tr.ID, EvaluatorVersionID: 401, Alias: "judge-a", EvaluatorResultID: 301}, {ExptTurnResultID: tr.ID, InlineKey: "inline-a", SourceType: int32(entity.EvaluatorRecordSourceTypeInline), EvaluatorResultID: 302}}, sources)
+			targetID, got, selectErr := failRetrySelectTurnRunLogRefs(context.Background(), 3, 0, true, tr, targetSvc, recordSvc, []*entity.ExptTurnEvaluatorResultRef{{ExptTurnResultID: tr.ID, EvaluatorVersionID: 401, Alias: "judge-a", EvaluatorResultID: 301}, {ExptTurnResultID: tr.ID, InlineKey: "inline-a", SourceType: int32(entity.EvaluatorRecordSourceTypeInline), EvaluatorResultID: 302}}, sources)
 			require.NoError(t, selectErr)
 			assert.Equal(t, int64(201), targetID)
 			if !tt.registered && !tt.inline {

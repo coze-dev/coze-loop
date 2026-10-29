@@ -2407,7 +2407,7 @@ func Test_recordEvalItemRunLogs_publishFailInterrupts(t *testing.T) {
 
 // TestExptSchedulerImpl_terminateZombieEvalTargetRecords_CrossSpace 覆盖 zombie 兜底销毁沙箱时
 // 传入 TerminateAsyncRecordsAndDestroySandbox 的 spaceID 解析：
-//   - Expt.TargetSpaceID > 0 → 用来源空间 (跨空间共享评测对象), 避免 DAO SpaceID.Eq 过滤把 record 过滤空
+//   - Expt.TargetSpaceID > 0 → 回收实验空间及历史来源空间记录
 //   - Expt.TargetSpaceID = 0 → 回退到 event.SpaceID (消费方 = 来源方)
 //   - expt = nil → 回退到 event.SpaceID (向后兼容)
 func TestExptSchedulerImpl_terminateZombieEvalTargetRecords_CrossSpace(t *testing.T) {
@@ -2422,7 +2422,7 @@ func TestExptSchedulerImpl_terminateZombieEvalTargetRecords_CrossSpace(t *testin
 		}, mockTurnRepo, mockTargetSvc
 	}
 
-	t.Run("TargetSpaceID>0 → 用来源空间 (99) 而不是 event.SpaceID (3)", func(t *testing.T) {
+	t.Run("shared target → clean consumer and legacy source records", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		svc, mockTurnRepo, mockTargetSvc := newSvc(ctrl)
@@ -2436,6 +2436,10 @@ func TestExptSchedulerImpl_terminateZombieEvalTargetRecords_CrossSpace(t *testin
 		}
 		mockTurnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{10}, int64(3)).
 			Return([]*entity.ExptTurnResultRunLog{{ItemID: 10, TargetResultID: 500}}, nil)
+		mockTargetSvc.EXPECT().TerminateAsyncRecordsAndDestroySandbox(
+			gomock.Any(), int64(3), []int64{500}, int32(errno.AsyncEvalTargetZombieTimeoutCode),
+			gomock.Any(), true,
+		).Times(1)
 		mockTargetSvc.EXPECT().TerminateAsyncRecordsAndDestroySandbox(
 			gomock.Any(), int64(99), []int64{500}, int32(errno.AsyncEvalTargetZombieTimeoutCode),
 			gomock.Any(), true,
@@ -2487,7 +2491,7 @@ func TestExptSchedulerImpl_terminateZombieEvalTargetRecords_CrossSpace(t *testin
 
 // TestExptSchedulerImpl_sweepTerminatedSandboxItems_CrossSpace 覆盖 sweep 分支中
 // CheckSandboxTerminated 与 TerminateAsyncRecordsAndDestroySandbox 传入的 spaceID 解析:
-//   - Expt.TargetSpaceID > 0 → 都用来源空间
+//   - Expt.TargetSpaceID > 0 → 覆盖实验空间及历史来源空间记录
 //   - Expt.TargetSpaceID = 0 → 都用 event.SpaceID
 func TestExptSchedulerImpl_sweepTerminatedSandboxItems_CrossSpace(t *testing.T) {
 	baseEvent := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
@@ -2506,7 +2510,7 @@ func TestExptSchedulerImpl_sweepTerminatedSandboxItems_CrossSpace(t *testing.T) 
 		}, mockTurnRepo, mockItemRepo, mockTargetSvc
 	}
 
-	t.Run("TargetSpaceID>0 → Check/Terminate 都用来源空间 (99)", func(t *testing.T) {
+	t.Run("shared target → check and clean both record spaces", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		svc, mockTurnRepo, mockItemRepo, mockTargetSvc := newSvc(ctrl)
@@ -2515,9 +2519,14 @@ func TestExptSchedulerImpl_sweepTerminatedSandboxItems_CrossSpace(t *testing.T) 
 		mockTurnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{10}, int64(3)).
 			Return([]*entity.ExptTurnResultRunLog{{ItemID: 10, TargetResultID: 500}}, nil)
 		// 关键: CheckSandboxTerminated 用 targetSpaceID=99
+		mockTargetSvc.EXPECT().CheckSandboxTerminated(gomock.Any(), int64(3), []int64{500}).Return(nil, nil)
 		mockTargetSvc.EXPECT().CheckSandboxTerminated(gomock.Any(), int64(99), []int64{500}).
 			Return([]int64{500}, map[int64]string{500: "Failed"})
 		// 关键: Terminate 也用 targetSpaceID=99, 与 Check 侧保持一致
+		mockTargetSvc.EXPECT().TerminateAsyncRecordsAndDestroySandbox(
+			gomock.Any(), int64(3), []int64{500}, int32(errno.SandboxTerminatedBeforeReportCode),
+			gomock.Any(), false,
+		).Times(1)
 		mockTargetSvc.EXPECT().TerminateAsyncRecordsAndDestroySandbox(
 			gomock.Any(), int64(99), []int64{500}, int32(errno.SandboxTerminatedBeforeReportCode),
 			gomock.Any(), false,
