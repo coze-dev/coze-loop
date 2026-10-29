@@ -35,7 +35,7 @@ func TestWindowsSandboxDestroyGroups(t *testing.T) {
 			svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: sched}
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
-			svc.destroySandboxExecute(ctx, "42", 7, 7, []string{"invoke-orch", "invoke-windows"}, zombie)
+			require.NoError(t, svc.destroySandboxExecute(ctx, "42", 7, 7, []string{"invoke-orch", "invoke-windows"}, zombie))
 			got := map[string][]string{}
 			for i := 0; i < 2; i++ {
 				select {

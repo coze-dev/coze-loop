@@ -131,7 +131,7 @@ func (l *sandboxInvocationLifecycle) prepare(ctx context.Context, invokeID int64
 		if !transitioned {
 			return 0, fmt.Errorf("sandbox initialization ownership changed")
 		}
-		l.service.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(l.param.ExperimentID), 10), l.schedulerSpaceID(), l.spaceID, sandboxExecuteIDsOf(ctx, old), false)
+		_ = l.service.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(l.param.ExperimentID), 10), l.schedulerSpaceID(), l.spaceID, sandboxExecuteIDsOf(ctx, old), false)
 	}
 	ext := make(map[string]string)
 	for k, v := range l.input.GetExt() {
@@ -184,7 +184,7 @@ func (l *sandboxInvocationLifecycle) finish(ctx context.Context) error {
 		if done, _ := l.loadReported(ctx); done {
 			return nil
 		}
-		l.service.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(l.param.ExperimentID), 10), l.schedulerSpaceID(), l.spaceID, sandboxExecuteIDsOf(ctx, l.record), false)
+		_ = l.service.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(l.param.ExperimentID), 10), l.schedulerSpaceID(), l.spaceID, sandboxExecuteIDsOf(ctx, l.record), false)
 		return err
 	}
 	if l.resumed {
@@ -239,7 +239,7 @@ func (l *sandboxInvocationLifecycle) abort(ctx context.Context, cause error) {
 			logs.CtxWarn(cleanupCtx, "sandbox initialization failure persistence failed, record_id=%d, err=%v", l.record.ID, err)
 		}
 	}
-	l.service.destroySandboxExecute(cleanupCtx, strconv.FormatInt(gptr.Indirect(l.param.ExperimentID), 10), l.schedulerSpaceID(), l.spaceID, sandboxExecuteIDsOf(cleanupCtx, l.record), false)
+	_ = l.service.destroySandboxExecute(cleanupCtx, strconv.FormatInt(gptr.Indirect(l.param.ExperimentID), 10), l.schedulerSpaceID(), l.spaceID, sandboxExecuteIDsOf(cleanupCtx, l.record), false)
 }
 
 func sandboxRecordSchedulerSpaceID(r *entity.EvalTargetRecord) int64 {

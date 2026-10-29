@@ -6,6 +6,8 @@ package application
 import (
 	"context"
 	"errors"
+	"testing"
+
 	"github.com/bytedance/gg/gptr"
 	im "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	dt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
@@ -20,20 +22,23 @@ import (
 	sm "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
-	"testing"
 )
 
 func executionModeExperiment(mode entity.SandboxCountMode) *entity.Experiment {
-	return &entity.Experiment{ID: 456, TargetType: entity.EvalTargetTypeSandboxAgent,
+	return &entity.Experiment{
+		ID: 456, TargetType: entity.EvalTargetTypeSandboxAgent,
 		Target: &entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{
-			EvalTargetType: entity.EvalTargetTypeSandboxAgent, SandboxAgent: &entity.SandboxAgent{SandboxCountMode: mode}}}}
+			EvalTargetType: entity.EvalTargetTypeSandboxAgent, SandboxAgent: &entity.SandboxAgent{SandboxCountMode: mode},
+		}},
+	}
 }
 
 func TestARMModeUsesGUITenant(t *testing.T) {
 	mode := entity.SandboxCountMode("arm_mac_vm_plus_sandbox")
 	expt := executionModeExperiment(mode)
 	dto := &de.Experiment{EvalTarget: &dt.EvalTarget{EvalTargetVersion: &dt.EvalTargetVersion{
-		EvalTargetContent: &dt.EvalTargetContent{SandboxAgent: &dt.SandboxAgent{SandboxCountMode: gptr.Of(dt.SandboxCountMode(mode))}}}}}
+		EvalTargetContent: &dt.EvalTargetContent{SandboxAgent: &dt.SandboxAgent{SandboxCountMode: gptr.Of(dt.SandboxCountMode(mode))}},
+	}}}
 	assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneralGUI, sandboxTenantForExperimentEntity(expt))
 	assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneralGUI, sandboxTenantForExperimentDTO(dto))
 	assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneralGUI, sandboxTenantForAsyncDebug(mode))

@@ -19,10 +19,10 @@ import (
 func TestSandboxInvocationOwnerUsesRunKeyAndPrimary(t *testing.T) {
 	source, expect, err := sqlmock.New()
 	require.NoError(t, err)
-	defer source.Close()
+	defer func() { _ = source.Close() }()
 	replica, replicaExpect, err := sqlmock.New()
 	require.NoError(t, err)
-	defer replica.Close()
+	defer func() { _ = replica.Close() }()
 	primaryDial := mysql.New(mysql.Config{Conn: source, SkipInitializeWithVersion: true})
 	replicaDial := mysql.New(mysql.Config{Conn: replica, SkipInitializeWithVersion: true})
 	database, err := gorm.Open(primaryDial, &gorm.Config{})
@@ -43,7 +43,7 @@ func TestSandboxInvocationOwnerUsesRunKeyAndPrimary(t *testing.T) {
 func TestSandboxInvocationReadyCASCannotOverwriteReportedStatus(t *testing.T) {
 	sqlDB, expect, err := sqlmock.New()
 	require.NoError(t, err)
-	defer sqlDB.Close()
+	defer func() { _ = sqlDB.Close() }()
 	database, err := gorm.Open(mysql.New(mysql.Config{Conn: sqlDB, SkipInitializeWithVersion: true}), &gorm.Config{})
 	require.NoError(t, err)
 	provider := dbmock.NewMockProvider(gomock.NewController(t))
