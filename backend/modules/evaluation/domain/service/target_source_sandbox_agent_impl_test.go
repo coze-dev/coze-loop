@@ -279,3 +279,28 @@ func TestSandboxAgentSourceEvalTargetServiceImpl_emitInvokeStarted(t *testing.T)
 		})
 	})
 }
+
+func TestSandboxAgentAsyncExecuteWindowsRejectsBeforeInvoke(t *testing.T) {
+	svc, _, _, ctrl := newSandboxAgentSvc(t)
+	defer ctrl.Finish()
+	_, _, _, err := svc.AsyncExecute(context.Background(), 1, &entity.ExecuteEvalTargetParam{
+		EvalTarget: &entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{
+			SandboxAgent: &entity.SandboxAgent{SandboxCountMode: entity.SandboxCountMode("windows_plus_sandbox")},
+		}},
+	})
+	assert.ErrorContains(t, err, "unsupported execution mode")
+}
+
+func TestSandboxAgentBuildNewModesPreservesSnapshot(t *testing.T) {
+	for _, mode := range []entity.SandboxCountMode{entity.SandboxCountModeArmMacVMPlusSandbox, entity.SandboxCountModeWindowsPlusSandbox} {
+		t.Run(string(mode), func(t *testing.T) {
+			svc, _, _, ctrl := newSandboxAgentSvc(t)
+			defer ctrl.Finish()
+			got, err := svc.BuildBySource(context.Background(), 1, "app", "v1", entity.WithSandboxAgent(&entity.SandboxAgent{SandboxCountMode: mode}))
+			assert.NoError(t, err)
+			if assert.NotNil(t, got) {
+				assert.Equal(t, mode, got.EvalTargetVersion.SandboxAgent.SandboxCountMode)
+			}
+		})
+	}
+}

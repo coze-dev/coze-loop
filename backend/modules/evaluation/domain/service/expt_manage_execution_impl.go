@@ -1387,6 +1387,16 @@ func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.C
 		}
 		return nil
 	}
+	if lifecycle, ok := e.evalTargetService.(interface {
+		TerminateSandboxAttemptsForRunItems(context.Context, int64, int64, []int64, ...bool) error
+	}); ok {
+		if err := lifecycle.TerminateSandboxAttemptsForRunItems(ctx, resolveLoadSpaceID(spaceID, targetSourceSpaceID), *exptRunID, terminatedItemIDs, waitForDestroy...); err != nil {
+			logs.CtxWarn(ctx, "[SandboxDestroy] discover pre-dispatch attempts failed, run_id=%d, err=%v", *exptRunID, err)
+			if len(waitForDestroy) > 0 && waitForDestroy[0] {
+				return err
+			}
+		}
+	}
 	turnRunLogs, err := e.turnResultRepo.MGetItemTurnRunLogs(ctx, exptID, *exptRunID, terminatedItemIDs, spaceID)
 	if err != nil {
 		logs.CtxWarn(ctx, "[SandboxDestroy] MGetItemTurnRunLogs fail on cancel, expt_id=%d, expt_run_id=%d, err=%v", exptID, *exptRunID, err)

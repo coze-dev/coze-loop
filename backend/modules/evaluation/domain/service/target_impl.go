@@ -37,6 +37,8 @@ import (
 )
 
 type EvalTargetServiceImpl struct {
+	sandboxLeasePendingRegistrar func(context.Context, *entity.EvalTargetRecord, int64, int64) error
+
 	idgen             idgen.IIDGenerator
 	metric            metrics.EvalTargetMetrics
 	evalTargetRepo    repo.IEvalTargetRepo
@@ -90,8 +92,10 @@ const (
 // Destroy 收尾据此把 execution 分回各自 task。两者字面量相同但语义不同 (一个是 execute id 后缀、
 // 一个是 task id 后缀), 分开命名避免误当同一概念。
 const (
-	sandboxMacVMExecuteIDSuffix = "-macvm"
-	sandboxMacVMTaskIDSuffix    = "-macvm"
+	sandboxMacVMExecuteIDSuffix   = "-macvm"
+	sandboxMacVMTaskIDSuffix      = "-macvm"
+	sandboxWindowsExecuteIDSuffix = "-windows"
+	sandboxWindowsTaskIDSuffix    = "-windows"
 )
 
 func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
@@ -507,6 +511,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 		EvalTarget:          evalTargetDO,
 		EvalSetItemID:       gptr.Of(param.ItemID),
 		EvalSetTurnID:       gptr.Of(param.TurnID),
+		ExptCreatedBy:       param.ExptCreatedBy,
 	})
 	if err != nil {
 		return nil, err
@@ -605,31 +610,51 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	span.SetCallType("EvalTarget")
 	ctx = looptracer.GetTracer().Inject(ctx)
 
+	lifecycle := &sandboxInvocationLifecycle{service: e, spaceID: spaceID, target: target, param: param, input: inputData, traceID: span.GetTraceID()}
+
 	invokeID, callee, ext, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
-		VerificationConfig:  param.VerificationConfig,
-		ExptID:              gptr.Indirect(param.ExperimentID),
-		ExptRunID:           gptr.Indirect(param.ExperimentRunID),
-		TargetID:            targetID,
-		VersionID:           targetVersionID,
-		SourceTargetID:      target.SourceTargetID,
-		SourceTargetVersion: target.EvalTargetVersion.SourceTargetVersion,
-		Input:               inputData,
-		TargetType:          target.EvalTargetType,
-		EvalTarget:          target,
-		EvalSetItemID:       gptr.Of(param.ItemID),
-		EvalSetTurnID:       gptr.Of(param.TurnID),
-		LogID:               param.LogID,
-		ItemMeta:            param.ItemMeta,
-		ExptGroupKey:        param.ExptGroupKey,
+		PrepareSandboxExecution: lifecycle.prepare,
+		CheckSandboxExecution:   lifecycle.check,
+		VerificationConfig:      param.VerificationConfig,
+		ExptID:                  gptr.Indirect(param.ExperimentID),
+		ExptRunID:               gptr.Indirect(param.ExperimentRunID),
+		TargetID:                targetID,
+		VersionID:               targetVersionID,
+		SourceTargetID:          target.SourceTargetID,
+		SourceTargetVersion:     target.EvalTargetVersion.SourceTargetVersion,
+		Input:                   inputData,
+		TargetType:              target.EvalTargetType,
+		EvalTarget:              target,
+		EvalSetItemID:           gptr.Of(param.ItemID),
+		EvalSetTurnID:           gptr.Of(param.TurnID),
+		LogID:                   param.LogID,
+		ItemMeta:                param.ItemMeta,
+		ExptGroupKey:            param.ExptGroupKey,
 		// 透传发起实验的空间。注意这里**不能**用 spaceID —— 跨空间共享时它已是对象来源空间。
-		ExptSpaceID: param.ExptSpaceID,
+		ExptSpaceID:   param.ExptSpaceID,
+		ExptCreatedBy: param.ExptCreatedBy,
 	})
 	if execErr != nil {
+		lifecycle.abort(ctx, execErr)
 		// If an asynchronous call fails, return immediately without logging the error or propagating the exception.
 		// Avoid triggering a follow-up process via an asynchronous callback after a successful return.
 		logs.CtxError(ctx, "async execute target failed, spaceID=%v, targetID=%d, targetVersionID=%d, param=%v, inputData=%v, err=%v",
 			spaceID, targetID, targetVersionID, json.Jsonify(param), json.Jsonify(inputData), execErr)
 		return nil, callee, execErr
+	}
+
+	if lifecycle.record != nil {
+		if lifecycle.resumed {
+			span.Finish(ctx)
+		}
+		if !lifecycle.resumed {
+			lifecycle.record.TraceID, _ = e.emitTargetTrace(ctx, span, lifecycle.record, &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)})
+		}
+		if err := lifecycle.finish(ctx); err != nil {
+			lifecycle.abort(ctx, err)
+			return nil, callee, err
+		}
+		return lifecycle.record, callee, nil
 	}
 
 	logs.CtxInfo(ctx, "AsyncExecute with invoke_id %v, callee: %v, target_id: %v, target_version_id: %v", invokeID, callee, targetID, targetVersionID)
@@ -865,7 +890,7 @@ func sandboxWorkspaceIDOf(record *entity.EvalTargetRecord) int64 {
 			return workspaceID
 		}
 	}
-	return record.SpaceID
+	return sandboxRecordSchedulerSpaceID(record)
 }
 
 // extractExtraSandboxExecuteID 从 record 的 outputData.Ext 里读取额外沙箱 execute id；
@@ -995,13 +1020,15 @@ func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskI
 		}
 		return nil
 	}
-	// 按所属 task 分组: "-macvm" 后缀的 execution 属 mac_vm task, 其余属基础 sandbox task。
+	// 桌面 VM execution 按资源后缀分组，避免向基础 Linux task 销毁导致租约泄漏。
 	// 每组各自一个带重试的 destroy goroutine，避免单 taskID 只销一个、另一个泄漏。
 	byTask := make(map[string][]string, 2)
 	for _, id := range executeIDs {
 		t := taskID
 		if strings.HasSuffix(id, sandboxMacVMExecuteIDSuffix) {
 			t = taskID + sandboxMacVMTaskIDSuffix
+		} else if strings.HasSuffix(id, sandboxWindowsExecuteIDSuffix) {
+			t = taskID + sandboxWindowsTaskIDSuffix
 		}
 		byTask[t] = append(byTask[t], id)
 	}
@@ -1165,9 +1192,11 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 				Message: errMessage,
 			},
 		}
-		// 保留 extra execute id 在落库的 fail record 上，便于事后审计 / 手动兜底销毁。
-		if extraExecuteID != "" {
-			failOutput.Ext = map[string]string{entity.SandboxAgentExtKeyExtraExecuteID: extraExecuteID}
+		if r.EvalTargetOutputData != nil {
+			failOutput.Ext = r.EvalTargetOutputData.Ext
+		}
+		if r.Ext["sandbox_lifecycle_version"] == "1" {
+			r.Ext["sandbox_lifecycle_phase"] = "aborted"
 		}
 		if r.EvalTargetOutputData != nil {
 			if workspaceID, ok := r.EvalTargetOutputData.Ext[consts.OutputDataExtKeySandboxWorkspaceID]; ok {
@@ -1353,6 +1382,8 @@ func sideForExecuteID(id string, recordID int64) string {
 	switch {
 	case id == strconv.FormatInt(recordID, 10):
 		return "main"
+	case strings.HasSuffix(id, sandboxWindowsExecuteIDSuffix):
+		return "windows"
 	case strings.HasSuffix(id, "-macvm"):
 		return "mac_vm"
 	case strings.HasSuffix(id, "-orch"):

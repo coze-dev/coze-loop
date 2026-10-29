@@ -85,6 +85,10 @@ type deleteCoreRecords struct {
 	saves  int
 }
 
+func (r *deleteCoreRecords) ListItemRetryRecordsByRun(context.Context, int64, int64, []int64) (map[int64][]*entity.RetryRecord, error) {
+	return nil, nil
+}
+
 func (r *deleteCoreRecords) ListEvalTargetRecordByIDsAndSpaceID(context.Context, int64, []int64) ([]*entity.EvalTargetRecord, error) {
 	copy := *r.record
 	return []*entity.EvalTargetRecord{&copy}, nil

@@ -1452,6 +1452,8 @@ func (e *EvalOpenAPIApplication) destroyDebugSandboxExecutions(ctx context.Conte
 		taskID := sandboxDebugTaskID
 		if strings.HasSuffix(executeID, sandboxMacVMTaskIDSuffix) {
 			taskID += sandboxMacVMTaskIDSuffix
+		} else if strings.HasSuffix(executeID, sandboxWindowsTaskIDSuffix) {
+			taskID += sandboxWindowsTaskIDSuffix
 		}
 		byTask[taskID] = append(byTask[taskID], executeID)
 	}
@@ -3847,8 +3849,10 @@ func sandboxTenantForAsyncDebug(mode entity.SandboxCountMode) rpc.SandboxTenant 
 		// 新链路租户只由实验提交/重试链路按 run_mode 推导, 见 experiment_app.go
 		// dualSandboxTenantByRunMode。
 		return rpc.SandboxTenantFornaxTraeEvalDualSandbox
-	case entity.SandboxCountModeMacVMPlusSandbox, entity.SandboxCountModeMacVMPlusSSH:
+	case entity.SandboxCountModeMacVMPlusSandbox, entity.SandboxCountModeArmMacVMPlusSandbox, entity.SandboxCountModeMacVMPlusSSH:
 		return rpc.SandboxTenantFornaxEvalGeneralGUI
+	case entity.SandboxCountModeWindowsPlusSandbox:
+		return rpc.SandboxTenantFornaxEvalGeneral
 	case entity.SandboxCountModeShared:
 		// 共享沙箱走通用评测租户, 与实验链路一致 —— 它用的是同一套 runtime 编排,
 		// 不存在 Dual 那种新旧两条实现并存的问题, 所以这里不需要像 Dual 那样回落旧租户。
@@ -3936,7 +3940,7 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 				mode = entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode()))
 			}
 			if initErr := initSandboxTasksByTaskID(ctx, e.sandboxSchedulerAdapter, "debug target", sandboxDebugTaskID,
-				sandboxTaskConcurrency{sandbox: 50, macVM: 50}, req.GetWorkspaceID(), sandboxTenantForAsyncDebug(mode)); initErr != nil {
+				sandboxTaskConcurrency{mode: mode, sandbox: 50, macVM: 50}, req.GetWorkspaceID(), sandboxTenantForAsyncDebug(mode)); initErr != nil {
 				return nil, errorx.Wrapf(initErr, "init sandbox debug task fail")
 			}
 		}

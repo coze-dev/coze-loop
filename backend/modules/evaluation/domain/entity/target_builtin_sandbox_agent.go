@@ -31,11 +31,13 @@ const SandboxAgentExtKeyExtraExecuteID = "sandbox_agent_extra_execute_id"
 type SandboxCountMode string
 
 const (
-	SandboxCountModeSingle           SandboxCountMode = "single"
-	SandboxCountModeDual             SandboxCountMode = "dual"
-	SandboxCountModeMacVMPlusSandbox SandboxCountMode = "mac_vm_plus_sandbox"
-	SandboxCountModeMacVMPlusSSH     SandboxCountMode = "mac_vm_plus_ssh"
-	SandboxCountModeShared           SandboxCountMode = "shared"
+	SandboxCountModeSingle              SandboxCountMode = "single"
+	SandboxCountModeDual                SandboxCountMode = "dual"
+	SandboxCountModeMacVMPlusSandbox    SandboxCountMode = "mac_vm_plus_sandbox"
+	SandboxCountModeMacVMPlusSSH        SandboxCountMode = "mac_vm_plus_ssh"
+	SandboxCountModeShared              SandboxCountMode = "shared"
+	SandboxCountModeArmMacVMPlusSandbox SandboxCountMode = "arm_mac_vm_plus_sandbox"
+	SandboxCountModeWindowsPlusSandbox  SandboxCountMode = "windows_plus_sandbox"
 )
 
 // ResolveSandboxCountMode 空/未识别值一律回退到 Single，保持默认行为。
@@ -54,6 +56,8 @@ func ResolveSandboxCountMode(mode SandboxCountMode) SandboxCountMode {
 		return SandboxCountModeMacVMPlusSSH
 	case SandboxCountModeShared:
 		return SandboxCountModeShared
+	case SandboxCountModeArmMacVMPlusSandbox, SandboxCountModeWindowsPlusSandbox:
+		return mode
 	default:
 		return SandboxCountModeSingle
 	}
@@ -72,7 +76,8 @@ func (a *SandboxAgent) IsMacVMPlusSandbox() bool {
 	if a == nil {
 		return false
 	}
-	return ResolveSandboxCountMode(a.SandboxCountMode) == SandboxCountModeMacVMPlusSandbox
+	mode := ResolveSandboxCountMode(a.SandboxCountMode)
+	return mode == SandboxCountModeMacVMPlusSandbox || mode == SandboxCountModeArmMacVMPlusSandbox
 }
 
 // IsSharedSandbox 判断 SandboxAgent 是否处于共享沙箱模式（Runner 与 Orchestrator 同处一个沙箱）；
@@ -91,6 +96,10 @@ func (a *SandboxAgent) IsMacVMPlusSSH() bool {
 		return false
 	}
 	return ResolveSandboxCountMode(a.SandboxCountMode) == SandboxCountModeMacVMPlusSSH
+}
+
+func (a *SandboxAgent) IsWindowsPlusSandbox() bool {
+	return a != nil && ResolveSandboxCountMode(a.SandboxCountMode) == SandboxCountModeWindowsPlusSandbox
 }
 
 type SandboxEnvVar struct {

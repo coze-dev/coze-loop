@@ -203,8 +203,12 @@ func (e *EvalTargetRecordDAOImpl) ListRecordsByRunItems(ctx context.Context, spa
 	if len(itemIDs) == 0 {
 		return nil, nil
 	}
-	q := e.query.TargetRecord
-	records, err := e.query.WithContext(ctx).TargetRecord.
+	query := e.query
+	if contexts.CtxWriteDB(ctx) {
+		query = query.WriteDB()
+	}
+	q := query.TargetRecord
+	records, err := query.WithContext(ctx).TargetRecord.
 		Select(
 			q.ID,
 			q.ItemID,

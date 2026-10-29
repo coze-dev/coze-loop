@@ -403,7 +403,13 @@ func TestEvalTargetServiceImpl_asyncExecuteTarget(t *testing.T) {
 			name: "success",
 			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, target *entity.EvalTarget, input *entity.EvalTargetInputData) {
 				deps.operator.EXPECT().ValidateInput(ctx, target.SpaceID, target.EvalTargetVersion.InputSchema, input).Return(nil)
-				deps.operator.EXPECT().AsyncExecute(ctx, target.SpaceID, gomock.Any()).Return(int64(999), "callee", map[string]string(nil), nil)
+				deps.operator.EXPECT().AsyncExecute(ctx, target.SpaceID, gomock.Any()).DoAndReturn(
+					func(_ context.Context, _ int64, param *entity.ExecuteEvalTargetParam) (int64, string, map[string]string, error) {
+						if param.ExptCreatedBy != "experiment_creator" {
+							return 0, "", nil, errorx.NewByCode(errno.CommonInvalidParamCode)
+						}
+						return 999, "callee", nil, nil
+					})
 				deps.repo.EXPECT().GetEvalTargetVersion(ctx, target.SpaceID, target.EvalTargetVersion.ID).Return(target, nil)
 				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).Return(int64(999), nil)
 				deps.metric.EXPECT().EmitRun(target.SpaceID, gomock.Any(), gomock.Any()).Times(1)
@@ -462,7 +468,8 @@ func TestEvalTargetServiceImpl_asyncExecuteTarget(t *testing.T) {
 				tt.prepare(ctx, deps, target, input)
 			}
 
-			record, callee, err := svc.asyncExecuteTarget(ctx, target.SpaceID, target, &entity.ExecuteTargetCtx{ItemID: 1, TurnID: 2}, input)
+			record, callee, err := svc.asyncExecuteTarget(ctx, target.SpaceID, target,
+				&entity.ExecuteTargetCtx{ItemID: 1, TurnID: 2, ExptCreatedBy: "experiment_creator"}, input)
 
 			if tt.wantErr {
 				require.Error(t, err)

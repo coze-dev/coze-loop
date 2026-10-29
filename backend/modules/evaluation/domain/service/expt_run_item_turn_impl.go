@@ -338,7 +338,8 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		// 多集执行恒用顶层 target, 而 ItemConfig 的来源空间是 per-set 的
 		// (见 ExptItemEvalCtx.TargetSourceSpaceID 的论证) —— 按 per-set 派生会重演
 		// "拿 B 的空间去加载 A 的 target" 那类错配。
-		ExptSpaceID: etec.Event.SpaceID,
+		ExptSpaceID:   etec.Event.SpaceID,
+		ExptCreatedBy: etec.Expt.CreatedBy,
 	}
 	if etec.Expt.EvalConf != nil {
 		etc.EnableExtractTrajectory = etec.Expt.EvalConf.EnableExtractTrajectory
@@ -354,27 +355,41 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	}
 
 	ts := time.Now()
+	makeAsyncCtx := func(recordID int64, callee string) *entity.EvalAsyncCtx {
+		return &entity.EvalAsyncCtx{
+			Event:                   etec.Event,
+			RecordID:                recordID,
+			AsyncUnixMS:             ts.UnixMilli(),
+			Session:                 etec.Event.Session,
+			Callee:                  callee,
+			EnableExtractTrajectory: etc.EnableExtractTrajectory,
+			TargetID:                pickTargetID(etec),
+			DatasetID:               pickDatasetID(etec),
+			DatasetVersionID:        etec.EvalSetVersionID,
+			ItemKey:                 pickItemKey(etec),
+			DatasetKey:              pickDatasetKey(etec),
+			AgentName:               pickAgentName(etec),
+			ApplicationID:           pickApplicationID(etec),
+		}
+	}
+	preparedID := int64(0)
+	etc.PrepareAsyncContext = func(ctx context.Context, recordID int64, callee string) error {
+		if err := PrepareSandboxAsyncContext(ctx, e.evalAsyncRepo, makeAsyncCtx(recordID, callee)); err != nil {
+			return err
+		}
+		preparedID = recordID
+		return nil
+	}
 	targetRecord, callee, err := e.evalTargetService.AsyncExecuteTarget(ctx, spaceID, etec.Expt.Target.ID, etec.Expt.Target.EvalTargetVersion.ID, etc, etid)
 	if err != nil {
 		return nil, err
 	}
-
-	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(targetRecord.ID, 10), &entity.EvalAsyncCtx{
-		Event:                   etec.Event,
-		RecordID:                targetRecord.ID,
-		AsyncUnixMS:             ts.UnixMilli(),
-		Session:                 etec.Event.Session,
-		Callee:                  callee,
-		EnableExtractTrajectory: etc.EnableExtractTrajectory,
-		TargetID:                pickTargetID(etec),
-		DatasetID:               pickDatasetID(etec),
-		DatasetVersionID:        etec.EvalSetVersionID,
-		ItemKey:                 pickItemKey(etec),
-		DatasetKey:              pickDatasetKey(etec),
-		AgentName:               pickAgentName(etec),
-		ApplicationID:           pickApplicationID(etec),
-	}); err != nil {
-		return nil, err
+	// Legacy targets still register after execution. Windows must not overwrite
+	// an early callback's context, original clock, or replay state here.
+	if preparedID != targetRecord.ID {
+		if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(targetRecord.ID, 10), makeAsyncCtx(targetRecord.ID, callee)); err != nil {
+			return nil, err
+		}
 	}
 
 	return targetRecord, nil
