@@ -240,7 +240,7 @@ func (l *sandboxInvocationLifecycle) abort(ctx context.Context, cause error) {
 			logs.CtxWarn(cleanupCtx, "sandbox initialization failure persistence failed, record_id=%d, err=%v", l.record.ID, err)
 		}
 	}
-	_ = l.service.destroySandboxExecute(cleanupCtx, strconv.FormatInt(gptr.Indirect(l.param.ExperimentID), 10), l.schedulerSpaceID(), l.spaceID, sandboxExecuteIDsOf(cleanupCtx, l.record), false)
+	_ = l.service.destroySandboxExecute(cleanupCtx, strconv.FormatInt(gptr.Indirect(l.param.ExperimentID), 10), l.schedulerSpaceID(), resolveLoadSpaceID(l.spaceID, l.target.SpaceID), sandboxExecuteIDsOf(cleanupCtx, l.record), false)
 }
 
 func sandboxRecordSchedulerSpaceID(r *entity.EvalTargetRecord) int64 {

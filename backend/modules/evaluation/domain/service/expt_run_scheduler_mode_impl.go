@@ -922,7 +922,7 @@ func (e *ExptFailRetryExec) buildPagePlan(ctx context.Context, event *entity.Exp
 	}
 	for targetSpaceID, recordIDSet := range targetIDsBySpace {
 		recordIDs := sortedInt64Set(recordIDSet)
-		records, err := e.evalTargetService.BatchGetRecordByIDs(currentRunCtx, targetSpaceID, recordIDs)
+		records, err := BatchGetExperimentTargetRecords(currentRunCtx, e.evalTargetService, event.SpaceID, targetSpaceID, recordIDs)
 		if err != nil {
 			return nil, e.retryStartDependencyError(ctx, event, "eval_target_record", err)
 		}

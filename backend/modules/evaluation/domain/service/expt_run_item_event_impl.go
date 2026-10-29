@@ -1298,7 +1298,7 @@ func (e *ExptRecordEvalModeSubmit) PostEval(ctx context.Context, eiec *entity.Ex
 // failRetrySelectTurnRunLogRefs keeps successful stages that belong to the reused target.
 func failRetrySelectTurnRunLogRefs(
 	ctx context.Context,
-	spaceID int64,
+	spaceID, sourceSpaceID int64,
 	targetRequired bool,
 	tr *entity.ExptTurnResult,
 	evalTarget IEvalTargetService,
@@ -1322,7 +1322,7 @@ func failRetrySelectTurnRunLogRefs(
 	if evalTarget == nil {
 		return 0, nil, errors.New("eval target service is nil")
 	}
-	targetRec, err := evalTarget.GetRecordByID(ctx, spaceID, tr.TargetResultID)
+	targetRec, err := GetExperimentTargetRecord(ctx, evalTarget, spaceID, sourceSpaceID, tr.TargetResultID)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -1571,9 +1571,7 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		runLog.Status = entity.TurnRunState_Processing
 		runLog.ExptRunID = eiec.Event.ExptRunID
 		runLog.ErrMsg = ""
-		// 跨空间共享: Target 记录随执行落来源空间(冻结 TargetSpaceID), 失败重试选引用时须按来源空间读;
-		// 用调用方空间读会得 nil → 误判 Target 非 Success → 清零 target_result_id 触发无谓重跑 Target。
-		targetID, evalIDs, err := failRetrySelectTurnRunLogRefs(snapshotCtx, resolveLoadSpaceID(eiec.Event.SpaceID, eiec.TargetSourceSpaceID()), !shouldSkipTargetNode(eiec.Expt), tr, e.evalTargetService, e.evaluatorRecordSvc, refsByTurnResultID[tr.ID], sourceLogs)
+		targetID, evalIDs, err := failRetrySelectTurnRunLogRefs(snapshotCtx, eiec.Event.SpaceID, eiec.TargetSourceSpaceID(), !shouldSkipTargetNode(eiec.Expt), tr, e.evalTargetService, e.evaluatorRecordSvc, refsByTurnResultID[tr.ID], sourceLogs)
 		if err != nil {
 			return fmt.Errorf("%w: %w", errRetryStartDependencyFailure, err)
 		}
