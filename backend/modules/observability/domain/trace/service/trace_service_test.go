@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"testing"
@@ -495,6 +496,26 @@ func TestTraceServiceImpl_IngestTraces(t *testing.T) {
 			)
 			err := r.IngestTraces(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
+		})
+	}
+}
+
+func Test_creationAgentDebugEnabled(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *creationAgentDebugConfig
+		err  error
+		want bool
+	}{
+		{name: "tcc enables debug logging", cfg: &creationAgentDebugConfig{Enabled: true}, want: true},
+		{name: "tcc read failure disables debug logging", cfg: &creationAgentDebugConfig{Enabled: true}, err: errors.New("tcc unavailable"), want: false},
+		{name: "tcc disabled disables debug logging", cfg: &creationAgentDebugConfig{}, want: false},
+		{name: "missing tcc config disables debug logging", err: errors.New("not found"), want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, creationAgentDebugEnabled(tt.cfg, tt.err))
 		})
 	}
 }
