@@ -35,10 +35,11 @@ type EvalConfConvert struct{}
 
 func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig) (*entity.EvaluationConfiguration, error) {
 	ec := &entity.EvaluationConfiguration{
-		VerificationConfig: verificationConfigDTO2DO(cer.GetVerificationConfig()),
-		ItemConcurNum:      entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
-		Ext:                cer.Ext,
-		RunModeConfig:      runModeConfigDTO2DO(cer.GetRunModeConfig()),
+		VerificationConfig:      verificationConfigDTO2DO(cer.GetVerificationConfig()),
+		ItemConcurNum:           entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
+		EnableExtractTrajectory: gptr.Of(!cer.IsSetEnableExtractTrajectory() || cer.GetEnableExtractTrajectory()),
+		Ext:                     cer.Ext,
+		RunModeConfig:           runModeConfigDTO2DO(cer.GetRunModeConfig()),
 	}
 
 	ec.ConnectorConf.TargetConf = &entity.TargetConf{
@@ -65,9 +66,6 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, eva
 	}
 	if cer.GetItemRetryNum() > 0 {
 		ec.ItemRetryNum = gptr.Of(int(cer.GetItemRetryNum()))
-	}
-	if cer.IsSetEnableExtractTrajectory() {
-		ec.EnableExtractTrajectory = gptr.Of(cer.GetEnableExtractTrajectory())
 	}
 	return ec, nil
 }
@@ -1019,18 +1017,15 @@ func buildExptConfFromEvalSetConfigs(cer *expt.CreateExperimentRequest, runConfi
 	}
 
 	ec := &entity.EvaluationConfiguration{
-		VerificationConfig: verificationConfigDTO2DO(cer.GetVerificationConfig()),
-		ItemConcurNum:      entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
-		Ext:                cer.Ext,
-		RunModeConfig:      runModeConfigDTO2DO(cer.GetRunModeConfig()),
+		VerificationConfig:      verificationConfigDTO2DO(cer.GetVerificationConfig()),
+		ItemConcurNum:           entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
+		EnableExtractTrajectory: gptr.Of(!cer.IsSetEnableExtractTrajectory() || cer.GetEnableExtractTrajectory()),
+		Ext:                     cer.Ext,
+		RunModeConfig:           runModeConfigDTO2DO(cer.GetRunModeConfig()),
 	}
 	if cer.GetItemRetryNum() > 0 {
 		ec.ItemRetryNum = gptr.Of(int(cer.GetItemRetryNum()))
 	}
-	if cer.IsSetEnableExtractTrajectory() {
-		ec.EnableExtractTrajectory = gptr.Of(cer.GetEnableExtractTrajectory())
-	}
-
 	// TargetConf: 取首个含 target_confs 的 set 的 target_confs[0]
 	targetVersionID := cer.GetTargetVersionID()
 	var targetMapping *domain_expt.TargetFieldMapping
