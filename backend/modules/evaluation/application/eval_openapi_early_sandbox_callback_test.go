@@ -35,6 +35,7 @@ func TestSandboxEarlyCallbackUsesPreRegisteredRedisContext(t *testing.T) {
 	event := &entity.ExptItemEvalEvent{SpaceID: 3, ExptID: 21, ExptRunID: 22, EvalSetItemID: 23}
 	prepared := &entity.EvalAsyncCtx{RecordID: 707, Event: event, Callee: "sandbox_agent", AsyncUnixMS: time.Now().Add(-time.Second).UnixMilli()}
 	require.NoError(t, service.PrepareSandboxAsyncContext(ctx, repository, prepared))
+	target.EXPECT().GetRecordByID(gomock.Any(), int64(2), int64(707)).Return(&entity.EvalTargetRecord{ID: 707, TurnID: 0}, nil)
 	target.EXPECT().ReportInvokeRecords(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, p *entity.ReportTargetRecordParam) error {
 		require.Equal(t, int64(2), p.SpaceID)
 		require.Equal(t, int64(707), p.RecordID)
@@ -49,6 +50,8 @@ func TestSandboxEarlyCallbackUsesPreRegisteredRedisContext(t *testing.T) {
 		require.Equal(t, int64(21), e.ExptID)
 		require.Equal(t, int64(22), e.ExptRunID)
 		require.Equal(t, int64(23), e.EvalSetItemID)
+		assertCallbackResumeSource(t, e, "target", 707, 0)
+		require.NotSame(t, event, e)
 		return nil
 	})
 	response, err := app.ReportEvalTargetInvokeResult_(ctx, request)
@@ -65,6 +68,7 @@ func TestSandboxEarlyCallbackUsesPreRegisteredRedisContext(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, prepared.AsyncUnixMS, actual.AsyncUnixMS)
 	require.True(t, actual.ResumeReady)
+	require.Nil(t, actual.Event.ResumeSource)
 	for _, field := range []string{"space", "experiment", "run", "item", "record", "callee"} {
 		t.Run(field, func(t *testing.T) {
 			wrong := *prepared
