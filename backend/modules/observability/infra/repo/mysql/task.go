@@ -444,8 +444,10 @@ func (v *TaskDaoImpl) ListNonFinalTasks(ctx context.Context) ([]*model.Observabi
 	q := genquery.Use(v.dbMgr.NewSession(ctx))
 	qd := q.WithContext(ctx).ObservabilityTask
 
-	// 查询非终态任务
-	qd = qd.Where(q.ObservabilityTask.TaskStatus.NotIn(string(entity.TaskStatusSuccess), string(entity.TaskStatusDisabled)))
+	// 只刷新未结束的任务；failed 已是终态。
+	qd = qd.Where(q.ObservabilityTask.TaskStatus.In(
+		string(entity.TaskStatusUnstarted), string(entity.TaskStatusRunning), string(entity.TaskStatusPending),
+	))
 
 	results, err := qd.Find()
 	if err != nil {
