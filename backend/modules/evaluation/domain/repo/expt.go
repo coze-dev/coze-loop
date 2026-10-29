@@ -76,6 +76,9 @@ type IExptItemResultRepo interface {
 	BatchCreateNXRunLogs(ctx context.Context, itemRunLogs []*entity.ExptItemResultRunLog) error
 	ScanItemRunLogs(ctx context.Context, exptID, exptRunID int64, filter *entity.ExptItemRunLogFilter, cursor, limit, spaceID int64) ([]*entity.ExptItemResultRunLog, int64, error)
 	UpdateItemRunLog(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64) error
+	// CompareAndSwapItemRunLog 仅在单行 run log 仍处于 fromStatus 时更新，返回是否命中。
+	// zombie scanner 与正常完成路径共用该 CAS，保证只有获胜方触发后续结算。
+	CompareAndSwapItemRunLog(ctx context.Context, exptID, exptRunID, itemID int64, fromStatus entity.ItemRunState, ufields map[string]any, spaceID int64) (bool, error)
 	// UpdateItemRunLogIfNotTerminal 与 UpdateItemRunLog 语义一致，但只更新当前 status 不为
 	// ItemRunState_Terminal 的行（一条原子 UPDATE ... WHERE status <> 5）。
 	// 用于「Terminal 是吸收态」的保证：行级终止后到达的在途执行结果 MUST NOT 回写 status。

@@ -412,6 +412,21 @@ func (mr *MockIExptItemResultRepoMockRecorder) BatchGet(ctx, spaceID, exptID, it
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGet", reflect.TypeOf((*MockIExptItemResultRepo)(nil).BatchGet), ctx, spaceID, exptID, itemIDs)
 }
 
+// CompareAndSwapItemRunLog mocks base method.
+func (m *MockIExptItemResultRepo) CompareAndSwapItemRunLog(ctx context.Context, exptID, exptRunID, itemID int64, fromStatus entity.ItemRunState, ufields map[string]any, spaceID int64) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CompareAndSwapItemRunLog", ctx, exptID, exptRunID, itemID, fromStatus, ufields, spaceID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CompareAndSwapItemRunLog indicates an expected call of CompareAndSwapItemRunLog.
+func (mr *MockIExptItemResultRepoMockRecorder) CompareAndSwapItemRunLog(ctx, exptID, exptRunID, itemID, fromStatus, ufields, spaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompareAndSwapItemRunLog", reflect.TypeOf((*MockIExptItemResultRepo)(nil).CompareAndSwapItemRunLog), ctx, exptID, exptRunID, itemID, fromStatus, ufields, spaceID)
+}
+
 // CountItemsByStatus mocks base method.
 func (m *MockIExptItemResultRepo) CountItemsByStatus(ctx context.Context, spaceID, exptID int64) (map[entity.ItemRunState]int64, error) {
 	m.ctrl.T.Helper()
@@ -609,17 +624,17 @@ func (mr *MockIExptItemResultRepoMockRecorder) UpdateItemRunLog(ctx, exptID, exp
 }
 
 // UpdateItemRunLogIfNotTerminal mocks base method.
-func (m *MockIExptItemResultRepo) UpdateItemRunLogIfNotTerminal(arg0 context.Context, arg1, arg2 int64, arg3 []int64, arg4 map[string]any, arg5 int64) error {
+func (m *MockIExptItemResultRepo) UpdateItemRunLogIfNotTerminal(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateItemRunLogIfNotTerminal", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret := m.ctrl.Call(m, "UpdateItemRunLogIfNotTerminal", ctx, exptID, exptRunID, itemID, ufields, spaceID)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateItemRunLogIfNotTerminal indicates an expected call of UpdateItemRunLogIfNotTerminal.
-func (mr *MockIExptItemResultRepoMockRecorder) UpdateItemRunLogIfNotTerminal(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
+func (mr *MockIExptItemResultRepoMockRecorder) UpdateItemRunLogIfNotTerminal(ctx, exptID, exptRunID, itemID, ufields, spaceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateItemRunLogIfNotTerminal", reflect.TypeOf((*MockIExptItemResultRepo)(nil).UpdateItemRunLogIfNotTerminal), arg0, arg1, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateItemRunLogIfNotTerminal", reflect.TypeOf((*MockIExptItemResultRepo)(nil).UpdateItemRunLogIfNotTerminal), ctx, exptID, exptRunID, itemID, ufields, spaceID)
 }
 
 // UpdateItemsResult mocks base method.

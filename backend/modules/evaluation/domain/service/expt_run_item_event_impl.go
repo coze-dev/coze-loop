@@ -764,12 +764,14 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 		// 落 Fail, 但在 eval() 里 BuildExptRecordEvalCtx 等前置阶段就失败时压根没走到那里(eiec 未构建),
 		// item 停在进入执行时写的 Processing 上, 表现为"报错了却永久卡 processing、实验永不收敛"。
 		// 此处按 CompleteItemRun 同样的字段兜底(status=Fail + err_msg + result_state=Logged), 幂等可重复写。
-		e.completeItemRunOnUnretriableErr(ctx, event, nextErr)
+		settled := e.completeItemRunOnUnretriableErr(ctx, event, nextErr)
 
 		// ★ 顺序不能反：必须先落 Fail 再释放。
 		// 落 Fail 让 item 不再计入并发占用，此时归还额度才是守恒的；反过来先释放，
 		// 会出现"额度已归还但 item 仍算 Processing"的窗口，下一拍调度器按虚高的占用少派 item。
-		e.releaseCentralQuotaOutsideGate(ctx, event, nextErr, "item unretriable pre-exec failure")
+		if settled {
+			e.releaseCentralQuotaOutsideGate(ctx, event, nextErr, "item unretriable pre-exec failure")
+		}
 
 		return nil
 	}
@@ -828,55 +830,42 @@ func (e *ExptItemEventEvalServiceImpl) releaseCentralQuotaOutsideGate(ctx contex
 // turn run log 缺失报 "found null turn log result" → 重试 5min 后整实验被判 Failed(其余 item 全中断)。
 // 僵尸清理路径(handleZombies)正是成对做 UpdateItemRunLog + CreateOrUpdateItemsTurnRunLogStatus,
 // 此处与之对齐; 缺这一步会把"单 item 失败"放大成"整实验失败", 比原先卡 Processing 更糟。
-func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) {
+func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) bool {
 	if event == nil || evalErr == nil || e.exptItemResultRepo == nil {
-		return
+		return false
 	}
 
 	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
 	defer cancel()
 
-	// Terminal 是吸收态：该行已被用户行级终止时，在途的失败结果 MUST NOT 把 status / err_msg 回写成 Fail。
-	// ⚠️ 与 CompleteItemRun 同理，这里不能靠「先 SELECT 判定再写」（从库延迟 + TOCTOU 会让吸收态失效），
-	// 而是拆成「条件写 + 无条件补 result_state」，让 DB 的 WHERE status <> Terminal 做原子判定。
-	if err := e.exptItemResultRepo.UpdateItemRunLogIfNotTerminal(persistCtx, event.ExptID, event.ExptRunID,
-		[]int64{event.EvalSetItemID}, map[string]any{
+	updated, err := e.exptItemResultRepo.CompareAndSwapItemRunLog(
+		contexts.WithCtxWriteDB(persistCtx), event.ExptID, event.ExptRunID, event.EvalSetItemID,
+		entity.ItemRunState_Processing, map[string]any{
 			"status":       int32(entity.ItemRunState_Fail),
 			"err_msg":      errno.SerializeErr(evalErr),
 			"result_state": int32(entity.ExptItemResultStateLogged),
-		}, event.SpaceID); err != nil {
+		}, event.SpaceID,
+	)
+	if err != nil {
 		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr update item run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+		return false
 	}
-
-	// result_state 必须无条件落 Logged（即使该行已 Terminal），否则调度侧收不了口。
-	// 该字段与终止语义无冲突（TerminateItems 自己也写 Logged），重复写幂等。
-	if err := e.exptItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID,
-		[]int64{event.EvalSetItemID}, map[string]any{
-			"result_state": int32(entity.ExptItemResultStateLogged),
-		}, event.SpaceID); err != nil {
-		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr update item run log result_state fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
-			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+	if !updated {
+		logs.CtxInfo(persistCtx, "completeItemRunOnUnretriableErr skipped by settled run log, expt_id: %v, expt_run_id: %v, item_id: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID)
+		return false
 	}
 
 	if e.exptTurnResultRepo == nil {
-		return
-	}
-	// turn run log 必须与 item run log 成对（见方法头注释）。item 已 Terminal 时 turn 也要写 Terminal，
-	// 否则 turn 落 Fail 会被 RecordItemRunLogs 回抄到 turn result，读侧出现「item 已终止 / turn 失败」的自相矛盾。
-	// ★ 在**写完之后**才读判定：此时 item run log 的 status 已是最终结果（Fail 或被拦下的 Terminal），
-	// 读到什么就照抄什么，不会像「写前判定」那样与实际落库结果分叉。
-	turnState := entity.TurnRunState_Fail
-	if e.isItemTerminated(persistCtx, event) {
-		logs.CtxInfo(persistCtx, "[ExptItemTerminate] keep terminal status on unretriable err, expt_id: %v, expt_run_id: %v, item_id: %v",
-			event.ExptID, event.ExptRunID, event.EvalSetItemID)
-		turnState = entity.TurnRunState_Terminal
+		return true
 	}
 	if err := e.exptTurnResultRepo.CreateOrUpdateItemsTurnRunLogStatus(persistCtx, event.SpaceID, event.ExptID, event.ExptRunID,
-		[]int64{event.EvalSetItemID}, turnState); err != nil {
+		[]int64{event.EvalSetItemID}, entity.TurnRunState_Fail); err != nil {
 		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr create/update turn run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
 	}
+	return true
 }
 
 // yieldItemRunForRetry 让位分支: 判定需重试时把行从 Processing 退回 Queueing 并递增持久 retry_times,
@@ -955,7 +944,7 @@ func (e *ExptItemEventEvalServiceImpl) yieldItemRunForRetry(ctx context.Context,
 
 func (e *ExptItemEventEvalServiceImpl) HandleEventLock(next RecordEvalEndPoint) RecordEvalEndPoint {
 	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
-		lockKey := fmt.Sprintf("expt_item_eval_run_lock:%d:%d", event.ExptID, event.EvalSetItemID)
+		lockKey := exptItemEvalRunLockKey(event.ExptID, event.EvalSetItemID)
 		locked, ctx, cancel, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*5, time.Second*60*60)
 		if err != nil {
 			return err

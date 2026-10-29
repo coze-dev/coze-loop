@@ -101,6 +101,26 @@ func (mr *MockIExptItemResultDAOMockRecorder) BatchGet(ctx, spaceID, exptID, ite
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGet", reflect.TypeOf((*MockIExptItemResultDAO)(nil).BatchGet), varargs...)
 }
 
+// CompareAndSwapItemRunLog mocks base method.
+func (m *MockIExptItemResultDAO) CompareAndSwapItemRunLog(ctx context.Context, exptID, exptRunID, itemID int64, fromStatus int32, ufields map[string]any, spaceID int64, opts ...db.Option) (bool, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, exptID, exptRunID, itemID, fromStatus, ufields, spaceID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CompareAndSwapItemRunLog", varargs...)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CompareAndSwapItemRunLog indicates an expected call of CompareAndSwapItemRunLog.
+func (mr *MockIExptItemResultDAOMockRecorder) CompareAndSwapItemRunLog(ctx, exptID, exptRunID, itemID, fromStatus, ufields, spaceID any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, exptID, exptRunID, itemID, fromStatus, ufields, spaceID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompareAndSwapItemRunLog", reflect.TypeOf((*MockIExptItemResultDAO)(nil).CompareAndSwapItemRunLog), varargs...)
+}
+
 // CountItemsByBackflowStatus mocks base method.
 func (m *MockIExptItemResultDAO) CountItemsByBackflowStatus(ctx context.Context, spaceID, exptID int64, opts ...db.Option) (map[int32]int64, error) {
 	m.ctrl.T.Helper()

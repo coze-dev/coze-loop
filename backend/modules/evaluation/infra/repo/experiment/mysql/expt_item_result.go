@@ -50,6 +50,7 @@ type IExptItemResultDAO interface {
 	BatchCreateNXRunLogs(ctx context.Context, itemRunLogs []*model.ExptItemResultRunLog, opts ...db.Option) error
 	ScanItemRunLogs(ctx context.Context, exptID, exptRunID int64, filter *entity.ExptItemRunLogFilter, cursor, limit, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, int64, error)
 	UpdateItemRunLog(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64, opts ...db.Option) error
+	CompareAndSwapItemRunLog(ctx context.Context, exptID, exptRunID, itemID int64, fromStatus int32, ufields map[string]any, spaceID int64, opts ...db.Option) (bool, error)
 	// UpdateItemRunLogIfNotTerminal 与 UpdateItemRunLog 相同，但 WHERE 追加 status <> Terminal，
 	// 用一条原子 UPDATE 保证「Terminal 是吸收态」，替代「先 SELECT 判定再写」的非原子实现。
 	UpdateItemRunLogIfNotTerminal(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64, opts ...db.Option) error
@@ -265,6 +266,24 @@ func (dao *exptItemResultDAOImpl) UpdateItemRunLog(ctx context.Context, exptID, 
 		return errorx.Wrapf(err, "ExptItemResultRepo.UpdateItemRunLog failed, expt_id: %v, run_id: %v, item_id: %v, ufields: %v", exptID, exptRunID, itemID, ufields)
 	}
 	return nil
+}
+
+func (dao *exptItemResultDAOImpl) CompareAndSwapItemRunLog(ctx context.Context, exptID, exptRunID, itemID int64, fromStatus int32, ufields map[string]any, spaceID int64, opts ...db.Option) (bool, error) {
+	db := dao.provider.NewSession(ctx, opts...)
+	q := query.Use(db).ExptItemResultRunLog
+	info, err := q.WithContext(ctx).
+		Where(
+			q.SpaceID.Eq(spaceID),
+			q.ExptID.Eq(exptID),
+			q.ExptRunID.Eq(exptRunID),
+			q.ItemID.Eq(itemID),
+			q.Status.Eq(fromStatus),
+		).
+		UpdateColumns(ufields)
+	if err != nil {
+		return false, errorx.Wrapf(err, "CompareAndSwapItemRunLog failed, expt_id: %v, run_id: %v, item_id: %v, from_status: %v", exptID, exptRunID, itemID, fromStatus)
+	}
+	return info.RowsAffected > 0, nil
 }
 
 // UpdateItemRunLogIfNotTerminal 条件更新：仅当当前 status 不是 Terminal 时才写入。

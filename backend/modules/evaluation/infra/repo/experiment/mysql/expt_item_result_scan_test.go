@@ -37,6 +37,82 @@ func newItemResultTestDAO(t *testing.T, ctrl *gomock.Controller) (*exptItemResul
 	return &exptItemResultDAOImpl{provider: provider}, mock, func() { _ = sqlDB.Close() }
 }
 
+func TestUpdateItemRunLogIfNotTerminal_ExcludesTerminal(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	dao, mock, closeFn := newItemResultTestDAO(t, ctrl)
+	defer closeFn()
+
+	mock.ExpectBegin()
+	mock.ExpectExec("UPDATE `expt_item_result_run_log` SET .* WHERE .*`status` <> \\?.*").
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectCommit()
+
+	err := dao.UpdateItemRunLogIfNotTerminal(context.Background(), 10, 40, []int64{30}, map[string]any{
+		"status":       int32(entity.ItemRunState_Success),
+		"result_state": int32(entity.ExptItemResultStateLogged),
+	}, 20)
+
+	require.NoError(t, err)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCompareAndSwapItemRunLog(t *testing.T) {
+	t.Run("updated", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		dao, mock, closeFn := newItemResultTestDAO(t, ctrl)
+		defer closeFn()
+
+		mock.ExpectBegin()
+		mock.ExpectExec("UPDATE `expt_item_result_run_log` SET .* WHERE .*`status` = \\?.*").
+			WillReturnResult(sqlmock.NewResult(0, 1))
+		mock.ExpectCommit()
+
+		updated, err := dao.CompareAndSwapItemRunLog(context.Background(), 10, 40, 30,
+			int32(entity.ItemRunState_Processing), map[string]any{"status": int32(entity.ItemRunState_Fail)}, 20)
+
+		require.NoError(t, err)
+		assert.True(t, updated)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("not updated", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		dao, mock, closeFn := newItemResultTestDAO(t, ctrl)
+		defer closeFn()
+
+		mock.ExpectBegin()
+		mock.ExpectExec("UPDATE `expt_item_result_run_log` SET .* WHERE .*`status` = \\?.*").
+			WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectCommit()
+
+		updated, err := dao.CompareAndSwapItemRunLog(context.Background(), 10, 40, 30,
+			int32(entity.ItemRunState_Processing), map[string]any{"status": int32(entity.ItemRunState_Fail)}, 20)
+
+		require.NoError(t, err)
+		assert.False(t, updated)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("database error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		dao, mock, closeFn := newItemResultTestDAO(t, ctrl)
+		defer closeFn()
+
+		dbErr := assert.AnError
+		mock.ExpectBegin()
+		mock.ExpectExec("UPDATE `expt_item_result_run_log` SET .* WHERE .*`status` = \\?.*").
+			WillReturnError(dbErr)
+		mock.ExpectRollback()
+
+		updated, err := dao.CompareAndSwapItemRunLog(context.Background(), 10, 40, 30,
+			int32(entity.ItemRunState_Processing), map[string]any{"status": int32(entity.ItemRunState_Fail)}, 20)
+
+		assert.False(t, updated)
+		require.ErrorIs(t, err, dbErr)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
 // TestExptItemResultDAO_ScanItemRunLogs_GenBranch_FlagOff_IdAsc 防回归(§6.2a):
 // flag=false 时 gen 分支 ORDER BY 与改造前完全一致(id asc)、ForceIndex 仍是 uk_expt_run_item_turn。
 func TestExptItemResultDAO_ScanItemRunLogs_GenBranch_FlagOff_IdAsc(t *testing.T) {
