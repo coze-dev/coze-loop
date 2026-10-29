@@ -4,6 +4,7 @@
 package entity
 
 import (
+	"context"
 	"time"
 )
 
@@ -226,6 +227,11 @@ func WithSandboxAgent(sandboxAgent *SandboxAgent) Option {
 }
 
 type ExecuteEvalTargetParam struct {
+	// PrepareSandboxExecution durably registers ownership before allocating resources.
+	// A nonzero returned ID resumes an already-ready invocation without dispatching again.
+	PrepareSandboxExecution func(context.Context, int64, []string) (int64, error) `json:"-"`
+	CheckSandboxExecution   func(context.Context) error                           `json:"-"`
+
 	VerificationConfig  *VerificationConfig
 	ExptID              int64
 	ExptRunID           int64

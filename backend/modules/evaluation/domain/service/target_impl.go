@@ -37,6 +37,8 @@ import (
 )
 
 type EvalTargetServiceImpl struct {
+	sandboxLeasePendingRegistrar func(context.Context, *entity.EvalTargetRecord, int64, int64) error
+
 	idgen             idgen.IIDGenerator
 	metric            metrics.EvalTargetMetrics
 	evalTargetRepo    repo.IEvalTargetRepo
@@ -607,31 +609,50 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	span.SetCallType("EvalTarget")
 	ctx = looptracer.GetTracer().Inject(ctx)
 
+	lifecycle := &sandboxInvocationLifecycle{service: e, spaceID: spaceID, target: target, param: param, input: inputData, traceID: span.GetTraceID()}
+
 	invokeID, callee, ext, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
-		VerificationConfig:  param.VerificationConfig,
-		ExptID:              gptr.Indirect(param.ExperimentID),
-		ExptRunID:           gptr.Indirect(param.ExperimentRunID),
-		TargetID:            targetID,
-		VersionID:           targetVersionID,
-		SourceTargetID:      target.SourceTargetID,
-		SourceTargetVersion: target.EvalTargetVersion.SourceTargetVersion,
-		Input:               inputData,
-		TargetType:          target.EvalTargetType,
-		EvalTarget:          target,
-		EvalSetItemID:       gptr.Of(param.ItemID),
-		EvalSetTurnID:       gptr.Of(param.TurnID),
-		LogID:               param.LogID,
-		ItemMeta:            param.ItemMeta,
-		ExptGroupKey:        param.ExptGroupKey,
+		PrepareSandboxExecution: lifecycle.prepare,
+		CheckSandboxExecution:   lifecycle.check,
+		VerificationConfig:      param.VerificationConfig,
+		ExptID:                  gptr.Indirect(param.ExperimentID),
+		ExptRunID:               gptr.Indirect(param.ExperimentRunID),
+		TargetID:                targetID,
+		VersionID:               targetVersionID,
+		SourceTargetID:          target.SourceTargetID,
+		SourceTargetVersion:     target.EvalTargetVersion.SourceTargetVersion,
+		Input:                   inputData,
+		TargetType:              target.EvalTargetType,
+		EvalTarget:              target,
+		EvalSetItemID:           gptr.Of(param.ItemID),
+		EvalSetTurnID:           gptr.Of(param.TurnID),
+		LogID:                   param.LogID,
+		ItemMeta:                param.ItemMeta,
+		ExptGroupKey:            param.ExptGroupKey,
 		// 透传发起实验的空间。注意这里**不能**用 spaceID —— 跨空间共享时它已是对象来源空间。
 		ExptSpaceID: param.ExptSpaceID,
 	})
 	if execErr != nil {
+		lifecycle.abort(ctx, execErr)
 		// If an asynchronous call fails, return immediately without logging the error or propagating the exception.
 		// Avoid triggering a follow-up process via an asynchronous callback after a successful return.
 		logs.CtxError(ctx, "async execute target failed, spaceID=%v, targetID=%d, targetVersionID=%d, param=%v, inputData=%v, err=%v",
 			spaceID, targetID, targetVersionID, json.Jsonify(param), json.Jsonify(inputData), execErr)
 		return nil, callee, execErr
+	}
+
+	if lifecycle.record != nil {
+		if lifecycle.resumed {
+			span.Finish(ctx)
+		}
+		if !lifecycle.resumed {
+			lifecycle.record.TraceID, _ = e.emitTargetTrace(ctx, span, lifecycle.record, &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)})
+		}
+		if err := lifecycle.finish(ctx); err != nil {
+			lifecycle.abort(ctx, err)
+			return nil, callee, err
+		}
+		return lifecycle.record, callee, nil
 	}
 
 	logs.CtxInfo(ctx, "AsyncExecute with invoke_id %v, callee: %v, target_id: %v, target_version_id: %v", invokeID, callee, targetID, targetVersionID)
@@ -1105,9 +1126,11 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 				Message: errMessage,
 			},
 		}
-		// 保留 extra execute id 在落库的 fail record 上，便于事后审计 / 手动兜底销毁。
-		if extraExecuteID != "" {
-			failOutput.Ext = map[string]string{entity.SandboxAgentExtKeyExtraExecuteID: extraExecuteID}
+		if r.EvalTargetOutputData != nil {
+			failOutput.Ext = r.EvalTargetOutputData.Ext
+		}
+		if r.Ext["sandbox_lifecycle_version"] == "1" {
+			r.Ext["sandbox_lifecycle_phase"] = "aborted"
 		}
 		r.Status = gptr.Of(entity.EvalTargetRunStatusFail)
 		r.EvalTargetOutputData = failOutput
@@ -1128,12 +1151,12 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 			if id == extraExecuteID {
 				continue
 			}
-			e.destroySandboxExecute(ctx, taskID, r.SpaceID, []string{id}, zombieTimeout)
+			e.destroySandboxExecute(ctx, taskID, sandboxRecordSchedulerSpaceID(r), []string{id}, zombieTimeout)
 		}
 		// 双沙箱：额外销毁从沙箱 execute，语义对齐 destroySandboxExecuteIfNeeded (success 分支)。
 		// 从沙箱 zombieTimeout 恒为 false，不需要下发 SandboxAgent EndCmd（EndCmd 只对主沙箱有意义）。
 		if extraExecuteID != "" {
-			e.destroySandboxExtraExecute(ctx, taskID, r.SpaceID, extraExecuteID)
+			e.destroySandboxExtraExecute(ctx, taskID, sandboxRecordSchedulerSpaceID(r), extraExecuteID)
 		}
 	}
 }
