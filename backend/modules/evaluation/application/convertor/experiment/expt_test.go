@@ -1717,6 +1717,46 @@ func TestEvalConfConvert_ConvertToEntity_RuntimeParam(t *testing.T) {
 	}
 }
 
+func TestEvalConfConvert_EnableExtractTrajectory(t *testing.T) {
+	tests := []struct {
+		name  string
+		value *bool
+		want  bool
+	}{
+		{
+			name:  "explicit true",
+			value: gptr.Of(true),
+			want:  true,
+		},
+		{
+			name:  "explicit false",
+			value: gptr.Of(false),
+			want:  false,
+		},
+		{
+			name: "omitted defaults to true",
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &expt.CreateExperimentRequest{EnableExtractTrajectory: tt.value}
+
+			legacyConf, err := NewEvalConfConvert().ConvertToEntity(req, nil)
+			require.NoError(t, err)
+			require.NotNil(t, legacyConf.EnableExtractTrajectory)
+			assert.Equal(t, tt.want, *legacyConf.EnableExtractTrajectory)
+
+			req.EvalSetConfigs = []*domain_expt.EvalSetConfig{{}}
+			multiSetConf := buildExptConfFromEvalSetConfigs(req, nil)
+			require.NotNil(t, multiSetConf)
+			require.NotNil(t, multiSetConf.EnableExtractTrajectory)
+			assert.Equal(t, tt.want, *multiSetConf.EnableExtractTrajectory)
+		})
+	}
+}
+
 func TestToExptDTO_RuntimeParam(t *testing.T) {
 	tests := []struct {
 		name                       string

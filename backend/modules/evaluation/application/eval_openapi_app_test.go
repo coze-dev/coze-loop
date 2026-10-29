@@ -2646,6 +2646,21 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 			},
 		}
 	}
+	setupSuccess := func(req *openapi.SubmitExperimentOApiRequest, auth *rpcmocks.MockIAuthProvider, manager *servicemocks.MockIExptManager, versionSvc *servicemocks.MockEvaluationSetVersionService, evaluatorSvc *servicemocks.MockEvaluatorService, fakeApp *fakeExperimentApp) {
+		auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+		manager.EXPECT().CheckName(gomock.Any(), req.GetName(), req.GetWorkspaceID(), gomock.AssignableToTypeOf(&entity.Session{})).Return(true, nil)
+		versionSvc.EXPECT().ListEvaluationSetVersions(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluationSetVersionsParam{})).Return([]*entity.EvaluationSetVersion{{ID: evaluatorVersionID}}, nil, nil, nil)
+		evaluator := &entity.Evaluator{
+			EvaluatorType: entity.EvaluatorTypePrompt,
+			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+				ID:          evaluatorVersionID,
+				EvaluatorID: evaluatorID,
+				Version:     "1.0",
+			},
+		}
+		evaluatorSvc.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluatorVersionRequest{})).Return([]*entity.Evaluator{evaluator}, int64(1), nil)
+		fakeApp.submitResp = &exptpb.SubmitExperimentResponse{Experiment: &domainexpt.Experiment{ID: gptr.Of(int64(8888))}}
+	}
 
 	tests := []struct {
 		name     string
@@ -2769,21 +2784,25 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 		{
 			name:     "success",
 			buildReq: buildBaseReq,
-			setup: func(req *openapi.SubmitExperimentOApiRequest, auth *rpcmocks.MockIAuthProvider, manager *servicemocks.MockIExptManager, versionSvc *servicemocks.MockEvaluationSetVersionService, evaluatorSvc *servicemocks.MockEvaluatorService, fakeApp *fakeExperimentApp) {
-				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
-				manager.EXPECT().CheckName(gomock.Any(), req.GetName(), req.GetWorkspaceID(), gomock.AssignableToTypeOf(&entity.Session{})).Return(true, nil)
-				versionSvc.EXPECT().ListEvaluationSetVersions(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluationSetVersionsParam{})).Return([]*entity.EvaluationSetVersion{{ID: evaluatorVersionID}}, nil, nil, nil)
-				evaluator := &entity.Evaluator{
-					EvaluatorType: entity.EvaluatorTypePrompt,
-					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
-						ID:          evaluatorVersionID,
-						EvaluatorID: evaluatorID,
-						Version:     "1.0",
-					},
-				}
-				evaluatorSvc.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluatorVersionRequest{})).Return([]*entity.Evaluator{evaluator}, int64(1), nil)
-				fakeApp.submitResp = &exptpb.SubmitExperimentResponse{Experiment: &domainexpt.Experiment{ID: gptr.Of(int64(8888))}}
+			setup:    setupSuccess,
+		},
+		{
+			name: "success with trajectory extraction enabled",
+			buildReq: func() *openapi.SubmitExperimentOApiRequest {
+				req := buildBaseReq()
+				req.EnableExtractTrajectory = gptr.Of(true)
+				return req
 			},
+			setup: setupSuccess,
+		},
+		{
+			name: "success with trajectory extraction disabled",
+			buildReq: func() *openapi.SubmitExperimentOApiRequest {
+				req := buildBaseReq()
+				req.EnableExtractTrajectory = gptr.Of(false)
+				return req
+			},
+			setup: setupSuccess,
 		},
 		{
 			name: "success with code evaluator",
@@ -2970,6 +2989,7 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 					assert.Equal(t, evaluatorVersionID, fakeApp.lastReq.EvaluatorVersionIds[0])
 					// ref_group_experiment_id 透传: 显式传入时应原样透传给内部 SubmitExperimentRequest。
 					assert.Equal(t, req.RefGroupExperimentID, fakeApp.lastReq.RefGroupExperimentID)
+					assert.Equal(t, req.EnableExtractTrajectory, fakeApp.lastReq.EnableExtractTrajectory)
 				}
 			}
 
