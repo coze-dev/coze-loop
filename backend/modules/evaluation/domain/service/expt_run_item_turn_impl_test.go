@@ -5579,6 +5579,7 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_CrossSpaceCarriesExptSpaceID(t
 			},
 			Expt: &entity.Experiment{
 				SpaceID:         exptSpaceID,
+				CreatedBy:       "experiment_creator",
 				TargetSpaceID:   targetSourceSpaceID, // >0 即跨空间共享
 				TargetVersionID: targetVersionID,
 				Target: &entity.EvalTarget{
@@ -5621,6 +5622,7 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_CrossSpaceCarriesExptSpaceID(t
 			assert.Equal(t, exptSpaceID, param.ExptSpaceID,
 				"★ ExptSpaceID 必须是发起实验的空间(42)，不是评测对象来源空间(99) —— "+
 					"取错就是本字段要修的那个 bug：模型凭据会按对象所在空间取")
+			assert.Equal(t, "experiment_creator", param.ExptCreatedBy)
 			return record, "callee-service", nil
 		})
 	mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)

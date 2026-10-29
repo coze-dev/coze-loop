@@ -116,7 +116,7 @@ type IExptTurnResultRepo interface {
 type IExptRunLogRepo interface {
 	Create(ctx context.Context, exptRunLog *entity.ExptRunLog) error
 	Save(ctx context.Context, exptRunLog *entity.ExptRunLog) error
-	Update(ctx context.Context, exptID, exptRunID int64, ufields map[string]any) error
+	Update(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any) error
 	Get(ctx context.Context, exptID, exptRunID int64) (*entity.ExptRunLog, error)
 }
 

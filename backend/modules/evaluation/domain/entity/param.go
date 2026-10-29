@@ -257,7 +257,8 @@ type ExecuteEvalTargetParam struct {
 	// 是**对象来源空间**, 本字段才是发起实验的空间。消费方**只应**用它做"按空间取配置"
 	// 这类归属判断 (当前唯一消费方: SandboxAgent 的模型凭据替换规则);
 	// 沙箱 workspace、record 空间、AK/SK 一律继续用 spaceID 形参, 换了会撕裂销毁链与回传链。
-	ExptSpaceID int64
+	ExptSpaceID   int64
+	ExptCreatedBy string
 }
 
 // EvalSetItemMeta 承载评测集与 item 层面的元数据快照, 用于评测对象 (如 SandboxAgent) 透传给外部执行侧。

@@ -13,8 +13,10 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
+	domain_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapi_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
+	common_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
@@ -402,6 +404,76 @@ func openAPITagFilterValuesDTO2DO(tagNames []string, relation openapi_eval_set.T
 }
 
 // 内部DTO转OpenAPI DTO
+func DomainEvaluationSetDTO2OpenAPI(dto *domain_eval_set.EvaluationSet) *openapi_eval_set.EvaluationSet {
+	if dto == nil {
+		return nil
+	}
+
+	var datasetType *string
+	if dto.Type != nil {
+		value := *dto.Type
+		datasetType = &value
+	}
+	tags := make([]*entity.ResourceTag, 0, len(dto.Tags))
+	for _, tag := range dto.Tags {
+		if tag == nil {
+			continue
+		}
+		tags = append(tags, &entity.ResourceTag{
+			TagName:     tag.TagName,
+			TagKeyID:    gptr.Indirect(tag.TagKeyID),
+			ContentType: gptr.Indirect(tag.ContentType),
+			Status:      gptr.Indirect(tag.Status),
+		})
+	}
+
+	var version *entity.EvaluationSetVersion
+	if dto.EvaluationSetVersion != nil {
+		version = &entity.EvaluationSetVersion{
+			ID:                  dto.EvaluationSetVersion.GetID(),
+			AppID:               dto.EvaluationSetVersion.GetAppID(),
+			SpaceID:             dto.EvaluationSetVersion.GetWorkspaceID(),
+			EvaluationSetID:     dto.EvaluationSetVersion.GetEvaluationSetID(),
+			Version:             dto.EvaluationSetVersion.GetVersion(),
+			VersionNum:          dto.EvaluationSetVersion.GetVersionNum(),
+			Description:         dto.EvaluationSetVersion.GetDescription(),
+			EvaluationSetSchema: SchemaDTO2DO(dto.EvaluationSetVersion.EvaluationSetSchema),
+			ItemCount:           dto.EvaluationSetVersion.GetItemCount(),
+			BaseInfo:            common_convertor.ConvertBaseInfoDTO2DO(dto.EvaluationSetVersion.BaseInfo),
+		}
+	}
+
+	var sharedInfo *entity.SharedResourceInfo
+	if dto.SharedInfo != nil {
+		sharedInfo = &entity.SharedResourceInfo{
+			IsShared:      dto.SharedInfo.GetIsShared(),
+			SourceSpaceID: dto.SharedInfo.GetSourceSpaceID(),
+			AccessLevel:   dto.SharedInfo.GetAccessLevel(),
+			VersionPolicy: dto.SharedInfo.GetVersionPolicy(),
+		}
+	}
+
+	return OpenAPIEvaluationSetDO2DTO(&entity.EvaluationSet{
+		ID:                   dto.GetID(),
+		AppID:                dto.GetAppID(),
+		SpaceID:              dto.GetWorkspaceID(),
+		Name:                 dto.GetName(),
+		Description:          dto.GetDescription(),
+		Status:               entity.DatasetStatus(dto.GetStatus()),
+		ItemCount:            dto.GetItemCount(),
+		ChangeUncommitted:    dto.GetChangeUncommitted(),
+		EvaluationSetVersion: version,
+		LatestVersion:        dto.GetLatestVersion(),
+		NextVersionNum:       dto.GetNextVersionNum(),
+		BaseInfo:             common_convertor.ConvertBaseInfoDTO2DO(dto.BaseInfo),
+		SharedInfo:           sharedInfo,
+		DatasetType:          datasetType,
+		Tags:                 tags,
+		DatasetKey:           dto.GetDatasetKey(),
+		TemplateDatasetID:    dto.TemplateDatasetID,
+	})
+}
+
 func OpenAPIEvaluationSetDO2DTO(do *entity.EvaluationSet) *openapi_eval_set.EvaluationSet {
 	if do == nil {
 		return nil

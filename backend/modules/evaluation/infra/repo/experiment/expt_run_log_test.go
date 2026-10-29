@@ -160,6 +160,7 @@ func TestExptRunLogImpl_Update(t *testing.T) {
 		name      string
 		exptID    int64
 		exptRunID int64
+		spaceID   int64
 		ufields   map[string]any
 		mockSetup func()
 		wantErr   bool
@@ -168,9 +169,10 @@ func TestExptRunLogImpl_Update(t *testing.T) {
 			name:      "success",
 			exptID:    1,
 			exptRunID: 2,
+			spaceID:   789,
 			ufields:   map[string]any{"status": 1},
 			mockSetup: func() {
-				mockDAO.EXPECT().Update(gomock.Any(), int64(1), int64(2), gomock.Any()).Return(nil)
+				mockDAO.EXPECT().Update(gomock.Any(), int64(1), int64(2), int64(789), gomock.Any()).Return(nil)
 			},
 			wantErr: false,
 		},
@@ -178,9 +180,10 @@ func TestExptRunLogImpl_Update(t *testing.T) {
 			name:      "fail_dao_error",
 			exptID:    3,
 			exptRunID: 4,
+			spaceID:   790,
 			ufields:   map[string]any{"status": 2},
 			mockSetup: func() {
-				mockDAO.EXPECT().Update(gomock.Any(), int64(3), int64(4), gomock.Any()).Return(errors.New("dao error"))
+				mockDAO.EXPECT().Update(gomock.Any(), int64(3), int64(4), int64(790), gomock.Any()).Return(errors.New("dao error"))
 			},
 			wantErr: true,
 		},
@@ -189,7 +192,7 @@ func TestExptRunLogImpl_Update(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
-			err := repo.Update(context.Background(), tt.exptID, tt.exptRunID, tt.ufields)
+			err := repo.Update(context.Background(), tt.exptID, tt.exptRunID, tt.spaceID, tt.ufields)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {

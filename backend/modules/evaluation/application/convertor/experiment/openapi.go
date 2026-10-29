@@ -394,6 +394,9 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 		TargetFieldMapping:    DomainTargetFieldMappingDTO2OpenAPI(dto.TargetFieldMapping),
 		EvaluatorFieldMapping: DomainEvaluatorFieldMappingDTO2OpenAPI(dto.EvaluatorFieldMapping, dto.Evaluators),
 		TargetRuntimeParam:    DomainRuntimeParamDTO2OpenAPI(dto.TargetRuntimeParam),
+		EvalSet:               evalsetopenapi.DomainEvaluationSetDTO2OpenAPI(dto.EvalSet),
+		EvalSetID:             dto.EvalSetID,
+		EvalSetVersionID:      dto.EvalSetVersionID,
 	}
 
 	result.Status = mapExperimentStatus(dto.Status)

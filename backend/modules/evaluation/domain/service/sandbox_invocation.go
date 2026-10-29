@@ -35,7 +35,7 @@ type sandboxInvocationLifecycle struct {
 	traceID string
 }
 
-func (l *sandboxInvocationLifecycle) schedulerSpaceID() int64 { return l.spaceID }
+func (l *sandboxInvocationLifecycle) schedulerSpaceID() int64 { return l.experimentSpaceID() }
 func (l *sandboxInvocationLifecycle) experimentSpaceID() int64 {
 	if l.param.ExptSpaceID > 0 {
 		return l.param.ExptSpaceID
@@ -131,7 +131,7 @@ func (l *sandboxInvocationLifecycle) prepare(ctx context.Context, invokeID int64
 		if !transitioned {
 			return 0, fmt.Errorf("sandbox initialization ownership changed")
 		}
-		l.service.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(l.param.ExperimentID), 10), l.schedulerSpaceID(), sandboxExecuteIDsOf(ctx, old), false)
+		l.service.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(l.param.ExperimentID), 10), l.schedulerSpaceID(), l.spaceID, sandboxExecuteIDsOf(ctx, old), false)
 	}
 	ext := make(map[string]string)
 	for k, v := range l.input.GetExt() {
@@ -184,7 +184,7 @@ func (l *sandboxInvocationLifecycle) finish(ctx context.Context) error {
 		if done, _ := l.loadReported(ctx); done {
 			return nil
 		}
-		l.service.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(l.param.ExperimentID), 10), l.schedulerSpaceID(), sandboxExecuteIDsOf(ctx, l.record), false)
+		l.service.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(l.param.ExperimentID), 10), l.schedulerSpaceID(), l.spaceID, sandboxExecuteIDsOf(ctx, l.record), false)
 		return err
 	}
 	if l.resumed {
@@ -208,7 +208,7 @@ func (l *sandboxInvocationLifecycle) finish(ctx context.Context) error {
 
 // TerminateSandboxAttemptsForRunItems discovers pre-dispatch and superseded attempts
 // which have not yet been attached to a turn's TargetResultID.
-func (e *EvalTargetServiceImpl) TerminateSandboxAttemptsForRunItems(ctx context.Context, spaceID, runID int64, itemIDs []int64) error {
+func (e *EvalTargetServiceImpl) TerminateSandboxAttemptsForRunItems(ctx context.Context, spaceID, runID int64, itemIDs []int64, waitForDestroy ...bool) error {
 	ctx = contexts.WithCtxWriteDB(ctx)
 	attempts, err := e.evalTargetRepo.ListItemRetryRecordsByRun(ctx, spaceID, runID, itemIDs)
 	if err != nil {
@@ -222,8 +222,7 @@ func (e *EvalTargetServiceImpl) TerminateSandboxAttemptsForRunItems(ctx context.
 			}
 		}
 	}
-	e.TerminateAsyncRecordsAndDestroySandbox(ctx, spaceID, ids, int32(errno.AsyncEvalTargetTerminatedCode), "async eval target terminated: experiment cancelled", false)
-	return nil
+	return e.TerminateAsyncRecordsAndDestroySandbox(ctx, spaceID, ids, int32(errno.AsyncEvalTargetTerminatedCode), "async eval target terminated: experiment cancelled", false, waitForDestroy...)
 }
 
 func (l *sandboxInvocationLifecycle) abort(ctx context.Context, cause error) {
@@ -240,7 +239,7 @@ func (l *sandboxInvocationLifecycle) abort(ctx context.Context, cause error) {
 			logs.CtxWarn(cleanupCtx, "sandbox initialization failure persistence failed, record_id=%d, err=%v", l.record.ID, err)
 		}
 	}
-	l.service.destroySandboxExecute(cleanupCtx, strconv.FormatInt(gptr.Indirect(l.param.ExperimentID), 10), l.schedulerSpaceID(), sandboxExecuteIDsOf(cleanupCtx, l.record), false)
+	l.service.destroySandboxExecute(cleanupCtx, strconv.FormatInt(gptr.Indirect(l.param.ExperimentID), 10), l.schedulerSpaceID(), l.spaceID, sandboxExecuteIDsOf(cleanupCtx, l.record), false)
 }
 
 func sandboxRecordSchedulerSpaceID(r *entity.EvalTargetRecord) int64 {

@@ -197,6 +197,8 @@ type ExecuteTargetCtx struct {
 	// 两个口径必须并存, 所以另开一个字段, 不要去改那个 spaceID 形参: 它还同时决定
 	// 沙箱 workspace、record 落库/读取空间、空间 AK/SK 与 TCC 空间级配置。
 	ExptSpaceID int64
+	// ExptCreatedBy is the persisted experiment creator, independent of the async caller.
+	ExptCreatedBy string
 }
 
 type TargetTrajectoryConf struct {

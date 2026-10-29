@@ -338,7 +338,8 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		// 多集执行恒用顶层 target, 而 ItemConfig 的来源空间是 per-set 的
 		// (见 ExptItemEvalCtx.TargetSourceSpaceID 的论证) —— 按 per-set 派生会重演
 		// "拿 B 的空间去加载 A 的 target" 那类错配。
-		ExptSpaceID: etec.Event.SpaceID,
+		ExptSpaceID:   etec.Event.SpaceID,
+		ExptCreatedBy: etec.Expt.CreatedBy,
 	}
 	if etec.Expt.EvalConf != nil {
 		etc.EnableExtractTrajectory = etec.Expt.EvalConf.EnableExtractTrajectory

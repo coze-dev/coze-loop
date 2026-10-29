@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 	configmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -32,11 +33,24 @@ func TestOpenAPIApplication_ListTrajectoryOApi(t *testing.T) {
 		authMock := rpcmocks.NewMockIAuthProvider(ctrl)
 		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
 		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		start := time.Now().Add(-time.Hour).UnixMilli()
 
 		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "open_api").Return(nil)
 		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(10, nil)
 		rateLimiterMock.EXPECT().AllowN(gomock.Any(), "123", 1, gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
-		traceServiceMock.EXPECT().ListTrajectory(gomock.Any(), gomock.Any()).Return(&service.ListTrajectoryResponse{Trajectories: nil}, nil)
+		traceServiceMock.EXPECT().ListTrajectory(gomock.Any(), gomock.Cond(func(arg any) bool {
+			req, ok := arg.(*service.ListTrajectoryRequest)
+			if !ok {
+				return false
+			}
+			return req.WorkspaceID == 123 &&
+				req.PlatformType == loop_span.PlatformOpenAPI &&
+				len(req.TraceIds) == 2 &&
+				req.TraceIds[0] == "trace-1" &&
+				req.TraceIds[1] == "trace-2" &&
+				req.StartTime != nil &&
+				*req.StartTime == start
+		})).Return(&service.ListTrajectoryResponse{Trajectories: nil}, nil)
 
 		app := &OpenAPIApplication{
 			traceService: traceServiceMock,
@@ -45,7 +59,6 @@ func TestOpenAPIApplication_ListTrajectoryOApi(t *testing.T) {
 			traceConfig:  traceConfigMock,
 		}
 
-		start := time.Now().Add(-time.Hour).UnixMilli()
 		req := &openapi.ListTrajectoryOApiRequest{
 			WorkspaceID:  123,
 			TraceIds:     []string{"trace-1", "trace-2"},
