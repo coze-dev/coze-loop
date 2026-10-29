@@ -7,13 +7,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"testing"
+
 	"github.com/bytedance/gg/gptr"
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"testing"
 )
 
 type lifecycleStore struct {
@@ -37,6 +38,7 @@ func copyLifecycleRecord(r *entity.EvalTargetRecord) *entity.EvalTargetRecord {
 	_ = json.Unmarshal(b, &out)
 	return &out
 }
+
 func (s *lifecycleStore) LatestSandboxInvocation(_ context.Context, space, run, item, turn int64) (*entity.EvalTargetRecord, error) {
 	var result *entity.EvalTargetRecord
 	for _, r := range s.records {
@@ -46,10 +48,12 @@ func (s *lifecycleStore) LatestSandboxInvocation(_ context.Context, space, run, 
 	}
 	return copyLifecycleRecord(result), nil
 }
+
 func (s *lifecycleStore) SandboxInvocationOwnerActive(_ context.Context, space, expt, run, item int64) (bool, error) {
 	s.checkedSpace = space
 	return s.active, nil
 }
+
 func (s *lifecycleStore) CreateEvalTargetRecord(_ context.Context, r *entity.EvalTargetRecord, _ *bool) (int64, error) {
 	if s.failCreate {
 		return 0, errors.New("database unavailable")
@@ -57,9 +61,11 @@ func (s *lifecycleStore) CreateEvalTargetRecord(_ context.Context, r *entity.Eva
 	s.records[r.ID] = copyLifecycleRecord(r)
 	return r.ID, nil
 }
+
 func (s *lifecycleStore) GetEvalTargetRecordByIDAndSpaceID(_ context.Context, space, id int64) (*entity.EvalTargetRecord, error) {
 	return copyLifecycleRecord(s.records[id]), nil
 }
+
 func (s *lifecycleStore) TransitionSandboxInvocation(_ context.Context, r *entity.EvalTargetRecord, phase string) (bool, error) {
 	if s.beforeTransition != nil {
 		fn := s.beforeTransition
@@ -73,11 +79,13 @@ func (s *lifecycleStore) TransitionSandboxInvocation(_ context.Context, r *entit
 	s.records[r.ID] = copyLifecycleRecord(r)
 	return true, nil
 }
+
 func newLifecycleFixture() (*sandboxInvocationLifecycle, *lifecycleStore) {
 	store := &lifecycleStore{records: map[int64]*entity.EvalTargetRecord{}, active: true}
 	svc := &EvalTargetServiceImpl{evalTargetRepo: store, sandboxLeasePendingRegistrar: func(context.Context, *entity.EvalTargetRecord, int64, int64) error { return nil }}
 	return &sandboxInvocationLifecycle{service: svc, spaceID: 10, target: &entity.EvalTarget{ID: 20, EvalTargetVersion: &entity.EvalTargetVersion{ID: 21}}, param: &entity.ExecuteTargetCtx{PrepareAsyncContext: func(context.Context, int64, string) error { return nil }, ExperimentID: gptr.Of(int64(30)), ExperimentRunID: gptr.Of(int64(31)), ItemID: 40, TurnID: 41, ExptSpaceID: 99}, input: &entity.EvalTargetInputData{}}, store
 }
+
 func TestSandboxLifecycleRegistersBeforeDispatch(t *testing.T) {
 	l, s := newLifecycleFixture()
 	registered := false
@@ -98,6 +106,7 @@ func TestSandboxLifecycleRegistersBeforeDispatch(t *testing.T) {
 	require.NoError(t, l.finish(context.Background()))
 	require.Equal(t, "ready", s.records[50].Ext["sandbox_lifecycle_phase"])
 }
+
 func TestSandboxLifecycleFailClosedBeforeDispatch(t *testing.T) {
 	for _, mode := range []string{"database", "queue", "async-context", "cancelled", "lock-lost"} {
 		t.Run(mode, func(t *testing.T) {
@@ -121,6 +130,7 @@ func TestSandboxLifecycleFailClosedBeforeDispatch(t *testing.T) {
 		})
 	}
 }
+
 func TestSandboxLifecycleFencesInterruptedAttempt(t *testing.T) {
 	old, s := newLifecycleFixture()
 	_, err := old.prepare(context.Background(), 50, []string{"50-windows", "50-orch"})
@@ -135,6 +145,7 @@ func TestSandboxLifecycleFencesInterruptedAttempt(t *testing.T) {
 	require.Error(t, old.finish(context.Background()))
 	require.Equal(t, "[\"50-windows\",\"50-orch\"]", s.records[50].Ext["sandbox_lifecycle_execute_ids"])
 }
+
 func TestSandboxLifecycleResumesReadyWithoutNewAllocation(t *testing.T) {
 	l, s := newLifecycleFixture()
 	_, err := l.prepare(context.Background(), 50, []string{"50-windows", "50-orch"})
@@ -147,6 +158,7 @@ func TestSandboxLifecycleResumesReadyWithoutNewAllocation(t *testing.T) {
 	require.Equal(t, int64(50), id)
 	require.Len(t, s.records, 1)
 }
+
 func TestSandboxLifecycleCancelCannotBeResurrected(t *testing.T) {
 	l, s := newLifecycleFixture()
 	_, err := l.prepare(context.Background(), 50, []string{"50-windows", "50-orch"})
@@ -156,6 +168,7 @@ func TestSandboxLifecycleCancelCannotBeResurrected(t *testing.T) {
 	require.Error(t, l.finish(context.Background()))
 	require.Equal(t, entity.EvalTargetRunStatusFail, *s.records[50].Status)
 }
+
 func TestSandboxLifecycleRejectsMismatchedOwner(t *testing.T) {
 	l, s := newLifecycleFixture()
 	_, err := l.prepare(context.Background(), 50, []string{"50-windows", "50-orch"})
@@ -190,6 +203,7 @@ func TestSandboxLifecycleKeepsReportedResult(t *testing.T) {
 func (s *lifecycleStore) GetEvalTargetVersion(context.Context, int64, int64) (*entity.EvalTarget, error) {
 	return s.target, nil
 }
+
 func (s *lifecycleStore) SaveEvalTargetRecord(_ context.Context, r *entity.EvalTargetRecord, _ *bool) error {
 	s.records[r.ID] = copyLifecycleRecord(r)
 	return nil
@@ -203,6 +217,7 @@ type lifecycleOperator struct {
 func (o lifecycleOperator) ValidateInput(context.Context, int64, []*entity.ArgsSchema, *entity.EvalTargetInputData) error {
 	return nil
 }
+
 func (o lifecycleOperator) AsyncExecute(ctx context.Context, space int64, p *entity.ExecuteEvalTargetParam) (int64, string, map[string]string, error) {
 	return o.run(ctx, space, p)
 }

@@ -2263,7 +2263,6 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_Async(t *testing.T) {
 						return nil
 					},
 				)
-
 			} else {
 				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			}
@@ -2273,7 +2272,6 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_Async(t *testing.T) {
 			assert.Equal(t, record, got)
 		})
 	}
-
 }
 
 func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {

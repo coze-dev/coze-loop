@@ -6,6 +6,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -15,8 +18,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
-	"strconv"
-	"time"
 )
 
 // WithSandboxLeasePendingRegistrar connects the commercial durable reconciliation queue.
@@ -254,6 +255,7 @@ func sandboxRecordSchedulerSpaceID(r *entity.EvalTargetRecord) int64 {
 func sandboxInvocationReported(r *entity.EvalTargetRecord) bool {
 	return r != nil && r.Ext["sandbox_lifecycle_version"] == "1" && r.Ext["sandbox_lifecycle_phase"] != "aborted" && (gptr.Indirect(r.Status) == entity.EvalTargetRunStatusSuccess || gptr.Indirect(r.Status) == entity.EvalTargetRunStatusFail)
 }
+
 func (l *sandboxInvocationLifecycle) loadReported(ctx context.Context) (bool, error) {
 	r, err := l.service.evalTargetRepo.GetEvalTargetRecordByIDAndSpaceID(contexts.WithCtxWriteDB(ctx), l.spaceID, l.record.ID)
 	if err != nil {

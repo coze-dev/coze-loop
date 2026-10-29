@@ -5,6 +5,8 @@ package target
 
 import (
 	"context"
+	"testing"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	dbmock "github.com/coze-dev/coze-loop/backend/infra/db/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -13,7 +15,6 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/plugin/dbresolver"
-	"testing"
 )
 
 func TestSandboxInvocationOwnerUsesRunKeyAndPrimary(t *testing.T) {

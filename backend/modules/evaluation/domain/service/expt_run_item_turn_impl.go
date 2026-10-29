@@ -369,7 +369,8 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 			ItemKey:                 pickItemKey(etec),
 			DatasetKey:              pickDatasetKey(etec),
 			AgentName:               pickAgentName(etec),
-			ApplicationID:           pickApplicationID(etec)}
+			ApplicationID:           pickApplicationID(etec),
+		}
 	}
 	preparedID := int64(0)
 	etc.PrepareAsyncContext = func(ctx context.Context, recordID int64, callee string) error {

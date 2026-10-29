@@ -6,6 +6,8 @@ package service
 import (
 	"context"
 	"errors"
+	"testing"
+
 	lwtMocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
 	rpcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -13,7 +15,6 @@ import (
 	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
-	"testing"
 )
 
 func TestWindowsRunReachesQuota(t *testing.T) {
