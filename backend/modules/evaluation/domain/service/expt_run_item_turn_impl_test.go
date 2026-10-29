@@ -2142,117 +2142,138 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_RuntimeParam(t *testing.T) {
 }
 
 func TestDefaultExptTurnEvaluationImpl_callTarget_Async(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	for _, preRegister := range []bool{false, true} {
+		t.Run(fmt.Sprint(preRegister), func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
-	mockEvalTargetService := svcmocks.NewMockIEvalTargetService(ctrl)
-	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+			mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+			mockEvalTargetService := svcmocks.NewMockIEvalTargetService(ctrl)
+			mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
 
-	service := &DefaultExptTurnEvaluationImpl{
-		metric:            mockMetric,
-		evalTargetService: mockEvalTargetService,
-		evalAsyncRepo:     mockEvalAsyncRepo,
-	}
+			service := &DefaultExptTurnEvaluationImpl{
+				metric:            mockMetric,
+				evalTargetService: mockEvalTargetService,
+				evalAsyncRepo:     mockEvalAsyncRepo,
+			}
 
-	spaceID := int64(42)
-	targetID := int64(101)
-	targetVersionID := int64(202)
-	isAsync := true
-	record := &entity.EvalTargetRecord{
-		ID:                   9999,
-		EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{}},
-		Status:               gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
-		TargetID:             targetID,
-		TargetVersionID:      targetVersionID,
-		SpaceID:              spaceID,
-	}
+			if preRegister {
+				service.evalAsyncRepo = &preparingAsyncRepoTest{MockIEvalAsyncRepo: mockEvalAsyncRepo, prepare: func(_ context.Context, key string, actx *entity.EvalAsyncCtx) (bool, error) {
+					require.Equal(t, "9999", key)
+					require.Equal(t, int64(777), actx.Event.ExptRunID)
+					require.Equal(t, "callee-service", actx.Callee)
+					return true, nil
+				}}
+			}
+			spaceID := int64(42)
+			targetID := int64(101)
+			targetVersionID := int64(202)
+			isAsync := true
+			record := &entity.EvalTargetRecord{
+				ID:                   9999,
+				EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{}},
+				Status:               gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+				TargetID:             targetID,
+				TargetVersionID:      targetVersionID,
+				SpaceID:              spaceID,
+			}
 
-	turnContent := &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("payload")}
-	etec := &entity.ExptTurnEvalCtx{
-		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
-			Event: &entity.ExptItemEvalEvent{
-				ExptID:    555,
-				ExptRunID: 777,
-				SpaceID:   spaceID,
-				Session:   &entity.Session{UserID: "user"},
-			},
-			Expt: &entity.Experiment{
-				SpaceID:         spaceID,
-				TargetVersionID: targetVersionID,
-				Target: &entity.EvalTarget{
-					ID:             targetID,
-					EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
-					EvalTargetVersion: &entity.EvalTargetVersion{
-						ID: targetVersionID,
-						CustomRPCServer: &entity.CustomRPCServer{
-							IsAsync: gptr.Of(isAsync),
-						},
+			turnContent := &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("payload")}
+			etec := &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Event: &entity.ExptItemEvalEvent{
+						ExptID:    555,
+						ExptRunID: 777,
+						SpaceID:   spaceID,
+						Session:   &entity.Session{UserID: "user"},
 					},
-				},
-				EvalConf: &entity.EvaluationConfiguration{
-					ConnectorConf: entity.Connector{
-						TargetConf: &entity.TargetConf{
-							TargetVersionID: targetVersionID,
-							IngressConf: &entity.TargetIngressConf{
-								EvalSetAdapter: &entity.FieldAdapter{
-									FieldConfs: []*entity.FieldConf{
-										{FieldName: "fieldA", FromField: "fieldA"},
+					Expt: &entity.Experiment{
+						SpaceID:         spaceID,
+						TargetVersionID: targetVersionID,
+						Target: &entity.EvalTarget{
+							ID:             targetID,
+							EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
+							EvalTargetVersion: &entity.EvalTargetVersion{
+								ID: targetVersionID,
+								CustomRPCServer: &entity.CustomRPCServer{
+									IsAsync: gptr.Of(isAsync),
+								},
+							},
+						},
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: &entity.TargetConf{
+									TargetVersionID: targetVersionID,
+									IngressConf: &entity.TargetIngressConf{
+										EvalSetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{
+												{FieldName: "fieldA", FromField: "fieldA"},
+											},
+										},
 									},
 								},
 							},
 						},
 					},
+					EvalSetItem: &entity.EvaluationSetItem{ItemID: 888},
 				},
-			},
-			EvalSetItem: &entity.EvaluationSetItem{ItemID: 888},
-		},
-		Turn: &entity.Turn{
-			ID: 999,
-			FieldDataList: []*entity.FieldData{
-				{Name: "fieldA", Content: turnContent},
-			},
-		},
-		Ext: map[string]string{"ext-key": "ext-val"},
+				Turn: &entity.Turn{
+					ID: 999,
+					FieldDataList: []*entity.FieldData{
+						{Name: "fieldA", Content: turnContent},
+					},
+				},
+				Ext: map[string]string{"ext-key": "ext-val"},
+			}
+
+			mockMetric.EXPECT().EmitTurnExecTargetResult(spaceID, false)
+
+			mockEvalTargetService.EXPECT().AsyncExecuteTarget(gomock.Any(), spaceID, targetID, targetVersionID, gomock.Any(), gomock.Any()).DoAndReturn(
+				func(_ context.Context, _, _, _ int64, param *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, string, error) {
+					assert.Equal(t, int64(777), gptr.Indirect(param.ExperimentRunID))
+					assert.Equal(t, int64(888), param.ItemID)
+					assert.Equal(t, int64(999), param.TurnID)
+					// ★ ExptSpaceID 必须是事件里的实验空间。
+					//
+					// 跨空间共享评测对象时，传给 AsyncExecuteTarget 的 spaceID 已被 resolveLoadSpaceID
+					// 换成**对象来源空间**，本字段是下游唯一能拿到"发起实验在哪个空间"的入口
+					// （SandboxAgent 据此选模型凭据的替换规则）。
+					// 若被改成从 ItemConfig 派生，多集实验会拿到 per-set 的来源空间 —— 那是另一个空间。
+					assert.Equal(t, etec.Event.SpaceID, param.ExptSpaceID,
+						"ExptSpaceID 必须恒等于事件里的实验空间，不能取 spaceID 形参、也不能从 ItemConfig 派生")
+					if assert.NotNil(t, input) {
+						assert.Equal(t, "payload", gptr.Indirect(input.InputFields["fieldA"].Text))
+						assert.Equal(t, "ext-val", input.Ext["ext-key"])
+					}
+					if preRegister {
+						require.NoError(t, param.PrepareAsyncContext(context.Background(), record.ID, "callee-service"))
+					}
+					return record, "callee-service", nil
+				},
+			)
+
+			if !preRegister {
+				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(record.ID, 10), gomock.Any()).DoAndReturn(
+					func(_ context.Context, invokeID string, actx *entity.EvalAsyncCtx) error {
+						assert.Equal(t, strconv.FormatInt(record.ID, 10), invokeID)
+						if assert.NotNil(t, actx) {
+							assert.Equal(t, "callee-service", actx.Callee)
+							assert.Equal(t, etec.Event, actx.Event)
+						}
+						return nil
+					},
+				)
+
+			} else {
+				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			}
+
+			got, err := service.callTarget(context.Background(), etec, []*entity.Message{}, spaceID)
+			assert.NoError(t, err)
+			assert.Equal(t, record, got)
+		})
 	}
 
-	mockMetric.EXPECT().EmitTurnExecTargetResult(spaceID, false)
-
-	mockEvalTargetService.EXPECT().AsyncExecuteTarget(gomock.Any(), spaceID, targetID, targetVersionID, gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, _, _, _ int64, param *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, string, error) {
-			assert.Equal(t, int64(777), gptr.Indirect(param.ExperimentRunID))
-			assert.Equal(t, int64(888), param.ItemID)
-			assert.Equal(t, int64(999), param.TurnID)
-			// ★ ExptSpaceID 必须是事件里的实验空间。
-			//
-			// 跨空间共享评测对象时，传给 AsyncExecuteTarget 的 spaceID 已被 resolveLoadSpaceID
-			// 换成**对象来源空间**，本字段是下游唯一能拿到"发起实验在哪个空间"的入口
-			// （SandboxAgent 据此选模型凭据的替换规则）。
-			// 若被改成从 ItemConfig 派生，多集实验会拿到 per-set 的来源空间 —— 那是另一个空间。
-			assert.Equal(t, etec.Event.SpaceID, param.ExptSpaceID,
-				"ExptSpaceID 必须恒等于事件里的实验空间，不能取 spaceID 形参、也不能从 ItemConfig 派生")
-			if assert.NotNil(t, input) {
-				assert.Equal(t, "payload", gptr.Indirect(input.InputFields["fieldA"].Text))
-				assert.Equal(t, "ext-val", input.Ext["ext-key"])
-			}
-			return record, "callee-service", nil
-		},
-	)
-
-	mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(record.ID, 10), gomock.Any()).DoAndReturn(
-		func(_ context.Context, invokeID string, actx *entity.EvalAsyncCtx) error {
-			assert.Equal(t, strconv.FormatInt(record.ID, 10), invokeID)
-			if assert.NotNil(t, actx) {
-				assert.Equal(t, "callee-service", actx.Callee)
-				assert.Equal(t, etec.Event, actx.Event)
-			}
-			return nil
-		},
-	)
-
-	got, err := service.callTarget(context.Background(), etec, []*entity.Message{}, spaceID)
-	assert.NoError(t, err)
-	assert.Equal(t, record, got)
 }
 
 func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
@@ -5607,4 +5628,13 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_CrossSpaceCarriesExptSpaceID(t
 	got, err := service.callTarget(context.Background(), etec, nil, targetSourceSpaceID)
 	require.NoError(t, err)
 	require.NotNil(t, got)
+}
+
+type preparingAsyncRepoTest struct {
+	*repomocks.MockIEvalAsyncRepo
+	prepare func(context.Context, string, *entity.EvalAsyncCtx) (bool, error)
+}
+
+func (r *preparingAsyncRepoTest) SetEvalAsyncCtxIfAbsent(ctx context.Context, key string, actx *entity.EvalAsyncCtx) (bool, error) {
+	return r.prepare(ctx, key, actx)
 }

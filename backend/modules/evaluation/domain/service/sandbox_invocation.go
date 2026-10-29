@@ -92,11 +92,17 @@ func (l *sandboxInvocationLifecycle) prepare(ctx context.Context, invokeID int64
 	}
 	if sandboxInvocationReported(old) {
 		l.record, l.resumed = old, true
+		if err := l.prepareAsyncContext(ctx, old.ID); err != nil {
+			return 0, err
+		}
 		return old.ID, nil
 	}
 	if old != nil && old.Ext["sandbox_lifecycle_version"] == "1" && gptr.Indirect(old.Status) == entity.EvalTargetRunStatusAsyncInvoking {
 		if old.Ext["sandbox_lifecycle_phase"] == "ready" {
 			l.record, l.resumed = old, true
+			if err := l.prepareAsyncContext(ctx, old.ID); err != nil {
+				return 0, err
+			}
 			if done, err := l.loadReported(ctx); err != nil {
 				return 0, err
 			} else if done {
@@ -160,6 +166,9 @@ func (l *sandboxInvocationLifecycle) prepare(ctx context.Context, invokeID int64
 		return 0, err
 	}
 	if err := l.service.sandboxLeasePendingRegistrar(ctx, l.record, gptr.Indirect(l.param.ExperimentID), l.schedulerSpaceID()); err != nil {
+		return 0, err
+	}
+	if err := l.prepareAsyncContext(ctx, invokeID); err != nil {
 		return 0, err
 	}
 	return 0, l.check(ctx)
@@ -256,4 +265,39 @@ func (l *sandboxInvocationLifecycle) loadReported(ctx context.Context) (bool, er
 		return true, nil
 	}
 	return false, nil
+}
+
+func (l *sandboxInvocationLifecycle) prepareAsyncContext(ctx context.Context, recordID int64) error {
+	if l.param.PrepareAsyncContext == nil {
+		return fmt.Errorf("sandbox async callback context registration is not configured")
+	}
+	return l.param.PrepareAsyncContext(ctx, recordID, "sandbox_agent")
+}
+
+// PrepareSandboxAsyncContext registers routing before an external process can report.
+// Existing context is reused only when its immutable owner matches this attempt.
+func PrepareSandboxAsyncContext(ctx context.Context, repository repo.IEvalAsyncRepo, want *entity.EvalAsyncCtx) error {
+	if want == nil || want.Event == nil || want.RecordID <= 0 {
+		return fmt.Errorf("invalid sandbox async context")
+	}
+	preparer, ok := repository.(repo.EvalAsyncContextPreparer)
+	if !ok {
+		return fmt.Errorf("conditional async context registration unavailable")
+	}
+	key := strconv.FormatInt(want.RecordID, 10)
+	created, err := preparer.SetEvalAsyncCtxIfAbsent(ctx, key, want)
+	if err != nil {
+		return err
+	}
+	if created {
+		return nil
+	}
+	got, err := repository.GetEvalAsyncCtx(ctx, key)
+	if err != nil {
+		return err
+	}
+	if got == nil || got.Event == nil || got.RecordID != want.RecordID || got.Event.SpaceID != want.Event.SpaceID || got.Event.ExptID != want.Event.ExptID || got.Event.ExptRunID != want.Event.ExptRunID || got.Event.EvalSetItemID != want.Event.EvalSetItemID || got.Callee != want.Callee {
+		return fmt.Errorf("sandbox async callback context owner mismatch, record_id=%d", want.RecordID)
+	}
+	return nil
 }

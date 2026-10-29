@@ -154,3 +154,16 @@ func (e *evalAsyncDAOImpl) getEvalAsyncCtx(ctx context.Context, invokeID string)
 	}
 	return convert.NewExptItemTurnEvalAsyncCtx().ToDO(conv.UnsafeStringToBytes(got))
 }
+
+// SetEvalAsyncCtxIfAbsent never resets callback state or the original start time.
+func (e *evalAsyncDAOImpl) SetEvalAsyncCtxIfAbsent(ctx context.Context, invokeID string, actx *entity.EvalAsyncCtx) (bool, error) {
+	bytes, err := convert.NewExptItemTurnEvalAsyncCtx().FromDO(actx)
+	if err != nil {
+		return false, err
+	}
+	created, err := e.cmdable.SetNX(ctx, e.makeExptItemTurnEvalAsyncCtxKey(invokeID), bytes, e.ttlOf(ctx, actx)).Result()
+	if err != nil {
+		return false, errorx.Wrapf(err, "register async context, invoke_id: %s", invokeID)
+	}
+	return created, nil
+}

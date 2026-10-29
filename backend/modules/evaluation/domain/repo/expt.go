@@ -213,3 +213,8 @@ type IExptItemRefRepo interface {
 	// CountByEvalSetGrouped 按 eval_set_id 分组统计实验的 item 数 (供 eval_set_details.item_count 用)
 	CountByEvalSetGrouped(ctx context.Context, spaceID int64, exptIDs []int64) (map[int64][]*entity.ExptEvalSetItemCount, error)
 }
+
+// EvalAsyncContextPreparer preserves an existing invocation context on replay.
+type EvalAsyncContextPreparer interface {
+	SetEvalAsyncCtxIfAbsent(context.Context, string, *entity.EvalAsyncCtx) (bool, error)
+}

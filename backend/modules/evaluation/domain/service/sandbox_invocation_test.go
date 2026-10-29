@@ -76,7 +76,7 @@ func (s *lifecycleStore) TransitionSandboxInvocation(_ context.Context, r *entit
 func newLifecycleFixture() (*sandboxInvocationLifecycle, *lifecycleStore) {
 	store := &lifecycleStore{records: map[int64]*entity.EvalTargetRecord{}, active: true}
 	svc := &EvalTargetServiceImpl{evalTargetRepo: store, sandboxLeasePendingRegistrar: func(context.Context, *entity.EvalTargetRecord, int64, int64) error { return nil }}
-	return &sandboxInvocationLifecycle{service: svc, spaceID: 10, target: &entity.EvalTarget{ID: 20, EvalTargetVersion: &entity.EvalTargetVersion{ID: 21}}, param: &entity.ExecuteTargetCtx{ExperimentID: gptr.Of(int64(30)), ExperimentRunID: gptr.Of(int64(31)), ItemID: 40, TurnID: 41, ExptSpaceID: 99}, input: &entity.EvalTargetInputData{}}, store
+	return &sandboxInvocationLifecycle{service: svc, spaceID: 10, target: &entity.EvalTarget{ID: 20, EvalTargetVersion: &entity.EvalTargetVersion{ID: 21}}, param: &entity.ExecuteTargetCtx{PrepareAsyncContext: func(context.Context, int64, string) error { return nil }, ExperimentID: gptr.Of(int64(30)), ExperimentRunID: gptr.Of(int64(31)), ItemID: 40, TurnID: 41, ExptSpaceID: 99}, input: &entity.EvalTargetInputData{}}, store
 }
 func TestSandboxLifecycleRegistersBeforeDispatch(t *testing.T) {
 	l, s := newLifecycleFixture()
@@ -98,7 +98,7 @@ func TestSandboxLifecycleRegistersBeforeDispatch(t *testing.T) {
 	require.Equal(t, "ready", s.records[50].Ext["sandbox_lifecycle_phase"])
 }
 func TestSandboxLifecycleFailClosedBeforeDispatch(t *testing.T) {
-	for _, mode := range []string{"database", "queue", "cancelled", "lock-lost"} {
+	for _, mode := range []string{"database", "queue", "async-context", "cancelled", "lock-lost"} {
 		t.Run(mode, func(t *testing.T) {
 			l, s := newLifecycleFixture()
 			ctx, cancel := context.WithCancel(context.Background())
@@ -108,6 +108,8 @@ func TestSandboxLifecycleFailClosedBeforeDispatch(t *testing.T) {
 				s.failCreate = true
 			case "queue":
 				l.service.sandboxLeasePendingRegistrar = func(context.Context, *entity.EvalTargetRecord, int64, int64) error { return errors.New("queue down") }
+			case "async-context":
+				l.param.PrepareAsyncContext = func(context.Context, int64, string) error { return errors.New("async context unavailable") }
 			case "cancelled":
 				s.active = false
 			case "lock-lost":

@@ -4,6 +4,7 @@
 package entity
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -168,6 +169,9 @@ const (
 )
 
 type ExecuteTargetCtx struct {
+	// PrepareAsyncContext must register callback routing before sandbox allocation.
+	PrepareAsyncContext func(context.Context, int64, string) error `json:"-"`
+
 	VerificationConfig *VerificationConfig
 	ExperimentID       *int64
 	// 实验执行ID
