@@ -2358,11 +2358,13 @@ func (e *EvalOpenAPIApplication) RetryExperimentOApi(ctx context.Context, req *o
 	}
 
 	retryReq := &exptpb.RetryExperimentRequest{
-		RetryMode:   domain_expt.ExptRetryModePtr(retryMode),
-		WorkspaceID: req.WorkspaceID,
-		ExptID:      req.ExperimentID,
-		ItemIds:     req.ItemIds,
-		Ext:         req.Ext,
+		RetryMode:     domain_expt.ExptRetryModePtr(retryMode),
+		WorkspaceID:   req.WorkspaceID,
+		ExptID:        req.ExperimentID,
+		ItemIds:       req.ItemIds,
+		ExpectedRunID: req.ExpectedRunID,
+		RequestID:     req.RequestID,
+		Ext:           req.Ext,
 	}
 
 	resp, err := e.experimentApp.RetryExperiment(ctx, retryReq)
@@ -2370,9 +2372,21 @@ func (e *EvalOpenAPIApplication) RetryExperimentOApi(ctx context.Context, req *o
 		return nil, err
 	}
 
+	var rejected []*experiment.RetryRejectedItem
+	if resp.RejectedItems != nil {
+		rejected = make([]*experiment.RetryRejectedItem, 0, len(resp.RejectedItems))
+		for _, item := range resp.RejectedItems {
+			rejected = append(rejected, &experiment.RetryRejectedItem{ItemID: item.ItemID, Reason: item.Reason})
+		}
+	}
+
 	return &openapi.RetryExperimentOApiResponse{
 		Data: &openapi.RetryExperimentOpenAPIData{
-			RunID: resp.RunID,
+			RunID:         resp.RunID,
+			RequestID:     resp.RequestID,
+			AcceptedCount: resp.AcceptedCount,
+			RejectedItems: rejected,
+			SnapshotAtMs:  resp.SnapshotAtMs,
 		},
 	}, nil
 }

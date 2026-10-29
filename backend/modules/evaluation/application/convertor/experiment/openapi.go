@@ -386,6 +386,7 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 
 	result := &openapiExperiment.Experiment{
 		ID:                    dto.ID,
+		LatestRunID:           dto.LatestRunID,
 		Name:                  dto.Name,
 		Description:           dto.Desc,
 		ExperimentGroupKey:    dto.ExperimentGroupKey,
@@ -707,6 +708,7 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 
 	result := &openapiExperiment.Experiment{
 		ID:                 gptr.Of(experiment.ID),
+		LatestRunID:        gptr.Of(experiment.LatestRunID),
 		Name:               gptr.Of(experiment.Name),
 		ExperimentGroupKey: gptr.Of(experiment.ExperimentGroupKey),
 		ExptStats:          openAPIExperimentStatsDO2DTO(experiment.Stats),

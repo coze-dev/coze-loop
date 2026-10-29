@@ -355,12 +355,18 @@ struct Experiment {
     // 单 item 预期资源消耗向量; "有则回显、无则省略"(legacy 实验确实没申报)。
     118: optional ExpectedQuotaConsumption expected_quota_consumption
     119: optional VerificationConfig verification_config
+    120: optional i64 latest_run_id (api.js_conv = 'true', go.tag = 'json:"latest_run_id,omitempty"')
 
     // 注: scheduler_scope **不进读模型**。它是不透明调度域 ID, 对调用方无可用语义却泄露部署拓扑;
     // 内部运维需要时直接查 experiment.scheduler_scope 列。
 
 
     100: optional common.BaseInfo base_info
+}
+
+struct RetryRejectedItem {
+    1: optional i64 item_id (api.js_conv = 'true', go.tag = 'json:"item_id,omitempty"')
+    2: optional string reason
 }
 
 // 单资源预期消耗。与 domain/expt.thrift 的 ExpectedResourceConsumption 同构 ——
