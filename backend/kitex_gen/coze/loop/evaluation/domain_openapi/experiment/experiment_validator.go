@@ -191,6 +191,9 @@ func (p *Experiment) IsValid() error {
 	}
 	return nil
 }
+func (p *RetryRejectedItem) IsValid() error {
+	return nil
+}
 func (p *ExpectedResourceConsumption) IsValid() error {
 	return nil
 }
