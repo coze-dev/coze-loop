@@ -1778,8 +1778,11 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return &expt.RetryExperimentResponse{RunID: req.ExpectedRunID, RequestID: gptr.Of(receipt.RequestID), AcceptedCount: gptr.Of(receipt.AcceptedCount), RejectedItems: rejected, SnapshotAtMs: gptr.Of(receipt.SnapshotAtMS), BaseResp: base.NewBaseResp()}, nil
 	}
 
-	if (got.Status == entity.ExptStatus_Processing || got.Status == entity.ExptStatus_Pending || entity.IsExptFinishing(got.Status)) && e.configer != nil && e.configer.GetExptExecConf(ctx, req.GetWorkspaceID()).IsRunningRetryEnabled() {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("current run retry identity required"))
+	// 只有「离线 + 运行中」才有同 run 重排（validateCurrentRetryExperiment 也只受理这一种）。
+	// 其余状态（Pending / Finishing / 在线实验）若也强制身份，旧调用方会 400、带身份又 4102 run_finished，
+	// 两条路都不通；这里放过它们，保持开关打开前的旧重试语义。
+	if got.ExptType == entity.ExptType_Offline && got.Status == entity.ExptStatus_Processing && e.configer != nil && e.configer.GetExptExecConf(ctx, req.GetWorkspaceID()).IsRunningRetryEnabled() {
+		return nil, errorx.NewByCode(errno.ManualRetryIdentityRequiredCode)
 	}
 
 	// SandboxAgent 评测对象：重试前重新初始化沙箱任务。

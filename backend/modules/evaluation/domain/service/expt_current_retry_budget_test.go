@@ -26,7 +26,7 @@ func retryBudgetHandler(t *testing.T) (*ExptItemEventEvalServiceImpl, *repomocks
 	ctrl := gomock.NewController(t)
 	mutex := lockmocks.NewMockILocker(ctrl)
 	held := false
-	mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:7:10", 5*time.Second, time.Minute).
+	mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:7:10", 5*time.Second, 5*time.Minute).
 		DoAndReturn(func(ctx context.Context, _ string, _, _ time.Duration) (bool, context.Context, func(), error) {
 			held = true
 			return true, ctx, func() {}, nil

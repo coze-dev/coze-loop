@@ -22,6 +22,8 @@ import (
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 func TestRunningRetryExplicitNeverFallsBack(t *testing.T) {
@@ -60,7 +62,7 @@ func TestRunningRetryExplicitNeverFallsBack(t *testing.T) {
 }
 
 func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
-	for _, kind := range []string{"explicit_sandbox", "old_live_join", "old_terminal_failure", "old_terminal_all", "old_terminal_items", "enabled_missing_identity"} {
+	for _, kind := range []string{"explicit_sandbox", "old_live_join", "old_terminal_failure", "old_terminal_all", "old_terminal_items", "enabled_missing_identity", "enabled_online_live", "enabled_pending_offline", "enabled_finishing_offline"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			manager := svcmocks.NewMockIExptManager(ctrl)
@@ -83,6 +85,14 @@ func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
 			}
 			if strings.HasPrefix(kind, "old_terminal") {
 				got.Status = entity.ExptStatus_Success
+			}
+			switch kind {
+			case "enabled_online_live":
+				got.ExptType = entity.ExptType_Online
+			case "enabled_pending_offline":
+				got.Status = entity.ExptStatus_Pending
+			case "enabled_finishing_offline":
+				got.Status = entity.ExptStatus_Terminating
 			}
 			manager.EXPECT().Get(gomock.Any(), int64(7), int64(9), gomock.Any()).Return(got, nil)
 			auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
@@ -113,7 +123,9 @@ func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
 			app := &experimentApplication{manager: manager, auth: auth, idgen: generator, configer: config, sandboxSchedulerAdapter: sandbox}
 			resp, err := app.RetryExperiment(context.Background(), req)
 			if kind == "enabled_missing_identity" {
-				require.Error(t, err)
+				statusErr, ok := errorx.FromStatusError(err)
+				require.True(t, ok)
+				require.EqualValues(t, errno.ManualRetryIdentityRequiredCode, statusErr.Code())
 				require.Nil(t, resp)
 				return
 			}

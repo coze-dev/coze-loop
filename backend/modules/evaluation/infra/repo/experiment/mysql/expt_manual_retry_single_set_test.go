@@ -222,7 +222,7 @@ func singleSetRetryManager(t *testing.T, f *manualRetryFixture, port repo.IExptM
 	config := componentmocks.NewMockIConfiger(ctrl)
 	config.EXPECT().GetExptExecConf(gomock.Any(), f.space).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)}).AnyTimes()
 	locker := lockmocks.NewMockILocker(ctrl)
-	locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), 5*time.Second, time.Minute).DoAndReturn(func(ctx context.Context, key string, ttl, renewal time.Duration) (bool, context.Context, func(), error) {
+	locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), 5*time.Second, 5*time.Minute).DoAndReturn(func(ctx context.Context, key string, ttl, renewal time.Duration) (bool, context.Context, func(), error) {
 		child, cancel := context.WithCancel(ctx)
 		return true, child, cancel, nil
 	}).AnyTimes()
