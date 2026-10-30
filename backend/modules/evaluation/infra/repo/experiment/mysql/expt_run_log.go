@@ -67,7 +67,13 @@ func NewExptRunLogDAO(db db.Provider) IExptRunLogDAO {
 func (dao *ExptRunLogDAOImpl) Get(ctx context.Context, exptID, exptRunID int64, opts ...db.Option) (*model.ExptRunLog, error) {
 	var exptRunLog model.ExptRunLog
 	db := dao.provider.NewSession(ctx, opts...)
-	if err := db.WithContext(ctx).Where("id = ? AND expt_id = ? AND expt_run_id = ?", exptRunID, exptID, exptRunID).First(&exptRunLog).Error; err != nil {
+	cond := db.WithContext(ctx).Where("id = ?", exptRunID)
+	// exptID 未知时只按 run id 查：destroy 链路要按 run id 反查 expt（resolveSandboxTaskIDByRunID 传 0），
+	// 这里再要求 expt_id 相等会让查询恒空、taskID 变空串，双沙箱的 -orch 销毁请求被丢弃。
+	if exptID > 0 {
+		cond = db.WithContext(ctx).Where("id = ? AND expt_id = ? AND expt_run_id = ?", exptRunID, exptID, exptRunID)
+	}
+	if err := cond.First(&exptRunLog).Error; err != nil {
 		return nil, errorx.Wrapf(err, "mget expt fail, expt_id: %v, expt_run_id: %v", exptID, exptRunID)
 	}
 	return &exptRunLog, nil
