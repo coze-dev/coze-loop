@@ -1140,7 +1140,7 @@ func ccCurrentSourceCoverageScannedFixture() (*entity.ExptCurrentItemRunSource, 
 
 func ccCurrentSourceCoverageScanLocker(ctrl *gomock.Controller, locked bool, lockErr error) *lockmocks.MockILocker {
 	locker := lockmocks.NewMockILocker(ctrl)
-	locker.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:5:11", 5*time.Second, time.Minute).
+	locker.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:5:11", 5*time.Second, 5*time.Minute).
 		DoAndReturn(func(ctx context.Context, _ string, _, _ time.Duration) (bool, context.Context, func(), error) {
 			if lockErr != nil {
 				return false, nil, nil, lockErr
@@ -1340,7 +1340,7 @@ func TestCCCurrentSourceCoverageWithCurrentScannedItem(t *testing.T) {
 		lockCtx, cancel := context.WithCancel(context.Background())
 		cancel()
 		locker := lockmocks.NewMockILocker(ctrl)
-		locker.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:5:11", 5*time.Second, time.Minute).
+		locker.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:5:11", 5*time.Second, 5*time.Minute).
 			Return(true, lockCtx, func() {}, nil)
 		locker.EXPECT().Unlock("expt_item_eval_run_lock:5:11").Return(true, nil)
 		scheduler := &ExptSchedulerImpl{ExptItemResultRepo: writer, itemLocker: func() lock.ILocker { return locker }}
@@ -1361,7 +1361,7 @@ func TestCCCurrentSourceCoverageWithCurrentScannedItem(t *testing.T) {
 		current.Current.UpdatedAt = source.Current.UpdatedAt
 		port.EXPECT().GetCurrentItemRunSource(gomock.Any(), int64(3), int64(5), int64(7), int64(11)).Return(current, nil)
 		locker := lockmocks.NewMockILocker(ctrl)
-		locker.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:5:11", 5*time.Second, time.Minute).
+		locker.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:5:11", 5*time.Second, 5*time.Minute).
 			DoAndReturn(func(ctx context.Context, _ string, _, _ time.Duration) (bool, context.Context, func(), error) {
 				return true, ctx, func() {}, nil
 			})

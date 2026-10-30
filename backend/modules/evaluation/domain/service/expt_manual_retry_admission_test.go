@@ -304,7 +304,7 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 			if kind == "lost_during_preflight" {
 				port.afterPreflight = runCancel
 			}
-			mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:7:8", 5*time.Second, time.Minute).DoAndReturn(func(context.Context, string, time.Duration, time.Duration) (bool, context.Context, func(), error) {
+			mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:7:8", 5*time.Second, 5*time.Minute).DoAndReturn(func(context.Context, string, time.Duration, time.Duration) (bool, context.Context, func(), error) {
 				if kind == "locked_receipt" {
 					_, hash, _ := normalizeCurrentRunRetry(req)
 					port.chunks = []entity.ExptRunLogItems{{ManualRetryReceipt: &entity.ManualRetryReceipt{RequestID: req.RequestID, PayloadHash: hash, AcceptedCount: 0, SnapshotAtMS: 77}}}
@@ -325,7 +325,7 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 				runs.EXPECT().Get(gomock.Any(), int64(7), int64(8)).Return(run, nil)
 				itemCtx, itemCancel := context.WithCancel(runCtx)
 				defer itemCancel()
-				mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:7:11", 5*time.Second, time.Minute).DoAndReturn(func(context.Context, string, time.Duration, time.Duration) (bool, context.Context, func(), error) {
+				mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:7:11", 5*time.Second, 5*time.Minute).DoAndReturn(func(context.Context, string, time.Duration, time.Duration) (bool, context.Context, func(), error) {
 					if kind == "lost_item_lock" {
 						itemCancel()
 					}

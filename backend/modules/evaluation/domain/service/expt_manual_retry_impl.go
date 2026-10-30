@@ -23,6 +23,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+// 与 FinishCurrentRun / 终止链路共用 expt_run_exec_lock，持锁上限必须一致：
+// 1 分钟到期会 cancel opCtx，失败项一多整批重试就会回滚。
+const manualRetryLockMaxHold = 5 * time.Minute
+
 func (m *ExptMangerImpl) prepareTerminalCandidatesAndReusableRefs(ctx context.Context, expt *entity.Experiment, runID int64, mode entity.ExptRunMode, itemIDs []int64, records EvaluatorRecordService) (*entity.ManualRetryPreparation, error) {
 	ctx = contexts.WithCtxWriteDB(ctx)
 	plan := &entity.ManualRetryPreparation{SnapshotAtMS: time.Now().UnixMilli()}
@@ -401,7 +405,7 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	if locker == nil {
 		return nil, fmt.Errorf("manual retry locker unavailable")
 	}
-	locked, lockCtx, cancel, err := locker.LockWithRenew(ctx, fmt.Sprintf("expt_run_exec_lock:%d:%d", expt.ID, normalized.ExpectedRunID), 5*time.Second, time.Minute)
+	locked, lockCtx, cancel, err := locker.LockWithRenew(ctx, fmt.Sprintf("expt_run_exec_lock:%d:%d", expt.ID, normalized.ExpectedRunID), 5*time.Second, manualRetryLockMaxHold)
 	if err != nil {
 		return nil, err
 	}
@@ -444,7 +448,7 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 		if err := opCtx.Err(); err != nil {
 			return nil, err
 		}
-		acquired, itemCtx, itemCancel, err := locker.LockWithRenew(opCtx, fmt.Sprintf("expt_item_eval_run_lock:%d:%d", expt.ID, item.SourceItem.ItemID), 5*time.Second, time.Minute)
+		acquired, itemCtx, itemCancel, err := locker.LockWithRenew(opCtx, fmt.Sprintf("expt_item_eval_run_lock:%d:%d", expt.ID, item.SourceItem.ItemID), 5*time.Second, manualRetryLockMaxHold)
 		if err != nil {
 			return nil, err
 		}
