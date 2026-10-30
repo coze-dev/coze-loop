@@ -746,3 +746,9 @@ error_code:
     message: running retry disabled
     description: same-run manual retry running retry disabled
     no_affect_stability: true
+
+  - name: ManualRetryIdentityRequired
+    code: 4107
+    message: identity_required
+    description: same-run manual retry identity required
+    no_affect_stability: true

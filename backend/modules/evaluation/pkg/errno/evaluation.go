@@ -540,8 +540,6 @@ const (
 	manualRetryDisabledMessage           = "running retry disabled"
 	manualRetryDisabledNoAffectStability = true
 
-	// 运行中的离线实验必须带 expected_run_id + request_id 走同 run 重排，
-	// 与 run_finished / run_conflict 区分，调用方才能判断是该换参数还是该放弃。
 	ManualRetryIdentityRequiredCode              = 601204107 // same-run manual retry identity required
 	manualRetryIdentityRequiredMessage           = "identity_required"
 	manualRetryIdentityRequiredNoAffectStability = true
