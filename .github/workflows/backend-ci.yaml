@@ -51,6 +51,30 @@ jobs:
     defaults:
       run:
         working-directory: ./backend
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_USER: cozeloop
+          MYSQL_PASSWORD: cozeloop
+          MYSQL_DATABASE: expt_running_retry_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -ucozeloop -pcozeloop"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:8.2.0
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,12 +84,33 @@ jobs:
         with:
           go-version: "1.24.0"
 
+      # Service containers start before checkout, so the init SQL (which lives
+      # in the repository) is applied here instead of via initdb.d.
+      - name: Initialize MySQL schema
+        run: |
+          set -euo pipefail
+          loaded=0
+          for f in ../release/deployment/docker-compose/bootstrap/mysql-init/init-sql/*.sql; do
+            docker exec -i -e MYSQL_PWD=cozeloop "${{ job.services.mysql.id }}" \
+              mysql --protocol=TCP -h 127.0.0.1 -ucozeloop expt_running_retry_test < "$f"
+            loaded=$((loaded + 1))
+          done
+          echo "initialized ${loaded} schema files in expt_running_retry_test"
+          # Lock-observation tests read performance_schema.data_locks, which the
+          # application user cannot see without an explicit read grant.
+          docker exec -i -e MYSQL_PWD=root "${{ job.services.mysql.id }}" \
+            mysql --protocol=TCP -h 127.0.0.1 -uroot \
+            -e "GRANT SELECT ON performance_schema.* TO 'cozeloop'@'%'; FLUSH PRIVILEGES;"
+
       - name: Build
         run: go build -v ./...
 
       - name: Run Unit Tests
+        env:
+          EXPT_RETRY_MYSQL_DSN: "cozeloop:cozeloop@tcp(127.0.0.1:3306)/expt_running_retry_test?charset=utf8mb4&parseTime=True&loc=Local"
+          EXPT_RETRY_REAL_REDIS_ADDR: "127.0.0.1:6379"
         run: |
-          go test -gcflags="all=-N -l" -race -v -coverprofile=coverage.out -coverpkg=./... ./...
+          go test -gcflags="all=-N -l" -race -v -timeout 45m -coverprofile=coverage.out -coverpkg=./... ./...
 
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v5

@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"github.com/jinzhu/copier"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
+	evalconsts "github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -109,7 +111,10 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 		return false, fmt.Errorf("EvalTurns with invalid empty eval_set_item")
 	}
 
-	for _, turn := range eiec.EvalSetItem.Turns {
+	for turnIndex, turn := range eiec.EvalSetItem.Turns {
+		if err := ctx.Err(); err != nil {
+			return false, errno.WrapMQRetryErr(err)
+		}
 		// 行级终止的「不再继续」语义：每轮开始前查一次该行是否已被终止，是则 break，
 		// 当前已跑完的轮次结果保留、后续轮次不再开始（对应 spec「执行中的行在当轮结束后停止」）。
 		// 放在循环体首部（而非尾部）是为了同时覆盖「排队中被终止、事件已在途」的情形。
@@ -122,6 +127,19 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 		etec, err := e.buildExptTurnEvalCtx(ctx, turn, eiec, history)
 		if err != nil {
 			return false, err
+		}
+		if existing := etec.GetExistTurnResultRunLog(turn.ID); existing != nil && existing.Status == entity.TurnRunState_Success && !etec.Event.IgnoreExistedTargetResult() {
+			target := etec.ExptTurnRunResult.GetTargetResult()
+			if existing.TargetResultID > 0 && target == nil {
+				return false, fmt.Errorf("success turn target record %d missing during history resume", existing.TargetResultID)
+			}
+			if turnIndex+1 < len(eiec.EvalSetItem.Turns) {
+				if err := e.loadTargetHistoryOutput(ctx, target); err != nil {
+					return false, err
+				}
+			}
+			history = append(history, buildHistoryMessage(ctx, etec.ExptTurnRunResult)...)
+			continue
 		}
 
 		ctx = context.WithValue(ctx, consts.CtxKeyLogID, etec.GetTurnEvalLogID(ctx, turn.ID)) //nolint:staticcheck
@@ -152,6 +170,11 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 		}
 		e.emitSandboxAgentE2EFinishedIfTerminal(ctx, etec, eiec.Event, turnRunRes, nil)
 
+		if turnIndex+1 < len(eiec.EvalSetItem.Turns) {
+			if err := e.loadTargetHistoryOutput(ctx, turnRunRes.GetTargetResult()); err != nil {
+				return false, err
+			}
+		}
 		history = append(history, buildHistoryMessage(ctx, turnRunRes)...)
 	}
 
@@ -179,10 +202,13 @@ func (e *ExptItemEvalCtxExecutor) isItemTerminated(ctx context.Context, eiec *en
 }
 
 func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *entity.ExptTurnEvalCtx, result *entity.ExptTurnRunResult) error {
+	if err := ctx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
 	if result == nil {
 		return fmt.Errorf("StoreTurnRunResult with nil result")
 	}
-	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	persistCtx, cancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
 	defer cancel()
 
 	turn := etec.Turn
@@ -218,11 +244,15 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 			logs.CtxWarn(ctx, "[ExptTurnEval] nil evaluator record, evaluator_version_id: %v", evID)
 			continue
 		}
-		clone.EvaluatorResultIds.Registered = append(clone.EvaluatorResultIds.Registered, &entity.RegisteredEvalResult{
-			VersionID: er.EvaluatorVersionID,
-			Alias:     er.Alias,
-			RecordID:  er.ID,
-		})
+		if er.SourceType == entity.EvaluatorRecordSourceTypeInline {
+			clone.EvaluatorResultIds.Inline = append(clone.EvaluatorResultIds.Inline, &entity.InlineEvalResult{InlineKey: er.InlineKey, RecordID: er.ID})
+		} else {
+			clone.EvaluatorResultIds.Registered = append(clone.EvaluatorResultIds.Registered, &entity.RegisteredEvalResult{
+				VersionID: er.EvaluatorVersionID,
+				Alias:     er.Alias,
+				RecordID:  er.ID,
+			})
+		}
 		if er.EvaluatorOutputData != nil && er.EvaluatorOutputData.EvaluatorRunError != nil && er.EvaluatorOutputData.EvaluatorRunError.Code > 0 {
 			evalErr = errno.NewEvaluatorResultErr(er.EvaluatorOutputData.EvaluatorRunError.Message)
 		}
@@ -271,10 +301,25 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 
 	result.SetEvalErr(evalErr)
 
-	if err := e.TurnResultRepo.SaveTurnRunLogs(persistCtx, []*entity.ExptTurnResultRunLog{clone}); err != nil {
+	if port, ok := e.ItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+		source, err := sourceForExecution(ctx, port, etec.Event)
+		if err != nil {
+			return err
+		}
+		applied, err := port.StoreCurrentTurnRunResult(persistCtx, source, clone)
+		if err := checkedCurrentWrite(ctx, applied, err); err != nil {
+			return err
+		}
+		// Advance only the reference that this execution just stored. Never read latest
+		// and replace the expected identity after an RPC or admission.
+		source.Turns[turn.ID] = clone
+	} else if err := e.TurnResultRepo.SaveTurnRunLogs(persistCtx, []*entity.ExptTurnResultRunLog{clone}); err != nil {
 		return err
 	}
-	resumeCtx, resumeCancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	if err := ctx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	resumeCtx, resumeCancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
 	defer resumeCancel()
 	var resumeWG sync.WaitGroup
 	for _, record := range result.EvaluatorResults {
@@ -390,14 +435,16 @@ func (e *ExptItemEvalCtxExecutor) SetItemRunProcessing(ctx context.Context, expt
 }
 
 func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn *entity.Turn, eiec *entity.ExptItemEvalCtx, history []*entity.Message) (*entity.ExptTurnEvalCtx, error) {
+	turnItemCtx := *eiec
+	turnItemCtx.Event = eiec.Event.CloneForTurn(turn.ID)
 	var (
 		spaceID            = eiec.Event.SpaceID
 		existTurnRunResult = eiec.GetExistTurnResultRunLog(turn.ID)
 		etec               = &entity.ExptTurnEvalCtx{
-			ExptItemEvalCtx:   eiec,
+			ExptItemEvalCtx:   &turnItemCtx,
 			Turn:              turn,
 			ExptTurnRunResult: &entity.ExptTurnRunResult{},
-			// History:           history,
+			History:           history,
 		}
 	)
 	etec.Ext = make(map[string]string)
@@ -487,6 +534,19 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 				return nil, err
 			}
 			etec.ExptTurnRunResult.EvaluatorResults = evaluatorRecords
+			if isTurnAsyncResume(etec, false) || isTurnAsyncResume(etec, true) || existTurnRunResult.Status == entity.TurnRunState_Success {
+				loaded := make(map[int64]bool, len(evaluatorRecords))
+				for _, record := range evaluatorRecords {
+					if record != nil {
+						loaded[record.ID] = true
+					}
+				}
+				for _, id := range recordIDs {
+					if !loaded[id] {
+						return nil, fmt.Errorf("turn evaluator record %d missing during resume", id)
+					}
+				}
+			}
 		}
 	}
 
@@ -494,8 +554,14 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 }
 
 func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *entity.ExptItemEvalCtx, evalErr error) error {
+	if err := ctx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if errno.NeedMQRetry(evalErr) || errors.Is(evalErr, errExptNonCurrentSource) {
+		return evalErr
+	}
 	event := eiec.Event
-	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	persistCtx, cancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
 	defer cancel()
 
 	if evalErr != nil {
@@ -516,26 +582,31 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 		ufields["status"] = int32(entity.ItemRunState_Success)
 	}
 
-	// Terminal 是吸收态：该行已被用户行级终止时，在途执行的成功/失败结果 MUST NOT 回写 status / err_msg
-	// （对应 spec「终止后到达的执行结果不覆盖终止状态」）—— 用户要看到的是"被主动终止"，而不是终止前
-	// 那次执行的报错。
-	//
-	// ⚠️ 这里刻意**不**用「先 SELECT 判 Terminal 再 UPDATE」：普通 SELECT 会被路由到只读从库
-	// （商业化侧 db 以 WithReadReplicas 构建），主从延迟窗口内会读回终止前的旧状态并把 Terminal
-	// 覆盖成 Success —— 该行还会被重新扫成成功行、发 item-complete MQ、记进 success_cnt，
-	// 用户的终止操作被静默吞掉。即便读主库，读-判-写之间仍有 TOCTOU 窗口。
-	// 故拆成两条写，用 DB 的 WHERE 做原子判定：
-	//	 (1) 条件写：status/err_msg/result_state，仅对 status <> Terminal 的行生效；
-	//	 (2) 无条件写：result_state=Logged —— 对已 Terminal 的行也必须落，否则调度侧收不了口。
-	//	     该字段与终止语义无冲突（TerminateItems 自己也写 Logged），重复写幂等。
-	if err := e.ItemResultRepo.UpdateItemRunLogIfNotTerminal(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
-		return err
-	}
-
-	if err := e.ItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, map[string]any{
-		"result_state": entity.ExptItemResultStateLogged,
-	}, event.SpaceID); err != nil {
-		return err
+	if port, ok := e.ItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+		source, err := sourceForExecution(ctx, port, event)
+		if err != nil {
+			return err
+		}
+		write := &entity.ExptCurrentItemRunWrite{Status: entity.ItemRunState_Success, RetryTimes: int32(event.RetryTimes)}
+		if evalErr != nil {
+			write.Status = entity.ItemRunState_Fail
+			write.ErrMsg = []byte(errno.SerializeErr(evalErr))
+			write.FailPendingTurns = true
+		}
+		applied, err := port.CompleteCurrentItemRun(persistCtx, source, write)
+		if err := checkedCurrentWrite(ctx, applied, err); err != nil {
+			return err
+		}
+		if execution := executionSource(ctx); execution != nil {
+			execution.Completed = true
+		}
+	} else {
+		if err := e.ItemResultRepo.UpdateItemRunLogIfNotTerminal(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
+			return err
+		}
+		if err := e.ItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, map[string]any{"result_state": entity.ExptItemResultStateLogged}, event.SpaceID); err != nil {
+			return err
+		}
 	}
 
 	// 沙箱 agent 实验:单行走到终态失败,立即发一张飞书卡。Notifier 内部做 sandbox agent + Enable 判定,
@@ -708,7 +779,34 @@ func (e *ExptItemEvalCtxExecutor) evalErrNeedTerminateExpt(ctx context.Context, 
 	return conf.IsInDebt
 }
 
+// Both DB reads and fresh persisted target records can contain only a preview.
+func (e *ExptItemEvalCtxExecutor) loadTargetHistoryOutput(ctx context.Context, target *entity.EvalTargetRecord) error {
+	if target == nil || target.EvalTargetOutputData == nil {
+		return nil
+	}
+	output := target.EvalTargetOutputData.OutputFields[evalconsts.EvalTargetOutputFieldKeyActualOutput]
+	if output == nil || !output.IsContentOmitted() {
+		return nil
+	}
+	if err := e.evalTargetService.LoadRecordOutputFields(ctx, target, []string{evalconsts.EvalTargetOutputFieldKeyActualOutput}); err != nil {
+		return fmt.Errorf("load target history record %d: %w", target.ID, err)
+	}
+	if target.EvalTargetOutputData == nil {
+		return fmt.Errorf("target history record %d missing output after load", target.ID)
+	}
+	output = target.EvalTargetOutputData.OutputFields[evalconsts.EvalTargetOutputFieldKeyActualOutput]
+	if output == nil || output.IsContentOmitted() {
+		return fmt.Errorf("target history record %d incomplete after load", target.ID)
+	}
+	return nil
+}
+
 func buildHistoryMessage(ctx context.Context, turnRunResult *entity.ExptTurnRunResult) []*entity.Message {
+	if target := turnRunResult.GetTargetResult(); target != nil && target.EvalTargetOutputData != nil {
+		if output := target.EvalTargetOutputData.OutputFields[evalconsts.EvalTargetOutputFieldKeyActualOutput]; output != nil {
+			return []*entity.Message{{Role: entity.RoleAssistant, Content: output}}
+		}
+	}
 	return nil
 }
 

@@ -24,6 +24,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
@@ -731,7 +732,7 @@ func (e *ExptSubmitExec) ScanEvalItems(ctx context.Context, event *entity.ExptSc
 
 func (e *ExptSubmitExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 {
-		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService, e.resultSvc)
 		pending, err := base.hasPendingAfterRescan(ctx, event)
 		if err != nil {
 			return false, err
@@ -1020,7 +1021,7 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 			return err
 		}
 
-		if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, plan.itemIDs, map[string]any{
+		if err := updateNewRunItemResults(ctx, e.manager, e.exptItemResultRepo, event, plan.itemIDs, map[string]any{
 			"err_msg":     nil,
 			"status":      int32(entity.ItemRunState_Queueing),
 			"expt_run_id": event.ExptRunID,
@@ -1131,7 +1132,7 @@ func (e *ExptFailRetryExec) ScanEvalItems(ctx context.Context, event *entity.Exp
 
 func (e *ExptFailRetryExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 {
-		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService, e.resultSvc)
 		pending, err := base.hasPendingAfterRescan(ctx, event)
 		if err != nil {
 			return false, err
@@ -1353,6 +1354,7 @@ func (e *ExptAppendExec) PublishResult(ctx context.Context, turnEvaluatorRefs []
 }
 
 type exptBaseExec struct {
+	resultSvc              ExptResultService
 	Manager                IExptManager
 	idem                   idem.IdempotentService
 	configer               component.IConfiger
@@ -1368,8 +1370,9 @@ func newExptBaseExec(
 	exptItemResultRepo repo.IExptItemResultRepo,
 	publisher events.ExptEventPublisher,
 	evaluatorRecordService EvaluatorRecordService,
+	resultSvc ...ExptResultService,
 ) *exptBaseExec {
-	return &exptBaseExec{
+	base := &exptBaseExec{
 		Manager:                manager,
 		idem:                   idem,
 		configer:               configer,
@@ -1377,25 +1380,51 @@ func newExptBaseExec(
 		evaluatorRecordService: evaluatorRecordService,
 		publisher:              publisher,
 	}
+	if len(resultSvc) > 0 {
+		base.resultSvc = resultSvc[0]
+	}
+	return base
 }
 
 func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (toSubmit, incomplete, complete []*entity.ExptEvalItem, err error) {
-	incomplete, complete, err = e.scanIncompleteAndComplete(ctx, event, expt)
+	rows, err := e.exptItemResultRepo.ScanCurrentRequests(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.Ext[entity.RetryYieldExtKey] == "true")
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errno.WrapMQRetryErr(err)
 	}
-
-	if submitCnt := e.getItemConcurNum(ctx, expt) - len(incomplete); submitCnt > 0 {
-		toSubmit, err = e.scanToSubmit(ctx, event, expt, int64(submitCnt))
-		if err != nil {
-			return nil, nil, nil, err
+	candidates := make([]*entity.ExptEvalItem, 0)
+	toSubmit = make([]*entity.ExptEvalItem, 0)
+	incomplete = make([]*entity.ExptEvalItem, 0)
+	complete = make([]*entity.ExptEvalItem, 0)
+	for _, source := range rows {
+		if source == nil {
+			return nil, nil, nil, errno.NewMQRetryErr("nil current item source")
+		}
+		item := &entity.ExptEvalItem{ExptID: event.ExptID, EvalSetVersionID: expt.EvalSet.EvaluationSetVersion.ID, ItemID: source.ItemID, Publication: source.Publication, PublicationObserved: source.PublicationObserved, Source: source.Source, State: source.Status, RequestID: source.RequestID, Mode: source.Mode, RetryTimes: source.RetryTimes, UpdatedAt: source.UpdatedAt}
+		if source.Status == entity.ItemRunState_Processing || source.QuotaReservationState.IsQuotaReserved() {
+			incomplete = append(incomplete, item)
+		}
+		if source.ResultState == entity.ExptItemResultStateLogged {
+			complete = append(complete, item)
+		}
+		if source.Status == entity.ItemRunState_Queueing && !source.QuotaReservationState.IsQuotaReserved() {
+			candidates = append(candidates, item)
 		}
 	}
-
+	limit := e.getItemConcurNum(ctx, expt) - len(incomplete)
+	if limit > 0 {
+		if limit > len(candidates) {
+			limit = len(candidates)
+		}
+		toSubmit = append(toSubmit, candidates[:limit]...)
+	}
 	return toSubmit, incomplete, complete, nil
 }
 
 func (e *exptBaseExec) scanIncompleteAndComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (incomplete, complete []*entity.ExptEvalItem, err error) {
+	if _, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+		_, incomplete, complete, err = e.ScanEvalItems(ctx, event, expt)
+		return incomplete, complete, err
+	}
 	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{
 		RawFilter: true,
 		RawCond:   clause.Expr{SQL: "status IN (?) OR result_state = ?", Vars: []interface{}{[]int32{int32(entity.ItemRunState_Processing)}, int32(entity.ExptItemResultStateLogged)}},
@@ -1481,6 +1510,49 @@ func (e *exptBaseExec) exptEnd(ctx context.Context, event *entity.ExptScheduleEv
 		return nil
 	}
 
+	if event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun && expt.ExptType != entity.ExptType_Online {
+		if calibration, ok := e.resultSvc.(ExptManualRetryFilterService); ok {
+			ready, err := reconcileManualRetryFilterBeforeFinish(ctx, calibration, event.SpaceID, event.ExptID, event.ExptRunID)
+			if err != nil {
+				return errno.WrapMQRetryErr(err)
+			}
+			if !ready {
+				return errno.NewMQRetryErr("manual retry filter calibration pending")
+			}
+		} else if _, current := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); current {
+			return errno.NewMQRetryErr("manual retry filter calibration service missing")
+		}
+	}
+
+	if event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun && expt.ExptType != entity.ExptType_Online {
+		if finish, ok := e.Manager.(IExptNaturalRunFinisher); ok {
+			result, err := finish.FinishCurrentRunWithHeldTickLock(ctx, event)
+			if err != nil {
+				return errno.WrapMQRetryErr(err)
+			}
+			if result == nil {
+				return errno.NewMQRetryErr("finish returned no disposition")
+			}
+			switch result.Disposition {
+			case entity.ExptRunFinishPending:
+				return errno.NewMQRetryErr("current run finish pending")
+			case entity.ExptRunFinishNonCurrent:
+				return nil
+			case entity.ExptRunFinishFinished, entity.ExptRunFinishAlreadyFinished:
+				duration := time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second * 2
+				if err := e.idem.Set(ctx, idemKey, duration); err != nil {
+					logs.CtxWarn(ctx, "finish end idem set failed: %v", err)
+				}
+				return nil
+			default:
+				return errno.NewMQRetryErr("invalid finish disposition")
+			}
+		}
+		if _, current := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); current {
+			return errno.NewMQRetryErr("current run finisher missing")
+		}
+	}
+
 	completeCID := fmt.Sprintf("exptexec:onend:%d", event.ExptRunID)
 	if err := e.Manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
 		return err
@@ -1515,6 +1587,18 @@ func (e *exptBaseExec) hasPendingAfterRescan(ctx context.Context, event *entity.
 		logs.CtxInfo(ctx, "[ExptEval] rescan before end found pending item, keep ticking, expt_id: %v, expt_run_id: %v, item_id: %v, status: %v",
 			event.ExptID, event.ExptRunID, rls[0].ItemID, rls[0].Status)
 		return true, nil
+	}
+	// Legacy test doubles do not implement the production current-result port.
+	// Production also rescans Logged so publication can retry before calibration.
+	if _, current := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); current {
+		logged := entity.ExptItemResultStateLogged
+		logs, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{ResultState: &logged}, 0, 1, event.SpaceID)
+		if err != nil {
+			return false, err
+		}
+		if len(logs) > 0 {
+			return true, nil
+		}
 	}
 	return false, nil
 }
@@ -1577,6 +1661,7 @@ func makeEndIdemKey(event *entity.ExptScheduleEvent) string {
 }
 
 type retryItemResetDeps struct {
+	manager                  IExptManager
 	evaluationSetItemService EvaluationSetItemService
 	exptItemResultRepo       repo.IExptItemResultRepo
 	exptTurnResultRepo       repo.IExptTurnResultRepo
@@ -1732,7 +1817,7 @@ func resetRetryRunLogsForItems(ctx context.Context, deps retryItemResetDeps, eve
 	if len(itemIDs) == 0 {
 		return nil, nil
 	}
-	if err := deps.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, itemIDs, map[string]any{
+	if err := updateNewRunItemResults(ctx, deps.manager, deps.exptItemResultRepo, event, itemIDs, map[string]any{
 		"err_msg":     nil,
 		"status":      int32(entity.ItemRunState_Queueing),
 		"expt_run_id": event.ExptRunID,
@@ -1908,7 +1993,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 			idIdx++
 		}
 
-		if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k }), map[string]any{
+		if err := updateNewRunItemResults(ctx, e.manager, e.exptItemResultRepo, event, maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k }), map[string]any{
 			"err_msg":     nil,
 			"status":      int32(entity.ItemRunState_Queueing),
 			"expt_run_id": event.ExptRunID,
@@ -2011,7 +2096,7 @@ func (e *ExptRetryAllExec) ScanEvalItems(ctx context.Context, event *entity.Expt
 
 func (e *ExptRetryAllExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 {
-		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService, e.resultSvc)
 		pending, err := base.hasPendingAfterRescan(ctx, event)
 		if err != nil {
 			return false, err
@@ -2088,6 +2173,7 @@ func (e *ExptRetryAllExec) exptStartMultiSet(ctx context.Context, event *entity.
 	}
 
 	deps := retryItemResetDeps{
+		manager:                  e.manager,
 		evaluationSetItemService: e.evaluationSetItemService,
 		exptItemResultRepo:       e.exptItemResultRepo,
 		exptTurnResultRepo:       e.exptTurnResultRepo,
@@ -2343,7 +2429,7 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 			idIdx++
 		}
 
-		if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, maps.ToSlice(itemIDMap, func(k int64, v bool) int64 { return k }), map[string]any{
+		if err := updateNewRunItemResults(ctx, e.manager, e.exptItemResultRepo, event, maps.ToSlice(itemIDMap, func(k int64, v bool) int64 { return k }), map[string]any{
 			"err_msg":     nil,
 			"status":      int32(entity.ItemRunState_Queueing),
 			"expt_run_id": event.ExptRunID,
@@ -2397,6 +2483,7 @@ func (e *ExptRetryItemsExec) resetEvalItemsMultiSet(ctx context.Context, event *
 	}
 
 	deps := retryItemResetDeps{
+		manager:                  e.manager,
 		evaluationSetItemService: e.evaluationSetItemService,
 		exptItemResultRepo:       e.exptItemResultRepo,
 		exptTurnResultRepo:       e.exptTurnResultRepo,
@@ -2492,7 +2579,7 @@ func (e *ExptRetryItemsExec) ExptEnd(ctx context.Context, event *entity.ExptSche
 		}
 	}
 
-	base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+	base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService, e.resultSvc)
 	pending, err := base.hasPendingAfterRescan(ctx, event)
 	if err != nil {
 		return false, err
@@ -2524,8 +2611,48 @@ func (e *ExptRetryItemsExec) ScheduleStart(ctx context.Context, event *entity.Ex
 		}
 	}
 	event.ExecEvalSetItemIDs = all
+	hasManualReceipt := false
+	for _, chunk := range rl.ItemIds {
+		if chunk.ManualRetryReceipt != nil {
+			hasManualReceipt = true
+			break
+		}
+	}
+	if hasManualReceipt && len(absence) == 0 {
+		return nil
+	}
+	if len(absence) > 0 {
+		if hasManualReceipt {
+			items, err := e.exptItemResultRepo.BatchGet(contexts.WithCtxWriteDB(ctx), event.SpaceID, event.ExptID, absence)
+			if err != nil {
+				return err
+			}
+			materialized := make(map[int64]bool)
+			for _, item := range items {
+				if item == nil {
+					return fmt.Errorf("manual retry item missing")
+				}
+				retry, err := entity.ParseManualRetryContext(item.Ext)
+				if err != nil {
+					return err
+				}
+				if retry != nil && retry.RunID == event.ExptRunID && item.ExptRunID == event.ExptRunID && item.SpaceID == event.SpaceID && item.ExptID == event.ExptID {
+					materialized[item.ItemID] = true
+				}
+			}
+			remaining := make([]int64, 0, len(absence))
+			for _, id := range absence {
+				if !materialized[id] {
+					remaining = append(remaining, id)
+				}
+			}
+			if len(remaining) == 0 {
+				return nil
+			}
+			absence = remaining
+		}
+	}
 	logs.CtxInfo(ctx, "ExptRetryItemsExec.ScheduleStart found absent item_id: %v, expt_id: %v", absence, event.ExptID)
-
 	return e.resetEvalItems(ctx, event, expt, absence)
 }
 

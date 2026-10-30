@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"gorm.io/gorm/clause"
 
@@ -16,6 +17,20 @@ import (
 	model "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	mocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/mocks"
 )
+
+func TestExptItemResultRepoRejectsCorruptExt(t *testing.T) {
+	for _, raw := range []string{`{`, `{"manual_retry":"{"}`, `{"manual_retry":"{}"}`} {
+		t.Run(raw, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			dao := mocks.NewMockIExptItemResultDAO(ctrl)
+			bytes := []byte(raw)
+			dao.EXPECT().BatchGet(gomock.Any(), int64(9), int64(7), []int64{11}).Return([]*model.ExptItemResult{{ID: 1, Ext: &bytes}}, nil)
+			got, err := NewExptItemResultRepo(dao).BatchGet(context.Background(), 9, 7, []int64{11})
+			require.Error(t, err)
+			require.Nil(t, got)
+		})
+	}
+}
 
 func TestExptItemResultRepoImpl_BatchGet(t *testing.T) {
 	ctrl := gomock.NewController(t)

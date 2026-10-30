@@ -880,6 +880,9 @@ struct RetryExperimentOApiRequest {
     3: optional experiment.ExptRetryMode retry_mode (api.body = 'retry_mode')
     4: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
 
+    5: optional i64 expected_run_id (api.body = 'expected_run_id', api.js_conv = 'true', go.tag = 'json:"expected_run_id,omitempty"')
+    6: optional string request_id (api.body = 'request_id')
+
     100: optional map<string, string> ext (api.body = 'ext')
 
     255: optional base.Base Base
@@ -894,7 +897,12 @@ struct RetryExperimentOApiResponse {
 }
 
 struct RetryExperimentOpenAPIData {
-    3: optional i64 run_id
+    3: optional i64 run_id (api.js_conv = 'true', go.tag = 'json:"run_id,omitempty"')
+    4: optional string request_id
+    5: optional i32 accepted_count
+    // Keep an explicit empty list in a current-run receipt.
+    6: optional list<experiment.RetryRejectedItem> rejected_items (go.tag = 'json:"rejected_items"')
+    7: optional i64 snapshot_at_ms (api.js_conv = 'true', go.tag = 'json:"snapshot_at_ms,omitempty"')
 }
 
 // KillExperimentOApiRequest 通过 OpenAPI 终止一个进行中的实验。

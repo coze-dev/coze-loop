@@ -5,6 +5,9 @@ package experiment
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -34,7 +37,13 @@ func (e ExptItemResultRepoImpl) BatchGet(ctx context.Context, spaceID, exptID in
 
 	results := make([]*entity.ExptItemResult, 0)
 	for _, po := range pos {
-		results = append(results, convert.NewExptItemResultConvertor().PO2DO(po))
+		result := convert.NewExptItemResultConvertor().PO2DO(po)
+		ext, parseErr := entity.ParseExptItemResultExt(gptr.Indirect(po.Ext))
+		if parseErr != nil {
+			return nil, parseErr
+		}
+		result.Ext = ext
+		results = append(results, result)
 	}
 	return results, nil
 }
@@ -140,7 +149,13 @@ func (e ExptItemResultRepoImpl) ScanItemResults(ctx context.Context, exptID, cur
 		return nil, 0, errorx.Wrapf(err, "ScanItemResults fail, exptID=%d, cursor=%d", exptID, cursor)
 	}
 	for _, po := range pos {
-		results = append(results, convert.NewExptItemResultConvertor().PO2DO(po))
+		result := convert.NewExptItemResultConvertor().PO2DO(po)
+		ext, parseErr := entity.ParseExptItemResultExt(gptr.Indirect(po.Ext))
+		if parseErr != nil {
+			return nil, 0, parseErr
+		}
+		result.Ext = ext
+		results = append(results, result)
 	}
 	return results, ncursor, nil
 }
@@ -152,7 +167,13 @@ func (e ExptItemResultRepoImpl) MGetItemResults(ctx context.Context, exptID int6
 	}
 	results = make([]*entity.ExptItemResult, 0, len(pos))
 	for _, po := range pos {
-		results = append(results, convert.NewExptItemResultConvertor().PO2DO(po))
+		result := convert.NewExptItemResultConvertor().PO2DO(po)
+		ext, parseErr := entity.ParseExptItemResultExt(gptr.Indirect(po.Ext))
+		if parseErr != nil {
+			return nil, parseErr
+		}
+		result.Ext = ext
+		results = append(results, result)
 	}
 	return results, nil
 }
@@ -168,7 +189,13 @@ func (e ExptItemResultRepoImpl) ListItemResultsByExptID(ctx context.Context, exp
 	}
 	results := make([]*entity.ExptItemResult, 0)
 	for _, po := range pos {
-		results = append(results, convert.NewExptItemResultConvertor().PO2DO(po))
+		result := convert.NewExptItemResultConvertor().PO2DO(po)
+		ext, parseErr := entity.ParseExptItemResultExt(gptr.Indirect(po.Ext))
+		if parseErr != nil {
+			return nil, 0, parseErr
+		}
+		result.Ext = ext
+		results = append(results, result)
 	}
 	return results, total, nil
 }
@@ -212,4 +239,42 @@ func (e ExptItemResultRepoImpl) BatchCreateNXRunLogs(ctx context.Context, itemRe
 
 func (e ExptItemResultRepoImpl) GetMaxItemIdxByExptID(ctx context.Context, exptID, spaceID int64) (int32, error) {
 	return e.exptItemResultDAO.GetMaxItemIdxByExptID(ctx, exptID, spaceID)
+}
+
+func (e ExptItemResultRepoImpl) ScanCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, retryFirst bool) ([]*entity.ExptItemCurrentRequest, error) {
+	return e.exptItemResultDAO.ScanCurrentRequests(ctx, spaceID, exptID, runID, retryFirst)
+}
+
+func (e ExptItemResultRepoImpl) GetCurrentRequest(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptItemCurrentRequest, error) {
+	return e.exptItemResultDAO.GetCurrentRequest(ctx, spaceID, exptID, runID, itemID)
+}
+
+// ScanIncompleteDispatchObservations exposes the existing strict primary JOIN to resource
+// cleanup, which must also observe runs that have already entered a terminal state.
+func (e ExptItemResultRepoImpl) ScanIncompleteDispatchObservations(ctx context.Context, spaceID, exptID, runID int64) ([]*repo.ExptDispatchObservation, error) {
+	return e.exptItemResultDAO.ScanIncompleteDispatchObservations(ctx, spaceID, exptID, runID)
+}
+
+func (e ExptItemResultRepoImpl) MarkProcessingIfCurrent(ctx context.Context, spaceID, exptID, runID, itemID int64, requestID string) (bool, error) {
+	return e.exptItemResultDAO.MarkProcessingIfCurrent(ctx, spaceID, exptID, runID, itemID, requestID)
+}
+
+func (e ExptItemResultRepoImpl) GetCurrentItemRunSource(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptCurrentItemRunSource, error) {
+	return e.exptItemResultDAO.(repo.IExptCurrentResultRepo).GetCurrentItemRunSource(ctx, spaceID, exptID, runID, itemID)
+}
+
+func (e ExptItemResultRepoImpl) StoreCurrentTurnRunResult(ctx context.Context, source *entity.ExptCurrentItemRunSource, result *entity.ExptTurnResultRunLog) (bool, error) {
+	return e.exptItemResultDAO.(repo.IExptCurrentResultRepo).StoreCurrentTurnRunResult(ctx, source, result)
+}
+
+func (e ExptItemResultRepoImpl) CompleteCurrentItemRun(ctx context.Context, source *entity.ExptCurrentItemRunSource, write *entity.ExptCurrentItemRunWrite) (bool, error) {
+	return e.exptItemResultDAO.(repo.IExptCurrentResultRepo).CompleteCurrentItemRun(ctx, source, write)
+}
+
+func (e ExptItemResultRepoImpl) ScanManualRetryFilterItems(ctx context.Context, space, expt, run, cursor int64, limit int) ([]int64, int64, error) {
+	scanner, ok := e.exptItemResultDAO.(repo.IExptManualRetryFilterRepo)
+	if !ok {
+		return nil, 0, fmt.Errorf("manual retry filter DAO enumeration missing")
+	}
+	return scanner.ScanManualRetryFilterItems(ctx, space, expt, run, cursor, limit)
 }

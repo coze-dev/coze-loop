@@ -1763,6 +1763,28 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return nil, err
 	}
 
+	if req.ExpectedRunID != nil {
+		if req.GetExpectedRunID() <= 0 || req.GetRequestID() == "" {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid current run retry identity"))
+		}
+		receipt, err := e.manager.RetryInCurrentRun(ctx, &entity.RetryInCurrentRunRequest{SpaceID: req.GetWorkspaceID(), ExptID: req.GetExptID(), ExpectedRunID: req.GetExpectedRunID(), RequestID: req.GetRequestID(), Mode: runMode, ItemIDs: req.GetItemIds(), Ext: req.GetExt(), Session: session})
+		if err != nil {
+			return nil, err
+		}
+		rejected := make([]*expt.RetryRejectedItem, 0, len(receipt.RejectedItems))
+		for _, item := range receipt.RejectedItems {
+			rejected = append(rejected, &expt.RetryRejectedItem{ItemID: gptr.Of(item.ItemID), Reason: gptr.Of(item.Reason)})
+		}
+		return &expt.RetryExperimentResponse{RunID: req.ExpectedRunID, RequestID: gptr.Of(receipt.RequestID), AcceptedCount: gptr.Of(receipt.AcceptedCount), RejectedItems: rejected, SnapshotAtMs: gptr.Of(receipt.SnapshotAtMS), BaseResp: base.NewBaseResp()}, nil
+	}
+
+	// 只有「离线 + 运行中」才有同 run 重排（validateCurrentRetryExperiment 也只受理这一种）。
+	// 其余状态（Pending / Finishing / 在线实验）若也强制身份，旧调用方会 400、带身份又 4102 run_finished，
+	// 两条路都不通；这里放过它们，保持开关打开前的旧重试语义。
+	if got.ExptType == entity.ExptType_Offline && got.Status == entity.ExptStatus_Processing && e.configer != nil && e.configer.GetExptExecConf(ctx, req.GetWorkspaceID()).IsRunningRetryEnabled() {
+		return nil, errorx.NewByCode(errno.ManualRetryIdentityRequiredCode)
+	}
+
 	// SandboxAgent 评测对象：重试前重新初始化沙箱任务。
 	// 首次运行结束后每条 execute 已被 destroy，沙箱侧任务不再持有可用 execute，Retry 必须重跑一次 Init 才能继续 SandboxRun。
 	// 与 Submit 保持一致：并发度先归一化，再按实际 task 的 execution 数分别计算。
@@ -2137,6 +2159,10 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 	}
 
 	kill := func(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
+		if terminate, ok := e.manager.(service.IExptCurrentRunTerminator); ok && got.ExptType == entity.ExptType_Offline {
+			_, err := terminate.TerminateCurrentRun(ctx, exptID, exptRunID, spaceID, session, nil, entity.WithStatus(entity.ExptStatus_Terminated), entity.NoAggrCalculate())
+			return err
+		}
 		if err := e.manager.CompleteRun(ctx, exptID, exptRunID, spaceID, session, entity.WithStatus(entity.ExptStatus_Terminated)); err != nil {
 			return err
 		}

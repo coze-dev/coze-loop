@@ -9255,6 +9255,7 @@ type Experiment struct {
 	// 单 item 预期资源消耗向量; "有则回显、无则省略"(legacy 实验确实没申报)。
 	ExpectedQuotaConsumption *ExpectedQuotaConsumption `thrift:"expected_quota_consumption,118,optional" frugal:"118,optional,ExpectedQuotaConsumption" form:"expected_quota_consumption" json:"expected_quota_consumption,omitempty" query:"expected_quota_consumption"`
 	VerificationConfig       *VerificationConfig       `thrift:"verification_config,119,optional" frugal:"119,optional,VerificationConfig" form:"verification_config" json:"verification_config,omitempty" query:"verification_config"`
+	LatestRunID              *int64                    `thrift:"latest_run_id,120,optional" frugal:"120,optional,i64" json:"latest_run_id,omitempty" form:"latest_run_id" query:"latest_run_id"`
 	// 注: scheduler_scope **不进读模型**。它是不透明调度域 ID, 对调用方无可用语义却泄露部署拓扑;
 	// 内部运维需要时直接查 experiment.scheduler_scope 列。
 	BaseInfo *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
@@ -9651,6 +9652,18 @@ func (p *Experiment) GetVerificationConfig() (v *VerificationConfig) {
 	return p.VerificationConfig
 }
 
+var Experiment_LatestRunID_DEFAULT int64
+
+func (p *Experiment) GetLatestRunID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLatestRunID() {
+		return Experiment_LatestRunID_DEFAULT
+	}
+	return *p.LatestRunID
+}
+
 var Experiment_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *Experiment) GetBaseInfo() (v *common.BaseInfo) {
@@ -9758,6 +9771,9 @@ func (p *Experiment) SetExpectedQuotaConsumption(val *ExpectedQuotaConsumption) 
 func (p *Experiment) SetVerificationConfig(val *VerificationConfig) {
 	p.VerificationConfig = val
 }
+func (p *Experiment) SetLatestRunID(val *int64) {
+	p.LatestRunID = val
+}
 func (p *Experiment) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
@@ -9795,6 +9811,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	117: "scheduler_mode",
 	118: "expected_quota_consumption",
 	119: "verification_config",
+	120: "latest_run_id",
 	100: "base_info",
 }
 
@@ -9924,6 +9941,10 @@ func (p *Experiment) IsSetExpectedQuotaConsumption() bool {
 
 func (p *Experiment) IsSetVerificationConfig() bool {
 	return p.VerificationConfig != nil
+}
+
+func (p *Experiment) IsSetLatestRunID() bool {
+	return p.LatestRunID != nil
 }
 
 func (p *Experiment) IsSetBaseInfo() bool {
@@ -10199,6 +10220,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 119:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField119(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 120:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField120(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10611,6 +10640,17 @@ func (p *Experiment) ReadField119(iprot thrift.TProtocol) error {
 	p.VerificationConfig = _field
 	return nil
 }
+func (p *Experiment) ReadField120(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LatestRunID = _field
+	return nil
+}
 func (p *Experiment) ReadField100(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -10752,6 +10792,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField119(oprot); err != nil {
 			fieldId = 119
+			goto WriteFieldError
+		}
+		if err = p.writeField120(oprot); err != nil {
+			fieldId = 120
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -11384,6 +11428,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 119 end error: ", p), err)
 }
+func (p *Experiment) writeField120(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLatestRunID() {
+		if err = oprot.WriteFieldBegin("latest_run_id", thrift.I64, 120); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.LatestRunID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 120 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 120 end error: ", p), err)
+}
 func (p *Experiment) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 100); err != nil {
@@ -11511,6 +11573,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field119DeepEqual(ano.VerificationConfig) {
+		return false
+	}
+	if !p.Field120DeepEqual(ano.LatestRunID) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.BaseInfo) {
@@ -11857,9 +11922,279 @@ func (p *Experiment) Field119DeepEqual(src *VerificationConfig) bool {
 	}
 	return true
 }
+func (p *Experiment) Field120DeepEqual(src *int64) bool {
+
+	if p.LatestRunID == src {
+		return true
+	} else if p.LatestRunID == nil || src == nil {
+		return false
+	}
+	if *p.LatestRunID != *src {
+		return false
+	}
+	return true
+}
 func (p *Experiment) Field100DeepEqual(src *common.BaseInfo) bool {
 
 	if !p.BaseInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type RetryRejectedItem struct {
+	ItemID *int64  `thrift:"item_id,1,optional" frugal:"1,optional,i64" json:"item_id,omitempty" form:"item_id" query:"item_id"`
+	Reason *string `thrift:"reason,2,optional" frugal:"2,optional,string" form:"reason" json:"reason,omitempty" query:"reason"`
+}
+
+func NewRetryRejectedItem() *RetryRejectedItem {
+	return &RetryRejectedItem{}
+}
+
+func (p *RetryRejectedItem) InitDefault() {
+}
+
+var RetryRejectedItem_ItemID_DEFAULT int64
+
+func (p *RetryRejectedItem) GetItemID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemID() {
+		return RetryRejectedItem_ItemID_DEFAULT
+	}
+	return *p.ItemID
+}
+
+var RetryRejectedItem_Reason_DEFAULT string
+
+func (p *RetryRejectedItem) GetReason() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReason() {
+		return RetryRejectedItem_Reason_DEFAULT
+	}
+	return *p.Reason
+}
+func (p *RetryRejectedItem) SetItemID(val *int64) {
+	p.ItemID = val
+}
+func (p *RetryRejectedItem) SetReason(val *string) {
+	p.Reason = val
+}
+
+var fieldIDToName_RetryRejectedItem = map[int16]string{
+	1: "item_id",
+	2: "reason",
+}
+
+func (p *RetryRejectedItem) IsSetItemID() bool {
+	return p.ItemID != nil
+}
+
+func (p *RetryRejectedItem) IsSetReason() bool {
+	return p.Reason != nil
+}
+
+func (p *RetryRejectedItem) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RetryRejectedItem[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *RetryRejectedItem) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemID = _field
+	return nil
+}
+func (p *RetryRejectedItem) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Reason = _field
+	return nil
+}
+
+func (p *RetryRejectedItem) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("RetryRejectedItem"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *RetryRejectedItem) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemID() {
+		if err = oprot.WriteFieldBegin("item_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ItemID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *RetryRejectedItem) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetReason() {
+		if err = oprot.WriteFieldBegin("reason", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Reason); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *RetryRejectedItem) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RetryRejectedItem(%+v)", *p)
+
+}
+
+func (p *RetryRejectedItem) DeepEqual(ano *RetryRejectedItem) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ItemID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Reason) {
+		return false
+	}
+	return true
+}
+
+func (p *RetryRejectedItem) Field1DeepEqual(src *int64) bool {
+
+	if p.ItemID == src {
+		return true
+	} else if p.ItemID == nil || src == nil {
+		return false
+	}
+	if *p.ItemID != *src {
+		return false
+	}
+	return true
+}
+func (p *RetryRejectedItem) Field2DeepEqual(src *string) bool {
+
+	if p.Reason == src {
+		return true
+	} else if p.Reason == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Reason, *src) != 0 {
 		return false
 	}
 	return true

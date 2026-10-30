@@ -50,6 +50,7 @@ func TestReportEvalTargetInvokeResult_SandboxCallee_SetsSkipErrMsgConvert(t *tes
 			assert.True(t, param.SkipErrMsgConvert, "sandbox callee should skip err msg convert")
 			return nil
 		})
+	targetSvc.EXPECT().GetRecordByID(gomock.Any(), req.GetWorkspaceID(), req.GetInvokeID()).Return(&entity.EvalTargetRecord{ID: req.GetInvokeID(), TurnID: 909}, nil)
 	configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(&entity.TargetTrajectoryConf{})
 	publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
@@ -93,6 +94,7 @@ func TestReportEvalTargetInvokeResult_NonSandboxCallee_KeepsConvert(t *testing.T
 			assert.False(t, param.SkipErrMsgConvert, "non-sandbox callee should not skip err msg convert")
 			return nil
 		})
+	targetSvc.EXPECT().GetRecordByID(gomock.Any(), req.GetWorkspaceID(), req.GetInvokeID()).Return(&entity.EvalTargetRecord{ID: req.GetInvokeID(), TurnID: 909}, nil)
 	configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(&entity.TargetTrajectoryConf{})
 	publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 

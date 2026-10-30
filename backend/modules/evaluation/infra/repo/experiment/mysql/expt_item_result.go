@@ -8,7 +8,9 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/bytedance/gg/gptr"
 	"gorm.io/gen"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/hints"
 	"gorm.io/plugin/dbresolver"
@@ -16,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/query"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
@@ -26,6 +29,10 @@ import (
 
 //go:generate  mockgen -destination=mocks/expt_item_result.go  -package mocks . IExptItemResultDAO
 type IExptItemResultDAO interface {
+	ScanIncompleteDispatchObservations(ctx context.Context, spaceID, exptID, runID int64) ([]*repo.ExptDispatchObservation, error)
+	ScanCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, retryFirst bool) ([]*entity.ExptItemCurrentRequest, error)
+	GetCurrentRequest(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptItemCurrentRequest, error)
+	MarkProcessingIfCurrent(ctx context.Context, spaceID, exptID, runID, itemID int64, requestID string) (bool, error)
 	BatchGet(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) ([]*model.ExptItemResult, error)
 	BatchCreateNX(ctx context.Context, itemResults []*model.ExptItemResult, opts ...db.Option) error
 	ScanItemResults(ctx context.Context, exptID, cursor, limit int64, status []int32, spaceID int64, opts ...db.Option) (results []*model.ExptItemResult, ncursor int64, err error)
@@ -67,6 +74,12 @@ func NewExptItemResultDAO(db db.Provider) IExptItemResultDAO {
 	}
 }
 
+// Cleanup shares dispatch's canonical/run-log observation, never a later
+// canonical token paired with an earlier run-log status.
+func (dao *exptItemResultDAOImpl) ScanIncompleteDispatchObservations(ctx context.Context, spaceID, exptID, runID int64) ([]*repo.ExptDispatchObservation, error) {
+	return (&exptItemDispatchDAOImpl{db: dao.provider}).dispatchObservations(ctx, spaceID, exptID, runID, nil, true)
+}
+
 func (dao *exptItemResultDAOImpl) BatchGet(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) ([]*model.ExptItemResult, error) {
 	db := dao.provider.NewSession(ctx, opts...)
 	if contexts.CtxWriteDB(ctx) {
@@ -81,6 +94,38 @@ func (dao *exptItemResultDAOImpl) BatchGet(ctx context.Context, spaceID, exptID 
 }
 
 func (dao *exptItemResultDAOImpl) UpdateItemsResult(ctx context.Context, spaceID, exptID int64, itemIDs []int64, ufields map[string]any, opts ...db.Option) error {
+	if next, ok := ufields["expt_run_id"].(int64); ok && next > 0 {
+		return dao.provider.Transaction(ctx, func(tx *gorm.DB) error {
+			var items []model.ExptItemResult
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id=? AND expt_id=? AND item_id IN ?", spaceID, exptID, itemIDs).Order("item_id").Find(&items).Error; err != nil {
+				return err
+			}
+			for _, item := range items {
+				fields := make(map[string]any, len(ufields)+1)
+				for key, value := range ufields {
+					fields[key] = value
+				}
+				if item.ExptRunID != next {
+					ext, err := entity.ParseExptItemResultExt(gptr.Indirect(item.Ext))
+					if err != nil {
+						return err
+					}
+					if _, exists := ext[entity.ManualRetryExtKey]; exists {
+						delete(ext, entity.ManualRetryExtKey)
+						raw, err := json.Marshal(ext)
+						if err != nil {
+							return err
+						}
+						fields["ext"] = raw
+					}
+				}
+				if err := tx.Model(&model.ExptItemResult{}).Where("id=? AND space_id=? AND expt_id=?", item.ID, spaceID, exptID).Updates(fields).Error; err != nil {
+					return err
+				}
+			}
+			return ctx.Err()
+		}, opts...)
+	}
 	db := dao.provider.NewSession(ctx, opts...)
 	q := query.Use(db).ExptItemResult
 	_, err := q.WithContext(ctx).
@@ -236,6 +281,9 @@ func (dao *exptItemResultDAOImpl) GetItemRunLog(ctx context.Context, exptID, exp
 
 func (dao *exptItemResultDAOImpl) MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, error) {
 	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	q := query.Use(db).ExptItemResultRunLog
 	found, err := q.WithContext(ctx).
 		Where(q.SpaceID.Eq(spaceID),
@@ -351,6 +399,9 @@ func (dao *exptItemResultDAOImpl) MGetItemResults(ctx context.Context, spaceID, 
 
 func (dao *exptItemResultDAOImpl) ListItemResultsByExptID(ctx context.Context, exptID, spaceID int64, page entity.Page, desc bool) ([]*model.ExptItemResult, int64, error) {
 	db := dao.provider.NewSession(ctx)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	q := query.Use(db).ExptItemResult
 	conds := []gen.Condition{
 		q.SpaceID.Eq(spaceID),
@@ -416,6 +467,9 @@ func (dao *exptItemResultDAOImpl) ScanItemRunLogs(ctx context.Context, exptID, e
 		filter = &entity.ExptItemRunLogFilter{}
 	}
 	session := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		session = session.Clauses(dbresolver.Write)
+	}
 
 	// RawFilter: use raw gorm.DB Where(sql, vars...) to avoid gen clause conversion / unknown clause issues.
 	if filter.RawFilter && filter.RawCond.SQL != "" {
