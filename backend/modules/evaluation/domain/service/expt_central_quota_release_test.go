@@ -189,18 +189,7 @@ func TestHandleEventErr_ReleasesQuotaOnUnretriableErr(t *testing.T) {
 	mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: false})
 	mockMetric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
-	// ⚠️ 断言的是 UpdateItemRunLogIfNotTerminal 而非 UpdateItemRunLog：
-	// 行级终止把 Terminal 做成吸收态后，completeItemRunOnUnretriableErr 的落 Fail 改成了
-	// 「WHERE status <> Terminal」的原子条件写（见 expt_run_item_event_impl.go 注释）。
-	// 若这里仍断言旧方法，本用例会因 mock 未预期而失败——这是合并 main 时的语义冲突，git 检测不到。
-	// 行级终止的 turn 侧闸门会查一次 run log（isItemTerminated，强制读主库）；
-	// 本用例场景是「非终止行的不可重试失败」，故返回 nil 让闸门放行。
-	mockItemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(nil, nil).AnyTimes()
-	// 落 Fail 拆成两次写：① 条件写 status/err_msg（WHERE status <> Terminal）
-	//                    ② 无条件补 result_state=Logged（否则调度侧收不了口）
-	mockItemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	mockItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	mockItemResultRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.ItemRunState_Processing, gomock.Any(), gomock.Any()).Return(true, nil)
 	mockTurnResultRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	guard := &fakeGuard{}
@@ -222,6 +211,40 @@ func TestHandleEventErr_ReleasesQuotaOnUnretriableErr(t *testing.T) {
 	assert.NoError(t, handler(ctx, event), "兜底路径吞掉错误，不让 MQ 无限重投")
 
 	assert.Len(t, guard.releases(), 1, "不可重试失败落 Fail 后必须归还额度")
+}
+
+func TestHandleEventErr_CASMissDoesNotReleaseQuota(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockConfiger := componentMocks.NewMockIConfiger(ctrl)
+	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+	mockItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+
+	mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: false})
+	mockMetric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+	mockItemResultRepo.EXPECT().CompareAndSwapItemRunLog(
+		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.ItemRunState_Processing, gomock.Any(), gomock.Any(),
+	).Return(false, nil)
+
+	guard := &fakeGuard{}
+	svc := &ExptItemEventEvalServiceImpl{
+		configer:           mockConfiger,
+		metric:             mockMetric,
+		exptItemResultRepo: mockItemResultRepo,
+		centralGuard:       guard,
+	}
+
+	event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 4, RetryTimes: 3}
+	ctx := ctxcache.Init(context.Background())
+	event.WithCtxCentralQuotaHeld(ctx, testScope)
+
+	handler := svc.HandleEventErr(func(context.Context, *entity.ExptItemEvalEvent) error {
+		return errors.New("late failure")
+	})
+	assert.NoError(t, handler(ctx, event))
+	assert.Empty(t, guard.releases(), "CAS 未获胜时额度已由终态获胜方处理，不能再释放")
 }
 
 // TestHandleEventErr_ReleasesQuotaOnIndebtTermination 欠费终止分支同样要归还额度。

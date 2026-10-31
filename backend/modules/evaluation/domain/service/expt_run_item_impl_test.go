@@ -214,9 +214,7 @@ func Test_ExptItemEvalCtxExecutor_Eval(t *testing.T) {
 				},
 			},
 			mockSetup: func() {
-				// CompleteItemRun 拆两条写: 条件写 status/err_msg(Terminal 吸收态) + 无条件补 result_state
-				mockItemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mockItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockItemResultRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.ItemRunState_Processing, gomock.Any(), gomock.Any()).Return(true, nil)
 				mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(&entity.RetryConf{IsInDebt: false, RetryTimes: 1, RetryIntervalSecond: 1})
 				mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil, nil)
 				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil, nil)
@@ -242,7 +240,7 @@ func Test_ExptItemEvalCtxExecutor_Eval(t *testing.T) {
 				},
 			},
 			mockSetup: func() {
-				mockItemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("mock updateitemrunlog error"))
+				mockItemResultRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.ItemRunState_Processing, gomock.Any(), gomock.Any()).Return(false, errors.New("mock updateitemrunlog error"))
 				mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(&entity.RetryConf{IsInDebt: false, RetryTimes: 1, RetryIntervalSecond: 1})
 			},
 			wantErr:    true,
@@ -390,37 +388,27 @@ func Test_ExptItemEvalCtxExecutor_CompleteSetItemRun(t *testing.T) {
 	mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(&entity.RetryConf{IsInDebt: false, RetryTimes: 1, RetryIntervalSecond: 1})
 
 	t.Run("正常流程", func(t *testing.T) {
-		mockItemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-		mockItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		mockItemResultRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.ItemRunState_Processing, gomock.Any(), gomock.Any()).Return(true, nil)
 		eiec := &entity.ExptItemEvalCtx{Event: &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4}}
 		err := executor.CompleteItemRun(context.Background(), eiec, nil)
 		assert.NoError(t, err)
 	})
 
 	t.Run("UpdateItemRunLog返回错误", func(t *testing.T) {
-		mockItemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("mock updateitemrunlog error"))
+		mockItemResultRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.ItemRunState_Processing, gomock.Any(), gomock.Any()).Return(false, errors.New("mock updateitemrunlog error"))
 		eiec := &entity.ExptItemEvalCtx{Event: &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4}}
 		err := executor.CompleteItemRun(context.Background(), eiec, nil)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "mock updateitemrunlog error")
 	})
 
-	t.Run("ctx取消后仍落item失败状态", func(t *testing.T) {
+	t.Run("ctx取消后不落item失败状态", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), int64(4), gomock.Any()).AnyTimes().Return(&entity.RetryConf{IsInDebt: false})
-		mockItemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), int64(1), int64(2), []int64{3}, gomock.Any(), int64(4)).
-			DoAndReturn(func(ctx context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
-				require.NoError(t, ctx.Err())
-				assert.Equal(t, int32(entity.ItemRunState_Fail), ufields["status"])
-				return nil
-			})
-		mockItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{3}, gomock.Any(), int64(4)).Return(nil)
-
 		eiec := &entity.ExptItemEvalCtx{Event: &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4, RetryTimes: 1}}
 		err := executor.CompleteItemRun(ctx, eiec, errors.New("target timeout"))
-		assert.NoError(t, err)
+		require.ErrorIs(t, err, context.Canceled)
 	})
 }
 
@@ -488,20 +476,12 @@ func Test_ExptItemEvalCtxExecutor_CompleteItemRun_NoItemCompletePublish(t *testi
 					Times(2).
 					Return(&entity.RetryConf{})
 			}
-			itemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(
-				gomock.Any(), exptID, exptRunID, []int64{itemID}, gomock.Any(), spaceID,
-			).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
+			itemResultRepo.EXPECT().CompareAndSwapItemRunLog(
+				gomock.Any(), exptID, exptRunID, itemID, entity.ItemRunState_Processing, gomock.Any(), spaceID,
+			).DoAndReturn(func(_ context.Context, _, _, _ int64, _ entity.ItemRunState, fields map[string]any, _ int64) (bool, error) {
 				require.Equal(t, wantFields, fields)
-				return nil
+				return true, nil
 			})
-			// 无条件补 result_state 的第二条写
-			itemResultRepo.EXPECT().UpdateItemRunLog(
-				gomock.Any(), exptID, exptRunID, []int64{itemID}, gomock.Any(), spaceID,
-			).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
-				require.Equal(t, map[string]any{"result_state": entity.ExptItemResultStateLogged}, fields)
-				return nil
-			})
-
 			executor := &ExptItemEvalCtxExecutor{
 				ItemResultRepo:        itemResultRepo,
 				Configer:              configer,
@@ -862,7 +842,7 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("ctx取消后仍落turn失败状态", func(t *testing.T) {
+	t.Run("ctx取消后不落turn失败状态", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
@@ -878,19 +858,8 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 		}
 		result := &entity.ExptTurnRunResult{EvalErr: errors.New("target timeout")}
 
-		mockConfiger.EXPECT().GetErrCtrl(gomock.Any()).DoAndReturn(func(ctx context.Context) *entity.ExptErrCtrl {
-			require.NoError(t, ctx.Err())
-			return entity.DefaultExptErrCtrl()
-		})
-		mockTurnResultRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, logs []*entity.ExptTurnResultRunLog) error {
-			require.NoError(t, ctx.Err())
-			require.Len(t, logs, 1)
-			assert.Equal(t, entity.TurnRunState_Fail, logs[0].Status)
-			return nil
-		})
-
 		err := executor.storeTurnRunResult(ctx, etec, result)
-		assert.NoError(t, err)
+		require.ErrorIs(t, err, context.Canceled)
 	})
 }
 

@@ -63,13 +63,10 @@ func TestCompleteItemRun_FailBranch_InvokesNotifier(t *testing.T) {
 	exec, itemResultRepo, _ := buildFailPathExecutor(t, ctrl, notifier)
 
 	failErr := errors.New("target timeout")
-	// CompleteItemRun 拆两条写: 条件写 status/err_msg + 无条件补 result_state（Terminal 吸收态）
+	// CompleteItemRun 用一条条件写原子落 status/err_msg/result_state。
 	itemResultRepo.EXPECT().
-		UpdateItemRunLogIfNotTerminal(gomock.Any(), int64(1), int64(2), []int64{3}, gomock.Any(), int64(4)).
-		Return(nil)
-	itemResultRepo.EXPECT().
-		UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{3}, gomock.Any(), int64(4)).
-		Return(nil)
+		CompareAndSwapItemRunLog(gomock.Any(), int64(1), int64(2), int64(3), entity.ItemRunState_Processing, gomock.Any(), int64(4)).
+		Return(true, nil)
 	notifier.EXPECT().
 		NotifyItemFail(gomock.Any(), gomock.Any(), int64(3), failErr).
 		Return(nil).
@@ -90,8 +87,7 @@ func TestCompleteItemRun_SuccessBranch_SkipsNotifier(t *testing.T) {
 	notifier := servicemocks.NewMockISandboxAgentNotifier(ctrl)
 	exec, itemResultRepo, _ := buildFailPathExecutor(t, ctrl, notifier)
 
-	itemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	itemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	itemResultRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.ItemRunState_Processing, gomock.Any(), gomock.Any()).Return(true, nil)
 	// notifier.EXPECT() 不注册, 表示"未被调用"。
 
 	eiec := &entity.ExptItemEvalCtx{
@@ -107,8 +103,7 @@ func TestCompleteItemRun_FailBranch_NilNotifier(t *testing.T) {
 	defer ctrl.Finish()
 
 	exec, itemResultRepo, _ := buildFailPathExecutor(t, ctrl, nil)
-	itemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	itemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	itemResultRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.ItemRunState_Processing, gomock.Any(), gomock.Any()).Return(true, nil)
 
 	eiec := &entity.ExptItemEvalCtx{
 		Event: &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4, RetryTimes: 1},
@@ -125,8 +120,7 @@ func TestCompleteItemRun_FailBranch_NotifierErrIgnored(t *testing.T) {
 	notifier := servicemocks.NewMockISandboxAgentNotifier(ctrl)
 	exec, itemResultRepo, _ := buildFailPathExecutor(t, ctrl, notifier)
 
-	itemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	itemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	itemResultRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.ItemRunState_Processing, gomock.Any(), gomock.Any()).Return(true, nil)
 	notifier.EXPECT().
 		NotifyItemFail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(errors.New("send timeout"))
@@ -255,8 +249,7 @@ func TestCompleteItemRun_FailBranch_NotifierReceivesExpectedArgs(t *testing.T) {
 	expt := sandboxExpt()
 	failErr := errors.New("failed reason")
 
-	itemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), int64(11), int64(22), []int64{33}, gomock.Any(), int64(44)).Return(nil)
-	itemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(11), int64(22), []int64{33}, gomock.Any(), int64(44)).Return(nil)
+	itemResultRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), int64(11), int64(22), int64(33), entity.ItemRunState_Processing, gomock.Any(), int64(44)).Return(true, nil)
 	notifier.EXPECT().
 		NotifyItemFail(gomock.Any(), gomock.AssignableToTypeOf(&entity.Experiment{}), int64(33), failErr).
 		DoAndReturn(func(_ context.Context, gotExpt *entity.Experiment, gotItemID int64, gotErr error) error {
