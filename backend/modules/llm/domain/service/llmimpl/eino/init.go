@@ -338,7 +338,7 @@ func qwenBuilder(ctx context.Context, model *entity.Model, opts ...entity.Option
 		if pc.ResponseFormatType != nil && pc.ResponseFormatJsonSchema != nil {
 			var js acl_openai.ChatCompletionResponseFormatJSONSchema
 			if *pc.ResponseFormatJsonSchema != "" {
-				if err := sonic.UnmarshalString(*pc.ResponseFormatJsonSchema, js); err != nil {
+				if err := sonic.UnmarshalString(*pc.ResponseFormatJsonSchema, &js); err != nil {
 					return nil, err
 				}
 			}
@@ -385,7 +385,7 @@ func qianfanBuilder(ctx context.Context, model *entity.Model, opts ...entity.Opt
 		if pc.ResponseFormatType != nil && pc.ResponseFormatJsonSchema != nil {
 			var js any
 			if *pc.ResponseFormatJsonSchema != "" {
-				if err := sonic.UnmarshalString(*pc.ResponseFormatJsonSchema, js); err != nil {
+				if err := sonic.UnmarshalString(*pc.ResponseFormatJsonSchema, &js); err != nil {
 					return nil, err
 				}
 			}
