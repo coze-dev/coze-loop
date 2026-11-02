@@ -5,6 +5,7 @@ package entity
 
 import (
 	"context"
+	stdjson "encoding/json"
 	"fmt"
 	"regexp"
 	"time"
@@ -704,8 +705,9 @@ type FixedQuery struct {
 	//
 	// **给 FixedQuery 加字段时必须同步 runtime 的 testcase.FixedQuery** —— 这条链上
 	// 平台是生产端、runtime 是消费端, 少一个字段就是又一次静默空跑。
-	ComplexQuery *ComplexQuery          `json:"complex_query,omitempty"`
-	Evaluators   map[string]interface{} `json:"evaluators,omitempty"`
+	ComplexQuery  *ComplexQuery          `json:"complex_query,omitempty"`
+	Evaluators    map[string]interface{} `json:"evaluators,omitempty"`
+	EvaluatorConf stdjson.RawMessage     `json:"evaluator_conf,omitempty"`
 }
 
 // ComplexQuery 结构化 query: 有序的 text/file 内容块序列。
