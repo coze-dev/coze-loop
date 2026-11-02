@@ -84,13 +84,15 @@ func TestManualRetryMySQLAbsentCurrentRun(t *testing.T) {
 	require.NoError(t, f.conn.Model(&model.ExptStats{}).Where("space_id=? AND expt_id=?", f.space, f.expt).Updates(map[string]any{"pending_cnt": 1, "success_cnt": 1}).Error)
 	again := f.request(entity.EvaluationModeRetryItems)
 	again.RequestID = "rq2"
-	again.PayloadHash = "hash2"
 	_, err = f.port.RequeueTerminalItems(context.Background(), again)
 	require.NoError(t, err)
 	require.NoError(t, f.conn.Where("id=?", newRun).First(&run).Error)
 	require.NoError(t, json.Unmarshal(*run.ItemIds, &chunks))
 	require.Equal(t, []int64{12, 13, 11}, (&entity.ExptRunLog{ItemIds: chunks}).GetItemIDs())
-	require.Len(t, chunks, 4)
+	require.Len(t, chunks, 2)
+	for _, chunk := range chunks {
+		require.Nil(t, chunk.ManualRetryReceipt)
+	}
 	t.Log("REAL_MYSQL_ABSENT_LOGS_VERIFIED all frozen turns/version R1 unchanged R2 total+1 repeated business IDs once")
 }
 

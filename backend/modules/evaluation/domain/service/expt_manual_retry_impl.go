@@ -5,9 +5,6 @@ package service
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"sort"
@@ -329,9 +326,9 @@ func (r *manualRetryTargetReader) GetRecordByID(ctx context.Context, spaceID, re
 	return record, nil
 }
 
-func normalizeCurrentRunRetry(req *entity.RetryInCurrentRunRequest) (*entity.RetryInCurrentRunRequest, string, error) {
+func normalizeCurrentRunRetry(req *entity.RetryInCurrentRunRequest) (*entity.RetryInCurrentRunRequest, error) {
 	if req == nil {
-		return nil, "", errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid manual retry request"))
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid manual retry request"))
 	}
 	normalized := *req
 	normalized.Ext = maps.Clone(req.Ext)
@@ -344,29 +341,11 @@ func normalizeCurrentRunRetry(req *entity.RetryInCurrentRunRequest) (*entity.Ret
 		normalized.ItemIDs = append(normalized.ItemIDs, id)
 	}
 	sort.Slice(normalized.ItemIDs, func(i, j int) bool { return normalized.ItemIDs[i] < normalized.ItemIDs[j] })
-	operator := ""
-	if req.Session != nil {
-		operator = req.Session.UserID
-	}
-	payload := struct {
-		SpaceID  int64              `json:"space_id"`
-		ExptID   int64              `json:"expt_id"`
-		RunID    int64              `json:"run_id"`
-		Operator string             `json:"operator"`
-		Mode     entity.ExptRunMode `json:"mode"`
-		ItemIDs  []int64            `json:"item_ids"`
-		Ext      map[string]string  `json:"ext,omitempty"`
-	}{normalized.SpaceID, normalized.ExptID, normalized.ExpectedRunID, operator, normalized.Mode, normalized.ItemIDs, normalized.Ext}
-	raw, err := json.Marshal(payload)
-	if err != nil {
-		return nil, "", err
-	}
-	hash := sha256.Sum256(raw)
-	return &normalized, hex.EncodeToString(hash[:]), nil
+	return &normalized, nil
 }
 
 func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.RetryInCurrentRunRequest) (*entity.ManualRetryReceipt, error) {
-	normalized, hash, err := normalizeCurrentRunRetry(req)
+	normalized, err := normalizeCurrentRunRetry(req)
 	if err != nil {
 		return nil, err
 	}
@@ -382,18 +361,6 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 			return nil, errorx.NewByCode(errno.ManualRetryRunConflictCode)
 		}
 		normalized.ExpectedRunID = current.LatestRunID
-		// Bind the fingerprint to the resolved run so explicit and implicit retries replay the same receipt.
-		normalized, hash, err = normalizeCurrentRunRetry(normalized)
-		if err != nil {
-			return nil, err
-		}
-	}
-	receipt, err := m.manualRetryRepo.FindReceipt(ctx, normalized.SpaceID, normalized.ExptID, normalized.ExpectedRunID, normalized.RequestID, hash)
-	if err != nil || receipt != nil {
-		if receipt != nil && receipt.RunID == 0 {
-			receipt.RunID = normalized.ExpectedRunID
-		}
-		return receipt, err
 	}
 	if err := validateCurrentRunRetry(normalized); err != nil {
 		return nil, err
@@ -433,13 +400,6 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	defer cancel()
 	if err := lockCtx.Err(); err != nil {
 		return nil, err
-	}
-	receipt, err = m.manualRetryRepo.FindReceipt(lockCtx, normalized.SpaceID, normalized.ExptID, normalized.ExpectedRunID, normalized.RequestID, hash)
-	if err != nil || receipt != nil {
-		if receipt != nil && receipt.RunID == 0 {
-			receipt.RunID = normalized.ExpectedRunID
-		}
-		return receipt, err
 	}
 	expt, err = m.exptRepo.GetByID(lockCtx, normalized.ExptID, normalized.SpaceID)
 	if err != nil {
@@ -504,7 +464,7 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	if normalized.Session != nil {
 		operator = normalized.Session.UserID
 	}
-	commit := &entity.RequeueTerminalItemsRequest{SpaceID: expt.SpaceID, ExptID: expt.ID, RunID: normalized.ExpectedRunID, RequestID: normalized.RequestID, PayloadHash: hash, Operator: operator, Mode: normalized.Mode, SnapshotAtMS: plan.SnapshotAtMS, Items: candidates, RejectedItems: plan.RejectedItems}
+	commit := &entity.RequeueTerminalItemsRequest{SpaceID: expt.SpaceID, ExptID: expt.ID, RunID: normalized.ExpectedRunID, RequestID: uuid.NewString(), Operator: operator, Mode: normalized.Mode, SnapshotAtMS: plan.SnapshotAtMS, Items: candidates, RejectedItems: plan.RejectedItems}
 	checked, err := m.manualRetryRepo.PreflightTerminalItems(opCtx, commit)
 	if err != nil {
 		return nil, err
@@ -537,7 +497,7 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	if err := checkLocks(); err != nil {
 		return nil, err
 	}
-	receipt, err = m.manualRetryRepo.RequeueTerminalItems(opCtx, commit)
+	receipt, err := m.manualRetryRepo.RequeueTerminalItems(opCtx, commit)
 	if err != nil {
 		return nil, err
 	}
@@ -554,11 +514,8 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 
 func validateCurrentRunRetry(req *entity.RetryInCurrentRunRequest) error {
 	// ExpectedRunID 允许为 0：调用方不关心具体 run 时按「当前 run」处理，由 RetryInCurrentRun 解析。
-	if req.SpaceID <= 0 || req.ExptID <= 0 || req.ExpectedRunID < 0 || len(req.RequestID) != 36 {
+	if req.SpaceID <= 0 || req.ExptID <= 0 || req.ExpectedRunID < 0 {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid manual retry identity"))
-	}
-	if _, err := uuid.Parse(req.RequestID); err != nil {
-		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid manual retry request UUID"))
 	}
 	if req.Mode != entity.EvaluationModeFailRetry && req.Mode != entity.EvaluationModeRetryItems {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("unsupported manual retry mode"))

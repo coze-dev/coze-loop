@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	mysqlDriver "gorm.io/driver/mysql"
@@ -84,13 +85,13 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), 5*time.Second, 5*time.Minute).DoAndReturn(func(ctx context.Context, _ string, _ time.Duration, _ time.Duration) (bool, context.Context, func(), error) {
 		c, cancel := context.WithCancel(ctx)
 		return true, c, cancel, nil
-	}).Times(2)
+	}).Times(4)
 	publisher.EXPECT().PublishExptScheduleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 	manager := service.NewExptManager(nil,
 		exptrepo.NewExptRepo(exptmysql.NewExptDAO(provider), exptmysql.NewExptEvaluatorRefDAO(provider), generator),
 		exptrepo.NewExptRunLogRepo(exptmysql.NewExptRunLogDAO(provider)), exptrepo.NewExptStatsRepo(exptmysql.NewExptStatsDAO(provider)), exptrepo.NewExptItemResultRepo(exptmysql.NewExptItemResultDAO(provider)), exptrepo.NewExptItemRefRepo(exptmysql.NewExptItemRefDAO(provider)), exptrepo.NewExptTurnResultRepo(generator, exptmysql.NewExptTurnResultDAO(provider), exptmysql.NewExptTurnEvaluatorResultRefDAO(provider)), config, nil, mutex, nil, publisher, nil, generator, nil, lwt, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, component.NewNoopCentralSchedulerScopeProvider(), component.NewNoopCentralAdmissionPolicy(), component.NewNoopCentralReservationGuard(), exptrepo.NewExptManualRetryRepo(provider, generator), nil, component.NewNoopCurrentRunSchedulerWaker(), func() lock.ILocker { return mutex })
 	app := &experimentApplication{manager: manager, auth: auth, idgen: generator, configer: config}
-	req := &exptpb.RetryExperimentRequest{WorkspaceID: &space, ExptID: &expt, ExpectedRunID: &run, RequestID: gptr.Of("72cc8921-40f4-4a43-b772-aaf2b5dcdf05"), RetryMode: gptr.Of(dexpt.ExptRetryMode_RetryTargetItems), ItemIds: []int64{item, item}, Ext: map[string]string{"caller": "identity"}}
+	req := &exptpb.RetryExperimentRequest{WorkspaceID: &space, ExptID: &expt, ExpectedRunID: &run, RetryMode: gptr.Of(dexpt.ExptRetryMode_RetryTargetItems), ItemIds: []int64{item, item}, Ext: map[string]string{"caller": "identity"}}
 	response, err := app.RetryExperiment(context.Background(), req)
 	require.NoError(t, err)
 	require.Equal(t, int32(1), response.GetAcceptedCount())
@@ -104,18 +105,32 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 	require.NotContains(t, ext, "caller")
 	manual, err := entity.ParseManualRetryContext(ext)
 	require.NoError(t, err)
-	require.Equal(t, req.GetRequestID(), manual.RequestID)
+	_, uuidErr := uuid.Parse(manual.RequestID)
+	require.NoError(t, uuidErr)
 	var log model.ExptItemResultRunLog
 	require.NoError(t, conn.First(&log, "id=?", base+13).Error)
 	require.Zero(t, *log.ResultState)
 	require.Equal(t, int32(3), log.RetryTimes)
-	enabled = false
-	require.NoError(t, conn.Model(&model.Experiment{}).Where("id=?", expt).Update("status", entity.ExptStatus_Success).Error)
+	var runLog model.ExptRunLog
+	require.NoError(t, conn.First(&runLog, "id=?", run).Error)
+	require.JSONEq(t, string(raw), string(*runLog.ItemIds))
 	again, err := app.RetryExperiment(context.Background(), req)
 	require.NoError(t, err)
-	require.Equal(t, response, again)
+	require.Zero(t, again.GetAcceptedCount())
+	require.Equal(t, "queueing", again.RejectedItems[0].GetReason())
+	require.Equal(t, item, again.RejectedItems[0].GetItemID())
+	require.Equal(t, run, again.GetRunID())
+	enabled = false
+	_, err = app.RetryExperiment(context.Background(), req)
+	require.ErrorContains(t, err, "disabled")
+	enabled = true
+	require.NoError(t, conn.Model(&model.Experiment{}).Where("id=?", expt).Update("status", entity.ExptStatus_Success).Error)
+	_, err = app.RetryExperiment(context.Background(), req)
+	require.ErrorContains(t, err, "run_finished")
 	req.Ext = map[string]string{"caller": "changed"}
 	_, err = app.RetryExperiment(context.Background(), req)
-	require.ErrorContains(t, err, "request_conflict")
-	t.Log("REAL_MYSQL_APPLICATION_RECEIPT_VERIFIED same-run reset, budget preserved, ended/off replay, Ext conflict")
+	require.ErrorContains(t, err, "run_finished")
+	require.NoError(t, conn.First(&runLog, "id=?", run).Error)
+	require.JSONEq(t, string(raw), string(*runLog.ItemIds))
+	t.Log("REAL_MYSQL_APPLICATION_RESULT_VERIFIED same-run reset, budget preserved, duplicate rejected, no persisted receipt")
 }

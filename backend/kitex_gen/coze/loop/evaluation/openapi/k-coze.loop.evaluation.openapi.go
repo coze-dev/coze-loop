@@ -29284,20 +29284,6 @@ func (p *RetryExperimentOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 6:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField6(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -29424,20 +29410,6 @@ func (p *RetryExperimentOApiRequest) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *RetryExperimentOApiRequest) FastReadField6(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.RequestID = _field
-	return offset, nil
-}
-
 func (p *RetryExperimentOApiRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -29494,7 +29466,6 @@ func (p *RetryExperimentOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocopy
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
-		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -29510,7 +29481,6 @@ func (p *RetryExperimentOApiRequest) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
-		l += p.field6Length()
 		l += p.field100Length()
 		l += p.field255Length()
 	}
@@ -29566,15 +29536,6 @@ func (p *RetryExperimentOApiRequest) fastWriteField5(buf []byte, w thrift.Nocopy
 	if p.IsSetExpectedRunID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 5)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.ExpectedRunID)
-	}
-	return offset
-}
-
-func (p *RetryExperimentOApiRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetRequestID() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.RequestID)
 	}
 	return offset
 }
@@ -29652,15 +29613,6 @@ func (p *RetryExperimentOApiRequest) field5Length() int {
 	return l
 }
 
-func (p *RetryExperimentOApiRequest) field6Length() int {
-	l := 0
-	if p.IsSetRequestID() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.RequestID)
-	}
-	return l
-}
-
 func (p *RetryExperimentOApiRequest) field100Length() int {
 	l := 0
 	if p.IsSetExt() {
@@ -29718,14 +29670,6 @@ func (p *RetryExperimentOApiRequest) DeepCopy(s interface{}) error {
 	if src.ExpectedRunID != nil {
 		tmp := *src.ExpectedRunID
 		p.ExpectedRunID = &tmp
-	}
-
-	if src.RequestID != nil {
-		var tmp string
-		if *src.RequestID != "" {
-			tmp = kutils.StringDeepCopy(*src.RequestID)
-		}
-		p.RequestID = &tmp
 	}
 
 	if src.Ext != nil {
@@ -30067,20 +30011,6 @@ func (p *RetryExperimentOpenAPIData) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 4:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField4(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 5:
 			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField5(buf[offset:])
@@ -30155,20 +30085,6 @@ func (p *RetryExperimentOpenAPIData) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *RetryExperimentOpenAPIData) FastReadField4(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.RequestID = _field
-	return offset, nil
-}
-
 func (p *RetryExperimentOpenAPIData) FastReadField5(buf []byte) (int, error) {
 	offset := 0
 
@@ -30232,7 +30148,6 @@ func (p *RetryExperimentOpenAPIData) FastWriteNocopy(buf []byte, w thrift.Nocopy
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField7(buf[offset:], w)
-		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -30243,7 +30158,6 @@ func (p *RetryExperimentOpenAPIData) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field3Length()
-		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
 		l += p.field7Length()
@@ -30257,15 +30171,6 @@ func (p *RetryExperimentOpenAPIData) fastWriteField3(buf []byte, w thrift.Nocopy
 	if p.IsSetRunID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.RunID)
-	}
-	return offset
-}
-
-func (p *RetryExperimentOpenAPIData) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetRequestID() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.RequestID)
 	}
 	return offset
 }
@@ -30313,15 +30218,6 @@ func (p *RetryExperimentOpenAPIData) field3Length() int {
 	return l
 }
 
-func (p *RetryExperimentOpenAPIData) field4Length() int {
-	l := 0
-	if p.IsSetRequestID() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.RequestID)
-	}
-	return l
-}
-
 func (p *RetryExperimentOpenAPIData) field5Length() int {
 	l := 0
 	if p.IsSetAcceptedCount() {
@@ -30362,14 +30258,6 @@ func (p *RetryExperimentOpenAPIData) DeepCopy(s interface{}) error {
 	if src.RunID != nil {
 		tmp := *src.RunID
 		p.RunID = &tmp
-	}
-
-	if src.RequestID != nil {
-		var tmp string
-		if *src.RequestID != "" {
-			tmp = kutils.StringDeepCopy(*src.RequestID)
-		}
-		p.RequestID = &tmp
 	}
 
 	if src.AcceptedCount != nil {

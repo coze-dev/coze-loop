@@ -109,7 +109,7 @@ func WithoutManualRetryExt(ext map[string]string) map[string]string {
 }
 
 // ErrExptRunLogItemsCapacity identifies BLOB overflow without assigning a business status.
-var ErrExptRunLogItemsCapacity = errors.New("manual retry receipt exceeds blob capacity")
+var ErrExptRunLogItemsCapacity = errors.New("experiment run item metadata exceeds blob capacity")
 
 func EncodeExptRunLogItems(items []ExptRunLogItems) ([]byte, error) {
 	encoded, err := json.Marshal(items)

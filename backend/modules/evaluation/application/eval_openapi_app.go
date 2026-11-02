@@ -2363,7 +2363,6 @@ func (e *EvalOpenAPIApplication) RetryExperimentOApi(ctx context.Context, req *o
 		ExptID:        req.ExperimentID,
 		ItemIds:       req.ItemIds,
 		ExpectedRunID: req.ExpectedRunID,
-		RequestID:     req.RequestID,
 		Ext:           req.Ext,
 	}
 
@@ -2383,7 +2382,6 @@ func (e *EvalOpenAPIApplication) RetryExperimentOApi(ctx context.Context, req *o
 	return &openapi.RetryExperimentOApiResponse{
 		Data: &openapi.RetryExperimentOpenAPIData{
 			RunID:         resp.RunID,
-			RequestID:     resp.RequestID,
 			AcceptedCount: resp.AcceptedCount,
 			RejectedItems: rejected,
 			SnapshotAtMs:  resp.SnapshotAtMs,

@@ -21,16 +21,16 @@ import (
 	loopjson "github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
-func TestManualRetryReceiptBizBoundary(t *testing.T) {
-	receipt := &entity.ManualRetryReceipt{RequestID: "request", PayloadHash: "original"}
-	chunks := []entity.ExptRunLogItems{{ManualRetryReceipt: receipt}}
-	got, err := findManualRetryReceipt(chunks, "request", "original")
+func TestManualRetryHistoricalReceiptMetadataIsPreserved(t *testing.T) {
+	raw := []byte(`[{"ItemIDs":[11],"CreateAt":null,"manual_retry_receipt":{"request_id":"old-operation","payload_hash":"old-payload","accepted_count":1,"rejected_items":null,"snapshot_at_ms":77}}]`)
+	chunks, err := decodeManualRetryRunItems(&model.ExptRunLog{ItemIds: &raw})
 	require.NoError(t, err)
-	require.Same(t, receipt, got)
-	_, err = findManualRetryReceipt(chunks, "request", "changed")
-	biz, ok := kerrors.FromBizStatusError(err)
-	require.True(t, ok, "request conflict must survive PacketAdapter")
-	require.Equal(t, int32(601204103), biz.BizStatusCode())
+	require.Len(t, chunks, 1)
+	require.Equal(t, "old-operation", chunks[0].ManualRetryReceipt.RequestID)
+	require.Equal(t, "old-payload", chunks[0].ManualRetryReceipt.PayloadHash)
+	encoded, err := entity.EncodeExptRunLogItems(chunks)
+	require.NoError(t, err)
+	require.JSONEq(t, string(raw), string(encoded))
 }
 
 func TestManualRetryTurnCapacityBizBoundary(t *testing.T) {
@@ -40,13 +40,13 @@ func TestManualRetryTurnCapacityBizBoundary(t *testing.T) {
 	require.Equal(t, int32(601204104), biz.BizStatusCode())
 }
 
-func TestManualRetryReceiptDBErrorRetainsCause(t *testing.T) {
+func TestManualRetryRunMetadataDBErrorRetainsCause(t *testing.T) {
 	conn, source, _ := newRunLogResolverTestDB(t)
 	provider := dbmock.NewMockProvider(gomock.NewController(t))
 	provider.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(conn.Clauses(dbresolver.Write))
 	cause := errors.New("database unavailable")
 	source.ExpectQuery("SELECT .* FROM `expt_run_log`").WillReturnError(cause)
-	_, err := NewExptManualRetryDAO(provider, nil).FindReceipt(context.Background(), 9, 7, 8, "request", "hash")
+	_, err := NewExptRunLogDAO(provider).Get(context.Background(), 7, 8)
 	require.ErrorIs(t, err, cause)
 	_, ok := kerrors.FromBizStatusError(err)
 	require.False(t, ok)
@@ -70,11 +70,15 @@ func TestRunLogCapacityMySQLBoundaries(t *testing.T) {
 			t.Run(operation+"/"+kind, func(t *testing.T) {
 				f := newManualRetryFixture(t)
 				req := f.request(entity.EvaluationModeRetryItems)
-				raw := []byte(`[{"ItemIDs":[11],"padding":"` + strings.Repeat("x", 65420) + `","future_id":9223372036854775806}]`)
+				raw := []byte(`[{"ItemIDs":[12,13],"padding":"` + strings.Repeat("x", 65440) + `","future_id":9223372036854775806}]`)
 				if kind == "corrupt" {
 					raw = []byte(`{`)
 				}
-				require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("id=?", f.run).Update("item_ids", raw).Error)
+				if kind == "capacity" && operation != "ordinary_append" {
+					prepareManualRetryCapacityAppend(t, f, req, raw)
+				} else {
+					require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("id=?", f.run).Update("item_ids", raw).Error)
+				}
 				before := f.snapshot()
 				var err error
 				switch operation {

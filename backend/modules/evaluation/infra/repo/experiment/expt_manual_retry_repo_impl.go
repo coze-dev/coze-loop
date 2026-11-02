@@ -21,10 +21,6 @@ func NewExptManualRetryRepo(provider db.Provider, generator idgen.IIDGenerator) 
 	return &ExptManualRetryRepoImpl{dao: mysql.NewExptManualRetryDAO(provider, generator)}
 }
 
-func (r *ExptManualRetryRepoImpl) FindReceipt(ctx context.Context, spaceID, exptID, runID int64, requestID, hash string) (*entity.ManualRetryReceipt, error) {
-	return r.dao.FindReceipt(ctx, spaceID, exptID, runID, requestID, hash)
-}
-
 func (r *ExptManualRetryRepoImpl) RequeueTerminalItems(ctx context.Context, request *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryReceipt, error) {
 	return r.dao.RequeueTerminalItems(ctx, request)
 }

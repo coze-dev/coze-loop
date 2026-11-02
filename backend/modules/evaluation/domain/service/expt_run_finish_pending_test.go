@@ -4,7 +4,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync/atomic"
 	"testing"
@@ -234,7 +233,7 @@ func TestRunFinishPendingRealAdmissionPublicationAndFourModes(t *testing.T) {
 			p := newPendingRunFixture(t, initMode)
 			f := p.f
 			p.publishSuccess(t, false)
-			req := &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, RequestID: "72cc8921-40f4-4a43-b772-aaf2b5dcdf05", Mode: entity.EvaluationModeRetryItems, ItemIDs: []int64{f.item}, Session: p.event.Session}
+			req := &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, Mode: entity.EvaluationModeRetryItems, ItemIDs: []int64{f.item}, Session: p.event.Session}
 			receipt, err := p.manager.RetryInCurrentRun(context.Background(), req)
 			require.NoError(t, err)
 			require.Equal(t, int32(1), receipt.AcceptedCount)
@@ -276,14 +275,13 @@ func TestRunFinishPendingRealAdmissionPublicationAndFourModes(t *testing.T) {
 			require.Equal(t, int32(2), p.resources.Load(), "resource cleanup still replays after notification marker")
 			require.Equal(t, after, f.snapshot(), "AlreadyFinished cannot recalculate stats or endAt")
 			again, err := p.manager.RetryInCurrentRun(context.Background(), req)
-			require.NoError(t, err)
-			a, _ := json.Marshal(receipt)
-			b, _ := json.Marshal(again)
-			require.Equal(t, string(a), string(b))
+			require.ErrorContains(t, err, "run_finished")
+			require.Nil(t, again)
+			require.Empty(t, receipt.RequestID)
+			require.Positive(t, receipt.SnapshotAtMS)
 			require.Equal(t, after, f.snapshot())
-			req.RequestID = "c551f9c8-e195-48a0-8505-f63b20802206"
 			_, err = p.manager.RetryInCurrentRun(context.Background(), req)
-			require.Error(t, err)
+			require.ErrorContains(t, err, "run_finished")
 			require.Equal(t, after, f.snapshot())
 		})
 	}

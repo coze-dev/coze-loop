@@ -13606,7 +13606,6 @@ type RetryExperimentRequest struct {
 	ExptID        *int64              `thrift:"expt_id,3,optional" frugal:"3,optional,i64" json:"expt_id" path:"expt_id" `
 	ItemIds       []int64             `thrift:"item_ids,4,optional" frugal:"4,optional,list<i64>" json:"item_ids" form:"item_ids" `
 	ExpectedRunID *int64              `thrift:"expected_run_id,5,optional" frugal:"5,optional,i64" json:"expected_run_id,omitempty" form:"expected_run_id" `
-	RequestID     *string             `thrift:"request_id,6,optional" frugal:"6,optional,string" form:"request_id" json:"request_id,omitempty"`
 	Ext           map[string]string   `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
 	Base          *base.Base          `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -13678,18 +13677,6 @@ func (p *RetryExperimentRequest) GetExpectedRunID() (v int64) {
 	return *p.ExpectedRunID
 }
 
-var RetryExperimentRequest_RequestID_DEFAULT string
-
-func (p *RetryExperimentRequest) GetRequestID() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetRequestID() {
-		return RetryExperimentRequest_RequestID_DEFAULT
-	}
-	return *p.RequestID
-}
-
 var RetryExperimentRequest_Ext_DEFAULT map[string]string
 
 func (p *RetryExperimentRequest) GetExt() (v map[string]string) {
@@ -13728,9 +13715,6 @@ func (p *RetryExperimentRequest) SetItemIds(val []int64) {
 func (p *RetryExperimentRequest) SetExpectedRunID(val *int64) {
 	p.ExpectedRunID = val
 }
-func (p *RetryExperimentRequest) SetRequestID(val *string) {
-	p.RequestID = val
-}
 func (p *RetryExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -13744,7 +13728,6 @@ var fieldIDToName_RetryExperimentRequest = map[int16]string{
 	3:   "expt_id",
 	4:   "item_ids",
 	5:   "expected_run_id",
-	6:   "request_id",
 	100: "ext",
 	255: "Base",
 }
@@ -13767,10 +13750,6 @@ func (p *RetryExperimentRequest) IsSetItemIds() bool {
 
 func (p *RetryExperimentRequest) IsSetExpectedRunID() bool {
 	return p.ExpectedRunID != nil
-}
-
-func (p *RetryExperimentRequest) IsSetRequestID() bool {
-	return p.RequestID != nil
 }
 
 func (p *RetryExperimentRequest) IsSetExt() bool {
@@ -13834,14 +13813,6 @@ func (p *RetryExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField5(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 6:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -13960,17 +13931,6 @@ func (p *RetryExperimentRequest) ReadField5(iprot thrift.TProtocol) error {
 	p.ExpectedRunID = _field
 	return nil
 }
-func (p *RetryExperimentRequest) ReadField6(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.RequestID = _field
-	return nil
-}
 func (p *RetryExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -14033,10 +13993,6 @@ func (p *RetryExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
-			goto WriteFieldError
-		}
-		if err = p.writeField6(oprot); err != nil {
-			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -14163,24 +14119,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
-func (p *RetryExperimentRequest) writeField6(oprot thrift.TProtocol) (err error) {
-	if p.IsSetRequestID() {
-		if err = oprot.WriteFieldBegin("request_id", thrift.STRING, 6); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.RequestID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
-}
 func (p *RetryExperimentRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -14258,9 +14196,6 @@ func (p *RetryExperimentRequest) DeepEqual(ano *RetryExperimentRequest) bool {
 	if !p.Field5DeepEqual(ano.ExpectedRunID) {
 		return false
 	}
-	if !p.Field6DeepEqual(ano.RequestID) {
-		return false
-	}
 	if !p.Field100DeepEqual(ano.Ext) {
 		return false
 	}
@@ -14327,18 +14262,6 @@ func (p *RetryExperimentRequest) Field5DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.ExpectedRunID != *src {
-		return false
-	}
-	return true
-}
-func (p *RetryExperimentRequest) Field6DeepEqual(src *string) bool {
-
-	if p.RequestID == src {
-		return true
-	} else if p.RequestID == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.RequestID, *src) != 0 {
 		return false
 	}
 	return true
@@ -14624,7 +14547,6 @@ func (p *RetryRejectedItem) Field2DeepEqual(src *string) bool {
 
 type RetryExperimentResponse struct {
 	RunID         *int64               `thrift:"run_id,1,optional" frugal:"1,optional,i64" json:"run_id" form:"run_id" `
-	RequestID     *string              `thrift:"request_id,2,optional" frugal:"2,optional,string" form:"request_id" json:"request_id,omitempty" query:"request_id"`
 	AcceptedCount *int32               `thrift:"accepted_count,3,optional" frugal:"3,optional,i32" form:"accepted_count" json:"accepted_count,omitempty" query:"accepted_count"`
 	RejectedItems []*RetryRejectedItem `thrift:"rejected_items,4,optional" frugal:"4,optional,list<RetryRejectedItem>" form:"rejected_items" json:"rejected_items,omitempty" query:"rejected_items"`
 	SnapshotAtMs  *int64               `thrift:"snapshot_at_ms,5,optional" frugal:"5,optional,i64" json:"snapshot_at_ms,omitempty" form:"snapshot_at_ms" query:"snapshot_at_ms"`
@@ -14648,18 +14570,6 @@ func (p *RetryExperimentResponse) GetRunID() (v int64) {
 		return RetryExperimentResponse_RunID_DEFAULT
 	}
 	return *p.RunID
-}
-
-var RetryExperimentResponse_RequestID_DEFAULT string
-
-func (p *RetryExperimentResponse) GetRequestID() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetRequestID() {
-		return RetryExperimentResponse_RequestID_DEFAULT
-	}
-	return *p.RequestID
 }
 
 var RetryExperimentResponse_AcceptedCount_DEFAULT int32
@@ -14712,9 +14622,6 @@ func (p *RetryExperimentResponse) GetBaseResp() (v *base.BaseResp) {
 func (p *RetryExperimentResponse) SetRunID(val *int64) {
 	p.RunID = val
 }
-func (p *RetryExperimentResponse) SetRequestID(val *string) {
-	p.RequestID = val
-}
 func (p *RetryExperimentResponse) SetAcceptedCount(val *int32) {
 	p.AcceptedCount = val
 }
@@ -14730,7 +14637,6 @@ func (p *RetryExperimentResponse) SetBaseResp(val *base.BaseResp) {
 
 var fieldIDToName_RetryExperimentResponse = map[int16]string{
 	1:   "run_id",
-	2:   "request_id",
 	3:   "accepted_count",
 	4:   "rejected_items",
 	5:   "snapshot_at_ms",
@@ -14739,10 +14645,6 @@ var fieldIDToName_RetryExperimentResponse = map[int16]string{
 
 func (p *RetryExperimentResponse) IsSetRunID() bool {
 	return p.RunID != nil
-}
-
-func (p *RetryExperimentResponse) IsSetRequestID() bool {
-	return p.RequestID != nil
 }
 
 func (p *RetryExperimentResponse) IsSetAcceptedCount() bool {
@@ -14782,14 +14684,6 @@ func (p *RetryExperimentResponse) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 2:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -14867,17 +14761,6 @@ func (p *RetryExperimentResponse) ReadField1(iprot thrift.TProtocol) error {
 	p.RunID = _field
 	return nil
 }
-func (p *RetryExperimentResponse) ReadField2(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.RequestID = _field
-	return nil
-}
 func (p *RetryExperimentResponse) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *int32
@@ -14942,10 +14825,6 @@ func (p *RetryExperimentResponse) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 1
 			goto WriteFieldError
 		}
-		if err = p.writeField2(oprot); err != nil {
-			fieldId = 2
-			goto WriteFieldError
-		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
 			goto WriteFieldError
@@ -14997,24 +14876,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-func (p *RetryExperimentResponse) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetRequestID() {
-		if err = oprot.WriteFieldBegin("request_id", thrift.STRING, 2); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.RequestID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *RetryExperimentResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetAcceptedCount() {
@@ -15112,9 +14973,6 @@ func (p *RetryExperimentResponse) DeepEqual(ano *RetryExperimentResponse) bool {
 	if !p.Field1DeepEqual(ano.RunID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.RequestID) {
-		return false
-	}
 	if !p.Field3DeepEqual(ano.AcceptedCount) {
 		return false
 	}
@@ -15138,18 +14996,6 @@ func (p *RetryExperimentResponse) Field1DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.RunID != *src {
-		return false
-	}
-	return true
-}
-func (p *RetryExperimentResponse) Field2DeepEqual(src *string) bool {
-
-	if p.RequestID == src {
-		return true
-	} else if p.RequestID == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.RequestID, *src) != 0 {
 		return false
 	}
 	return true

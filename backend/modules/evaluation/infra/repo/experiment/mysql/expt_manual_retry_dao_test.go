@@ -6,6 +6,7 @@ package mysql
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -123,4 +124,47 @@ func TestManualRetryRefsDeleteScoped(t *testing.T) {
 	require.ErrorContains(t, err, "delete failed")
 	require.NoError(t, mock.ExpectationsWereMet())
 	require.NoError(t, rootMock.ExpectationsWereMet())
+}
+
+func TestManualRetryWithoutReceiptCapacityOrWrites(t *testing.T) {
+	for _, operation := range []string{"preflight", "requeue"} {
+		t.Run(operation, func(t *testing.T) {
+			provider, mock := newManualRetrySQLProvider(t)
+			dao := NewExptManualRetryDAO(provider, nil)
+			// The existing run fits in BLOB. A receipt for these rejections would not.
+			raw := []byte(`[{"ItemIDs":[11],"padding":"` + strings.Repeat("x", 65470) + `"}]`)
+			require.Less(t, len(raw), 65535)
+			rejected := make([]*entity.ManualRetryRejectedItem, 2000)
+			for i := range rejected {
+				rejected[i] = &entity.ManualRetryRejectedItem{ItemID: int64(i + 12), Reason: "queueing"}
+			}
+			req := &entity.RequeueTerminalItemsRequest{SpaceID: 9, ExptID: 7, RunID: 8, RequestID: "internal-operation", Mode: entity.EvaluationModeRetryItems, SnapshotAtMS: 77, RejectedItems: rejected}
+			for i := 0; i < 2; i++ {
+				mock.ExpectBegin()
+				mock.ExpectQuery("SELECT .* FROM `experiment` WHERE .*`id` = \\?.*FOR UPDATE").WithArgs(int64(7), 1).
+					WillReturnRows(sqlmock.NewRows([]string{"id", "space_id", "latest_run_id", "status", "expt_type"}).AddRow(7, 9, 8, int32(entity.ExptStatus_Processing), int32(entity.ExptType_Offline)))
+				mock.ExpectQuery("SELECT .* FROM `expt_run_log` WHERE \\(id = \\? AND expt_id = \\? AND expt_run_id = \\?\\).*FOR UPDATE").WithArgs(int64(8), int64(7), int64(8), 1).
+					WillReturnRows(sqlmock.NewRows([]string{"id", "space_id", "expt_id", "expt_run_id", "status", "item_ids"}).AddRow(8, 9, 7, 8, int64(entity.ExptStatus_Processing), raw))
+				mock.ExpectCommit()
+				if operation == "preflight" {
+					plan, err := dao.PreflightTerminalItems(context.Background(), req)
+					require.NoError(t, err)
+					require.Empty(t, plan.Items)
+					require.Equal(t, rejected, plan.RejectedItems)
+					require.Equal(t, int64(77), plan.SnapshotAtMS)
+				} else {
+					result, err := dao.RequeueTerminalItems(context.Background(), req)
+					require.NoError(t, err)
+					require.Zero(t, result.AcceptedCount)
+					require.Equal(t, rejected, result.RejectedItems)
+					require.Equal(t, int64(77), result.SnapshotAtMS)
+					require.Equal(t, int64(8), result.RunID)
+					require.Empty(t, result.RequestID)
+					require.Empty(t, result.PayloadHash)
+				}
+				// Any receipt lookup, ID allocation, or database write is unexpected.
+				require.NoError(t, mock.ExpectationsWereMet())
+			}
+		})
+	}
 }

@@ -37,24 +37,6 @@ func NewExptManualRetryDAO(provider db.Provider, generator idgen.IIDGenerator) r
 	return &ExptManualRetryDAOImpl{provider: provider, idgen: generator}
 }
 
-func (d *ExptManualRetryDAOImpl) FindReceipt(ctx context.Context, spaceID, exptID, runID int64, requestID, hash string) (*entity.ManualRetryReceipt, error) {
-	run, err := NewExptRunLogDAO(d.provider).Get(ctx, exptID, runID, db.WithMaster())
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	if run.SpaceID != spaceID {
-		return nil, errorx.NewByCode(errno.ManualRetryRunConflictCode)
-	}
-	chunks, err := decodeManualRetryRunItems(run)
-	if err != nil {
-		return nil, err
-	}
-	return findManualRetryReceipt(chunks, requestID, hash)
-}
-
 func decodeManualRetryRunItems(run *model.ExptRunLog) ([]entity.ExptRunLogItems, error) {
 	var chunks []entity.ExptRunLogItems
 	if raw := gptr.Indirect(run.ItemIds); len(raw) > 0 {
@@ -63,24 +45,6 @@ func decodeManualRetryRunItems(run *model.ExptRunLog) ([]entity.ExptRunLogItems,
 		}
 	}
 	return chunks, nil
-}
-
-func findManualRetryReceipt(chunks []entity.ExptRunLogItems, requestID, hash string) (*entity.ManualRetryReceipt, error) {
-	var found *entity.ManualRetryReceipt
-	for _, chunk := range chunks {
-		receipt := chunk.ManualRetryReceipt
-		if receipt == nil || receipt.RequestID != requestID {
-			continue
-		}
-		if receipt.PayloadHash != hash {
-			return nil, errorx.NewByCode(errno.ManualRetryRequestConflictCode)
-		}
-		if found != nil {
-			return nil, fmt.Errorf("duplicate manual retry receipt")
-		}
-		found = receipt
-	}
-	return found, nil
 }
 
 type manualRetryLogIDs struct {
@@ -148,13 +112,10 @@ type lockedManualRetryTurn struct {
 }
 
 func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, request *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryReceipt, error) {
-	if request == nil || request.SpaceID <= 0 || request.ExptID <= 0 || request.RunID <= 0 || request.RequestID == "" || request.PayloadHash == "" || (request.Mode != entity.EvaluationModeFailRetry && request.Mode != entity.EvaluationModeRetryItems) {
+	if request == nil || request.SpaceID <= 0 || request.ExptID <= 0 || request.RunID <= 0 || request.RequestID == "" || (request.Mode != entity.EvaluationModeFailRetry && request.Mode != entity.EvaluationModeRetryItems) {
 		return nil, fmt.Errorf("invalid manual retry request")
 	}
-	receipt, err := d.FindReceipt(ctx, request.SpaceID, request.ExptID, request.RunID, request.RequestID, request.PayloadHash)
-	if err != nil || receipt != nil {
-		return receipt, err
-	}
+	var receipt *entity.ManualRetryReceipt
 	logIDs, err := d.allocateRetryLogIDs(ctx, request.Items)
 	if err != nil {
 		return nil, err
@@ -176,17 +137,13 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 		if err != nil {
 			return err
 		}
-		receipt, err = findManualRetryReceipt(chunks, request.RequestID, request.PayloadHash)
-		if err != nil || receipt != nil {
-			return err
-		}
 		if expt.LatestRunID != request.RunID {
 			return errorx.NewByCode(errno.ManualRetryRunConflictCode)
 		}
 		if expt.Status != int32(entity.ExptStatus_Processing) || (gptr.Indirect(run.Status) != int64(entity.ExptStatus_Pending) && gptr.Indirect(run.Status) != int64(entity.ExptStatus_Processing)) || expt.ExptType != int32(entity.ExptType_Offline) {
 			return errorx.NewByCode(errno.ManualRetryRunFinishedCode)
 		}
-		receipt = &entity.ManualRetryReceipt{RequestID: request.RequestID, PayloadHash: request.PayloadHash, SnapshotAtMS: request.SnapshotAtMS, RejectedItems: append([]*entity.ManualRetryRejectedItem(nil), request.RejectedItems...)}
+		receipt = &entity.ManualRetryReceipt{RunID: request.RunID, SnapshotAtMS: request.SnapshotAtMS, RejectedItems: append([]*entity.ManualRetryRejectedItem(nil), request.RejectedItems...)}
 		prepared := append([]*entity.PreparedRetryItem(nil), request.Items...)
 		for _, item := range prepared {
 			if item == nil || item.SourceItem == nil {
@@ -243,7 +200,6 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 		if len(added) > 0 {
 			chunks = append(chunks, entity.ExptRunLogItems{ItemIDs: added, CreateAt: gptr.Of(time.Now().Unix())})
 		}
-		chunks = append(chunks, entity.ExptRunLogItems{CreateAt: gptr.Of(time.Now().Unix()), ManualRetryReceipt: receipt})
 		encoded, err := entity.EncodeExptRunLogItems(chunks)
 		if errors.Is(err, entity.ErrExptRunLogItemsCapacity) {
 			return errorx.WrapByCode(err, errno.ManualRetryCapacityCode, errorx.WithExtraMsg(err.Error()))
@@ -284,7 +240,10 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 				return err
 			}
 		}
-		fields := map[string]any{"item_ids": encoded}
+		fields := make(map[string]any)
+		if len(added) > 0 {
+			fields["item_ids"] = encoded
+		}
 		if len(accepted) > 0 {
 			type statusCount struct {
 				Status int32
@@ -302,6 +261,9 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 					fields[field] = count.Count
 				}
 			}
+		}
+		if len(fields) == 0 {
+			return nil
 		}
 		return NewExptRunLogDAO(d.provider).Update(ctx, request.ExptID, request.RunID, request.SpaceID, fields, opts...)
 	}, db.WithMaster())
@@ -618,13 +580,6 @@ func (d *ExptManualRetryDAOImpl) PreflightTerminalItems(ctx context.Context, req
 		if err != nil {
 			return err
 		}
-		receipt, err := findManualRetryReceipt(chunks, request.RequestID, request.PayloadHash)
-		if err != nil {
-			return err
-		}
-		if receipt != nil {
-			return errorx.NewByCode(errno.ManualRetryBusyCode, errorx.WithExtraMsg("manual retry receipt appeared during preflight"))
-		}
 		items := append([]*entity.PreparedRetryItem(nil), request.Items...)
 		for _, item := range items {
 			if item == nil || item.SourceItem == nil {
@@ -685,25 +640,22 @@ func (d *ExptManualRetryDAOImpl) PreflightTerminalItems(ctx context.Context, req
 				}
 			}
 		}
-		// Reserve both the maximum business append and a rejection for every candidate.
+		// Check only the business item IDs that may be appended to the run.
 		contained := map[int64]bool{}
 		for _, id := range (&entity.ExptRunLog{ItemIds: chunks}).GetItemIDs() {
 			contained[id] = true
 		}
 		var added []int64
-		worstRejected := append([]*entity.ManualRetryRejectedItem(nil), plan.RejectedItems...)
 		for _, item := range plan.Items {
 			id := item.SourceItem.ItemID
 			if item.CurrentItemLog == nil && !contained[id] {
 				added = append(added, id)
 				contained[id] = true
 			}
-			worstRejected = append(worstRejected, &entity.ManualRetryRejectedItem{ItemID: id, Reason: "reservation_mismatch"})
 		}
 		if len(added) > 0 {
 			chunks = append(chunks, entity.ExptRunLogItems{ItemIDs: added, CreateAt: gptr.Of(time.Now().Unix())})
 		}
-		chunks = append(chunks, entity.ExptRunLogItems{CreateAt: gptr.Of(time.Now().Unix()), ManualRetryReceipt: &entity.ManualRetryReceipt{RequestID: request.RequestID, PayloadHash: request.PayloadHash, SnapshotAtMS: request.SnapshotAtMS, AcceptedCount: 2147483647, RejectedItems: worstRejected}})
 		_, err = entity.EncodeExptRunLogItems(chunks)
 		if errors.Is(err, entity.ErrExptRunLogItemsCapacity) {
 			return errorx.WrapByCode(err, errno.ManualRetryCapacityCode, errorx.WithExtraMsg(err.Error()))

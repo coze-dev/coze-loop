@@ -1763,13 +1763,12 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return nil, err
 	}
 
-	// 带身份即走同 run 重排：request_id 是幂等键，必填；expected_run_id 可省略，
-	// 省略时等价于「操作当前 run」，由服务端解析 latest_run_id。
-	if req.ExpectedRunID != nil || req.GetRequestID() != "" {
-		if req.GetRequestID() == "" || req.GetExpectedRunID() < 0 {
+	// expected_run_id 可省略：开关开启的运行中离线实验由服务端解析当前 run。
+	if req.ExpectedRunID != nil || (got.ExptType == entity.ExptType_Offline && got.Status == entity.ExptStatus_Processing && e.configer != nil && e.configer.GetExptExecConf(ctx, req.GetWorkspaceID()).IsRunningRetryEnabled()) {
+		if req.GetExpectedRunID() < 0 {
 			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid current run retry identity"))
 		}
-		receipt, err := e.manager.RetryInCurrentRun(ctx, &entity.RetryInCurrentRunRequest{SpaceID: req.GetWorkspaceID(), ExptID: req.GetExptID(), ExpectedRunID: req.GetExpectedRunID(), RequestID: req.GetRequestID(), Mode: runMode, ItemIDs: req.GetItemIds(), Ext: req.GetExt(), Session: session})
+		receipt, err := e.manager.RetryInCurrentRun(ctx, &entity.RetryInCurrentRunRequest{SpaceID: req.GetWorkspaceID(), ExptID: req.GetExptID(), ExpectedRunID: req.GetExpectedRunID(), Mode: runMode, ItemIDs: req.GetItemIds(), Ext: req.GetExt(), Session: session})
 		if err != nil {
 			return nil, err
 		}
@@ -1781,14 +1780,7 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		if runID == 0 {
 			runID = req.GetExpectedRunID()
 		}
-		return &expt.RetryExperimentResponse{RunID: gptr.Of(runID), RequestID: gptr.Of(receipt.RequestID), AcceptedCount: gptr.Of(receipt.AcceptedCount), RejectedItems: rejected, SnapshotAtMs: gptr.Of(receipt.SnapshotAtMS), BaseResp: base.NewBaseResp()}, nil
-	}
-
-	// 只有「离线 + 运行中」才有同 run 重排（validateCurrentRetryExperiment 也只受理这一种）。
-	// 其余状态（Pending / Finishing / 在线实验）若也强制身份，旧调用方会 400、带身份又 4102 run_finished，
-	// 两条路都不通；这里放过它们，保持开关打开前的旧重试语义。
-	if got.ExptType == entity.ExptType_Offline && got.Status == entity.ExptStatus_Processing && e.configer != nil && e.configer.GetExptExecConf(ctx, req.GetWorkspaceID()).IsRunningRetryEnabled() {
-		return nil, errorx.NewByCode(errno.ManualRetryIdentityRequiredCode)
+		return &expt.RetryExperimentResponse{RunID: gptr.Of(runID), AcceptedCount: gptr.Of(receipt.AcceptedCount), RejectedItems: rejected, SnapshotAtMs: gptr.Of(receipt.SnapshotAtMS), BaseResp: base.NewBaseResp()}, nil
 	}
 
 	// SandboxAgent 评测对象：重试前重新初始化沙箱任务。

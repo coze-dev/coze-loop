@@ -283,7 +283,6 @@ func TestDispatchMySQLOldSourceZeroWrites(t *testing.T) {
 				f := newManualRetryFixture(t)
 				req := f.request(entity.EvaluationModeFailRetry)
 				req.RequestID = "rq2"
-				req.PayloadHash = "hash2"
 				_, err := f.port.RequeueTerminalItems(context.Background(), req)
 				require.NoError(t, err)
 				state, quota := 0, 0
@@ -507,7 +506,6 @@ func TestDispatchMySQLAdmissionLockRejectsOldOperations(t *testing.T) {
 			require.NoError(t, f.conn.Exec("UPDATE expt_stats SET pending_cnt=pending_cnt-1,fail_cnt=fail_cnt+1 WHERE space_id=? AND expt_id=?", f.space, f.expt).Error)
 			req := f.request(entity.EvaluationModeFailRetry)
 			req.RequestID = "rq2"
-			req.PayloadHash = "hash2"
 			held, resume, done := make(chan struct{}), make(chan struct{}), make(chan error, 1)
 			var admittedSnapshot map[string]string
 			var once sync.Once

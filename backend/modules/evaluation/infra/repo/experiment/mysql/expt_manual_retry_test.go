@@ -237,10 +237,10 @@ func (f *manualRetryFixture) request(mode entity.ExptRunMode) *entity.RequeueTer
 		}
 		prepared.Turns = append(prepared.Turns, plan)
 	}
-	return &entity.RequeueTerminalItemsRequest{SpaceID: f.space, ExptID: f.expt, RunID: f.run, RequestID: "rq1", PayloadHash: "hash1", Operator: "operator", Mode: mode, SnapshotAtMS: 1700000000123, Items: []*entity.PreparedRetryItem{prepared}}
+	return &entity.RequeueTerminalItemsRequest{SpaceID: f.space, ExptID: f.expt, RunID: f.run, RequestID: "rq1", Operator: "operator", Mode: mode, SnapshotAtMS: 1700000000123, Items: []*entity.PreparedRetryItem{prepared}}
 }
 
-func TestManualRetryMySQLReceiptUnknownRun(t *testing.T) {
+func TestManualRetryMySQLRequeueUnknownRun(t *testing.T) {
 	f := newManualRetryFixture(t)
 	before := f.snapshot()
 	ctx := context.Background()
@@ -249,13 +249,17 @@ func TestManualRetryMySQLReceiptUnknownRun(t *testing.T) {
 	require.ErrorIs(t, err, gorm.ErrRecordNotFound)
 	require.NotEqual(t, gorm.ErrRecordNotFound, err, "run DAO wraps the missing-row error")
 	t.Log("WRAPPED_NOT_FOUND_VERIFIED errors.Is=true direct_equality=false")
-	receipt, err := f.port.FindReceipt(ctx, f.space, f.expt, f.run+1, "unknown-run", "hash")
-	require.Equal(t, before, f.snapshot(), "receipt lookup must not write any fixture data")
-	require.NoError(t, err, "an unknown run has no receipt; the manager must validate the expected run")
+	receipt, err := f.port.RequeueTerminalItems(ctx, func() *entity.RequeueTerminalItemsRequest {
+		req := f.request(entity.EvaluationModeRetryItems)
+		req.RunID = f.run + 1
+		return req
+	}())
+	require.Equal(t, before, f.snapshot(), "missing run must not write fixture data")
+	require.ErrorIs(t, err, gorm.ErrRecordNotFound, "an unknown run fails current-state validation")
 	require.Nil(t, receipt)
 }
 
-func TestManualRetryMySQLReceiptQueryErrorRetainsCause(t *testing.T) {
+func TestManualRetryMySQLRequeueQueryErrorRetainsCause(t *testing.T) {
 	f := newManualRetryFixture(t)
 	before := f.snapshot()
 	// Matching text is not the GORM sentinel and must remain a database error.
@@ -269,7 +273,7 @@ func TestManualRetryMySQLReceiptQueryErrorRetainsCause(t *testing.T) {
 		}
 	}))
 	defer func() { require.NoError(t, f.conn.Callback().Query().Remove(name)) }()
-	receipt, err := f.port.FindReceipt(context.Background(), f.space, f.expt, f.run, "query-error", "hash")
+	receipt, err := f.port.RequeueTerminalItems(context.Background(), f.request(entity.EvaluationModeRetryItems))
 	require.Nil(t, receipt)
 	require.ErrorIs(t, err, cause)
 	require.NotErrorIs(t, err, gorm.ErrRecordNotFound)
@@ -361,16 +365,21 @@ func TestManualRetryMySQLSameRun(t *testing.T) {
 	}
 	replay, err := f.port.RequeueTerminalItems(context.Background(), req)
 	require.NoError(t, err)
-	expectedReceipt, err := json.Marshal(receipt)
-	require.NoError(t, err)
-	replayReceipt, err := json.Marshal(replay)
-	require.NoError(t, err)
-	require.JSONEq(t, string(expectedReceipt), string(replayReceipt))
+	require.Zero(t, replay.AcceptedCount)
+	require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 11, Reason: "queueing"}}, replay.RejectedItems)
+	require.Equal(t, receipt.RunID, replay.RunID)
+	require.Equal(t, receipt.SnapshotAtMS, replay.SnapshotAtMS)
 	require.Equal(t, after, f.snapshot())
-	req.PayloadHash = "different"
-	_, err = f.port.RequeueTerminalItems(context.Background(), req)
-	require.ErrorContains(t, err, "request_conflict")
+	req.Operator = "another-operator"
+	again, err := f.port.RequeueTerminalItems(context.Background(), req)
+	require.NoError(t, err)
+	require.Zero(t, again.AcceptedCount)
+	require.Equal(t, replay.RejectedItems, again.RejectedItems)
 	require.Equal(t, after, f.snapshot())
+	for _, chunk := range chunks {
+		require.NotContains(t, chunk, "manual_retry_receipt")
+	}
+	require.Equal(t, req.RequestID, retry.RequestID)
 }
 
 func TestManualRetryMySQLWriteRollback(t *testing.T) {
@@ -406,7 +415,7 @@ func TestManualRetryMySQLWriteRollback(t *testing.T) {
 }
 
 func TestManualRetryMySQLBoundaries(t *testing.T) {
-	for _, kind := range []string{"logged", "source_changed", "capacity", "manual_whole_row", "zero_accepted", "finished_replay", "replaced_replay"} {
+	for _, kind := range []string{"logged", "source_changed", "near_capacity", "manual_whole_row", "zero_accepted", "finished_replay", "replaced_replay"} {
 		t.Run(kind, func(t *testing.T) {
 			f := newManualRetryFixture(t)
 			mode := entity.EvaluationModeFailRetry
@@ -419,7 +428,7 @@ func TestManualRetryMySQLBoundaries(t *testing.T) {
 				require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND expt_id=? AND item_id=?", f.space, f.expt, 11).Update("result_state", 2).Error)
 			case "source_changed":
 				require.NoError(t, f.conn.Model(&model.ExptTurnResult{}).Where("space_id=? AND expt_id=? AND turn_id=?", f.space, f.expt, 21).Update("target_result_id", 991).Error)
-			case "capacity":
+			case "near_capacity":
 				raw := []byte(`[{"ItemIDs":[11,12,13],"future":"` + strings.Repeat("x", 65450) + `"}]`)
 				require.Less(t, len(raw), 65535)
 				require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("id=?", f.run).Update("item_ids", raw).Error)
@@ -429,11 +438,6 @@ func TestManualRetryMySQLBoundaries(t *testing.T) {
 			}
 			before := f.snapshot()
 			receipt, err := f.port.RequeueTerminalItems(context.Background(), req)
-			if kind == "capacity" {
-				require.ErrorContains(t, err, "capacity")
-				require.Equal(t, before, f.snapshot())
-				return
-			}
 			require.NoError(t, err)
 			switch kind {
 			case "logged", "source_changed", "zero_accepted":
@@ -447,13 +451,16 @@ func TestManualRetryMySQLBoundaries(t *testing.T) {
 				}
 				after := f.snapshot()
 				for table, snapshot := range before {
-					if table != "expt_run_log" {
-						require.Equal(t, snapshot, after[table], table)
-					}
+					require.Equal(t, snapshot, after[table], table)
 				}
 				_, err = f.port.RequeueTerminalItems(context.Background(), req)
 				require.NoError(t, err)
 				require.Equal(t, after, f.snapshot())
+			case "near_capacity":
+				require.Equal(t, int32(1), receipt.AcceptedCount)
+				var run model.ExptRunLog
+				require.NoError(t, f.conn.Where("id=?", f.run).First(&run).Error)
+				require.NotContains(t, string(*run.ItemIds), "manual_retry_receipt")
 			case "manual_whole_row":
 				var turns []*model.ExptTurnResult
 				require.NoError(t, f.conn.Where("space_id=? AND expt_id=?", f.space, f.expt).Find(&turns).Error)
@@ -479,26 +486,24 @@ func TestManualRetryMySQLBoundaries(t *testing.T) {
 					require.NoError(t, f.conn.Model(&model.Experiment{}).Where("id=?", f.expt).Updates(map[string]any{"latest_run_id": f.run + 1, "status": int32(entity.ExptStatus_Processing)}).Error)
 				}
 				after := f.snapshot()
-				expectedReceipt, err := json.Marshal(receipt)
-				require.NoError(t, err)
 				replay, err := f.port.RequeueTerminalItems(context.Background(), req)
-				require.NoError(t, err)
-				replayedReceipt, err := json.Marshal(replay)
-				require.NoError(t, err)
-				require.JSONEq(t, string(expectedReceipt), string(replayedReceipt))
+				require.Error(t, err)
+				require.Nil(t, replay)
+				if kind == "replaced_replay" {
+					require.ErrorContains(t, err, "run_conflict")
+				} else {
+					require.ErrorContains(t, err, "run_finished")
+				}
 				require.Equal(t, after, f.snapshot())
-				found, err := f.port.FindReceipt(context.Background(), f.space, f.expt, f.run, req.RequestID, req.PayloadHash)
-				require.NoError(t, err)
-				foundReceipt, err := json.Marshal(found)
-				require.NoError(t, err)
-				require.JSONEq(t, string(expectedReceipt), string(foundReceipt))
-				require.Equal(t, after, f.snapshot())
+				var run model.ExptRunLog
+				require.NoError(t, f.conn.Where("id=?", f.run).First(&run).Error)
+				require.NotContains(t, string(*run.ItemIds), "manual_retry_receipt")
 			}
 		})
 	}
 }
 
-func TestManualRetryMySQLConcurrentReplay(t *testing.T) {
+func TestManualRetryMySQLConcurrentRequeue(t *testing.T) {
 	f := newManualRetryFixture(t)
 	req := f.request(entity.EvaluationModeFailRetry)
 	results := make(chan *entity.ManualRetryReceipt, 2)
@@ -519,9 +524,19 @@ func TestManualRetryMySQLConcurrentReplay(t *testing.T) {
 	for err := range failures {
 		require.NoError(t, err)
 	}
+	var accepted int32
+	var rejected int
 	for r := range results {
-		require.Equal(t, int32(1), r.AcceptedCount)
+		accepted += r.AcceptedCount
+		if r.AcceptedCount == 0 {
+			require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 11, Reason: "queueing"}}, r.RejectedItems)
+			rejected++
+		} else {
+			require.Equal(t, int32(1), r.AcceptedCount)
+		}
 	}
+	require.Equal(t, int32(1), accepted)
+	require.Equal(t, 1, rejected)
 	var stats model.ExptStats
 	require.NoError(t, f.conn.Where("space_id=? AND expt_id=?", f.space, f.expt).First(&stats).Error)
 	require.Equal(t, int32(2), stats.PendingCnt)
@@ -530,8 +545,9 @@ func TestManualRetryMySQLConcurrentReplay(t *testing.T) {
 	require.NoError(t, f.conn.Where("id=?", f.run).First(&run).Error)
 	var chunks []entity.ExptRunLogItems
 	require.NoError(t, json.Unmarshal(*run.ItemIds, &chunks))
-	require.Len(t, chunks, 2)
-	t.Log("REAL_MYSQL_CONCURRENT_REPLAY_VERIFIED same request one write set")
+	require.Len(t, chunks, 1)
+	require.Nil(t, chunks[0].ManualRetryReceipt)
+	t.Log("REAL_MYSQL_CONCURRENT_REPLAY_VERIFIED state machine accepts one write set")
 }
 
 func TestManualRetryMySQLCorruptionNoReceipt(t *testing.T) {

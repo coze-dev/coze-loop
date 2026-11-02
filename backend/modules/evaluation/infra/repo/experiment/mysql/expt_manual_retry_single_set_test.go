@@ -281,7 +281,7 @@ func TestManualRetryMySQLSingleSetManagerSameRun(t *testing.T) {
 					require.NoError(t, f.conn.Where("space_id=? AND expt_id=?", f.space, f.expt).Order("id").Find(&beforeItems).Error)
 					require.NoError(t, f.conn.Where("space_id=? AND expt_id=?", f.space, f.expt).Order("id").Find(&beforeTurns).Error)
 					manager := singleSetRetryManager(t, f, f.port, enforce)
-					req := &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, RequestID: "9ef59b9a-fbdb-4c9a-a027-8c969493aaf3", Mode: mode}
+					req := &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, Mode: mode}
 					if mode == entity.EvaluationModeRetryItems {
 						req.ItemIDs = []int64{13, 11, 12, 11}
 					}
@@ -333,13 +333,19 @@ func TestManualRetryMySQLSingleSetManagerSameRun(t *testing.T) {
 					}
 					replay, err := manager.RetryInCurrentRun(context.Background(), req)
 					require.NoError(t, err)
-					expectedJSON, err := json.Marshal(receipt)
-					require.NoError(t, err)
-					replayedJSON, err := json.Marshal(replay)
-					require.NoError(t, err)
-					require.JSONEq(t, string(expectedJSON), string(replayedJSON))
-					require.Equal(t, after, f.snapshot(), "receipt duplicate performs no second reset")
-					t.Log("REAL_MYSQL_SINGLE_SET_MANAGER_VERIFIED sameRun rowIDs reused turn0 refsAbsent target/E1 preserved receipt replay")
+					require.Zero(t, replay.AcceptedCount)
+					require.Equal(t, f.run, replay.RunID)
+					require.Positive(t, replay.SnapshotAtMS)
+					if mode == entity.EvaluationModeRetryItems {
+						require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 11, Reason: "queueing"}, {ItemID: 12, Reason: "processing"}, {ItemID: 13, Reason: "queueing"}}, replay.RejectedItems)
+					} else {
+						require.Empty(t, replay.RejectedItems)
+					}
+					require.Equal(t, after, f.snapshot(), "state machine prevents a second reset")
+					var run model.ExptRunLog
+					require.NoError(t, f.conn.Where("id=?", f.run).First(&run).Error)
+					require.NotContains(t, string(*run.ItemIds), "manual_retry_receipt")
+					t.Log("REAL_MYSQL_SINGLE_SET_MANAGER_VERIFIED sameRun rowIDs reused turn0 refsAbsent target/E1 preserved duplicate rejection")
 				})
 			}
 		}
@@ -367,7 +373,7 @@ func TestManualRetryMySQLSingleSetFrozenSourceDrift(t *testing.T) {
 					port.beforeCommit = drift
 				}
 				manager := singleSetRetryManager(t, f, port, false)
-				receipt, err := manager.RetryInCurrentRun(context.Background(), &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, RequestID: "9ef59b9a-fbdb-4c9a-a027-8c969493aaf3", Mode: entity.EvaluationModeRetryItems, ItemIDs: []int64{11}})
+				receipt, err := manager.RetryInCurrentRun(context.Background(), &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, Mode: entity.EvaluationModeRetryItems, ItemIDs: []int64{11}})
 				require.NoError(t, err)
 				require.Zero(t, receipt.AcceptedCount)
 				require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 11, Reason: "source_changed"}}, receipt.RejectedItems)
@@ -408,12 +414,12 @@ func TestManualRetryMySQLSingleSetPreparationFences(t *testing.T) {
 			}
 			before := f.snapshot()
 			manager := singleSetRetryManager(t, f, f.port, false)
-			receipt, err := manager.RetryInCurrentRun(context.Background(), &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, RequestID: "9ef59b9a-fbdb-4c9a-a027-8c969493aaf3", Mode: entity.EvaluationModeRetryItems, ItemIDs: []int64{11}})
+			receipt, err := manager.RetryInCurrentRun(context.Background(), &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, Mode: entity.EvaluationModeRetryItems, ItemIDs: []int64{11}})
 			if kind == "not_resulted" {
 				require.NoError(t, err)
 				require.Zero(t, receipt.AcceptedCount)
 				require.Equal(t, "result_not_ready", receipt.RejectedItems[0].Reason)
-				before["expt_run_log"] = f.snapshot()["expt_run_log"]
+				require.Equal(t, before["expt_run_log"], f.snapshot()["expt_run_log"])
 			} else {
 				require.Error(t, err)
 				require.Nil(t, receipt)
@@ -432,11 +438,11 @@ func TestManualRetryMySQLSingleSetConcurrentReplay(t *testing.T) {
 	port := &singleSetRetryPort{IExptManualRetryRepo: f.port}
 	manager := singleSetRetryManager(t, f, port, false)
 	// Capture the real manager-prepared source before acceptance. Concurrent SQL
-	// acceptors then contend on the actual experiment/run/item locks and receipt.
+	// acceptors then contend on the actual experiment/run/item locks.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	port.beforeCommit = cancel
-	_, err := manager.RetryInCurrentRun(ctx, &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, RequestID: "9ef59b9a-fbdb-4c9a-a027-8c969493aaf3", Mode: entity.EvaluationModeFailRetry})
+	_, err := manager.RetryInCurrentRun(ctx, &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, Mode: entity.EvaluationModeFailRetry})
 	require.ErrorIs(t, err, context.Canceled)
 	require.NotNil(t, port.prepared)
 	before := f.snapshot()
@@ -454,22 +460,30 @@ func TestManualRetryMySQLSingleSetConcurrentReplay(t *testing.T) {
 	}
 	close(start)
 	wg.Wait()
+	var accepted int32
+	var rejected int
 	for i := range receipts {
 		require.NoError(t, errs[i])
-		require.Equal(t, int32(1), receipts[i].AcceptedCount)
+		accepted += receipts[i].AcceptedCount
+		if receipts[i].AcceptedCount == 0 {
+			require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 11, Reason: "queueing"}}, receipts[i].RejectedItems)
+			rejected++
+		} else {
+			require.Equal(t, int32(1), receipts[i].AcceptedCount)
+		}
 	}
-	a, err := json.Marshal(receipts[0])
-	require.NoError(t, err)
-	b, err := json.Marshal(receipts[1])
-	require.NoError(t, err)
-	require.JSONEq(t, string(a), string(b))
+	require.Equal(t, int32(1), accepted)
+	require.Equal(t, 1, rejected)
+	var run model.ExptRunLog
+	require.NoError(t, f.conn.Where("id=?", f.run).First(&run).Error)
+	require.NotContains(t, string(*run.ItemIds), "manual_retry_receipt")
 	after := f.snapshot()
 	require.Equal(t, before["expt_item_ref"], after["expt_item_ref"])
 	var stats model.ExptStats
 	require.NoError(t, f.conn.Where("space_id=? AND expt_id=?", f.space, f.expt).First(&stats).Error)
 	require.Equal(t, int32(2), stats.PendingCnt)
 	require.Zero(t, stats.FailCnt)
-	t.Log("REAL_MYSQL_SINGLE_SET_CONCURRENT_REPLAY one atomic reset/stat delta/receipt")
+	t.Log("REAL_MYSQL_SINGLE_SET_CONCURRENT_REPLAY one atomic reset/stat delta with no receipt")
 }
 
 func TestManualRetryMySQLSingleSetWriteRollback(t *testing.T) {
@@ -492,7 +506,7 @@ func TestManualRetryMySQLSingleSetWriteRollback(t *testing.T) {
 				require.NoError(t, f.conn.Callback().Delete().Remove(name))
 			}()
 			manager := singleSetRetryManager(t, f, f.port, false)
-			receipt, err := manager.RetryInCurrentRun(context.Background(), &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, RequestID: "9ef59b9a-fbdb-4c9a-a027-8c969493aaf3", Mode: entity.EvaluationModeFailRetry})
+			receipt, err := manager.RetryInCurrentRun(context.Background(), &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, Mode: entity.EvaluationModeFailRetry})
 			require.ErrorIs(t, err, cause)
 			require.Nil(t, receipt)
 			require.Equal(t, before, f.snapshot(), "four tables, refs, stats and receipt roll back together")
