@@ -368,7 +368,16 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 			}
 		}
 
-		if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+		// 已终态实验上的重试 run 在 ExptStart 切 Processing 之前就失败时，实验仍是终态、run 还是 Pending，
+		// 终止链路会以「requires active current run」拒绝受理，run 会永远挂在 Pending。这种 run 从未接管实验，
+		// 落回下面的 CompleteRun/CompleteExpt 收口（与改造前一致）。
+		exptFinished := false
+		if e.ExptRepo != nil {
+			if current, getErr := e.ExptRepo.GetByID(contexts.WithCtxWriteDB(ctx), event.ExptID, event.SpaceID); getErr == nil && current != nil {
+				exptFinished = entity.IsExptFinished(current.Status)
+			}
+		}
+		if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok && !exptFinished && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
 			_, err := terminate.TerminateCurrentRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, nil, entity.WithStatus(entity.ExptStatus_Failed), entity.WithStatusMessage(userVisibleErrMsg(nextErr)))
 			return err
 		}

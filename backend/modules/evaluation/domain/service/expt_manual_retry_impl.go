@@ -559,7 +559,10 @@ func validateCurrentRetryExperiment(expt *entity.Experiment, req *entity.RetryIn
 	if expt.ID != req.ExptID || expt.SpaceID != req.SpaceID || expt.LatestRunID != req.ExpectedRunID {
 		return errorx.NewByCode(errno.ManualRetryRunConflictCode)
 	}
-	if expt.Status != entity.ExptStatus_Processing || expt.ExptType != entity.ExptType_Offline {
+	if expt.ExptType != entity.ExptType_Offline {
+		return errorx.NewByCode(errno.ManualRetryUnsupportedTypeCode)
+	}
+	if expt.Status != entity.ExptStatus_Processing {
 		return errorx.NewByCode(errno.ManualRetryRunFinishedCode)
 	}
 	return nil

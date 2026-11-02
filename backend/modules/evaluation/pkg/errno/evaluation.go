@@ -543,6 +543,10 @@ const (
 	ManualRetryIdentityRequiredCode              = 601204107 // same-run manual retry identity required
 	manualRetryIdentityRequiredMessage           = "identity_required"
 	manualRetryIdentityRequiredNoAffectStability = true
+
+	ManualRetryUnsupportedTypeCode              = 601204108 // same-run manual retry unsupported experiment type
+	manualRetryUnsupportedTypeMessage           = "unsupported_experiment_type"
+	manualRetryUnsupportedTypeNoAffectStability = true
 )
 
 func init() {
@@ -1349,6 +1353,12 @@ func init() {
 		ManualRetryIdentityRequiredCode,
 		manualRetryIdentityRequiredMessage,
 		code.WithAffectStability(!manualRetryIdentityRequiredNoAffectStability),
+	)
+
+	code.Register(
+		ManualRetryUnsupportedTypeCode,
+		manualRetryUnsupportedTypeMessage,
+		code.WithAffectStability(!manualRetryUnsupportedTypeNoAffectStability),
 	)
 
 }

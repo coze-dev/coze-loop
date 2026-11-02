@@ -150,6 +150,8 @@ func TestManualRetryAdmissionGuards(t *testing.T) {
 					expected = 601204106
 				case kind == "foreign_run" || kind == "unknown_run":
 					expected = 601204101
+				case kind == "online":
+					expected = 601204108
 				case kind == "run_busy":
 					expected = 601204105
 				}

@@ -752,3 +752,9 @@ error_code:
     message: identity_required
     description: same-run manual retry identity required
     no_affect_stability: true
+
+  - name: ManualRetryUnsupportedType
+    code: 4108
+    message: unsupported_experiment_type
+    description: same-run manual retry unsupported experiment type
+    no_affect_stability: true
