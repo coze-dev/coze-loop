@@ -26,6 +26,105 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
+func TestManualRetryAdmissionUsesLatestRunID(t *testing.T) {
+	for _, kind := range []string{"commit", "replay", "locked_replay"} {
+		t.Run(kind, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			port := repomocks.NewMockIExptManualRetryRepo(ctrl)
+			expts := repomocks.NewMockIExperimentRepo(ctrl)
+			config := componentmocks.NewMockIConfiger(ctrl)
+			items := repomocks.NewMockIExptItemResultRepo(ctrl)
+			runs := repomocks.NewMockIExptRunLogRepo(ctrl)
+			mutex := lockmocks.NewMockILocker(ctrl)
+			req := admissionRequest()
+			req.ExpectedRunID = 0
+			resolved := *req
+			resolved.ExpectedRunID = 8
+			_, hash, err := normalizeCurrentRunRetry(&resolved)
+			require.NoError(t, err)
+			expt := &entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}
+			receipt := &entity.ManualRetryReceipt{RequestID: req.RequestID, PayloadHash: hash, SnapshotAtMS: 77}
+			expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(expt, nil)
+			first := port.EXPECT().FindReceipt(gomock.Any(), int64(9), int64(7), int64(8), req.RequestID, hash)
+			if kind == "replay" {
+				first.Return(receipt, nil)
+			} else {
+				first.Return(nil, nil)
+				config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)})
+				expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(expt, nil)
+				items.EXPECT().BatchGet(gomock.Any(), int64(9), int64(7), []int64{11}).Return(nil, nil)
+				mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:7:8", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil)
+				second := port.EXPECT().FindReceipt(gomock.Any(), int64(9), int64(7), int64(8), req.RequestID, hash).After(first)
+				if kind == "locked_replay" {
+					second.Return(receipt, nil)
+				} else {
+					second.Return(nil, nil)
+					expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(expt, nil)
+					runs.EXPECT().Get(gomock.Any(), int64(7), int64(8)).Return(&entity.ExptRunLog{SpaceID: 9, ExptID: 7, ExptRunID: 8, Status: int64(entity.ExptStatus_Processing)}, nil)
+					var commit *entity.RequeueTerminalItemsRequest
+					port.EXPECT().PreflightTerminalItems(gomock.Any(), gomock.Cond(func(value any) bool {
+						r, ok := value.(*entity.RequeueTerminalItemsRequest)
+						return ok && r != nil && r.SpaceID == 9 && r.ExptID == 7 && r.RunID == 8 && r.RequestID == req.RequestID && r.PayloadHash == hash && r.Operator == "operator" && r.Mode == entity.EvaluationModeRetryItems
+					})).DoAndReturn(func(_ context.Context, r *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryPreparation, error) {
+						require.Empty(t, r.Items)
+						require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 11, Reason: "not_found"}}, r.RejectedItems)
+						require.Positive(t, r.SnapshotAtMS)
+						commit = r
+						return &entity.ManualRetryPreparation{RejectedItems: r.RejectedItems, SnapshotAtMS: r.SnapshotAtMS}, nil
+					})
+					port.EXPECT().RequeueTerminalItems(gomock.Any(), gomock.Cond(func(value any) bool {
+						r, ok := value.(*entity.RequeueTerminalItemsRequest)
+						return ok && r != nil && r == commit
+					})).Return(receipt, nil)
+				}
+			}
+			manager := &ExptMangerImpl{manualRetryRepo: port, exptRepo: expts, configer: config, itemResultRepo: items, runLogRepo: runs, manualRetryLocker: func() lock.ILocker { return mutex }}
+			got, err := manager.RetryInCurrentRun(context.Background(), req)
+			require.NoError(t, err)
+			require.Equal(t, int64(8), got.RunID)
+			require.Equal(t, req.RequestID, got.RequestID)
+			require.Equal(t, hash, got.PayloadHash)
+			require.Equal(t, int64(77), got.SnapshotAtMS)
+			require.Zero(t, req.ExpectedRunID, "resolving the current run must not mutate the caller's request")
+		})
+	}
+}
+
+func TestManualRetryAdmissionLatestRunUnavailable(t *testing.T) {
+	for _, kind := range []string{"missing_experiment", "zero_latest_run", "negative_latest_run", "read_error"} {
+		t.Run(kind, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			expts := repomocks.NewMockIExperimentRepo(ctrl)
+			port := repomocks.NewMockIExptManualRetryRepo(ctrl)
+			req := admissionRequest()
+			req.ExpectedRunID = 0
+			current := &entity.Experiment{ID: 7, SpaceID: 9}
+			var cause error
+			switch kind {
+			case "missing_experiment":
+				current = nil
+			case "negative_latest_run":
+				current.LatestRunID = -1
+			case "read_error":
+				cause = errors.New("experiment read unavailable")
+			}
+			expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(current, cause)
+			manager := &ExptMangerImpl{manualRetryRepo: port, exptRepo: expts}
+			receipt, err := manager.RetryInCurrentRun(context.Background(), req)
+			require.Nil(t, receipt)
+			require.Zero(t, req.ExpectedRunID)
+			if cause != nil {
+				require.Same(t, cause, err)
+				return
+			}
+			require.ErrorContains(t, err, "run_conflict")
+			biz, ok := kerrors.FromBizStatusError(err)
+			require.True(t, ok)
+			require.Equal(t, int32(601204101), biz.BizStatusCode())
+		})
+	}
+}
+
 func TestManualRetryAdmissionReceiptBeforeDependencies(t *testing.T) {
 	req := admissionRequest()
 	req.ItemIDs = []int64{9223372036854775806, 11, 11}
@@ -38,6 +137,7 @@ func TestManualRetryAdmissionReceiptBeforeDependencies(t *testing.T) {
 	manager := &ExptMangerImpl{manualRetryRepo: port}
 	got, err := manager.RetryInCurrentRun(context.Background(), req)
 	require.NoError(t, err)
+	require.Equal(t, int64(8), got.RunID)
 	require.Equal(t, int32(1), got.AcceptedCount)
 	require.Equal(t, int64(1700000000123), got.SnapshotAtMS)
 	require.Equal(t, int64(9223372036854775806), got.RejectedItems[0].ItemID)
@@ -65,7 +165,7 @@ func admissionRequest() *entity.RetryInCurrentRunRequest {
 }
 
 func TestManualRetryAdmissionGuards(t *testing.T) {
-	for _, kind := range []string{"disabled", "bad_uuid", "malformed_uuid", "internal_ext", "failure_selection", "empty_selection", "retry_all", "negative_item", "foreign_run", "unknown_run", "pending", "terminating", "draining", "online", "run_busy", "lost_run_lock"} {
+	for _, kind := range []string{"disabled", "bad_uuid", "malformed_uuid", "internal_ext", "failure_selection", "empty_selection", "retry_all", "negative_item", "negative_run", "foreign_run", "unknown_run", "pending", "terminating", "draining", "online", "run_busy", "lost_run_lock"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			config := componentmocks.NewMockIConfiger(ctrl)
@@ -98,6 +198,9 @@ func TestManualRetryAdmissionGuards(t *testing.T) {
 				shape = true
 			case "negative_item":
 				req.ItemIDs = []int64{-1}
+				shape = true
+			case "negative_run":
+				req.ExpectedRunID = -1
 				shape = true
 			case "foreign_run":
 				got.LatestRunID = 18

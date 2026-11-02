@@ -107,7 +107,7 @@ func TestOpenAPIRunningRetryLegacyAndError(t *testing.T) {
 }
 
 func TestOpenAPIRunningRetryRealExperimentApplication(t *testing.T) {
-	for _, kind := range []string{"receipt", "manager error", "missing request_id", "zero expected_run_id"} {
+	for _, kind := range []string{"receipt", "manager error", "missing request_id", "zero expected_run_id", "negative expected_run_id"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			manager := svcmocks.NewMockIExptManager(ctrl)
@@ -131,9 +131,14 @@ func TestOpenAPIRunningRetryRealExperimentApplication(t *testing.T) {
 				req.RequestID = nil
 			case "zero expected_run_id":
 				req.ExpectedRunID = gptr.Of(int64(0))
-			default:
+			case "negative expected_run_id":
+				req.ExpectedRunID = gptr.Of(int64(-1))
+			}
+			if kind != "missing request_id" && kind != "negative expected_run_id" {
 				manager.EXPECT().RetryInCurrentRun(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.RetryInCurrentRunRequest) (*entity.ManualRetryReceipt, error) {
-					assert.Equal(t, int64(8), r.ExpectedRunID)
+					assert.Equal(t, req.GetExpectedRunID(), r.ExpectedRunID)
+					assert.Equal(t, int64(9), r.SpaceID)
+					assert.Equal(t, int64(7), r.ExptID)
 					assert.Equal(t, "72cc8921-40f4-4a43-b772-aaf2b5dcdf05", r.RequestID)
 					assert.Equal(t, entity.EvaluationModeRetryItems, r.Mode)
 					assert.Equal(t, []int64{11, 12}, r.ItemIDs)
@@ -141,14 +146,14 @@ func TestOpenAPIRunningRetryRealExperimentApplication(t *testing.T) {
 						return nil, failure
 					}
 					return &entity.ManualRetryReceipt{
-						RequestID: r.RequestID, AcceptedCount: 1,
+						RunID: 8, RequestID: r.RequestID, AcceptedCount: 1,
 						RejectedItems: []*entity.ManualRetryRejectedItem{{ItemID: 12, Reason: "busy"}}, SnapshotAtMS: 1793275200123,
 					}, nil
 				})
 			}
 			app := &EvalOpenAPIApplication{auth: auth, metric: &fakeOpenAPIMetric{}, experimentApp: &experimentApplication{manager: manager, auth: auth}}
 			resp, err := app.RetryExperimentOApi(context.Background(), &req)
-			if kind != "receipt" {
+			if kind == "manager error" || kind == "missing request_id" || kind == "negative expected_run_id" {
 				require.Error(t, err)
 				require.Nil(t, resp)
 				if kind == "manager error" {

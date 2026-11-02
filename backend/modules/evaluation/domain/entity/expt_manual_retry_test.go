@@ -28,6 +28,23 @@ func TestExptRunLogItemsPreserveOptionalMetadata(t *testing.T) {
 	require.Error(t, run.AppendItemIDs([]int64{11}))
 }
 
+func TestManualRetryReceiptRunIDJSON(t *testing.T) {
+	raw := `{"run_id":9223372036854775806,"request_id":"rq1","payload_hash":"hash","accepted_count":1,"rejected_items":[],"snapshot_at_ms":1700000000123,"future_receipt":true}`
+	var receipt ManualRetryReceipt
+	require.NoError(t, json.Unmarshal([]byte(raw), &receipt))
+	require.Equal(t, int64(9223372036854775806), receipt.RunID)
+	encoded, err := json.Marshal(receipt)
+	require.NoError(t, err)
+	require.JSONEq(t, raw, string(encoded))
+	receipt.RunID = 0
+	encoded, err = json.Marshal(receipt)
+	require.NoError(t, err)
+	var fields map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(encoded, &fields))
+	require.NotContains(t, fields, "run_id")
+	require.Equal(t, json.RawMessage(`true`), fields["future_receipt"])
+}
+
 func TestManualRetryExtStrictMerge(t *testing.T) {
 	ctx := &ManualRetryContext{RunID: 7, RequestID: "rq1", Mode: EvaluationModeFailRetry, Operator: "user", AcceptedAtMS: 1700000000123}
 	raw, err := MergeManualRetryContext([]byte(`{"other":"keep","retry_yield_enabled":"true"}`), ctx)

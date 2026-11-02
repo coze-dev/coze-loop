@@ -614,10 +614,11 @@ func (e *ExptMangerImpl) releaseCurrentSupersededRunQuota(ctx context.Context, e
 		cursor = next
 	}
 	// The new lifecycle holder excludes old run cleanup until migration completes.
-	releaseCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
-	defer cancel()
 	for _, source := range sources {
-		if err := e.centralGuard.Release(releaseCtx, current.SchedulerScope, run, source.Current.ItemID, source.Current.RequestID, "superseded run residual reservation"); err != nil {
+		releaseCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+		err := e.centralGuard.Release(releaseCtx, current.SchedulerScope, run, source.Current.ItemID, source.Current.RequestID, "superseded run residual reservation")
+		cancel()
+		if err != nil {
 			return errno.WrapMQRetryErr(err)
 		}
 	}

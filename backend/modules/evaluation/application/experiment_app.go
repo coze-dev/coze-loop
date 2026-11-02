@@ -1763,8 +1763,10 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return nil, err
 	}
 
-	if req.ExpectedRunID != nil {
-		if req.GetExpectedRunID() <= 0 || req.GetRequestID() == "" {
+	// 带身份即走同 run 重排：request_id 是幂等键，必填；expected_run_id 可省略，
+	// 省略时等价于「操作当前 run」，由服务端解析 latest_run_id。
+	if req.ExpectedRunID != nil || req.GetRequestID() != "" {
+		if req.GetRequestID() == "" || req.GetExpectedRunID() < 0 {
 			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid current run retry identity"))
 		}
 		receipt, err := e.manager.RetryInCurrentRun(ctx, &entity.RetryInCurrentRunRequest{SpaceID: req.GetWorkspaceID(), ExptID: req.GetExptID(), ExpectedRunID: req.GetExpectedRunID(), RequestID: req.GetRequestID(), Mode: runMode, ItemIDs: req.GetItemIds(), Ext: req.GetExt(), Session: session})
@@ -1775,7 +1777,11 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		for _, item := range receipt.RejectedItems {
 			rejected = append(rejected, &expt.RetryRejectedItem{ItemID: gptr.Of(item.ItemID), Reason: gptr.Of(item.Reason)})
 		}
-		return &expt.RetryExperimentResponse{RunID: req.ExpectedRunID, RequestID: gptr.Of(receipt.RequestID), AcceptedCount: gptr.Of(receipt.AcceptedCount), RejectedItems: rejected, SnapshotAtMs: gptr.Of(receipt.SnapshotAtMS), BaseResp: base.NewBaseResp()}, nil
+		runID := receipt.RunID
+		if runID == 0 {
+			runID = req.GetExpectedRunID()
+		}
+		return &expt.RetryExperimentResponse{RunID: gptr.Of(runID), RequestID: gptr.Of(receipt.RequestID), AcceptedCount: gptr.Of(receipt.AcceptedCount), RejectedItems: rejected, SnapshotAtMs: gptr.Of(receipt.SnapshotAtMS), BaseResp: base.NewBaseResp()}, nil
 	}
 
 	// 只有「离线 + 运行中」才有同 run 重排（validateCurrentRetryExperiment 也只受理这一种）。

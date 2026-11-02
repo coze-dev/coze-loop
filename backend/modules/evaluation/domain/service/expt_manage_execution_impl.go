@@ -1890,10 +1890,6 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 		rl.ItemIds = []entity.ExptRunLogItems{{ItemIDs: itemIDs, CreateAt: gptr.Of(time.Now().Unix())}}
 	}
 
-	if err := e.runLogRepo.Create(ctx, rl); err != nil {
-		return err
-	}
-
 	// 重试顶替旧 run：必须赶在下面改写 LatestRunID 之前释放旧 run 的残留预占。
 	if e.runFinishRepo != nil {
 		if err := e.releaseCurrentSupersededRunQuota(ctx, exptID, spaceID, exptRunID, mode); err != nil {
@@ -1901,6 +1897,10 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 		}
 	} else {
 		e.releaseSupersededRunQuota(ctx, exptID, spaceID, exptRunID, mode)
+	}
+
+	if err := e.runLogRepo.Create(ctx, rl); err != nil {
+		return err
 	}
 
 	if err := e.exptRepo.Update(ctx, &entity.Experiment{
@@ -1978,14 +1978,6 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 		if len(itemIDs) > 0 {
 			rl.ItemIds = []entity.ExptRunLogItems{{ItemIDs: itemIDs, CreateAt: gptr.Of(time.Now().Unix())}}
 		}
-		if err := e.runLogRepo.Create(ctx, rl); err != nil {
-			return 0, false, err
-		}
-	}
-
-	// retried 分支刻意不释放：那说明锁被一个**活着的 run** 持有，runID 是它的号、
-	// LatestRunID 也还是它 —— 此时释放等于把正在跑的 item 的额度还回去。
-	if !retried {
 		if e.runFinishRepo != nil {
 			if err := e.releaseCurrentSupersededRunQuota(ctx, exptID, spaceID, runID, mode); err != nil {
 				return 0, false, err
@@ -1994,6 +1986,14 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 			e.releaseSupersededRunQuota(ctx, exptID, spaceID, runID, mode)
 		}
 
+		if err := e.runLogRepo.Create(ctx, rl); err != nil {
+			return 0, false, err
+		}
+	}
+
+	// retried 分支刻意不释放：那说明锁被一个**活着的 run** 持有，runID 是它的号、
+	// LatestRunID 也还是它 —— 此时释放等于把正在跑的 item 的额度还回去。
+	if !retried {
 		if err := e.exptRepo.Update(ctx, &entity.Experiment{ID: exptID, LatestRunID: runID}); err != nil {
 			return 0, false, err
 		}

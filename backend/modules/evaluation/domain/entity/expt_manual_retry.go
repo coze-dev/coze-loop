@@ -25,6 +25,7 @@ type ManualRetryContext struct {
 }
 
 type ManualRetryReceipt struct {
+	RunID         int64                      `json:"run_id,omitempty"`
 	RequestID     string                     `json:"request_id"`
 	PayloadHash   string                     `json:"payload_hash"`
 	AcceptedCount int32                      `json:"accepted_count"`
@@ -170,7 +171,7 @@ func (i ExptRunLogItems) MarshalJSON() ([]byte, error) {
 func (r *ManualRetryReceipt) UnmarshalJSON(raw []byte) error {
 	type plain ManualRetryReceipt
 	var value plain
-	unknown, err := decodeRunMetadata(raw, &value, "request_id", "payload_hash", "accepted_count", "rejected_items", "snapshot_at_ms")
+	unknown, err := decodeRunMetadata(raw, &value, "run_id", "request_id", "payload_hash", "accepted_count", "rejected_items", "snapshot_at_ms")
 	if err != nil {
 		return err
 	}

@@ -27,7 +27,7 @@ import (
 )
 
 func TestRunningRetryExplicitNeverFallsBack(t *testing.T) {
-	for _, kind := range []string{"zero_expected", "missing_request", "permission_denied"} {
+	for _, kind := range []string{"zero_expected", "negative_expected", "missing_request", "permission_denied"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			manager := svcmocks.NewMockIExptManager(ctrl)
@@ -49,9 +49,25 @@ func TestRunningRetryExplicitNeverFallsBack(t *testing.T) {
 			if kind == "zero_expected" {
 				req.ExpectedRunID = gptr.Of(int64(0))
 				req.RequestID = gptr.Of("72cc8921-40f4-4a43-b772-aaf2b5dcdf05")
+				manager.EXPECT().RetryInCurrentRun(gomock.Any(), &entity.RetryInCurrentRunRequest{
+					SpaceID: 9, ExptID: 7, RequestID: req.GetRequestID(), Mode: entity.EvaluationModeFailRetry,
+					Session: entity.NewSession(context.Background()),
+				}).Return(&entity.ManualRetryReceipt{RunID: 8, RequestID: req.GetRequestID(), AcceptedCount: 1}, nil)
+			}
+			if kind == "negative_expected" {
+				req.ExpectedRunID = gptr.Of(int64(-1))
+				req.RequestID = gptr.Of("72cc8921-40f4-4a43-b772-aaf2b5dcdf05")
 			}
 			app := &experimentApplication{manager: manager, auth: auth, idgen: generator}
 			response, err := app.RetryExperiment(context.Background(), req)
+			if kind == "zero_expected" {
+				require.NoError(t, err)
+				require.NotNil(t, response.RunID)
+				require.Equal(t, int64(8), response.GetRunID())
+				require.Equal(t, req.GetRequestID(), response.GetRequestID())
+				require.Equal(t, int32(1), response.GetAcceptedCount())
+				return
+			}
 			require.Error(t, err)
 			require.Nil(t, response)
 			if denied != nil {
@@ -59,6 +75,45 @@ func TestRunningRetryExplicitNeverFallsBack(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunningRetryRequestIDOnlyUsesResolvedRun(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	manager := svcmocks.NewMockIExptManager(ctrl)
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	ctx := context.Background()
+	session := entity.NewSession(ctx)
+	req := &exptpb.RetryExperimentRequest{
+		WorkspaceID: gptr.Of(int64(9)), ExptID: gptr.Of(int64(7)),
+		RequestID: gptr.Of("72cc8921-40f4-4a43-b772-aaf2b5dcdf05"),
+		RetryMode: gptr.Of(domain_expt.ExptRetryMode_RetryTargetItems), ItemIds: []int64{11},
+		Ext: map[string]string{"caller": "keep"},
+	}
+	manager.EXPECT().Get(ctx, int64(7), int64(9), session).Return(&entity.Experiment{
+		ID: 7, SpaceID: 9, LatestRunID: 8, CreatedBy: "owner", Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline,
+	}, nil)
+	auth.EXPECT().AuthorizationWithoutSPI(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, p *rpc.AuthorizationWithoutSPIParam) error {
+		require.Equal(t, "7", p.ObjectID)
+		require.Equal(t, int64(9), p.SpaceID)
+		require.Equal(t, int64(9), p.ResourceSpaceID)
+		require.Equal(t, "owner", *p.OwnerID)
+		return nil
+	})
+	manager.EXPECT().RetryInCurrentRun(ctx, &entity.RetryInCurrentRunRequest{
+		SpaceID: 9, ExptID: 7, ExpectedRunID: 0, RequestID: req.GetRequestID(),
+		Mode: entity.EvaluationModeRetryItems, ItemIDs: []int64{11}, Ext: req.Ext, Session: session,
+	}).Return(&entity.ManualRetryReceipt{RunID: 18, RequestID: req.GetRequestID(), AcceptedCount: 1, SnapshotAtMS: 1700000000123}, nil)
+	app := &experimentApplication{manager: manager, auth: auth}
+	resp, err := app.RetryExperiment(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, req.ExpectedRunID)
+	require.NotNil(t, resp.RunID)
+	// The manager may resolve a newer run than the application's initial read.
+	require.Equal(t, int64(18), resp.GetRunID())
+	require.Equal(t, req.GetRequestID(), resp.GetRequestID())
+	require.Equal(t, int32(1), resp.GetAcceptedCount())
+	require.Equal(t, int64(1700000000123), resp.GetSnapshotAtMs())
+	require.Empty(t, resp.RejectedItems)
 }
 
 func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {

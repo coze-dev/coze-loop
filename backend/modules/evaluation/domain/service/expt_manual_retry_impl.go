@@ -373,8 +373,26 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	if m.manualRetryRepo == nil {
 		return nil, fmt.Errorf("manual retry repository unavailable")
 	}
+	if normalized.ExpectedRunID == 0 {
+		current, err := m.exptRepo.GetByID(ctx, normalized.ExptID, normalized.SpaceID)
+		if err != nil {
+			return nil, err
+		}
+		if current == nil || current.LatestRunID <= 0 {
+			return nil, errorx.NewByCode(errno.ManualRetryRunConflictCode)
+		}
+		normalized.ExpectedRunID = current.LatestRunID
+		// Bind the fingerprint to the resolved run so explicit and implicit retries replay the same receipt.
+		normalized, hash, err = normalizeCurrentRunRetry(normalized)
+		if err != nil {
+			return nil, err
+		}
+	}
 	receipt, err := m.manualRetryRepo.FindReceipt(ctx, normalized.SpaceID, normalized.ExptID, normalized.ExpectedRunID, normalized.RequestID, hash)
 	if err != nil || receipt != nil {
+		if receipt != nil && receipt.RunID == 0 {
+			receipt.RunID = normalized.ExpectedRunID
+		}
 		return receipt, err
 	}
 	if err := validateCurrentRunRetry(normalized); err != nil {
@@ -418,6 +436,9 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	}
 	receipt, err = m.manualRetryRepo.FindReceipt(lockCtx, normalized.SpaceID, normalized.ExptID, normalized.ExpectedRunID, normalized.RequestID, hash)
 	if err != nil || receipt != nil {
+		if receipt != nil && receipt.RunID == 0 {
+			receipt.RunID = normalized.ExpectedRunID
+		}
 		return receipt, err
 	}
 	expt, err = m.exptRepo.GetByID(lockCtx, normalized.ExptID, normalized.SpaceID)
@@ -525,11 +546,15 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	if err := m.wakeCurrentRetryRun(ctx, expt, run); err != nil {
 		logs.CtxWarn(ctx, "wake current retry run failed, expt_id=%d, run_id=%d, err=%v", expt.ID, run.ExptRunID, err)
 	}
+	if receipt != nil {
+		receipt.RunID = normalized.ExpectedRunID
+	}
 	return receipt, nil
 }
 
 func validateCurrentRunRetry(req *entity.RetryInCurrentRunRequest) error {
-	if req.SpaceID <= 0 || req.ExptID <= 0 || req.ExpectedRunID <= 0 || len(req.RequestID) != 36 {
+	// ExpectedRunID 允许为 0：调用方不关心具体 run 时按「当前 run」处理，由 RetryInCurrentRun 解析。
+	if req.SpaceID <= 0 || req.ExptID <= 0 || req.ExpectedRunID < 0 || len(req.RequestID) != 36 {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid manual retry identity"))
 	}
 	if _, err := uuid.Parse(req.RequestID); err != nil {
