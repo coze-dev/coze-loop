@@ -5139,12 +5139,12 @@ func TestExptRetryItemsExec_ScheduleStart(t *testing.T) {
 					ItemIds: []entity.ExptRunLogItems{{ItemIDs: []int64{1, 2, 3}}},
 				}, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().BatchGet(gomock.Any(), args.event.SpaceID, args.event.ExptID, []int64{2, 3}).Return(nil, nil).Times(1)
-				f.exptStatsRepo.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("stats error")).Times(1)
+				f.evaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return(nil, errors.New("items error")).Times(1)
 			},
 			wantErr: true,
 			assertErr: func(t *testing.T, err error) {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "stats error")
+				assert.Contains(t, err.Error(), "items error")
 			},
 		},
 		{
