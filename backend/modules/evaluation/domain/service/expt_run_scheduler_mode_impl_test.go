@@ -386,6 +386,52 @@ func TestExptSubmitExec_ExptStart(t *testing.T) {
 			},
 		},
 		{
+			name: "空turns的item不建执行记录也不计数",
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: testUserID}),
+				event: &entity.ExptScheduleEvent{
+					ExptID:      1,
+					ExptRunID:   2,
+					SpaceID:     3,
+					ExptRunMode: 1,
+					Session:     &entity.Session{UserID: testUserID},
+				},
+				expt: mockExpt,
+			},
+			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
+				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
+				f.exptRepo.EXPECT().GetByID(gomock.Any(), args.event.ExptID, args.event.SpaceID).Return(args.expt, nil).Times(1)
+				f.evaluationSetItemService.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{
+					{ItemID: 1, Turns: []*entity.Turn{{ID: 1}}},
+					{ItemID: 2},
+				}, ptr.Of(int64(2)), ptr.Of(int64(2)), nil, nil).Times(1)
+				f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{1, 2}, nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().BatchCreateNX(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, etrs []*entity.ExptTurnResult) error {
+					assert.Len(t, etrs, 1)
+					return nil
+				}).Times(1)
+				f.exptItemResultRepo.EXPECT().BatchCreateNX(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, eirs []*entity.ExptItemResult) error {
+					assert.Len(t, eirs, 1)
+					assert.Equal(t, int64(1), eirs[0].ItemID)
+					return nil
+				}).Times(1)
+				f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), 1).Return([]int64{3}, nil).Times(1)
+				f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				f.exptStatsRepo.EXPECT().UpdateByExptID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _, _ int64, stats *entity.ExptStats) error {
+					assert.Equal(t, int32(1), stats.PendingItemCnt)
+					return nil
+				}).Times(1)
+				f.exptRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				f.configer.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Return(&entity.ExptExecConf{ZombieIntervalSecond: 1}).Times(1)
+				f.idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				f.resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			wantErr: false,
+			assertErr: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
 			name: "idem已存在",
 			args: args{
 				ctx: session.WithCtxUser(context.Background(), &session.User{ID: testUserID}),
@@ -2424,11 +2470,6 @@ func TestExptTrialRunExec_ExptStart(t *testing.T) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
 				f.evaluationSetItemService.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).
 					Return([]*entity.EvaluationSetItem{}, ptr.Of(int64(0)), nil, nil, nil)
-				f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), 0).Return([]int64{}, nil)
-				f.exptTurnResultRepo.EXPECT().BatchCreateNX(gomock.Any(), gomock.Any()).Return(nil)
-				f.exptItemResultRepo.EXPECT().BatchCreateNX(gomock.Any(), gomock.Any()).Return(nil)
-				f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{}, nil)
-				f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil)
 				f.resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				f.exptStatsRepo.EXPECT().UpdateByExptID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				f.exptRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)

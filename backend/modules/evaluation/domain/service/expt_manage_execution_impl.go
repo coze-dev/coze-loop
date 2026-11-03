@@ -1455,6 +1455,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 		}
 		toSubmitItems = append(toSubmitItems, item)
 	}
+	toSubmitItems = dropItemsWithoutTurns(ctx, invokeExptReq.ExptID, toSubmitItems)
 	if len(toSubmitItems) == 0 {
 		logs.CtxInfo(ctx, "InvokeExpt with no new item, expt_id: %v", invokeExptReq.ExptID)
 		return nil
