@@ -1104,7 +1104,7 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).DoAndReturn(func(context.Context, int64, int64) (*entity.Experiment, error) {
 			cancel()
 			return nil, errors.New("read")
-		})
+		}).Times(2)
 		require.Error(t, m.cleanupTerminatedRun(ctx, event(), expt(), nil, &entity.CompleteExptOption{NoCompleteItemTurn: true}))
 	})
 	t.Run("cleanup_release_error_while_cancelled", func(t *testing.T) {
@@ -1117,7 +1117,7 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		current := expt()
 		current.ExptDispatchMode = entity.ExptDispatchModeEnforce
 		current.SchedulerScope = "scope"
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(current, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(current, nil).Times(2)
 		d.guard.EXPECT().Release(gomock.Any(), "scope", int64(2), int64(9), "req", gomock.Any()).DoAndReturn(func(context.Context, string, int64, int64, string, string) error {
 			cancel()
 			return errors.New("release")
