@@ -2995,4 +2995,5 @@ func TestShouldPublishProcessingStart(t *testing.T) {
 	assert.True(t, shouldPublishProcessingStart(entity.ExptStatus_Success, entity.ExptStatus_Processing))
 	assert.True(t, shouldPublishProcessingStart(entity.ExptStatus_Processing, entity.ExptStatus_Pending), "partial retry initialization must still publish start on redelivery")
 	assert.False(t, shouldPublishProcessingStart(entity.ExptStatus_Processing, entity.ExptStatus_Processing))
+	assert.Equal(t, "expt_1_2_to_3", makeProcessingStartIdemKey(1, 2), "retry start key must not change with the observed source status")
 }

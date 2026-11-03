@@ -445,6 +445,10 @@ func shouldPublishProcessingStart(exptStatus, runStatus entity.ExptStatus) bool 
 	return exptStatus != entity.ExptStatus_Processing || runStatus == entity.ExptStatus_Pending
 }
 
+func makeProcessingStartIdemKey(exptID, runID int64) string {
+	return fmt.Sprintf("expt_%d_%d_to_%d", exptID, runID, entity.ExptStatus_Processing)
+}
+
 func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptScheduleEvent) error {
 	if event.ExptRunMode == entity.EvaluationModeAppend {
 		logs.CtxInfo(ctx, "[ExptEval] consume schedule event (Append), expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
@@ -489,7 +493,7 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 				ExptType:   exptDetail.ExptType,
 				SourceType: exptDetail.SourceType,
 			}
-			idempotentKey := fmt.Sprintf("expt_%d_%d_%d_%d", event.ExptID, event.ExptRunID, lifecycleEvent.FromStatus, lifecycleEvent.ToStatus)
+			idempotentKey := makeProcessingStartIdemKey(event.ExptID, event.ExptRunID)
 			lifecycleEvent.IdempotentKey = idempotentKey
 			if pubErr := e.Publisher.PublishExptLifecycleEvent(ctx, lifecycleEvent, gptr.Of(time.Second*3), idempotentKey); pubErr != nil {
 				logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent(Processing) failed, expt_id: %v, err: %v", event.ExptID, pubErr)
