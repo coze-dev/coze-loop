@@ -11,6 +11,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 func NewExptRunLogRepo(exptRunLogDAO mysql.IExptRunLogDAO) repo.IExptRunLogRepo {
@@ -42,6 +43,14 @@ func (e *ExptRunLogImpl) Get(ctx context.Context, exptID, exptRunID int64) (*ent
 		return nil, err
 	}
 	return convert.NewExptRunLogConvertor().PO2DO(po)
+}
+
+func (e *ExptRunLogImpl) MarkProcessingIfPending(ctx context.Context, exptID, runID, spaceID int64) (bool, error) {
+	marker, ok := e.exptRunLogDAO.(mysql.IExptRunActivationDAO)
+	if !ok {
+		return false, errorx.New("run activation DAO missing")
+	}
+	return marker.MarkProcessingIfPending(ctx, exptID, runID, spaceID)
 }
 
 func (e *ExptRunLogImpl) Create(ctx context.Context, exptRunLog *entity.ExptRunLog) error {

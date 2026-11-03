@@ -279,3 +279,24 @@ func TestMarkRetryProcessingGuardsRunAndTerminating(t *testing.T) {
 		})
 	}
 }
+
+func TestMarkProcessingIfPendingDoesNotReopenTerminalRun(t *testing.T) {
+	provider, _ := newRetryResetFixture(t, "", "")
+	ctx := context.Background()
+	marker, ok := any(NewExptRunLogDAO(provider)).(IExptRunActivationDAO)
+	require.True(t, ok)
+	require.NoError(t, provider.NewSession(ctx).Model(&model.ExptRunLog{}).Where("expt_run_id=2").Update("status", int64(entity.ExptStatus_Pending)).Error)
+	activated, err := marker.MarkProcessingIfPending(ctx, 7, 2, 9)
+	require.NoError(t, err)
+	require.True(t, activated)
+	activated, err = marker.MarkProcessingIfPending(ctx, 7, 2, 9)
+	require.NoError(t, err)
+	require.False(t, activated)
+	require.NoError(t, provider.NewSession(ctx).Model(&model.ExptRunLog{}).Where("expt_run_id=2").Update("status", int64(entity.ExptStatus_Terminated)).Error)
+	activated, err = marker.MarkProcessingIfPending(ctx, 7, 2, 9)
+	require.NoError(t, err)
+	require.False(t, activated)
+	var run model.ExptRunLog
+	require.NoError(t, provider.NewSession(ctx).Where("expt_run_id=2").Take(&run).Error)
+	require.Equal(t, int64(entity.ExptStatus_Terminated), gptr.Indirect(run.Status))
+}

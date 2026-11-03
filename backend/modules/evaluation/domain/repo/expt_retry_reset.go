@@ -20,3 +20,8 @@ type IExptRetryItemResetRepo interface {
 type IExptRetryRunStatusRepo interface {
 	MarkRetryProcessing(ctx context.Context, spaceID, exptID, runID int64) (processing bool, err error)
 }
+
+// IExptRunActivationRepo advances a Pending run without reopening a terminal run.
+type IExptRunActivationRepo interface {
+	MarkProcessingIfPending(ctx context.Context, exptID, runID, spaceID int64) (bool, error)
+}

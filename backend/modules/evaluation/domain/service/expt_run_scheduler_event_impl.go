@@ -495,8 +495,13 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 			}
 			idempotentKey := makeProcessingStartIdemKey(event.ExptID, event.ExptRunID)
 			lifecycleEvent.IdempotentKey = idempotentKey
-			if pubErr := e.Publisher.PublishExptLifecycleEvent(ctx, lifecycleEvent, gptr.Of(time.Second*3), idempotentKey); pubErr != nil {
+			pubErr := e.Publisher.PublishExptLifecycleEvent(ctx, lifecycleEvent, gptr.Of(time.Second*3), idempotentKey)
+			if pubErr != nil {
 				logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent(Processing) failed, expt_id: %v, err: %v", event.ExptID, pubErr)
+			} else if activation, ok := e.ExptRunLogRepo.(repo.IExptRunActivationRepo); ok {
+				if _, err := activation.MarkProcessingIfPending(ctx, event.ExptID, event.ExptRunID, event.SpaceID); err != nil {
+					logs.CtxWarn(ctx, "[ExptEval] mark run Processing after lifecycle publication failed, expt_id: %v, err: %v", event.ExptID, err)
+				}
 			}
 		}
 	}
