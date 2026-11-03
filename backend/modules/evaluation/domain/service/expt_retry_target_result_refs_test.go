@@ -162,6 +162,7 @@ func TestExptRetryAllExec_ExptStart_ResetsTurnResultTargetAndRunID(t *testing.T)
 	}, ptr.Of(int64(1)), ptr.Of(int64(1)), nil, nil).Times(1)
 
 	f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{600, 601}, nil).Times(1)
+	f.exptItemResultRepo.EXPECT().MGetItemResults(gomock.Any(), exptID, gomock.Any(), spaceID).Return(nil, nil).Times(1)
 	f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, gomock.Any(), map[string]any{
 		"err_msg":     nil,
 		"status":      int32(entity.ItemRunState_Queueing),
@@ -172,8 +173,6 @@ func TestExptRetryAllExec_ExptStart_ResetsTurnResultTargetAndRunID(t *testing.T)
 
 	f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), spaceID, exptID, newRunID, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-	f.exptStatsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{}, nil).Times(1)
-	f.exptStatsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	f.exptRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	f.configer.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Return(&entity.ExptExecConf{ZombieIntervalSecond: 1}).Times(1)
 	f.idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
@@ -217,7 +216,6 @@ func TestExptRetryItemsExec_ResetEvalItems_ResetsTurnResultTargetAndRunID(t *tes
 
 	f := buildRetryItemsExecFields(ctrl)
 
-	f.exptStatsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{}, nil).Times(1)
 	f.evaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{
 		{ItemID: itemID, ItemVersionID: ptr.Of(int64(70)), Turns: []*entity.Turn{{ID: 7001}}},
 	}, nil).Times(1)
@@ -233,7 +231,9 @@ func TestExptRetryItemsExec_ResetEvalItems_ResetsTurnResultTargetAndRunID(t *tes
 
 	f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), spaceID, exptID, newRunID, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-	f.exptStatsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	f.exptStatsRepo.EXPECT().ArithOperateCount(gomock.Any(), exptID, spaceID, &entity.StatsCntArithOp{
+		OpStatusCnt: map[entity.ItemRunState]int{entity.ItemRunState_Fail: -1, entity.ItemRunState_Queueing: 1},
+	}).Return(nil).Times(1)
 
 	exec := &ExptRetryItemsExec{
 		manager:                  f.manager,
@@ -309,7 +309,6 @@ func TestExptRetryItemsExec_ResetEvalItems_ItemVersionIDPassThrough(t *testing.T
 
 	f := buildRetryItemsExecFields(ctrl)
 
-	f.exptStatsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{}, nil).Times(1)
 	f.evaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{
 		{ItemID: itemID, ItemVersionID: ptr.Of(expectVersionID), Turns: []*entity.Turn{{ID: 7001}}},
 	}, nil).Times(1)
@@ -325,7 +324,9 @@ func TestExptRetryItemsExec_ResetEvalItems_ItemVersionIDPassThrough(t *testing.T
 	// 核心断言: 落 run_log 时必须带上从 item_result 平移的 ItemVersionID。
 	f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), runLogItemVersionMatcher{want: map[int64]int64{itemID: expectVersionID}}).Return(nil).Times(1)
 
-	f.exptStatsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	f.exptStatsRepo.EXPECT().ArithOperateCount(gomock.Any(), exptID, spaceID, &entity.StatsCntArithOp{
+		OpStatusCnt: map[entity.ItemRunState]int{entity.ItemRunState_Fail: -1, entity.ItemRunState_Queueing: 1},
+	}).Return(nil).Times(1)
 
 	exec := &ExptRetryItemsExec{
 		manager:                  f.manager,
@@ -375,6 +376,7 @@ func TestExptRetryAllExec_ExptStart_ItemVersionIDPassThrough(t *testing.T) {
 	}, ptr.Of(int64(1)), ptr.Of(int64(1)), nil, nil).Times(1)
 
 	f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{600, 601}, nil).Times(1)
+	f.exptItemResultRepo.EXPECT().MGetItemResults(gomock.Any(), exptID, gomock.Any(), spaceID).Return(nil, nil).Times(1)
 	f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), exptID, gomock.Any(), spaceID, gomock.Any()).Return(nil).Times(1)
 	f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), spaceID, exptID, newRunID, gomock.Any(), gomock.Any()).Return(nil).Times(1)
@@ -382,8 +384,6 @@ func TestExptRetryAllExec_ExptStart_ItemVersionIDPassThrough(t *testing.T) {
 	// 核心断言。
 	f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), runLogItemVersionMatcher{want: map[int64]int64{itemID: expectVersionID}}).Return(nil).Times(1)
 
-	f.exptStatsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{}, nil).Times(1)
-	f.exptStatsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	f.exptRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	f.configer.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Return(&entity.ExptExecConf{ZombieIntervalSecond: 1}).Times(1)
 	f.idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
@@ -611,7 +611,6 @@ func TestExptRetryItemsExec_ResetEvalItems_NilIrsAndMissingVersion(t *testing.T)
 
 	f := buildRetryItemsExecFields(ctrl)
 
-	f.exptStatsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{}, nil).Times(1)
 	f.evaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{
 		{ItemID: itemA, Turns: []*entity.Turn{{ID: 90001}}},
 		{ItemID: itemB, Turns: []*entity.Turn{{ID: 90002}}},
@@ -631,7 +630,9 @@ func TestExptRetryItemsExec_ResetEvalItems_NilIrsAndMissingVersion(t *testing.T)
 		runLogFullMatcher{want: map[int64]int64{itemA: 10001, itemB: 0}},
 	).Return(nil).Times(1)
 
-	f.exptStatsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	f.exptStatsRepo.EXPECT().ArithOperateCount(gomock.Any(), exptID, spaceID, &entity.StatsCntArithOp{
+		OpStatusCnt: map[entity.ItemRunState]int{entity.ItemRunState_Fail: -1, entity.ItemRunState_Queueing: 1},
+	}).Return(nil).Times(1)
 
 	exec := newRetryItemsExecFromFields(f)
 
@@ -655,13 +656,6 @@ func TestExptRetryItemsExec_ResetEvalItems_StatsPerStatus(t *testing.T) {
 
 	f := buildRetryItemsExecFields(ctrl)
 
-	got := &entity.ExptStats{
-		ProcessingItemCnt: 1,
-		SuccessItemCnt:    1,
-		FailItemCnt:       1,
-		TerminatedItemCnt: 1,
-	}
-	f.exptStatsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(got, nil).Times(1)
 	f.evaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{
 		{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},
 		{ItemID: 2, Turns: []*entity.Turn{{ID: 21}}},
@@ -679,15 +673,15 @@ func TestExptRetryItemsExec_ResetEvalItems_StatsPerStatus(t *testing.T) {
 	f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-	// Save 时验证四个计数字段都清零, PendingItemCnt=4。
-	f.exptStatsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, s *entity.ExptStats) error {
-		assert.EqualValues(t, 4, s.PendingItemCnt)
-		assert.EqualValues(t, 0, s.ProcessingItemCnt)
-		assert.EqualValues(t, 0, s.SuccessItemCnt)
-		assert.EqualValues(t, 0, s.FailItemCnt)
-		assert.EqualValues(t, 0, s.TerminatedItemCnt)
-		return nil
-	}).Times(1)
+	f.exptStatsRepo.EXPECT().ArithOperateCount(gomock.Any(), exptID, spaceID, &entity.StatsCntArithOp{
+		OpStatusCnt: map[entity.ItemRunState]int{
+			entity.ItemRunState_Processing: -1,
+			entity.ItemRunState_Success:    -1,
+			entity.ItemRunState_Fail:       -1,
+			entity.ItemRunState_Terminal:   -1,
+			entity.ItemRunState_Queueing:   4,
+		},
+	}).Return(nil).Times(1)
 
 	exec := newRetryItemsExecFromFields(f)
 	err := exec.resetEvalItems(session.WithCtxUser(context.Background(), &session.User{ID: "u"}), &entity.ExptScheduleEvent{
@@ -709,11 +703,9 @@ func TestExptRetryItemsExec_ResetEvalItems_MGetItemResultsError(t *testing.T) {
 	)
 
 	f := buildRetryItemsExecFields(ctrl)
-	f.exptStatsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{}, nil).Times(1)
 	f.evaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{
 		{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},
 	}, nil).Times(1)
-	f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{1, 2}, nil).Times(1)
 	f.exptItemResultRepo.EXPECT().MGetItemResults(gomock.Any(), exptID, gomock.Any(), spaceID).Return(nil, errors.New("boom")).Times(1)
 
 	exec := newRetryItemsExecFromFields(f)
@@ -736,7 +728,6 @@ func TestExptRetryItemsExec_ResetEvalItems_UpdateTurnResultsError(t *testing.T) 
 	)
 
 	f := buildRetryItemsExecFields(ctrl)
-	f.exptStatsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{}, nil).Times(1)
 	f.evaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{
 		{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},
 	}, nil).Times(1)
@@ -857,12 +848,11 @@ func TestExptRetryAllExec_ExptStart_MultiItemMixedVersion(t *testing.T) {
 	}, ptr.Of(int64(3)), ptr.Of(int64(3)), nil, nil).Times(1)
 
 	f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), 6).Return([]int64{1, 2, 3, 4, 5, 6}, nil).Times(1)
+	f.exptItemResultRepo.EXPECT().MGetItemResults(gomock.Any(), exptID, gomock.Any(), spaceID).Return(nil, nil).Times(1)
 	f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), exptID, gomock.Any(), spaceID, turnResetMapMatcher{wantRunID: newRunID}).Return(nil).Times(1)
 	f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), spaceID, exptID, newRunID, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), runLogFullMatcher{want: map[int64]int64{10: 1010, 20: 0, 30: 0}}).Return(nil).Times(1)
-	f.exptStatsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{}, nil).Times(1)
-	f.exptStatsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	f.exptRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	f.configer.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Return(&entity.ExptExecConf{ZombieIntervalSecond: 1}).Times(1)
 	f.idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
@@ -896,6 +886,7 @@ func TestExptRetryAllExec_ExptStart_UpdateTurnResultsError(t *testing.T) {
 		{ItemID: 10, ItemVersionID: ptr.Of(int64(1010)), Turns: []*entity.Turn{{ID: 100}}},
 	}, ptr.Of(int64(1)), ptr.Of(int64(1)), nil, nil).Times(1)
 	f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{1, 2}, nil).Times(1)
+	f.exptItemResultRepo.EXPECT().MGetItemResults(gomock.Any(), exptID, gomock.Any(), spaceID).Return(nil, nil).Times(1)
 	f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), exptID, gomock.Any(), spaceID, turnResetMapMatcher{wantRunID: newRunID}).Return(errors.New("boom")).Times(1)
 
@@ -923,7 +914,6 @@ func TestExptRetryItemsExec_ResetEvalItems_ClearRunLogRefsError(t *testing.T) {
 	)
 
 	f := buildRetryItemsExecFields(ctrl)
-	f.exptStatsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{}, nil).Times(1)
 	f.evaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{
 		{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},
 	}, nil).Times(1)
@@ -954,7 +944,6 @@ func TestExptRetryItemsExec_ResetEvalItems_BatchCreateRunLogsError(t *testing.T)
 	)
 
 	f := buildRetryItemsExecFields(ctrl)
-	f.exptStatsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{}, nil).Times(1)
 	f.evaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{
 		{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},
 	}, nil).Times(1)
@@ -974,8 +963,8 @@ func TestExptRetryItemsExec_ResetEvalItems_BatchCreateRunLogsError(t *testing.T)
 	assert.Error(t, err)
 }
 
-// TestExptRetryItemsExec_ResetEvalItems_StatsSaveError 覆盖 Stats.Save 报错。
-func TestExptRetryItemsExec_ResetEvalItems_StatsSaveError(t *testing.T) {
+// TestExptRetryItemsExec_ResetEvalItems_StatsUpdateError 覆盖统计 delta 更新报错。
+func TestExptRetryItemsExec_ResetEvalItems_StatsUpdateError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -986,7 +975,6 @@ func TestExptRetryItemsExec_ResetEvalItems_StatsSaveError(t *testing.T) {
 	)
 
 	f := buildRetryItemsExecFields(ctrl)
-	f.exptStatsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{}, nil).Times(1)
 	f.evaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{
 		{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},
 	}, nil).Times(1)
@@ -998,7 +986,9 @@ func TestExptRetryItemsExec_ResetEvalItems_StatsSaveError(t *testing.T) {
 	f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), exptID, gomock.Any(), spaceID, turnResetMapMatcher{wantRunID: newRunID}).Return(nil).Times(1)
 	f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), spaceID, exptID, newRunID, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-	f.exptStatsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(errors.New("boom")).Times(1)
+	f.exptStatsRepo.EXPECT().ArithOperateCount(gomock.Any(), exptID, spaceID, &entity.StatsCntArithOp{
+		OpStatusCnt: map[entity.ItemRunState]int{entity.ItemRunState_Fail: -1, entity.ItemRunState_Queueing: 1},
+	}).Return(errors.New("boom")).Times(1)
 
 	exec := newRetryItemsExecFromFields(f)
 	err := exec.resetEvalItems(session.WithCtxUser(context.Background(), &session.User{ID: "u"}), &entity.ExptScheduleEvent{
