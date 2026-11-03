@@ -343,8 +343,8 @@ func TestNewRunRealInitializersAndResetClearOnlyManualExt(t *testing.T) {
 			event := *p.event
 			event.ExptRunID = next
 			event.ExptRunMode = mode
-			deps := retryItemResetDeps{exptItemResultRepo: f.itemRepo(), exptTurnResultRepo: f.turnRepo(), idgenerator: ids}
-			_, err = resetRetryRunLogsForItems(context.Background(), deps, &event, []*entity.EvaluationSetItem{{ItemID: f.item, ItemVersionID: &f.version, Turns: []*entity.Turn{{ID: 0}}}}, map[int64]int64{f.item: f.version})
+			deps := retryItemResetDeps{manager: p.manager, exptItemResultRepo: f.itemRepo(), exptTurnResultRepo: f.turnRepo(), exptRepo: p.manager.exptRepo, idgenerator: ids}
+			err = resetRetryItemsForNewRun(context.Background(), deps, &event, p.expt, []*entity.EvaluationSetItem{{ItemID: f.item, ItemVersionID: &f.version, Turns: []*entity.Turn{{ID: 0}}}}, map[int64]int64{f.item: f.version})
 			require.NoError(t, err)
 			require.NoError(t, f.conn.Where("space_id=?", f.space).Take(&item).Error)
 			ext, err = entity.ParseExptItemResultExt(gptr.Indirect(item.Ext))

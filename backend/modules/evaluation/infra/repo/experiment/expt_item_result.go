@@ -68,6 +68,14 @@ func (e ExptItemResultRepoImpl) UpdateItemsResult(ctx context.Context, spaceID, 
 	return nil
 }
 
+func (e ExptItemResultRepoImpl) ResetItemForRetry(ctx context.Context, spaceID, exptID, runID int64, runLog *entity.ExptItemResultRunLog, turnIDs []int64) (bool, error) {
+	resetter, ok := e.exptItemResultDAO.(mysql.IExptRetryItemResetDAO)
+	if !ok {
+		return false, errorx.New("retry item reset transaction DAO missing")
+	}
+	return resetter.ResetItemForRetry(ctx, spaceID, exptID, runID, runLog, turnIDs)
+}
+
 func (e ExptItemResultRepoImpl) GetItemTurnResults(ctx context.Context, spaceID, exptID, itemID int64) ([]*entity.ExptTurnResult, error) {
 	pos, err := e.exptItemResultDAO.GetItemTurnResults(ctx, spaceID, exptID, itemID)
 	if err != nil {

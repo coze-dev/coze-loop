@@ -93,6 +93,28 @@ func (dao *exptItemResultDAOImpl) BatchGet(ctx context.Context, spaceID, exptID 
 	return finds, nil
 }
 
+func newRunItemResultFields(item *model.ExptItemResult, next int64, ufields map[string]any) (map[string]any, error) {
+	fields := make(map[string]any, len(ufields)+1)
+	for key, value := range ufields {
+		fields[key] = value
+	}
+	if item.ExptRunID != next {
+		ext, err := entity.ParseExptItemResultExt(gptr.Indirect(item.Ext))
+		if err != nil {
+			return nil, err
+		}
+		if _, exists := ext[entity.ManualRetryExtKey]; exists {
+			delete(ext, entity.ManualRetryExtKey)
+			raw, err := json.Marshal(ext)
+			if err != nil {
+				return nil, err
+			}
+			fields["ext"] = raw
+		}
+	}
+	return fields, nil
+}
+
 func (dao *exptItemResultDAOImpl) UpdateItemsResult(ctx context.Context, spaceID, exptID int64, itemIDs []int64, ufields map[string]any, opts ...db.Option) error {
 	if next, ok := ufields["expt_run_id"].(int64); ok && next > 0 {
 		return dao.provider.Transaction(ctx, func(tx *gorm.DB) error {
@@ -101,23 +123,9 @@ func (dao *exptItemResultDAOImpl) UpdateItemsResult(ctx context.Context, spaceID
 				return err
 			}
 			for _, item := range items {
-				fields := make(map[string]any, len(ufields)+1)
-				for key, value := range ufields {
-					fields[key] = value
-				}
-				if item.ExptRunID != next {
-					ext, err := entity.ParseExptItemResultExt(gptr.Indirect(item.Ext))
-					if err != nil {
-						return err
-					}
-					if _, exists := ext[entity.ManualRetryExtKey]; exists {
-						delete(ext, entity.ManualRetryExtKey)
-						raw, err := json.Marshal(ext)
-						if err != nil {
-							return err
-						}
-						fields["ext"] = raw
-					}
+				fields, err := newRunItemResultFields(&item, next, ufields)
+				if err != nil {
+					return err
 				}
 				if err := tx.Model(&model.ExptItemResult{}).Where("id=? AND space_id=? AND expt_id=?", item.ID, spaceID, exptID).Updates(fields).Error; err != nil {
 					return err

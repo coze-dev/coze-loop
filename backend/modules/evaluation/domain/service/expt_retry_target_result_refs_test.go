@@ -443,9 +443,11 @@ func (m runLogFullMatcher) String() string {
 
 func newRetryHelperDeps(ctrl *gomock.Controller) retryItemResetDeps {
 	return retryItemResetDeps{
+		manager:                  newRetryTestManager(ctrl),
 		evaluationSetItemService: svcmocks.NewMockEvaluationSetItemService(ctrl),
-		exptItemResultRepo:       mock_repo.NewMockIExptItemResultRepo(ctrl),
+		exptItemResultRepo:       newRetryTestItemResultRepo(ctrl),
 		exptTurnResultRepo:       mock_repo.NewMockIExptTurnResultRepo(ctrl),
+		exptRepo:                 mock_repo.NewMockIExperimentRepo(ctrl),
 		idgenerator:              idgenmocks.NewMockIIDGenerator(ctrl),
 	}
 }
@@ -457,9 +459,8 @@ func TestResetRetryRunLogsForItems_Empty(t *testing.T) {
 	deps := newRetryHelperDeps(ctrl)
 	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
 
-	got, err := resetRetryRunLogsForItems(context.Background(), deps, event, nil, nil)
+	err := resetRetryItemsForNewRun(context.Background(), deps, event, &entity.Experiment{Status: entity.ExptStatus_Processing}, nil, nil)
 	assert.NoError(t, err)
-	assert.Nil(t, got)
 }
 
 func TestResetRetryRunLogsForItems_VersionPrecedenceAndTurnMap(t *testing.T) {
@@ -474,101 +475,43 @@ func TestResetRetryRunLogsForItems_VersionPrecedenceAndTurnMap(t *testing.T) {
 
 	deps := newRetryHelperDeps(ctrl)
 	items := []*entity.EvaluationSetItem{
-		{ItemID: 100, ItemVersionID: ptr.Of(int64(1000)), Turns: []*entity.Turn{{ID: 10001}}}, // 自带版本优先
-		{ItemID: 200, ItemVersionID: nil, Turns: []*entity.Turn{{ID: 20001}}},                 // fallback 到 map
-		{ItemID: 300, ItemVersionID: ptr.Of(int64(0)), Turns: []*entity.Turn{{ID: 30001}}},    // 0 也走 fallback
+		{ItemID: 100, ItemVersionID: ptr.Of(int64(1000)), Turns: []*entity.Turn{{ID: 10001}}},
+		{ItemID: 200, ItemVersionID: nil, Turns: []*entity.Turn{{ID: 20001}}},
+		{ItemID: 300, ItemVersionID: ptr.Of(int64(0)), Turns: []*entity.Turn{{ID: 30001}}},
 	}
-	versionMap := map[int64]int64{
-		200: 2000,
-		// 300 缺失 → 期望 run_log ItemVersionID=0 (fallback map 也不命中即为 0, 与"无版本"语义一致)
-	}
+	versionMap := map[int64]int64{200: 2000}
 
 	deps.idgenerator.(*idgenmocks.MockIIDGenerator).EXPECT().GenMultiIDs(gomock.Any(), 6).Return([]int64{1, 2, 3, 4, 5, 6}, nil).Times(1)
-	deps.exptItemResultRepo.(*mock_repo.MockIExptItemResultRepo).EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, gomock.Any(), map[string]any{
-		"err_msg":     nil,
-		"status":      int32(entity.ItemRunState_Queueing),
-		"expt_run_id": newRunID,
-	}).Return(nil).Times(1)
+	versions := map[int64]int64{}
+	turns := map[int64][]int64{}
+	deps.exptItemResultRepo.(*retryTestItemResultRepo).reset.EXPECT().ResetItemForRetry(gomock.Any(), spaceID, exptID, newRunID, gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, _, _, _ int64, runLog *entity.ExptItemResultRunLog, turnIDs []int64) (bool, error) {
+			versions[runLog.ItemID] = runLog.ItemVersionID
+			turns[runLog.ItemID] = turnIDs
+			return true, nil
+		}).Times(3)
 
-	// 核心断言 1: turn map 满足 (status, target_result_id=0, expt_run_id=NEW)。
-	deps.exptTurnResultRepo.(*mock_repo.MockIExptTurnResultRepo).EXPECT().UpdateTurnResults(
-		gomock.Any(), exptID, gomock.Any(), spaceID, turnResetMapMatcher{wantRunID: newRunID},
-	).Return(nil).Times(1)
-	deps.exptTurnResultRepo.(*mock_repo.MockIExptTurnResultRepo).EXPECT().UpdateTurnRunLogWithItemIDs(
-		gomock.Any(), spaceID, exptID, newRunID, gomock.Any(), gomock.Any(),
-	).Return(nil).Times(1)
-
-	// 核心断言 2: run_log 每个 item 的 ItemVersionID 符合优先级 (item.ItemVersionID > map > 0)。
-	deps.exptItemResultRepo.(*mock_repo.MockIExptItemResultRepo).EXPECT().BatchCreateNXRunLogs(
-		gomock.Any(),
-		runLogFullMatcher{want: map[int64]int64{100: 1000, 200: 2000, 300: 0}},
-	).Return(nil).Times(1)
-
-	got, err := resetRetryRunLogsForItems(context.Background(), deps, &entity.ExptScheduleEvent{
+	err := resetRetryItemsForNewRun(context.Background(), deps, &entity.ExptScheduleEvent{
 		ExptID: exptID, ExptRunID: newRunID, SpaceID: spaceID,
-	}, items, versionMap)
+	}, &entity.Experiment{Status: entity.ExptStatus_Processing}, items, versionMap)
 	assert.NoError(t, err)
-	assert.ElementsMatch(t, []int64{100, 200, 300}, got)
+	assert.Equal(t, map[int64]int64{100: 1000, 200: 2000, 300: 0}, versions)
+	assert.Equal(t, map[int64][]int64{100: {10001}, 200: {20001}, 300: {30001}}, turns)
 }
 
-func TestResetRetryRunLogsForItems_UpdateItemsResultError(t *testing.T) {
+func TestResetRetryRunLogsForItems_TransactionError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	deps := newRetryHelperDeps(ctrl)
 	items := []*entity.EvaluationSetItem{{ItemID: 1, Turns: []*entity.Turn{{ID: 10}}}}
 	deps.idgenerator.(*idgenmocks.MockIIDGenerator).EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{1, 2}, nil).Times(1)
-	deps.exptItemResultRepo.(*mock_repo.MockIExptItemResultRepo).EXPECT().UpdateItemsResult(
-		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
-	).Return(errors.New("boom")).Times(1)
-
-	got, err := resetRetryRunLogsForItems(context.Background(), deps, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, items, nil)
-	assert.Error(t, err)
-	assert.Nil(t, got)
-}
-
-func TestResetRetryRunLogsForItems_UpdateTurnResultsError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	deps := newRetryHelperDeps(ctrl)
-	items := []*entity.EvaluationSetItem{{ItemID: 1, Turns: []*entity.Turn{{ID: 10}}}}
-	deps.idgenerator.(*idgenmocks.MockIIDGenerator).EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{1, 2}, nil).Times(1)
-	deps.exptItemResultRepo.(*mock_repo.MockIExptItemResultRepo).EXPECT().UpdateItemsResult(
-		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
-	).Return(nil).Times(1)
-	deps.exptTurnResultRepo.(*mock_repo.MockIExptTurnResultRepo).EXPECT().UpdateTurnResults(
-		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
-	).Return(errors.New("boom")).Times(1)
-
-	got, err := resetRetryRunLogsForItems(context.Background(), deps, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, items, nil)
-	assert.Error(t, err)
-	assert.Nil(t, got)
-}
-
-func TestResetRetryRunLogsForItems_BatchCreateRunLogsError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	deps := newRetryHelperDeps(ctrl)
-	items := []*entity.EvaluationSetItem{{ItemID: 1, Turns: []*entity.Turn{{ID: 10}}}}
-	deps.idgenerator.(*idgenmocks.MockIIDGenerator).EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{1, 2}, nil).Times(1)
-	deps.exptItemResultRepo.(*mock_repo.MockIExptItemResultRepo).EXPECT().UpdateItemsResult(
-		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
-	).Return(nil).Times(1)
-	deps.exptTurnResultRepo.(*mock_repo.MockIExptTurnResultRepo).EXPECT().UpdateTurnResults(
-		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
-	).Return(nil).Times(1)
-	deps.exptTurnResultRepo.(*mock_repo.MockIExptTurnResultRepo).EXPECT().UpdateTurnRunLogWithItemIDs(
+	deps.exptItemResultRepo.(*retryTestItemResultRepo).reset.EXPECT().ResetItemForRetry(
 		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
-	).Return(nil).Times(1)
-	deps.exptItemResultRepo.(*mock_repo.MockIExptItemResultRepo).EXPECT().BatchCreateNXRunLogs(
-		gomock.Any(), gomock.Any(),
-	).Return(errors.New("boom")).Times(1)
+	).Return(false, errors.New("boom")).Times(1)
 
-	got, err := resetRetryRunLogsForItems(context.Background(), deps, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, items, nil)
+	err := resetRetryItemsForNewRun(context.Background(), deps, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, &entity.Experiment{Status: entity.ExptStatus_Processing}, items, nil)
 	assert.Error(t, err)
-	assert.Nil(t, got)
 }
 
 // ============================================================================

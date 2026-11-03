@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 // IExptCurrentRunTerminator accepts the execution source before a worker leaves
@@ -662,10 +663,13 @@ type IExptNewRunItemResetter interface {
 	ResetItemsForNewRun(context.Context, int64, int64, int64, []int64, map[string]any) error
 }
 
-func (e *ExptMangerImpl) ResetItemsForNewRun(ctx context.Context, space, expt, newRun int64, ids []int64, fields map[string]any) error {
-	if e.runFinishRepo == nil {
-		return e.itemResultRepo.UpdateItemsResult(ctx, space, expt, ids, fields)
-	}
+// IExptNewRunItemLocker shares new-run ownership and terminal reservation handling
+// with ResetItemsForNewRun while letting the retry initializer use its transaction.
+type IExptNewRunItemLocker interface {
+	WithNewRunItemLocks(context.Context, int64, int64, int64, []int64, func(context.Context, int64) error) error
+}
+
+func (e *ExptMangerImpl) withNewRunItemLocks(ctx context.Context, space, expt, newRun int64, ids []int64, unlock bool, write func(context.Context, int64) error) error {
 	if err := ctx.Err(); err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
@@ -693,6 +697,9 @@ func (e *ExptMangerImpl) ResetItemsForNewRun(ctx context.Context, space, expt, n
 	sort.Slice(ordered, func(i, j int) bool { return ordered[i] < ordered[j] })
 	for _, id := range ordered {
 		err := func() error {
+			if e.manualRetryLocker == nil {
+				return errno.NewMQRetryErr("new-run reset item locker missing")
+			}
 			locker := e.manualRetryLocker()
 			if locker == nil {
 				return errno.NewMQRetryErr("new-run reset item locker missing")
@@ -706,6 +713,13 @@ func (e *ExptMangerImpl) ResetItemsForNewRun(ctx context.Context, space, expt, n
 				return errno.NewMQRetryErr("new-run reset item lock busy")
 			}
 			defer cancel()
+			if unlock {
+				defer func() {
+					if _, err := locker.Unlock(key); err != nil {
+						logs.CtxWarn(ctx, "unlock new-run reset item %v: %v", key, err)
+					}
+				}()
+			}
 			if err := itemCtx.Err(); err != nil {
 				return errno.WrapMQRetryErr(err)
 			}
@@ -743,13 +757,29 @@ func (e *ExptMangerImpl) ResetItemsForNewRun(ctx context.Context, space, expt, n
 			if err := itemCtx.Err(); err != nil {
 				return errno.WrapMQRetryErr(err)
 			}
-			return e.itemResultRepo.UpdateItemsResult(itemCtx, space, expt, []int64{id}, fields)
+			return write(itemCtx, id)
 		}()
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (e *ExptMangerImpl) WithNewRunItemLocks(ctx context.Context, space, expt, newRun int64, ids []int64, write func(context.Context, int64) error) error {
+	if e.runFinishRepo == nil {
+		return errno.NewMQRetryErr("new-run reset lifecycle guard missing")
+	}
+	return e.withNewRunItemLocks(ctx, space, expt, newRun, ids, true, write)
+}
+
+func (e *ExptMangerImpl) ResetItemsForNewRun(ctx context.Context, space, expt, newRun int64, ids []int64, fields map[string]any) error {
+	if e.runFinishRepo == nil {
+		return e.itemResultRepo.UpdateItemsResult(ctx, space, expt, ids, fields)
+	}
+	return e.withNewRunItemLocks(ctx, space, expt, newRun, ids, false, func(itemCtx context.Context, id int64) error {
+		return e.itemResultRepo.UpdateItemsResult(itemCtx, space, expt, []int64{id}, fields)
+	})
 }
 
 func updateNewRunItemResults(ctx context.Context, manager IExptManager, items repo.IExptItemResultRepo, event *entity.ExptScheduleEvent, ids []int64, fields map[string]any) error {
