@@ -3150,6 +3150,9 @@ func OpenAPIRunModeConfigDTO2Domain(c *openapiExperiment.RunModeConfig) (*domain
 	if c == nil {
 		return nil, nil
 	}
+	if c.MaxQaTurns != nil && *c.MaxQaTurns <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("max_qa_turns must be positive"))
+	}
 	out := &domainExpt.RunModeConfig{
 		MaxRunMinutes: c.MaxRunMinutes,
 		// SuaModelID 不再从入参取: sua_model_id 已从 OpenAPI 契约移除 (SUA 模型由平台
@@ -3162,6 +3165,8 @@ func OpenAPIRunModeConfigDTO2Domain(c *openapiExperiment.RunModeConfig) (*domain
 		SuaBehavioralConstraints: c.SuaBehavioralConstraints,
 		SuaPeTemplate:            c.SuaPeTemplate,
 		MaxTurns:                 c.MaxTurns,
+		QaReplyTemplate:          c.QaReplyTemplate,
+		MaxQaTurns:               c.MaxQaTurns,
 	}
 	if c.RunMode != nil {
 		rm, ok := openAPIRunModeToDomain(*c.RunMode)
@@ -3204,7 +3209,80 @@ func OpenAPIRunModeConfigDTO2Domain(c *openapiExperiment.RunModeConfig) (*domain
 	if len(c.Skills) > 0 {
 		out.Skills = openAPISkillsToDomain(c.Skills)
 	}
+	if c.FluxWorkflow != nil {
+		if err := validateFluxWorkflowOpenAPI(c.FluxWorkflow); err != nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+		}
+		out.FluxWorkflow = openAPIFluxWorkflowToDomain(c.FluxWorkflow)
+	}
 	return out, nil
+}
+
+func validateFluxWorkflowOpenAPI(c *openapiExperiment.FluxWorkflowConfig) error {
+	switch c.GetSourceKind() {
+	case "space-flow":
+		if c.GetSourceWorkflowID() == "" || c.GetSourceTemplateID() != "" {
+			return fmt.Errorf("flux_workflow space-flow requires source_workflow_id only")
+		}
+	case "task-template":
+		if c.GetSourceTemplateID() == "" || c.GetSourceWorkflowID() != "" ||
+			(c.GetSourceSnapshotID() == "") == (c.GetSourceReleaseID() == "") {
+			return fmt.Errorf("flux_workflow task-template requires source_template_id and one fixed version")
+		}
+	default:
+		return fmt.Errorf("flux_workflow source_kind must be space-flow or task-template")
+	}
+	if len(c.GetNodes()) == 0 {
+		return fmt.Errorf("flux_workflow nodes must not be empty")
+	}
+	for i, n := range c.GetNodes() {
+		if n.GetPhaseKey() == "" || n.GetNodeKey() == "" {
+			return fmt.Errorf("flux_workflow nodes[%d] requires phase_key and node_key", i)
+		}
+		switch n.GetAction() {
+		case "run", "skip":
+		case "mock":
+			if c.GetSourceKind() != "space-flow" {
+				return fmt.Errorf("flux_workflow task-template does not support mock")
+			}
+		default:
+			return fmt.Errorf("flux_workflow nodes[%d] has invalid action", i)
+		}
+	}
+	if p := c.PhaseReview; p != nil {
+		switch p.GetMode() {
+		case "sua", "auto", "manual":
+		default:
+			return fmt.Errorf("flux_workflow phase_review.mode must be sua, auto or manual")
+		}
+	}
+	return nil
+}
+
+func openAPIFluxWorkflowToDomain(in *openapiExperiment.FluxWorkflowConfig) *domainExpt.FluxWorkflowConfig {
+	out := &domainExpt.FluxWorkflowConfig{
+		SourceKind: in.SourceKind, SourceSpaceID: in.SourceSpaceID,
+		SourceWorkflowID: in.SourceWorkflowID, SourceRevision: in.SourceRevision,
+		SourceDigest: in.SourceDigest, SourceTemplateID: in.SourceTemplateID,
+		SourceSnapshotID: in.SourceSnapshotID, SourceReleaseID: in.SourceReleaseID,
+	}
+	if p := in.PhaseReview; p != nil {
+		out.PhaseReview = &domainExpt.FluxWorkflowPhaseReview{
+			Mode: p.Mode, ReviewTemplate: p.ReviewTemplate,
+			MaxReworks: p.MaxReworks, PhaseOverrides: p.PhaseOverrides,
+		}
+	}
+	if p := in.InteractionSua; p != nil {
+		out.InteractionSua = &domainExpt.FluxWorkflowInteractionSUA{Enabled: p.Enabled}
+	}
+	for _, n := range in.GetNodes() {
+		out.Nodes = append(out.Nodes, &domainExpt.FluxWorkflowNodePolicy{
+			PhaseKey: n.PhaseKey, NodeKey: n.NodeKey, Action: n.Action,
+			Role: n.Role, MockFormat: n.MockFormat, FixtureRef: n.FixtureRef,
+			NextNodeKey: n.NextNodeKey,
+		})
+	}
+	return out
 }
 
 // openAPISkillsToDomain 把 OpenAPI 的实验级 Agent Skills 声明逐元素逐字段拷贝为 domain 形态。
@@ -3309,8 +3387,10 @@ func RunModeConfigDomain2OpenAPI(c *domainExpt.RunModeConfig) *openapiExperiment
 		return nil
 	}
 	out := &openapiExperiment.RunModeConfig{
-		MaxRunMinutes: c.MaxRunMinutes,
-		MaxTurns:      c.MaxTurns,
+		MaxRunMinutes:   c.MaxRunMinutes,
+		MaxTurns:        c.MaxTurns,
+		QaReplyTemplate: c.QaReplyTemplate,
+		MaxQaTurns:      c.MaxQaTurns,
 		// SuaModelName 已弃用, 仅调试用; 原样回显便于排查"配了什么"。
 		// sua_model_id 在两套契约里都已移除, 无可回显。
 		SuaModelName:             c.SuaModelName,
@@ -3324,6 +3404,7 @@ func RunModeConfigDomain2OpenAPI(c *domainExpt.RunModeConfig) *openapiExperiment
 	if len(c.Skills) > 0 {
 		out.Skills = domainSkillsToOpenAPI(c.Skills)
 	}
+	out.FluxWorkflow = domainFluxWorkflowToOpenAPI(c.FluxWorkflow)
 	if c.RunMode != nil {
 		if rm, ok := domainRunModeToOpenAPI(*c.RunMode); ok {
 			out.RunMode = gptr.Of(rm)
@@ -3333,6 +3414,35 @@ func RunModeConfigDomain2OpenAPI(c *domainExpt.RunModeConfig) *openapiExperiment
 		if sm, ok := domainSuaModeToOpenAPI(*c.SuaMode); ok {
 			out.SuaMode = gptr.Of(sm)
 		}
+	}
+	return out
+}
+
+func domainFluxWorkflowToOpenAPI(in *domainExpt.FluxWorkflowConfig) *openapiExperiment.FluxWorkflowConfig {
+	if in == nil {
+		return nil
+	}
+	out := &openapiExperiment.FluxWorkflowConfig{
+		SourceKind: in.SourceKind, SourceSpaceID: in.SourceSpaceID,
+		SourceWorkflowID: in.SourceWorkflowID, SourceRevision: in.SourceRevision,
+		SourceDigest: in.SourceDigest, SourceTemplateID: in.SourceTemplateID,
+		SourceSnapshotID: in.SourceSnapshotID, SourceReleaseID: in.SourceReleaseID,
+	}
+	if p := in.PhaseReview; p != nil {
+		out.PhaseReview = &openapiExperiment.FluxWorkflowPhaseReview{
+			Mode: p.Mode, ReviewTemplate: p.ReviewTemplate,
+			MaxReworks: p.MaxReworks, PhaseOverrides: p.PhaseOverrides,
+		}
+	}
+	if p := in.InteractionSua; p != nil {
+		out.InteractionSua = &openapiExperiment.FluxWorkflowInteractionSUA{Enabled: p.Enabled}
+	}
+	for _, n := range in.GetNodes() {
+		out.Nodes = append(out.Nodes, &openapiExperiment.FluxWorkflowNodePolicy{
+			PhaseKey: n.PhaseKey, NodeKey: n.NodeKey, Action: n.Action,
+			Role: n.Role, MockFormat: n.MockFormat, FixtureRef: n.FixtureRef,
+			NextNodeKey: n.NextNodeKey,
+		})
 	}
 	return out
 }

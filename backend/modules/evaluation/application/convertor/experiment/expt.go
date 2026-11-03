@@ -1442,6 +1442,9 @@ func runModeConfigDTO2DO(dto *domain_expt.RunModeConfig) *entity.RunModeConfig {
 		MaxTurns:                 int(dto.GetMaxTurns()),
 		SkillsMode:               dto.GetSkillsMode(),
 		Skills:                   skillsDTO2DO(dto.GetSkills()),
+		FluxWorkflow:             fluxWorkflowDTO2DO(dto.FluxWorkflow),
+		QAReplyTemplate:          dto.GetQaReplyTemplate(),
+		MaxQATurns:               int(dto.GetMaxQaTurns()),
 	}
 	if dto.IsSetRunMode() {
 		do.RunMode = suaRunModeDTO2DO(dto.GetRunMode())
@@ -1542,7 +1545,78 @@ func runModeConfigDO2DTO(do *entity.RunModeConfig) *domain_expt.RunModeConfig {
 	if len(do.Skills) > 0 {
 		dto.Skills = skillsDO2DTO(do.Skills)
 	}
+	dto.FluxWorkflow = fluxWorkflowDO2DTO(do.FluxWorkflow)
+	if do.QAReplyTemplate != "" {
+		dto.QaReplyTemplate = gptr.Of(do.QAReplyTemplate)
+	}
+	if do.MaxQATurns != 0 {
+		dto.MaxQaTurns = gptr.Of(int32(do.MaxQATurns))
+	}
 	return dto
+}
+
+func fluxWorkflowDTO2DO(in *domain_expt.FluxWorkflowConfig) *entity.FluxWorkflowConfig {
+	if in == nil {
+		return nil
+	}
+	out := &entity.FluxWorkflowConfig{
+		SourceKind: in.GetSourceKind(), SourceSpaceID: in.GetSourceSpaceID(),
+		SourceWorkflowID: in.GetSourceWorkflowID(), SourceRevision: in.GetSourceRevision(),
+		SourceDigest: in.GetSourceDigest(), SourceTemplateID: in.GetSourceTemplateID(),
+		SourceSnapshotID: in.GetSourceSnapshotID(), SourceReleaseID: in.GetSourceReleaseID(),
+	}
+	if p := in.PhaseReview; p != nil {
+		out.PhaseReview = &entity.FluxWorkflowPhaseReview{
+			Mode: p.GetMode(), ReviewTemplate: p.GetReviewTemplate(),
+			MaxReworks: int(p.GetMaxReworks()), PhaseOverrides: p.GetPhaseOverrides(),
+		}
+	}
+	if p := in.InteractionSua; p != nil {
+		out.InteractionSUA = &entity.FluxWorkflowInteractionSUA{Enabled: p.GetEnabled()}
+	}
+	for _, n := range in.GetNodes() {
+		if n == nil {
+			continue
+		}
+		out.Nodes = append(out.Nodes, &entity.FluxWorkflowNodePolicy{
+			PhaseKey: n.GetPhaseKey(), NodeKey: n.GetNodeKey(), Action: n.GetAction(),
+			Role: n.GetRole(), MockFormat: n.GetMockFormat(), FixtureRef: n.GetFixtureRef(),
+			NextNodeKey: n.NextNodeKey,
+		})
+	}
+	return out
+}
+
+func fluxWorkflowDO2DTO(in *entity.FluxWorkflowConfig) *domain_expt.FluxWorkflowConfig {
+	if in == nil {
+		return nil
+	}
+	out := &domain_expt.FluxWorkflowConfig{
+		SourceKind: gptr.Of(in.SourceKind), SourceSpaceID: gptr.Of(in.SourceSpaceID),
+		SourceWorkflowID: gptr.Of(in.SourceWorkflowID), SourceRevision: gptr.Of(in.SourceRevision),
+		SourceDigest: gptr.Of(in.SourceDigest), SourceTemplateID: gptr.Of(in.SourceTemplateID),
+		SourceSnapshotID: gptr.Of(in.SourceSnapshotID), SourceReleaseID: gptr.Of(in.SourceReleaseID),
+	}
+	if p := in.PhaseReview; p != nil {
+		out.PhaseReview = &domain_expt.FluxWorkflowPhaseReview{
+			Mode: gptr.Of(p.Mode), ReviewTemplate: gptr.Of(p.ReviewTemplate),
+			MaxReworks: gptr.Of(int32(p.MaxReworks)), PhaseOverrides: p.PhaseOverrides,
+		}
+	}
+	if p := in.InteractionSUA; p != nil {
+		out.InteractionSua = &domain_expt.FluxWorkflowInteractionSUA{Enabled: gptr.Of(p.Enabled)}
+	}
+	for _, n := range in.Nodes {
+		if n == nil {
+			continue
+		}
+		out.Nodes = append(out.Nodes, &domain_expt.FluxWorkflowNodePolicy{
+			PhaseKey: gptr.Of(n.PhaseKey), NodeKey: gptr.Of(n.NodeKey), Action: gptr.Of(n.Action),
+			Role: gptr.Of(n.Role), MockFormat: gptr.Of(n.MockFormat), FixtureRef: gptr.Of(n.FixtureRef),
+			NextNodeKey: n.NextNodeKey,
+		})
+	}
+	return out
 }
 
 // skillsDTO2DO 把 domain DTO 的实验级 Agent Skills 声明逐元素逐字段拷贝为 entity 形态落库

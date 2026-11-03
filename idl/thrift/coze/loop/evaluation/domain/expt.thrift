@@ -130,6 +130,41 @@ struct VerificationConfig {
 // —— 实验级是整个实验的默认值, 题目级是单题特例, 单题特例赢 (题目 schema 亦如此声明)。
 // 合并逐字段在 runtime 侧进行 (internal/application/orchestration.go suaConfig)。
 // 此前这五项只有题目级一半, 实验粒度配了 100% 无效, 且 runtime 读实验级的代码因恒为空而是死代码。
+struct FluxWorkflowNodePolicy {
+    1: optional string phase_key
+    2: optional string node_key
+    3: optional string action
+    4: optional string role
+    5: optional string mock_format
+    6: optional string fixture_ref
+    7: optional string next_node_key
+}
+
+struct FluxWorkflowPhaseReview {
+    1: optional string mode
+    2: optional string review_template
+    3: optional i32 max_reworks
+    4: optional map<string, string> phase_overrides
+}
+
+struct FluxWorkflowInteractionSUA {
+    1: optional bool enabled
+}
+
+struct FluxWorkflowConfig {
+    1: optional string source_kind
+    2: optional string source_space_id
+    3: optional string source_workflow_id
+    4: optional i64 source_revision
+    5: optional string source_digest
+    6: optional string source_template_id
+    7: optional string source_snapshot_id
+    8: optional string source_release_id
+    9: optional FluxWorkflowPhaseReview phase_review
+    10: optional FluxWorkflowInteractionSUA interaction_sua
+    11: optional list<FluxWorkflowNodePolicy> nodes
+}
+
 struct RunModeConfig {
     1: optional ExptRunMode run_mode (go.tag = 'json:"run_mode"')
     2: optional i32 max_run_minutes (go.tag = 'json:"max_run_minutes"')
@@ -158,7 +193,12 @@ struct RunModeConfig {
     // 与 skills_mode 同容器同链路; 结构对齐 runtime testcase.Skill, 由 runtime 按
     // skills_mode 与题目级 dataset_item.skills 合并安装。
     12: optional list<AgentSkillDeclare> skills (go.tag = 'json:"skills"')
+    13: optional FluxWorkflowConfig flux_workflow (go.tag = 'json:"flux_workflow"')
+    14: optional string qa_reply_template (go.tag = 'json:"qa_reply_template"')
+    15: optional i32 max_qa_turns (go.tag = 'json:"max_qa_turns"')
 }
+
+
 
 typedef string Visibility(ts.enum="true")
 const Visibility Visibility_Hidden = "hidden"

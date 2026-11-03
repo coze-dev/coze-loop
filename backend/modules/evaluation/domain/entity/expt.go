@@ -628,7 +628,45 @@ type RunModeConfig struct {
 	// Skills 实验级 Agent Skills 声明, 原样落到 case-file experiment_info.skills, 由 runtime
 	// 按 skills_mode 与题目级 dataset_item.skills 合并安装。平台仅校验 skill_key 非空,
 	// 其余结构/语义校验在 runtime。
-	Skills []*AgentSkillDeclare `json:"skills,omitempty"`
+	Skills          []*AgentSkillDeclare `json:"skills,omitempty"`
+	FluxWorkflow    *FluxWorkflowConfig  `json:"flux_workflow,omitempty"`
+	QAReplyTemplate string               `json:"qa_reply_template,omitempty"`
+	MaxQATurns      int                  `json:"max_qa_turns,omitempty"`
+}
+
+type FluxWorkflowConfig struct {
+	SourceKind       string                      `json:"source_kind,omitempty"`
+	SourceSpaceID    string                      `json:"source_space_id,omitempty"`
+	SourceWorkflowID string                      `json:"source_workflow_id,omitempty"`
+	SourceRevision   int64                       `json:"source_revision,omitempty"`
+	SourceDigest     string                      `json:"source_digest,omitempty"`
+	SourceTemplateID string                      `json:"source_template_id,omitempty"`
+	SourceSnapshotID string                      `json:"source_snapshot_id,omitempty"`
+	SourceReleaseID  string                      `json:"source_release_id,omitempty"`
+	PhaseReview      *FluxWorkflowPhaseReview    `json:"phase_review,omitempty"`
+	InteractionSUA   *FluxWorkflowInteractionSUA `json:"interaction_sua,omitempty"`
+	Nodes            []*FluxWorkflowNodePolicy   `json:"nodes,omitempty"`
+}
+
+type FluxWorkflowNodePolicy struct {
+	PhaseKey    string  `json:"phase_key,omitempty"`
+	NodeKey     string  `json:"node_key,omitempty"`
+	Action      string  `json:"action,omitempty"`
+	Role        string  `json:"role,omitempty"`
+	MockFormat  string  `json:"mock_format,omitempty"`
+	FixtureRef  string  `json:"fixture_ref,omitempty"`
+	NextNodeKey *string `json:"next_node_key,omitempty"`
+}
+
+type FluxWorkflowPhaseReview struct {
+	Mode           string            `json:"mode,omitempty"`
+	ReviewTemplate string            `json:"review_template,omitempty"`
+	MaxReworks     int               `json:"max_reworks,omitempty"`
+	PhaseOverrides map[string]string `json:"phase_overrides,omitempty"`
+}
+
+type FluxWorkflowInteractionSUA struct {
+	Enabled bool `json:"enabled,omitempty"`
 }
 
 // SkillDistDeclare Agent Skill 的 channel-tagged 分发声明。字段与 runtime testcase.SkillDist
@@ -668,7 +706,9 @@ type ItemRunConf struct {
 	// SuaPETemplate 是 SUA loop 跑法必需的 PE 模板 (含 {{eval_result}} 占位符, sua-cli 用它
 	// 把上一轮评分拼成下一轮追问); 缺失时 runtime 在 prepare 阶段即拒绝该 trial。
 	// 题目级配置优先于实验级配置。
-	SuaPETemplate string `json:"sua_pe_template,omitempty"`
+	SuaPETemplate      string `json:"sua_pe_template,omitempty"`
+	SuaQAReplyTemplate string `json:"sua_qa_reply_template,omitempty"`
+	MaxQATurns         int    `json:"max_qa_turns,omitempty"`
 	// EvaluatorTrigger 决定该题目**什么时候**跑评估器: never / after_each_turn /
 	// final_turn_only / by_testcase_config (空 = 未配, 回落到 by_testcase_config)。
 	//

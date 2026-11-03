@@ -2988,6 +2988,1609 @@ func (p *AgentSkillDeclare) DeepCopy(s interface{}) error {
 	return nil
 }
 
+func (p *FluxWorkflowNodePolicy) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FluxWorkflowNodePolicy[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *FluxWorkflowNodePolicy) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PhaseKey = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowNodePolicy) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.NodeKey = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowNodePolicy) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Action = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowNodePolicy) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Role = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowNodePolicy) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.MockFormat = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowNodePolicy) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.FixtureRef = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowNodePolicy) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.NextNodeKey = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowNodePolicy) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *FluxWorkflowNodePolicy) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *FluxWorkflowNodePolicy) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
+		l += p.field7Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *FluxWorkflowNodePolicy) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPhaseKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PhaseKey)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowNodePolicy) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetNodeKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.NodeKey)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowNodePolicy) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAction() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Action)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowNodePolicy) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRole() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Role)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowNodePolicy) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMockFormat() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.MockFormat)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowNodePolicy) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFixtureRef() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.FixtureRef)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowNodePolicy) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetNextNodeKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.NextNodeKey)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowNodePolicy) field1Length() int {
+	l := 0
+	if p.IsSetPhaseKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.PhaseKey)
+	}
+	return l
+}
+
+func (p *FluxWorkflowNodePolicy) field2Length() int {
+	l := 0
+	if p.IsSetNodeKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.NodeKey)
+	}
+	return l
+}
+
+func (p *FluxWorkflowNodePolicy) field3Length() int {
+	l := 0
+	if p.IsSetAction() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Action)
+	}
+	return l
+}
+
+func (p *FluxWorkflowNodePolicy) field4Length() int {
+	l := 0
+	if p.IsSetRole() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Role)
+	}
+	return l
+}
+
+func (p *FluxWorkflowNodePolicy) field5Length() int {
+	l := 0
+	if p.IsSetMockFormat() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.MockFormat)
+	}
+	return l
+}
+
+func (p *FluxWorkflowNodePolicy) field6Length() int {
+	l := 0
+	if p.IsSetFixtureRef() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.FixtureRef)
+	}
+	return l
+}
+
+func (p *FluxWorkflowNodePolicy) field7Length() int {
+	l := 0
+	if p.IsSetNextNodeKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.NextNodeKey)
+	}
+	return l
+}
+
+func (p *FluxWorkflowNodePolicy) DeepCopy(s interface{}) error {
+	src, ok := s.(*FluxWorkflowNodePolicy)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.PhaseKey != nil {
+		var tmp string
+		if *src.PhaseKey != "" {
+			tmp = kutils.StringDeepCopy(*src.PhaseKey)
+		}
+		p.PhaseKey = &tmp
+	}
+
+	if src.NodeKey != nil {
+		var tmp string
+		if *src.NodeKey != "" {
+			tmp = kutils.StringDeepCopy(*src.NodeKey)
+		}
+		p.NodeKey = &tmp
+	}
+
+	if src.Action != nil {
+		var tmp string
+		if *src.Action != "" {
+			tmp = kutils.StringDeepCopy(*src.Action)
+		}
+		p.Action = &tmp
+	}
+
+	if src.Role != nil {
+		var tmp string
+		if *src.Role != "" {
+			tmp = kutils.StringDeepCopy(*src.Role)
+		}
+		p.Role = &tmp
+	}
+
+	if src.MockFormat != nil {
+		var tmp string
+		if *src.MockFormat != "" {
+			tmp = kutils.StringDeepCopy(*src.MockFormat)
+		}
+		p.MockFormat = &tmp
+	}
+
+	if src.FixtureRef != nil {
+		var tmp string
+		if *src.FixtureRef != "" {
+			tmp = kutils.StringDeepCopy(*src.FixtureRef)
+		}
+		p.FixtureRef = &tmp
+	}
+
+	if src.NextNodeKey != nil {
+		var tmp string
+		if *src.NextNodeKey != "" {
+			tmp = kutils.StringDeepCopy(*src.NextNodeKey)
+		}
+		p.NextNodeKey = &tmp
+	}
+
+	return nil
+}
+
+func (p *FluxWorkflowPhaseReview) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FluxWorkflowPhaseReview[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *FluxWorkflowPhaseReview) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Mode = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowPhaseReview) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ReviewTemplate = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowPhaseReview) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.MaxReworks = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowPhaseReview) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		var _val string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	p.PhaseOverrides = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowPhaseReview) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *FluxWorkflowPhaseReview) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *FluxWorkflowPhaseReview) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *FluxWorkflowPhaseReview) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMode() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Mode)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowPhaseReview) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetReviewTemplate() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ReviewTemplate)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowPhaseReview) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMaxReworks() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 3)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.MaxReworks)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowPhaseReview) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPhaseOverrides() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 4)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.PhaseOverrides {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRING, length)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowPhaseReview) field1Length() int {
+	l := 0
+	if p.IsSetMode() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Mode)
+	}
+	return l
+}
+
+func (p *FluxWorkflowPhaseReview) field2Length() int {
+	l := 0
+	if p.IsSetReviewTemplate() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ReviewTemplate)
+	}
+	return l
+}
+
+func (p *FluxWorkflowPhaseReview) field3Length() int {
+	l := 0
+	if p.IsSetMaxReworks() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *FluxWorkflowPhaseReview) field4Length() int {
+	l := 0
+	if p.IsSetPhaseOverrides() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.PhaseOverrides {
+			_, _ = k, v
+
+			l += thrift.Binary.StringLengthNocopy(k)
+			l += thrift.Binary.StringLengthNocopy(v)
+		}
+	}
+	return l
+}
+
+func (p *FluxWorkflowPhaseReview) DeepCopy(s interface{}) error {
+	src, ok := s.(*FluxWorkflowPhaseReview)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.Mode != nil {
+		var tmp string
+		if *src.Mode != "" {
+			tmp = kutils.StringDeepCopy(*src.Mode)
+		}
+		p.Mode = &tmp
+	}
+
+	if src.ReviewTemplate != nil {
+		var tmp string
+		if *src.ReviewTemplate != "" {
+			tmp = kutils.StringDeepCopy(*src.ReviewTemplate)
+		}
+		p.ReviewTemplate = &tmp
+	}
+
+	if src.MaxReworks != nil {
+		tmp := *src.MaxReworks
+		p.MaxReworks = &tmp
+	}
+
+	if src.PhaseOverrides != nil {
+		p.PhaseOverrides = make(map[string]string, len(src.PhaseOverrides))
+		for key, val := range src.PhaseOverrides {
+			var _key string
+			if key != "" {
+				_key = kutils.StringDeepCopy(key)
+			}
+
+			var _val string
+			if val != "" {
+				_val = kutils.StringDeepCopy(val)
+			}
+
+			p.PhaseOverrides[_key] = _val
+		}
+	}
+
+	return nil
+}
+
+func (p *FluxWorkflowInteractionSUA) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FluxWorkflowInteractionSUA[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *FluxWorkflowInteractionSUA) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Enabled = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowInteractionSUA) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *FluxWorkflowInteractionSUA) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *FluxWorkflowInteractionSUA) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *FluxWorkflowInteractionSUA) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnabled() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 1)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.Enabled)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowInteractionSUA) field1Length() int {
+	l := 0
+	if p.IsSetEnabled() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
+func (p *FluxWorkflowInteractionSUA) DeepCopy(s interface{}) error {
+	src, ok := s.(*FluxWorkflowInteractionSUA)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.Enabled != nil {
+		tmp := *src.Enabled
+		p.Enabled = &tmp
+	}
+
+	return nil
+}
+
+func (p *FluxWorkflowConfig) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 11:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FluxWorkflowConfig[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *FluxWorkflowConfig) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SourceKind = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowConfig) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SourceSpaceID = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowConfig) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SourceWorkflowID = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowConfig) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SourceRevision = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowConfig) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SourceDigest = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowConfig) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SourceTemplateID = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowConfig) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SourceSnapshotID = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowConfig) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SourceReleaseID = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowConfig) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+	_field := NewFluxWorkflowPhaseReview()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.PhaseReview = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowConfig) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+	_field := NewFluxWorkflowInteractionSUA()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.InteractionSua = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowConfig) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*FluxWorkflowNodePolicy, 0, size)
+	values := make([]FluxWorkflowNodePolicy, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.Nodes = _field
+	return offset, nil
+}
+
+func (p *FluxWorkflowConfig) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *FluxWorkflowConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
+		offset += p.fastWriteField8(buf[offset:], w)
+		offset += p.fastWriteField9(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
+		offset += p.fastWriteField11(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *FluxWorkflowConfig) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
+		l += p.field7Length()
+		l += p.field8Length()
+		l += p.field9Length()
+		l += p.field10Length()
+		l += p.field11Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *FluxWorkflowConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSourceKind() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SourceKind)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSourceSpaceID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SourceSpaceID)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSourceWorkflowID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SourceWorkflowID)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowConfig) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSourceRevision() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.SourceRevision)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowConfig) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSourceDigest() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SourceDigest)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowConfig) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSourceTemplateID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SourceTemplateID)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowConfig) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSourceSnapshotID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SourceSnapshotID)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowConfig) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSourceReleaseID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 8)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SourceReleaseID)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowConfig) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPhaseReview() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 9)
+		offset += p.PhaseReview.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowConfig) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetInteractionSua() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 10)
+		offset += p.InteractionSua.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowConfig) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetNodes() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 11)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.Nodes {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *FluxWorkflowConfig) field1Length() int {
+	l := 0
+	if p.IsSetSourceKind() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SourceKind)
+	}
+	return l
+}
+
+func (p *FluxWorkflowConfig) field2Length() int {
+	l := 0
+	if p.IsSetSourceSpaceID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SourceSpaceID)
+	}
+	return l
+}
+
+func (p *FluxWorkflowConfig) field3Length() int {
+	l := 0
+	if p.IsSetSourceWorkflowID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SourceWorkflowID)
+	}
+	return l
+}
+
+func (p *FluxWorkflowConfig) field4Length() int {
+	l := 0
+	if p.IsSetSourceRevision() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *FluxWorkflowConfig) field5Length() int {
+	l := 0
+	if p.IsSetSourceDigest() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SourceDigest)
+	}
+	return l
+}
+
+func (p *FluxWorkflowConfig) field6Length() int {
+	l := 0
+	if p.IsSetSourceTemplateID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SourceTemplateID)
+	}
+	return l
+}
+
+func (p *FluxWorkflowConfig) field7Length() int {
+	l := 0
+	if p.IsSetSourceSnapshotID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SourceSnapshotID)
+	}
+	return l
+}
+
+func (p *FluxWorkflowConfig) field8Length() int {
+	l := 0
+	if p.IsSetSourceReleaseID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SourceReleaseID)
+	}
+	return l
+}
+
+func (p *FluxWorkflowConfig) field9Length() int {
+	l := 0
+	if p.IsSetPhaseReview() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.PhaseReview.BLength()
+	}
+	return l
+}
+
+func (p *FluxWorkflowConfig) field10Length() int {
+	l := 0
+	if p.IsSetInteractionSua() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.InteractionSua.BLength()
+	}
+	return l
+}
+
+func (p *FluxWorkflowConfig) field11Length() int {
+	l := 0
+	if p.IsSetNodes() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.Nodes {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *FluxWorkflowConfig) DeepCopy(s interface{}) error {
+	src, ok := s.(*FluxWorkflowConfig)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.SourceKind != nil {
+		var tmp string
+		if *src.SourceKind != "" {
+			tmp = kutils.StringDeepCopy(*src.SourceKind)
+		}
+		p.SourceKind = &tmp
+	}
+
+	if src.SourceSpaceID != nil {
+		var tmp string
+		if *src.SourceSpaceID != "" {
+			tmp = kutils.StringDeepCopy(*src.SourceSpaceID)
+		}
+		p.SourceSpaceID = &tmp
+	}
+
+	if src.SourceWorkflowID != nil {
+		var tmp string
+		if *src.SourceWorkflowID != "" {
+			tmp = kutils.StringDeepCopy(*src.SourceWorkflowID)
+		}
+		p.SourceWorkflowID = &tmp
+	}
+
+	if src.SourceRevision != nil {
+		tmp := *src.SourceRevision
+		p.SourceRevision = &tmp
+	}
+
+	if src.SourceDigest != nil {
+		var tmp string
+		if *src.SourceDigest != "" {
+			tmp = kutils.StringDeepCopy(*src.SourceDigest)
+		}
+		p.SourceDigest = &tmp
+	}
+
+	if src.SourceTemplateID != nil {
+		var tmp string
+		if *src.SourceTemplateID != "" {
+			tmp = kutils.StringDeepCopy(*src.SourceTemplateID)
+		}
+		p.SourceTemplateID = &tmp
+	}
+
+	if src.SourceSnapshotID != nil {
+		var tmp string
+		if *src.SourceSnapshotID != "" {
+			tmp = kutils.StringDeepCopy(*src.SourceSnapshotID)
+		}
+		p.SourceSnapshotID = &tmp
+	}
+
+	if src.SourceReleaseID != nil {
+		var tmp string
+		if *src.SourceReleaseID != "" {
+			tmp = kutils.StringDeepCopy(*src.SourceReleaseID)
+		}
+		p.SourceReleaseID = &tmp
+	}
+
+	var _phaseReview *FluxWorkflowPhaseReview
+	if src.PhaseReview != nil {
+		_phaseReview = &FluxWorkflowPhaseReview{}
+		if err := _phaseReview.DeepCopy(src.PhaseReview); err != nil {
+			return err
+		}
+	}
+	p.PhaseReview = _phaseReview
+
+	var _interactionSua *FluxWorkflowInteractionSUA
+	if src.InteractionSua != nil {
+		_interactionSua = &FluxWorkflowInteractionSUA{}
+		if err := _interactionSua.DeepCopy(src.InteractionSua); err != nil {
+			return err
+		}
+	}
+	p.InteractionSua = _interactionSua
+
+	if src.Nodes != nil {
+		p.Nodes = make([]*FluxWorkflowNodePolicy, 0, len(src.Nodes))
+		for _, elem := range src.Nodes {
+			var _elem *FluxWorkflowNodePolicy
+			if elem != nil {
+				_elem = &FluxWorkflowNodePolicy{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.Nodes = append(p.Nodes, _elem)
+		}
+	}
+
+	return nil
+}
+
 func (p *RunModeConfig) FastRead(buf []byte) (int, error) {
 
 	var err error
@@ -3148,6 +4751,48 @@ func (p *RunModeConfig) FastRead(buf []byte) (int, error) {
 		case 12:
 			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 13:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField14(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 15:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField15(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -3342,6 +4987,46 @@ func (p *RunModeConfig) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *RunModeConfig) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+	_field := NewFluxWorkflowConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.FluxWorkflow = _field
+	return offset, nil
+}
+
+func (p *RunModeConfig) FastReadField14(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.QaReplyTemplate = _field
+	return offset, nil
+}
+
+func (p *RunModeConfig) FastReadField15(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.MaxQaTurns = _field
+	return offset, nil
+}
+
 func (p *RunModeConfig) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -3351,6 +5036,7 @@ func (p *RunModeConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	if p != nil {
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
+		offset += p.fastWriteField15(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
@@ -3360,6 +5046,8 @@ func (p *RunModeConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField9(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
+		offset += p.fastWriteField13(buf[offset:], w)
+		offset += p.fastWriteField14(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -3379,6 +5067,9 @@ func (p *RunModeConfig) BLength() int {
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
+		l += p.field13Length()
+		l += p.field14Length()
+		l += p.field15Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -3490,6 +5181,33 @@ func (p *RunModeConfig) fastWriteField12(buf []byte, w thrift.NocopyWriter) int 
 	return offset
 }
 
+func (p *RunModeConfig) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFluxWorkflow() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 13)
+		offset += p.FluxWorkflow.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *RunModeConfig) fastWriteField14(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetQaReplyTemplate() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 14)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.QaReplyTemplate)
+	}
+	return offset
+}
+
+func (p *RunModeConfig) fastWriteField15(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMaxQaTurns() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 15)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.MaxQaTurns)
+	}
+	return offset
+}
+
 func (p *RunModeConfig) field1Length() int {
 	l := 0
 	if p.IsSetRunMode() {
@@ -3593,6 +5311,33 @@ func (p *RunModeConfig) field12Length() int {
 	return l
 }
 
+func (p *RunModeConfig) field13Length() int {
+	l := 0
+	if p.IsSetFluxWorkflow() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.FluxWorkflow.BLength()
+	}
+	return l
+}
+
+func (p *RunModeConfig) field14Length() int {
+	l := 0
+	if p.IsSetQaReplyTemplate() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.QaReplyTemplate)
+	}
+	return l
+}
+
+func (p *RunModeConfig) field15Length() int {
+	l := 0
+	if p.IsSetMaxQaTurns() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *RunModeConfig) DeepCopy(s interface{}) error {
 	src, ok := s.(*RunModeConfig)
 	if !ok {
@@ -3680,6 +5425,28 @@ func (p *RunModeConfig) DeepCopy(s interface{}) error {
 
 			p.Skills = append(p.Skills, _elem)
 		}
+	}
+
+	var _fluxWorkflow *FluxWorkflowConfig
+	if src.FluxWorkflow != nil {
+		_fluxWorkflow = &FluxWorkflowConfig{}
+		if err := _fluxWorkflow.DeepCopy(src.FluxWorkflow); err != nil {
+			return err
+		}
+	}
+	p.FluxWorkflow = _fluxWorkflow
+
+	if src.QaReplyTemplate != nil {
+		var tmp string
+		if *src.QaReplyTemplate != "" {
+			tmp = kutils.StringDeepCopy(*src.QaReplyTemplate)
+		}
+		p.QaReplyTemplate = &tmp
+	}
+
+	if src.MaxQaTurns != nil {
+		tmp := *src.MaxQaTurns
+		p.MaxQaTurns = &tmp
 	}
 
 	return nil
