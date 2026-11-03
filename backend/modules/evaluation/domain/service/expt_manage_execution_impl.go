@@ -323,14 +323,14 @@ func (e *ExptMangerImpl) prepareRun(ctx context.Context, exptID, runID, spaceID 
 }
 
 func (e *ExptMangerImpl) prepareFluxWorkflowSchedule(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
-	if expt == nil || expt.EvalConf == nil || expt.EvalConf.RunModeConfig == nil || expt.EvalConf.RunModeConfig.FluxWorkflow == nil {
-		return nil
-	}
 	preparer, ok := e.publisher.(events.ExptSchedulePreparer)
-	if !ok {
+	if ok {
+		return preparer.BeforeExptSchedule(ctx, expt, session)
+	}
+	if expt != nil && expt.EvalConf != nil && expt.EvalConf.RunModeConfig != nil && expt.EvalConf.RunModeConfig.FluxWorkflow != nil {
 		return errorx.New("Flux Workflow requires an experiment schedule preparer")
 	}
-	return preparer.BeforeExptSchedule(ctx, expt, session)
+	return nil
 }
 
 func (e *ExptMangerImpl) cleanupUnscheduledRun(ctx context.Context, exptID, runID, spaceID int64, cause error) {
