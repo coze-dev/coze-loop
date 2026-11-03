@@ -85,7 +85,7 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), 5*time.Second, 5*time.Minute).DoAndReturn(func(ctx context.Context, _ string, _ time.Duration, _ time.Duration) (bool, context.Context, func(), error) {
 		c, cancel := context.WithCancel(ctx)
 		return true, c, cancel, nil
-	}).Times(4)
+	}).Times(3)
 	publisher.EXPECT().PublishExptScheduleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 	manager := service.NewExptManager(nil,
 		exptrepo.NewExptRepo(exptmysql.NewExptDAO(provider), exptmysql.NewExptEvaluatorRefDAO(provider), generator),

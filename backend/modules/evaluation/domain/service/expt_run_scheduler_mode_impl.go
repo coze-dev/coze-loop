@@ -1902,6 +1902,17 @@ func (e *ExptRetryAllExec) Mode() entity.ExptRunMode {
 	return entity.EvaluationModeRetryAll
 }
 
+func startRetryMutation(ctx context.Context, exptRepo repo.IExperimentRepo, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
+	if !entity.IsExptFinished(expt.Status) {
+		return nil
+	}
+	if err := exptRepo.Update(ctx, &entity.Experiment{Status: entity.ExptStatus_Processing, ID: event.ExptID, SpaceID: event.SpaceID}); err != nil {
+		return err
+	}
+	expt.Status = entity.ExptStatus_Processing
+	return nil
+}
+
 func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
 	idemKey := makeStartIdemKey(event)
 	exist, err := e.idem.Exist(ctx, idemKey)
@@ -1911,8 +1922,18 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 	if exist {
 		return nil
 	}
+
+	var got *entity.ExptStats
+	// 统计读取必须先于会产生 Queueing item 的重置。
+	if entity.IsExptFinished(expt.Status) {
+		got, err = e.exptStatsRepo.Get(ctx, event.ExptID, event.SpaceID)
+		if err != nil {
+			return err
+		}
+	}
+
 	if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
-		return e.exptStartMultiSet(ctx, event, expt, idemKey)
+		return e.exptStartMultiSet(ctx, event, expt, idemKey, got)
 	}
 
 	var (
@@ -1993,6 +2014,9 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 			idIdx++
 		}
 
+		if err := startRetryMutation(ctx, e.exptRepo, event, expt); err != nil {
+			return err
+		}
 		if err := updateNewRunItemResults(ctx, e.manager, e.exptItemResultRepo, event, maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k }), map[string]any{
 			"err_msg":     nil,
 			"status":      int32(entity.ItemRunState_Queueing),
@@ -2033,9 +2057,11 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		time.Sleep(time.Millisecond * 30)
 	}
 
-	got, err := e.exptStatsRepo.Get(ctx, event.ExptID, event.SpaceID)
-	if err != nil {
-		return err
+	if got == nil {
+		got, err = e.exptStatsRepo.Get(ctx, event.ExptID, event.SpaceID)
+		if err != nil {
+			return err
+		}
 	}
 
 	pendingCnt := got.PendingItemCnt + got.FailItemCnt + got.TerminatedItemCnt + got.ProcessingItemCnt + got.SuccessItemCnt
@@ -2167,7 +2193,7 @@ func NewExptRetryItemsExec(
 	return exec
 }
 
-func (e *ExptRetryAllExec) exptStartMultiSet(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, idemKey string) error {
+func (e *ExptRetryAllExec) exptStartMultiSet(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, idemKey string, stats *entity.ExptStats) error {
 	if e.exptItemRefRepo == nil {
 		return errorx.New("exptItemRefRepo is nil, cannot retry all multiset expt, expt_id=%d", event.ExptID)
 	}
@@ -2197,6 +2223,9 @@ func (e *ExptRetryAllExec) exptStartMultiSet(ctx context.Context, event *entity.
 		if err != nil {
 			return err
 		}
+		if err := startRetryMutation(ctx, e.exptRepo, event, expt); err != nil {
+			return err
+		}
 		resetItemIDs, err := resetRetryRunLogsForItems(ctx, deps, event, items, itemVersionByItemID)
 		if err != nil {
 			return err
@@ -2216,17 +2245,20 @@ func (e *ExptRetryAllExec) exptStartMultiSet(ctx context.Context, event *entity.
 		time.Sleep(time.Millisecond * 30)
 	}
 
-	got, err := e.exptStatsRepo.Get(ctx, event.ExptID, event.SpaceID)
-	if err != nil {
-		return err
+	if stats == nil {
+		var err error
+		stats, err = e.exptStatsRepo.Get(ctx, event.ExptID, event.SpaceID)
+		if err != nil {
+			return err
+		}
 	}
-	pendingCnt := got.PendingItemCnt + got.FailItemCnt + got.TerminatedItemCnt + got.ProcessingItemCnt + got.SuccessItemCnt
-	got.PendingItemCnt = pendingCnt
-	got.FailItemCnt = 0
-	got.TerminatedItemCnt = 0
-	got.ProcessingItemCnt = 0
-	got.SuccessItemCnt = 0
-	if err := e.exptStatsRepo.Save(ctx, got); err != nil {
+	pendingCnt := stats.PendingItemCnt + stats.FailItemCnt + stats.TerminatedItemCnt + stats.ProcessingItemCnt + stats.SuccessItemCnt
+	stats.PendingItemCnt = pendingCnt
+	stats.FailItemCnt = 0
+	stats.TerminatedItemCnt = 0
+	stats.ProcessingItemCnt = 0
+	stats.SuccessItemCnt = 0
+	if err := e.exptStatsRepo.Save(ctx, stats); err != nil {
 		return err
 	}
 
@@ -2429,6 +2461,9 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 			idIdx++
 		}
 
+		if err := startRetryMutation(ctx, e.exptRepo, event, expt); err != nil {
+			return err
+		}
 		if err := updateNewRunItemResults(ctx, e.manager, e.exptItemResultRepo, event, maps.ToSlice(itemIDMap, func(k int64, v bool) int64 { return k }), map[string]any{
 			"err_msg":     nil,
 			"status":      int32(entity.ItemRunState_Queueing),
@@ -2528,6 +2563,9 @@ func (e *ExptRetryItemsExec) resetEvalItemsMultiSet(ctx context.Context, event *
 			}
 		}
 
+		if err := startRetryMutation(ctx, e.exptRepo, event, expt); err != nil {
+			return err
+		}
 		if _, err := resetRetryRunLogsForItems(ctx, deps, event, items, itemVersionByItemID); err != nil {
 			return err
 		}
@@ -2611,46 +2649,37 @@ func (e *ExptRetryItemsExec) ScheduleStart(ctx context.Context, event *entity.Ex
 		}
 	}
 	event.ExecEvalSetItemIDs = all
-	hasManualReceipt := false
-	for _, chunk := range rl.ItemIds {
-		if chunk.ManualRetryReceipt != nil {
-			hasManualReceipt = true
-			break
-		}
-	}
-	if hasManualReceipt && len(absence) == 0 {
+	if len(absence) == 0 {
 		return nil
 	}
 	if len(absence) > 0 {
-		if hasManualReceipt {
-			items, err := e.exptItemResultRepo.BatchGet(contexts.WithCtxWriteDB(ctx), event.SpaceID, event.ExptID, absence)
+		items, err := e.exptItemResultRepo.BatchGet(contexts.WithCtxWriteDB(ctx), event.SpaceID, event.ExptID, absence)
+		if err != nil {
+			return err
+		}
+		materialized := make(map[int64]bool)
+		for _, item := range items {
+			if item == nil {
+				return fmt.Errorf("manual retry item missing")
+			}
+			retry, err := entity.ParseManualRetryContext(item.Ext)
 			if err != nil {
 				return err
 			}
-			materialized := make(map[int64]bool)
-			for _, item := range items {
-				if item == nil {
-					return fmt.Errorf("manual retry item missing")
-				}
-				retry, err := entity.ParseManualRetryContext(item.Ext)
-				if err != nil {
-					return err
-				}
-				if retry != nil && retry.RunID == event.ExptRunID && item.ExptRunID == event.ExptRunID && item.SpaceID == event.SpaceID && item.ExptID == event.ExptID {
-					materialized[item.ItemID] = true
-				}
+			if retry != nil && retry.RunID == event.ExptRunID && item.ExptRunID == event.ExptRunID && item.SpaceID == event.SpaceID && item.ExptID == event.ExptID {
+				materialized[item.ItemID] = true
 			}
-			remaining := make([]int64, 0, len(absence))
-			for _, id := range absence {
-				if !materialized[id] {
-					remaining = append(remaining, id)
-				}
-			}
-			if len(remaining) == 0 {
-				return nil
-			}
-			absence = remaining
 		}
+		remaining := make([]int64, 0, len(absence))
+		for _, id := range absence {
+			if !materialized[id] {
+				remaining = append(remaining, id)
+			}
+		}
+		if len(remaining) == 0 {
+			return nil
+		}
+		absence = remaining
 	}
 	logs.CtxInfo(ctx, "ExptRetryItemsExec.ScheduleStart found absent item_id: %v, expt_id: %v", absence, event.ExptID)
 	return e.resetEvalItems(ctx, event, expt, absence)

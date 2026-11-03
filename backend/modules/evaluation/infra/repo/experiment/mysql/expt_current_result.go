@@ -109,7 +109,12 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 		source.Current.Status = entity.ItemRunState(item.Status)
 	}
 	var canonical []model.ExptTurnResult
-	if err := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", spaceID, exptID, runID, itemID).Order("id ASC").Find(&canonical).Error; err != nil {
+	canonicalQuery := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND item_id=?", spaceID, exptID, itemID)
+	if mode != entity.EvaluationModeFailRetry {
+		canonicalQuery = canonicalQuery.Where("expt_run_id=?", runID)
+	}
+	// FailRetry keeps successful canonical turns in their original run until publication.
+	if err := canonicalQuery.Order("id ASC").Find(&canonical).Error; err != nil {
 		return nil, err
 	}
 	var logs []model.ExptTurnResultRunLog
@@ -121,6 +126,9 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 	for _, turn := range canonical {
 		if turn.ItemVersionID != item.ItemVersionID || turn.TurnID < 0 {
 			return nil, fmt.Errorf("damaged canonical turn source")
+		}
+		if turn.ExptRunID != runID && (mode != entity.EvaluationModeFailRetry || entity.TurnRunState(turn.Status) != entity.TurnRunState_Success) {
+			continue
 		}
 		byTurn[turn.TurnID] = turn
 		canonicalIDs = append(canonicalIDs, turn.ID)

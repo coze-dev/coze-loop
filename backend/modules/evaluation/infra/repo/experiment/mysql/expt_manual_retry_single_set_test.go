@@ -339,7 +339,7 @@ func TestManualRetryMySQLSingleSetManagerSameRun(t *testing.T) {
 					if mode == entity.EvaluationModeRetryItems {
 						require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 11, Reason: "queueing"}, {ItemID: 12, Reason: "processing"}, {ItemID: 13, Reason: "queueing"}}, replay.RejectedItems)
 					} else {
-						require.Empty(t, replay.RejectedItems)
+						require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 11, Reason: "queueing"}}, replay.RejectedItems)
 					}
 					require.Equal(t, after, f.snapshot(), "state machine prevents a second reset")
 					var run model.ExptRunLog

@@ -163,10 +163,12 @@ func (r *ExptResultPublishDAOImpl) CommitItemResult(ctx context.Context, publica
 			turnIDs = append(turnIDs, turn.ID)
 		}
 		expectedRefs := map[string]int64{}
+		canonicalRuns := make(map[int64]int64, len(actual.Source.CanonicalTurns))
 		for _, turn := range actual.Source.CanonicalTurns {
 			if turns[turn.ID] == nil || turns[turn.ID].TurnID != turn.TurnID {
 				return fmt.Errorf("publication canonical turn mismatch")
 			}
+			canonicalRuns[turn.ID] = turn.ExptRunID
 			log := actual.Source.Turns[turn.TurnID]
 			refs := log.EvaluatorResultIds
 			if refs == nil {
@@ -223,8 +225,22 @@ func (r *ExptResultPublishDAOImpl) CommitItemResult(ctx context.Context, publica
 		}
 		for _, turn := range publication.Turns {
 			fields := map[string]any{"status": turn.Status, "target_result_id": turn.TargetResultID, "trace_id": turn.TraceID, "log_id": turn.LogID, "err_msg": []byte(turn.ErrMsg), "weighted_score": turn.WeightedScore, "expt_run_id": c.RunID}
-			if err := tx.Model(&model.ExptTurnResult{}).Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?", turn.ID, c.SpaceID, c.ExptID, c.RunID, c.ItemID, c.ItemVersionID).Updates(fields).Error; err != nil {
-				return err
+			written := tx.Model(&model.ExptTurnResult{}).Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?", turn.ID, c.SpaceID, c.ExptID, canonicalRuns[turn.ID], c.ItemID, c.ItemVersionID).Updates(fields)
+			if written.Error != nil {
+				return written.Error
+			}
+			if written.RowsAffected != 1 {
+				if written.RowsAffected != 0 || canonicalRuns[turn.ID] != c.RunID {
+					return fmt.Errorf("publication canonical turn update missed")
+				}
+				var persisted model.ExptTurnResult
+				err := tx.Select("id").Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?", turn.ID, c.SpaceID, c.ExptID, canonicalRuns[turn.ID], c.ItemID, c.ItemVersionID).Take(&persisted).Error
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return fmt.Errorf("publication canonical turn update missed")
+				}
+				if err != nil {
+					return err
+				}
 			}
 		}
 		if err := tx.Model(&model.ExptItemResult{}).Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?", actual.Item.ID, c.SpaceID, c.ExptID, c.RunID, c.ItemID, c.ItemVersionID).Updates(map[string]any{"status": actual.ItemLog.Status, "log_id": actual.ItemLog.LogID, "err_msg": actual.ItemLog.ErrMsg}).Error; err != nil {

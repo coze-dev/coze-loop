@@ -4,7 +4,6 @@ package mysql
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
 	"sync/atomic"
@@ -256,9 +255,8 @@ func TestRunFinishMySQLConcurrentAdmissionAndReceiptReplay(t *testing.T) {
 				after := f.snapshot()
 				again, err := f.port.RequeueTerminalItems(context.Background(), request)
 				require.NoError(t, err)
-				originalRaw, _ := json.Marshal(receipt)
-				replayRaw, _ := json.Marshal(again)
-				require.Equal(t, string(originalRaw), string(replayRaw))
+				require.Zero(t, again.AcceptedCount)
+				require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 11, Reason: "queueing"}}, again.RejectedItems)
 				require.Equal(t, after, f.snapshot())
 				require.NoError(t, f.conn.Model(&model.ExptItemResult{}).Where("space_id=? AND item_id=?", f.space, 11).Update("status", int32(entity.ItemRunState_Success)).Error)
 				require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, 11).Updates(map[string]any{"status": int32(entity.ItemRunState_Success), "result_state": 1}).Error)
@@ -267,10 +265,8 @@ func TestRunFinishMySQLConcurrentAdmissionAndReceiptReplay(t *testing.T) {
 				require.Equal(t, entity.ExptRunFinishFinished, finished.Disposition)
 				after = f.snapshot()
 				again, err = f.port.RequeueTerminalItems(context.Background(), request)
-				require.NoError(t, err)
-				originalRaw, _ = json.Marshal(receipt)
-				replayRaw, _ = json.Marshal(again)
-				require.Equal(t, string(originalRaw), string(replayRaw))
+				require.ErrorContains(t, err, "run_finished")
+				require.Nil(t, again)
 				require.Equal(t, after, f.snapshot())
 			} else {
 				require.Error(t, err2)

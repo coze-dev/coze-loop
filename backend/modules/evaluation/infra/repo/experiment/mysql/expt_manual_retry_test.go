@@ -41,6 +41,17 @@ type manualRetryFixture struct {
 	space, expt, run, base int64
 }
 
+type manualRetryTransactionTracker struct {
+	db.Provider
+	inTransaction atomic.Bool
+}
+
+func (p *manualRetryTransactionTracker) Transaction(ctx context.Context, fc func(tx *gorm.DB) error, opts ...db.Option) error {
+	p.inTransaction.Store(true)
+	defer p.inTransaction.Store(false)
+	return p.Provider.Transaction(ctx, fc, opts...)
+}
+
 func newManualRetryFixture(t *testing.T) *manualRetryFixture {
 	t.Helper()
 	dsn := os.Getenv("EXPT_RETRY_MYSQL_DSN")
@@ -72,17 +83,12 @@ func newManualRetryFixture(t *testing.T) *manualRetryFixture {
 		require.NoError(t, sqlDB.Close())
 	})
 	gen := idgenmocks.NewMockIIDGenerator(gomock.NewController(t))
-	var inTransaction atomic.Bool
-	require.NoError(t, conn.Callback().Query().After("gorm:query").Register("track_manual_retry_transaction", func(tx *gorm.DB) {
-		if _, ok := tx.Statement.ConnPool.(*sql.Tx); ok {
-			inTransaction.Store(true)
-		}
-	}))
+	tracker := &manualRetryTransactionTracker{Provider: provider}
 	gen.EXPECT().GenID(gomock.Any()).DoAndReturn(func(context.Context) (int64, error) {
-		require.False(t, inTransaction.Load(), "IDGen may use Redis and must run before SQL transaction")
+		require.False(t, tracker.inTransaction.Load(), "IDGen may use Redis and must run before SQL transaction")
 		return base + 9000 + retryFixtureSeq.Add(1), nil
 	}).AnyTimes()
-	port, ok := any(&ExptManualRetryDAOImpl{provider: provider, idgen: gen}).(repo.IExptManualRetryRepo)
+	port, ok := any(&ExptManualRetryDAOImpl{provider: tracker, idgen: gen}).(repo.IExptManualRetryRepo)
 	require.True(t, ok, "same-run four-table transaction is missing")
 	f.port = port
 	require.NoError(t, conn.Exec("INSERT INTO experiment (id,space_id,latest_run_id,status,expt_type) VALUES (?,?,?,?,?)", f.expt, f.space, f.run, entity.ExptStatus_Processing, entity.ExptType_Offline).Error)

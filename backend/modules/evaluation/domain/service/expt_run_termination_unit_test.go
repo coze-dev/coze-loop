@@ -653,6 +653,7 @@ func TestCleanupCancelledTerminationResourcesUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(frozen, nil)
 		require.Error(t, m.cleanupCancelledTerminationResources(context.Background(), event, frozen, []*entity.ExptCurrentItemRunSource{nil}))
 	})
 	t.Run("cancelled_returns_retry", func(t *testing.T) {
@@ -661,12 +662,14 @@ func TestCleanupCancelledTerminationResourcesUnit(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(frozen, nil)
 		require.True(t, errno.NeedMQRetry(m.cleanupCancelledTerminationResources(ctx, event, frozen, nil)))
 	})
 	t.Run("success", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(frozen, nil)
 		// The trailing unwrap always reports a retryable envelope, preserving replay.
 		require.Error(t, m.cleanupCancelledTerminationResources(context.Background(), event, frozen, nil))
 	})
@@ -750,6 +753,9 @@ func TestCleanupCurrentUnscheduledRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
+		runLogs := repomocks.NewMockIExptRunLogRepo(d.ctrl)
+		runLogs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Success)}, nil)
+		m.runLogRepo = runLogs
 		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 		d.expectLock(true, context.Background())
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Success}, nil)

@@ -87,6 +87,45 @@ func TestCancelSetupRealLogRunDetailAndQuotaFailure(t *testing.T) {
 
 // These failures must never turn a read error into stale ACK or leave the
 // original lifecycle value trapped. SQL is still bounded by the caller context.
+func TestCancelSetupTerminalExperimentClosesPendingRun(t *testing.T) {
+	for _, failure := range []string{"GetDetail", "AllowExptRun"} {
+		t.Run(failure, func(t *testing.T) {
+			f, m, _, ownsLock := newCancelSetupFixture(t)
+			cause := errors.New("setup dependency unavailable")
+			sets := m.evaluationSetService.(*svcmocks.MockIEvaluationSetService)
+			if failure == "GetDetail" {
+				sets.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), int64(0), gomock.Any(), gomock.Any()).Return(nil, cause)
+			} else {
+				sets.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), int64(0), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil)
+				m.exptResultService.(*svcmocks.MockExptResultService).EXPECT().MGetStats(gomock.Any(), []int64{f.expt}, f.space, gomock.Any()).Return(nil, nil)
+				m.exptAggrResultService.(*svcmocks.MockExptAggrResultService).EXPECT().BatchGetExptAggrResultByExperimentIDs(gomock.Any(), f.space, []int64{f.expt}).Return(nil, nil)
+				m.quotaRepo.(*repomocks.MockQuotaRepo).EXPECT().CreateOrUpdate(gomock.Any(), f.space, gomock.Any(), gomock.Any()).Return(cause)
+			}
+			session := &entity.Session{UserID: "setup"}
+			require.NoError(t, m.LogRun(context.Background(), f.expt, f.run, entity.EvaluationModeSubmit, f.space, nil, session))
+			endAt := time.Now().Add(-time.Minute).Truncate(time.Second)
+			require.NoError(t, f.conn.Model(&model.Experiment{}).Where("space_id=?", f.space).Updates(map[string]any{"status": int32(entity.ExptStatus_Success), "end_at": endAt}).Error)
+			before, err := m.exptRepo.GetByID(context.Background(), f.expt, f.space)
+			require.NoError(t, err)
+			run, err := m.runLogRepo.Get(context.Background(), f.expt, f.run)
+			require.NoError(t, err)
+			require.Equal(t, int64(entity.ExptStatus_Pending), run.Status)
+
+			err = m.Run(context.Background(), f.expt, f.run, f.space, 0, session, entity.EvaluationModeSubmit, nil)
+			require.ErrorIs(t, err, cause)
+			run, err = m.runLogRepo.Get(context.Background(), f.expt, f.run)
+			require.NoError(t, err)
+			require.Equal(t, int64(entity.ExptStatus_Failed), run.Status, "an unscheduled run must not remain Pending")
+			require.Equal(t, cause.Error(), string(run.StatusMessage))
+			require.False(t, ownsLock(), "setup failure must release the captured lifecycle owner")
+			after, err := m.exptRepo.GetByID(context.Background(), f.expt, f.space)
+			require.NoError(t, err)
+			require.Equal(t, before.Status, after.Status)
+			require.Equal(t, before.EndAt, after.EndAt)
+		})
+	}
+}
+
 func TestCancelSetupCleanupFaultsReleaseOriginalOwner(t *testing.T) {
 	for _, fault := range []string{"read_error", "write_error", "parent_cancel"} {
 		t.Run(fault, func(t *testing.T) {

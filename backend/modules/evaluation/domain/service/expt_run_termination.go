@@ -443,8 +443,9 @@ func (e *ExptMangerImpl) cleanupTerminatedRun(ctx context.Context, event *entity
 }
 
 func (e *ExptMangerImpl) cleanupCancelledTerminationResources(ctx context.Context, event *entity.ExptScheduleEvent, frozen *entity.Experiment, sources []*entity.ExptCurrentItemRunSource) error {
-	// Cancellation permits only frozen resource IO. A separate holder prevents
-	// the cancelled operation's asynchronous unlock from deleting this lease.
+	// Cancellation permits only a primary ownership read and frozen resource IO.
+	// Scores and MQ retain ctx. A separate holder prevents the cancelled
+	// operation's asynchronous unlock from deleting this lease.
 	resourceCtx, stop := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
 	defer stop()
 	locker := e.manualRetryLocker()
@@ -459,6 +460,16 @@ func (e *ExptMangerImpl) cleanupCancelledTerminationResources(ctx context.Contex
 		return errno.NewMQRetryErr("termination resource owner unavailable")
 	}
 	defer cancel()
+	current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(leaseCtx), event.ExptID, event.SpaceID)
+	if err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if current == nil {
+		return errno.NewMQRetryErr("termination resource experiment missing")
+	}
+	if current.LatestRunID != event.ExptRunID {
+		return errno.WrapMQRetryErr(ctx.Err())
+	}
 	if err := e.releaseTerminationResources(leaseCtx, frozen, event.ExptRunID, sources, true, event.Session); err != nil {
 		return err
 	}
@@ -538,7 +549,7 @@ func (e *ExptMangerImpl) cleanupCurrentUnscheduledRun(ctx context.Context, expt,
 		if current == nil {
 			return fmt.Errorf("cleanup experiment missing")
 		}
-		if current.LatestRunID != run || entity.IsExptFinished(current.Status) {
+		if current.LatestRunID != run {
 			return nil
 		}
 		if current.ExptType == entity.ExptType_Online {
@@ -552,6 +563,19 @@ func (e *ExptMangerImpl) cleanupCurrentUnscheduledRun(ctx context.Context, expt,
 			}
 			_, err = port.TerminateCurrentRun(ctx, &entity.ExptRunTerminationRequest{SpaceID: space, ExptID: expt, RunID: run, SetupAbort: true, StatusMessage: cause.Error()})
 			return err
+		}
+		if entity.IsExptFinished(current.Status) {
+			runLog, err := e.runLogRepo.Get(ctx, expt, run)
+			if err != nil {
+				return err
+			}
+			if runLog == nil {
+				return fmt.Errorf("cleanup run missing")
+			}
+			if runLog.Status != int64(entity.ExptStatus_Pending) {
+				return nil
+			}
+			return e.runLogRepo.Update(ctx, expt, run, space, map[string]any{"status": int64(entity.ExptStatus_Failed), "status_message": []byte(cause.Error())})
 		}
 		terminate = true
 		return nil

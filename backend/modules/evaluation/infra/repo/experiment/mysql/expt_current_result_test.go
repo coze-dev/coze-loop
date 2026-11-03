@@ -126,6 +126,38 @@ func (f *currentResultFixture) result(source *entity.ExptCurrentItemRunSource) *
 	return &r
 }
 
+func TestCurrentResultFailRetryReadsSuccessfulHistoryWithNewRunLogs(t *testing.T) {
+	provider := db.NewTestDB(t, &model.ExptItemResult{}, &model.ExptItemResultRunLog{}, &model.ExptRunLog{}, &model.ExptTurnResult{}, &model.ExptTurnResultRunLog{}, &model.ExptTurnEvaluatorResultRef{})
+	conn := provider.NewSession(context.Background(), db.WithMaster())
+	const spaceID, exptID, oldRunID, runID, itemID, versionID = int64(1), int64(2), int64(3), int64(4), int64(5), int64(6)
+	require.NoError(t, conn.Create(&model.ExptRunLog{ID: 10, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(entity.EvaluationModeFailRetry))}).Error)
+	require.NoError(t, conn.Create(&model.ExptItemResult{ID: 11, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, Status: int32(entity.ItemRunState_Processing)}).Error)
+	require.NoError(t, conn.Create(&model.ExptItemResultRunLog{ID: 12, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, Status: int32(entity.ItemRunState_Processing), ResultState: gptr.Of(int32(entity.ExptItemResultStateDefault))}).Error)
+	for _, turn := range []model.ExptTurnResult{
+		{ID: 21, SpaceID: spaceID, ExptID: exptID, ExptRunID: oldRunID, ItemID: itemID, ItemVersionID: versionID, TurnID: 31, Status: int32(entity.TurnRunState_Success)},
+		{ID: 22, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, TurnID: 32, Status: int32(entity.TurnRunState_Fail)},
+	} {
+		require.NoError(t, conn.Create(&turn).Error)
+	}
+	for _, log := range []model.ExptTurnResultRunLog{
+		{ID: 41, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, TurnID: 31, Status: int32(entity.TurnRunState_Processing)},
+		{ID: 42, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, TurnID: 32, Status: int32(entity.TurnRunState_Processing)},
+	} {
+		require.NoError(t, conn.Create(&log).Error)
+	}
+
+	source, err := loadCurrentRunSource(conn, spaceID, exptID, runID, itemID)
+	require.NoError(t, err)
+	require.NotNil(t, source)
+	require.Len(t, source.CanonicalTurns, 2)
+	require.Equal(t, oldRunID, source.CanonicalTurns[0].ExptRunID)
+	require.Equal(t, runID, source.CanonicalTurns[1].ExptRunID)
+	require.Len(t, source.Turns, 2)
+	for _, log := range source.Turns {
+		require.Equal(t, runID, log.ExptRunID)
+	}
+}
+
 // Real SQL, not mocked Transaction: late sources must leave all eleven tables byte-for-byte unchanged.
 func TestCurrentResultMySQLLateSource(t *testing.T) {
 	for _, kind := range []string{"rq2", "same_request_invoke", "empty_to_manual", "old_run", "wrong_version", "alias", "inline", "resulted", "cancelled"} {

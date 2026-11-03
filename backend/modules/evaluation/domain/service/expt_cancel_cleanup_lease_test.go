@@ -15,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	idemrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/idem"
@@ -178,6 +179,7 @@ func TestCancelCleanupLeaseCancelDuringResourceIOPreservesBindings(t *testing.T)
 	queries := 0
 	require.NoError(t, f.conn.Callback().Query().Before("gorm:query").Register("cleanup_cancel_during_io", func(tx *gorm.DB) {
 		if ctx.Err() != nil {
+			require.Contains(t, []string{"experiment", "expt_evaluator_ref"}, tx.Statement.Table)
 			queries++
 		}
 	}))
@@ -195,7 +197,7 @@ func TestCancelCleanupLeaseCancelDuringResourceIOPreservesBindings(t *testing.T)
 	_, err := m.TerminateCurrentRun(ctx, f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
 	require.True(t, errno.NeedMQRetry(err))
 	require.Len(t, guard.completed, 1)
-	require.Zero(t, queries)
+	require.Equal(t, 2, queries, "cancelled cleanup may only re-read run ownership")
 	require.Empty(t, store.rows)
 	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("finish-cleanup:%d:%d", f.expt, f.run))
 	require.NoError(t, err)
@@ -249,8 +251,9 @@ func TestCancelCleanupLeaseCancelledCommitOnlyFrozenResources(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	queriesAfterCancel := 0
-	require.NoError(t, f.conn.Callback().Query().Before("gorm:query").Register("cleanup_no_detached_sql", func(tx *gorm.DB) {
+	require.NoError(t, f.conn.Callback().Query().Before("gorm:query").Register("cleanup_ownership_sql_only", func(tx *gorm.DB) {
 		if ctx.Err() != nil {
+			require.Contains(t, []string{"experiment", "expt_evaluator_ref"}, tx.Statement.Table)
 			queriesAfterCancel++
 		}
 	}))
@@ -269,7 +272,7 @@ func TestCancelCleanupLeaseCancelledCommitOnlyFrozenResources(t *testing.T) {
 	_, err := m.TerminateCurrentRun(ctx, f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
 	require.True(t, errno.NeedMQRetry(err))
 	require.Len(t, guard.completed, 1)
-	require.Zero(t, queriesAfterCancel, "cancelled commit cleanup must use only its frozen source")
+	require.Equal(t, 2, queriesAfterCancel, "cancelled cleanup may only re-read run ownership before using frozen sources")
 	require.Empty(t, store.rows)
 	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("finish-cleanup:%d:%d", f.expt, f.run))
 	require.NoError(t, err)
@@ -307,6 +310,46 @@ func TestCancelCleanupLeaseReplacementOwnerHasZeroActions(t *testing.T) {
 			require.False(t, marked)
 		})
 	}
+}
+
+func TestCancelCleanupLeaseExpiredReplacementStillFencesQuota(t *testing.T) {
+	f, m := newCancelFilterFixture(t)
+	_, raw := cleanupLeaseRealRedis(t, f, m)
+	frozen, err := m.exptRepo.GetByID(context.Background(), f.expt, f.space)
+	require.NoError(t, err)
+	frozen.Status = entity.ExptStatus_Terminated
+
+	replacement := f.run + 100
+	runStatus := int64(entity.ExptStatus_Processing)
+	require.NoError(t, f.conn.Create(&model.ExptRunLog{ID: replacement, SpaceID: f.space, ExptID: f.expt, ExptRunID: replacement, Status: &runStatus}).Error)
+	require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=? AND expt_run_id=?", f.space, f.run).Update("status", int64(entity.ExptStatus_Terminated)).Error)
+	require.NoError(t, f.conn.Model(&model.Experiment{}).Where("space_id=?", f.space).Updates(map[string]any{"latest_run_id": replacement, "status": int32(entity.ExptStatus_Processing), "end_at": nil}).Error)
+	lockKey := m.makeExptMutexLockKey(f.expt)
+	require.NoError(t, raw.Set(context.Background(), lockKey, fmt.Sprint(replacement), time.Minute).Err())
+	require.NoError(t, raw.PExpire(context.Background(), lockKey, 0).Err(), "expire the replacement's old lifecycle lock")
+	require.Zero(t, raw.Exists(context.Background(), lockKey).Val())
+
+	quotaState := &entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{f.expt: time.Now().Unix()}}
+	quota := repomocks.NewMockQuotaRepo(gomock.NewController(t))
+	quota.EXPECT().CreateOrUpdate(gomock.Any(), f.space, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, update func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
+		updated, _, err := update(quotaState)
+		if updated != nil {
+			quotaState = updated
+		}
+		return err
+	}).AnyTimes()
+	m.quotaRepo = quota
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	event := &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, Session: &entity.Session{}}
+	err = m.cleanupCancelledTerminationResources(ctx, event, frozen, nil)
+	require.True(t, errno.NeedMQRetry(err))
+	locked, owner, err := m.mutex.BackoffLockWithValue(context.Background(), lockKey, fmt.Sprint(replacement), time.Minute, time.Millisecond)
+	require.NoError(t, err)
+	require.True(t, locked, "stale cleanup must not leave its lease behind")
+	require.Equal(t, fmt.Sprint(replacement), owner)
+	require.Contains(t, quotaState.ExptID2RunTime, f.expt, "R1 cleanup must not release R2's experiment quota")
 }
 
 func TestCancelCleanupLeaseWholeResourcesPastEightSeconds(t *testing.T) {

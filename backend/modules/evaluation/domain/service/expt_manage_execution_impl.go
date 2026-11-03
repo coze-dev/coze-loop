@@ -501,6 +501,7 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 		}
 	}
 
+	currentRunCleanup := false
 	if e.runFinishRepo != nil {
 		current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
 		if err != nil {
@@ -513,22 +514,26 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 			if current.LatestRunID != exptRunID {
 				return nil
 			}
-			opt := &entity.CompleteExptOption{}
-			for _, fn := range opts {
-				fn(opt)
+			// ExptStart 前的 retry 失败会留下“实验已终态、run 仍 Pending”，自然完成原语不接受这种部分终态。
+			if !entity.IsExptFinished(current.Status) {
+				opt := &entity.CompleteExptOption{}
+				for _, fn := range opts {
+					fn(opt)
+				}
+				if opt.Status == entity.ExptStatus_Terminated || opt.Status == entity.ExptStatus_Failed {
+					_, err := e.TerminateCurrentRun(ctx, exptID, exptRunID, spaceID, session, nil, opts...)
+					return err
+				}
+				result, err := e.FinishCurrentRun(ctx, &entity.ExptScheduleEvent{ExptID: exptID, ExptRunID: exptRunID, SpaceID: spaceID, Session: session})
+				if err != nil {
+					return err
+				}
+				if result == nil || result.Disposition == entity.ExptRunFinishPending {
+					return errno.NewMQRetryErr("current run completion pending")
+				}
+				return nil
 			}
-			if opt.Status == entity.ExptStatus_Terminated || opt.Status == entity.ExptStatus_Failed {
-				_, err := e.TerminateCurrentRun(ctx, exptID, exptRunID, spaceID, session, nil, opts...)
-				return err
-			}
-			result, err := e.FinishCurrentRun(ctx, &entity.ExptScheduleEvent{ExptID: exptID, ExptRunID: exptRunID, SpaceID: spaceID, Session: session})
-			if err != nil {
-				return err
-			}
-			if result == nil || result.Disposition == entity.ExptRunFinishPending {
-				return errno.NewMQRetryErr("current run completion pending")
-			}
-			return nil
+			currentRunCleanup = true
 		}
 	}
 	const idemKeyPrefix = "CompleteRun:"
@@ -553,6 +558,57 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 		}
 	}
 
+	if currentRunCleanup {
+		if e.manualRetryLocker == nil {
+			return errno.NewMQRetryErr("run cleanup lifecycle locker missing")
+		}
+		cleanupLocker := e.manualRetryLocker()
+		if cleanupLocker == nil {
+			return errno.NewMQRetryErr("run cleanup lifecycle locker missing")
+		}
+		lockKey := e.makeExptMutexLockKey(exptID)
+		if _, err := e.mutex.UnlockWithValue(ctx, lockKey, strconv.FormatInt(exptRunID, 10)); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		locked, cleanupCtx, cancel, err := cleanupLocker.LockWithRenew(ctx, lockKey, 5*time.Second, 5*time.Minute)
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if !locked {
+			current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
+			if err != nil {
+				return errno.WrapMQRetryErr(err)
+			}
+			if current != nil && current.LatestRunID != exptRunID {
+				return nil
+			}
+			return errno.NewMQRetryErr("run cleanup lifecycle owner unavailable")
+		}
+		defer func() {
+			cancel()
+			if _, err := cleanupLocker.Unlock(lockKey); err != nil {
+				logs.CtxWarn(ctx, "failed to unlock completed run cleanup: %v", err)
+			}
+		}()
+		ctx = cleanupCtx
+		if err := ctx.Err(); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if current == nil {
+			return errno.NewMQRetryErr("run cleanup experiment missing")
+		}
+		if current.LatestRunID != exptRunID {
+			return nil
+		}
+		if !entity.IsExptFinished(current.Status) {
+			return errno.NewMQRetryErr("run cleanup experiment is active")
+		}
+	}
+
 	runLog, err := e.runLogRepo.Get(ctx, exptID, exptRunID)
 	if err != nil {
 		return err
@@ -574,8 +630,15 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 	if err := e.runLogRepo.Update(ctx, exptID, exptRunID, spaceID, runLogMutableFields(runLog)); err != nil {
 		return err
 	}
-	if _, err := e.mutex.UnlockForce(ctx, e.makeExptMutexLockKey(exptID)); err != nil {
-		return err
+	if currentRunCleanup {
+		// The lifecycle lease blocks a replacement run until this run's quota is released.
+		if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(ctx, exptID, spaceID, session); err != nil {
+			return err
+		}
+	} else {
+		if _, err := e.mutex.UnlockForce(ctx, e.makeExptMutexLockKey(exptID)); err != nil {
+			return err
+		}
 	}
 
 	if len(opt.CID) > 0 {

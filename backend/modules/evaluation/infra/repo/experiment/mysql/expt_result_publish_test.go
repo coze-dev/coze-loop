@@ -55,6 +55,42 @@ func TestResultPublishMySQLReuseRefsAndReceipt(t *testing.T) {
 	require.Equal(t, after, f.snapshot())
 }
 
+func TestResultPublishMySQLCanonicalNoop(t *testing.T) {
+	f := newCurrentResultFixture(t, "rq1")
+	ctx := context.Background()
+	require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Updates(map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)}).Error)
+	require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=?", f.space).Updates(map[string]any{"status": int32(entity.TurnRunState_Fail), "evaluator_result_ids": []byte(`null`)}).Error)
+	port := NewExptResultPublishDAO(f.provider)
+	publicationFor := func(source *entity.ExptItemResultPublishSource) *entity.ExptItemResultPublication {
+		publication := &entity.ExptItemResultPublication{Source: source}
+		for _, old := range source.Source.CanonicalTurns {
+			turn := *old
+			log := source.Source.Turns[old.TurnID]
+			turn.Status = int32(log.Status)
+			turn.TargetResultID = log.TargetResultID
+			turn.TraceID = log.TraceID
+			turn.LogID = log.LogID
+			turn.ErrMsg = log.ErrMsg
+			turn.WeightedScore = nil
+			publication.Turns = append(publication.Turns, &turn)
+		}
+		return publication
+	}
+	source, err := port.GetItemResultPublishSource(ctx, f.space, f.expt, f.run, f.item)
+	require.NoError(t, err)
+	applied, err := port.CommitItemResult(ctx, publicationFor(source))
+	require.NoError(t, err)
+	require.True(t, applied)
+
+	f.token("rq2")
+	require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("result_state", int32(entity.ExptItemResultStateLogged)).Error)
+	source, err = port.GetItemResultPublishSource(ctx, f.space, f.expt, f.run, f.item)
+	require.NoError(t, err)
+	applied, err = port.CommitItemResult(ctx, publicationFor(source))
+	require.NoError(t, err)
+	require.True(t, applied)
+}
+
 func TestResultPublishMySQLCanonicalLockAgainstAdmission(t *testing.T) {
 	f := newCurrentResultFixture(t, "rq1")
 	ctx := context.Background()
