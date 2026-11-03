@@ -514,6 +514,43 @@ func TestResetRetryRunLogsForItems_TransactionError(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestResetRetryRunLogsForItems_StaleRunDoesNotMutateExperiment(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deps := newRetryHelperDeps(ctrl)
+	manager := &retryTestManager{MockIExptManager: svcmocks.NewMockIExptManager(ctrl), locks: svcmocks.NewMockIExptNewRunItemLocker(ctrl)}
+	manager.locks.EXPECT().WithNewRunItemLocks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("new-run reset replaced")).Times(1)
+	deps.manager = manager
+	deps.idgenerator.(*idgenmocks.MockIIDGenerator).EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{1, 2}, nil).Times(1)
+
+	err := resetRetryItemsForNewRun(context.Background(), deps, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, &entity.Experiment{Status: entity.ExptStatus_Success}, []*entity.EvaluationSetItem{{ItemID: 1, Turns: []*entity.Turn{{ID: 10}}}}, nil)
+	assert.Error(t, err)
+}
+
+func TestResetRetryRunLogsForItems_PartialCommitStillRefreshesFilter(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deps := newRetryHelperDeps(ctrl)
+	items := []*entity.EvaluationSetItem{{ItemID: 1, Turns: []*entity.Turn{{ID: 10}}}, {ItemID: 2, Turns: []*entity.Turn{{ID: 20}}}}
+	deps.idgenerator.(*idgenmocks.MockIIDGenerator).EXPECT().GenMultiIDs(gomock.Any(), 4).Return([]int64{1, 2, 3, 4}, nil).Times(1)
+	deps.exptItemResultRepo.(*retryTestItemResultRepo).reset.EXPECT().ResetItemForRetry(
+		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+	).DoAndReturn(func(_ context.Context, _, _, _ int64, runLog *entity.ExptItemResultRunLog, _ []int64) (bool, error) {
+		if runLog.ItemID == 2 {
+			return false, errors.New("boom")
+		}
+		return true, nil
+	}).Times(2)
+	resultSvc := svcmocks.NewMockExptResultService(ctrl)
+	resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), int64(3), int64(1), []int64{1}).Return(nil).Times(1)
+	deps.resultSvc = resultSvc
+
+	err := resetRetryItemsForNewRun(context.Background(), deps, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, &entity.Experiment{Status: entity.ExptStatus_Processing}, items, nil)
+	assert.Error(t, err)
+}
+
 // ============================================================================
 // ExptRetryItemsExec.resetEvalItems (Single-set) 覆盖率补丁: 边界/失败/统计分支。
 // ============================================================================

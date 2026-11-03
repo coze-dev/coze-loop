@@ -22,6 +22,7 @@ import (
 	metricsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	componentMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	exptrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
@@ -161,6 +162,18 @@ func (i *retryAllStartIdemFailure) Set(ctx context.Context, key string, duration
 	return i.IdempotentService.Set(ctx, key, duration)
 }
 
+type retryStartResetFailureRepo struct {
+	repo.IExptItemResultRepo
+}
+
+func (r *retryStartResetFailureRepo) ResetItemForRetry(ctx context.Context, spaceID, exptID, runID int64, runLog *entity.ExptItemResultRunLog, turnIDs []int64) (bool, error) {
+	applied, err := r.IExptItemResultRepo.(repo.IExptRetryItemResetRepo).ResetItemForRetry(ctx, spaceID, exptID, runID, runLog, turnIDs)
+	if err != nil {
+		return false, err
+	}
+	return applied, errors.New("save stats error")
+}
+
 func TestRetryAllStartFailureTerminatesMutatedRun(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
@@ -240,12 +253,10 @@ func TestRetryAllStartFailureTerminatesMutatedRun(t *testing.T) {
 			} else {
 				itemService.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).Return(items, gptr.Of(int64(1)), nil, nil, nil).Times(1)
 			}
-			stats := repomocks.NewMockIExptStatsRepo(ctrl)
-			statsSaveErr := errors.New("save stats error")
-			if tc.failIdemSet {
-				stats.EXPECT().ArithOperateCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
-			} else {
-				stats.EXPECT().ArithOperateCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(statsSaveErr).Times(1)
+			stats := p.manager.statsRepo
+			itemResultRepo := p.manager.itemResultRepo
+			if !tc.failIdemSet {
+				itemResultRepo = &retryStartResetFailureRepo{IExptItemResultRepo: itemResultRepo}
 			}
 
 			event := &entity.ExptScheduleEvent{
@@ -265,13 +276,13 @@ func TestRetryAllStartFailureTerminatesMutatedRun(t *testing.T) {
 			if tc.retryItems {
 				event.ExecEvalSetItemIDs = []int64{p.f.item}
 				exec = &ExptRetryItemsExec{
-					manager: p.manager, exptItemResultRepo: p.manager.itemResultRepo, exptTurnResultRepo: p.manager.turnResultRepo,
+					manager: p.manager, exptItemResultRepo: itemResultRepo, exptTurnResultRepo: p.manager.turnResultRepo,
 					exptStatsRepo: stats, idgenerator: ids, evaluationSetItemService: itemService, exptRepo: p.manager.exptRepo,
 					idem: startIdem, configer: p.manager.configer, exptItemRefRepo: p.manager.itemRefRepo,
 				}
 			} else {
 				exec = &ExptRetryAllExec{
-					manager: p.manager, exptItemResultRepo: p.manager.itemResultRepo, exptTurnResultRepo: p.manager.turnResultRepo,
+					manager: p.manager, exptItemResultRepo: itemResultRepo, exptTurnResultRepo: p.manager.turnResultRepo,
 					exptStatsRepo: stats, idgenerator: ids, evaluationSetItemService: itemService, exptRepo: p.manager.exptRepo,
 					idem: startIdem, configer: p.manager.configer, exptItemRefRepo: p.manager.itemRefRepo,
 				}

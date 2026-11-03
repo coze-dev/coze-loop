@@ -89,16 +89,14 @@ func (dao *exptItemResultDAOImpl) ResetItemForRetry(ctx context.Context, spaceID
 			return err
 		}
 
-		if canonical.ExptRunID != runID {
-			delta := make(map[entity.ItemRunState]int)
-			switch entity.ItemRunState(canonical.Status) {
-			case entity.ItemRunState_Processing, entity.ItemRunState_Success, entity.ItemRunState_Fail, entity.ItemRunState_Terminal:
-				delta[entity.ItemRunState(canonical.Status)] = -1
-				delta[entity.ItemRunState_Queueing] = 1
-			}
-			if err := NewExptStatsDAO(dao.provider).ArithOperateCount(ctx, exptID, spaceID, &entity.StatsCntArithOp{OpStatusCnt: delta}, opts...); err != nil {
-				return err
-			}
+		delta := make(map[entity.ItemRunState]int)
+		switch entity.ItemRunState(canonical.Status) {
+		case entity.ItemRunState_Processing, entity.ItemRunState_Success, entity.ItemRunState_Fail, entity.ItemRunState_Terminal:
+			delta[entity.ItemRunState(canonical.Status)] = -1
+			delta[entity.ItemRunState_Queueing] = 1
+		}
+		if err := NewExptStatsDAO(dao.provider).ArithOperateCount(ctx, exptID, spaceID, &entity.StatsCntArithOp{OpStatusCnt: delta}, opts...); err != nil {
+			return err
 		}
 		return ctx.Err()
 	}, db.WithMaster())

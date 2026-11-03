@@ -165,6 +165,16 @@ func TestRetryResetRequiresCanonicalAndSkipsMaterializedItem(t *testing.T) {
 		requireRetryResetApplied(t, provider)
 	})
 
+	t.Run("canonical_current_run_success_backfills_stats", func(t *testing.T) {
+		provider, port := newRetryResetFixture(t, "", "")
+		ctx := context.Background()
+		require.NoError(t, provider.NewSession(ctx).Model(&model.ExptItemResult{}).Where("id=1").Update("expt_run_id", int64(2)).Error)
+		applied, err := port.ResetItemForRetry(ctx, 9, 7, 2, retryResetRunLog(), []int64{21})
+		require.NoError(t, err)
+		require.True(t, applied)
+		requireRetryResetApplied(t, provider)
+	})
+
 	t.Run("current_run_log_is_absorbing", func(t *testing.T) {
 		provider, port := newRetryResetFixture(t, "", "")
 		ctx := context.Background()

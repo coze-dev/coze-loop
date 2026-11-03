@@ -1902,28 +1902,31 @@ func resetRetryItemsForNewRun(ctx context.Context, deps retryItemResetDeps, even
 		requests[itemID] = request
 	}
 
-	if err := startRetryMutation(ctx, deps.exptRepo, event, expt); err != nil {
-		return err
-	}
 	resetItemIDs := make([]int64, 0, len(itemIDs))
-	if err := guard.WithNewRunItemLocks(ctx, event.SpaceID, event.ExptID, event.ExptRunID, itemIDs, func(itemCtx context.Context, itemID int64) error {
+	mutationStarted := false
+	resetErr := guard.WithNewRunItemLocks(ctx, event.SpaceID, event.ExptID, event.ExptRunID, itemIDs, func(itemCtx context.Context, itemID int64) error {
+		if !mutationStarted {
+			if err := startRetryMutation(itemCtx, deps.exptRepo, event, expt); err != nil {
+				return err
+			}
+			mutationStarted = true
+		}
 		request := requests[itemID]
 		applied, err := resetter.ResetItemForRetry(itemCtx, event.SpaceID, event.ExptID, event.ExptRunID, request.runLog, request.turnIDs)
 		if applied {
 			resetItemIDs = append(resetItemIDs, itemID)
 		}
 		return err
-	}); err != nil {
-		return err
-	}
+	})
 
-	// All item locks have been released; the public filter service may take them again.
+	// All item locks have been released; refresh every committed reset even when
+	// a later item failed, so its old terminal filter cannot survive initialization.
 	if deps.resultSvc != nil && len(resetItemIDs) > 0 {
 		if err := deps.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, resetItemIDs); err != nil {
 			logs.CtxError(ctx, "resetRetryItemsForNewRun UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
 		}
 	}
-	return nil
+	return resetErr
 }
 
 func NewExptRetryAllExec(
