@@ -441,6 +441,10 @@ func isSchedulerInfraError(err error) bool {
 	return false
 }
 
+func shouldPublishProcessingStart(exptStatus, runStatus entity.ExptStatus) bool {
+	return exptStatus != entity.ExptStatus_Processing || runStatus == entity.ExptStatus_Pending
+}
+
 func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptScheduleEvent) error {
 	if event.ExptRunMode == entity.EvaluationModeAppend {
 		logs.CtxInfo(ctx, "[ExptEval] consume schedule event (Append), expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
@@ -465,8 +469,15 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
-	// Publish Processing lifecycle event on first transition
-	if exptDetail.Status != entity.ExptStatus_Processing && e.Publisher != nil {
+	// A Pending run still needs its start event even when a previous partial
+	// initializer already moved the experiment to Processing.
+	runStatus := entity.ExptStatus_Processing
+	if exptDetail.Status == entity.ExptStatus_Processing && e.ExptRunLogRepo != nil {
+		if runLog, runErr := e.ExptRunLogRepo.Get(ctx, event.ExptID, event.ExptRunID); runErr == nil && runLog != nil {
+			runStatus = entity.ExptStatus(runLog.Status)
+		}
+	}
+	if shouldPublishProcessingStart(exptDetail.Status, runStatus) && e.Publisher != nil {
 		currentExpt, getErr := e.ExptRepo.GetByID(ctx, event.ExptID, event.SpaceID)
 		if getErr == nil && currentExpt.Status == entity.ExptStatus_Processing {
 			lifecycleEvent := &entity.ExptLifecycleEvent{

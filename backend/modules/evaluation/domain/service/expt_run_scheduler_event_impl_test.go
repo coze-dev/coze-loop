@@ -2990,3 +2990,9 @@ func TestExptSchedulerImpl_handleZombies_SkipQueueing(t *testing.T) {
 	assert.Empty(t, zombies, "queueing (yielded) row must never be treated as zombie")
 	assert.Empty(t, alives, "queueing row is filtered out by State==Processing guard, not counted as alive either")
 }
+
+func TestShouldPublishProcessingStart(t *testing.T) {
+	assert.True(t, shouldPublishProcessingStart(entity.ExptStatus_Success, entity.ExptStatus_Processing))
+	assert.True(t, shouldPublishProcessingStart(entity.ExptStatus_Processing, entity.ExptStatus_Pending), "partial retry initialization must still publish start on redelivery")
+	assert.False(t, shouldPublishProcessingStart(entity.ExptStatus_Processing, entity.ExptStatus_Processing))
+}
