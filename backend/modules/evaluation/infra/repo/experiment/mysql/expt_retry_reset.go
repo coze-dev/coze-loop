@@ -36,6 +36,10 @@ func (dao *exptItemResultDAOImpl) ResetItemForRetry(ctx context.Context, spaceID
 		if expt.LatestRunID != runID {
 			return fmt.Errorf("retry reset experiment run replaced")
 		}
+		active, err := retryRunAllowsProcessing(tx, spaceID, exptID, runID)
+		if err != nil || !active {
+			return err
+		}
 
 		var canonical model.ExptItemResult
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
@@ -45,7 +49,7 @@ func (dao *exptItemResultDAOImpl) ResetItemForRetry(ctx context.Context, spaceID
 		}
 
 		var current model.ExptItemResultRunLog
-		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", spaceID, exptID, runID, runLog.ItemID).
 			Take(&current).Error
 		if err == nil {

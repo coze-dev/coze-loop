@@ -2006,14 +2006,8 @@ func startRetryMutation(ctx context.Context, exptRepo repo.IExperimentRepo, even
 
 func finishRetryMutation(ctx context.Context, exptRepo repo.IExperimentRepo, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
 	if marker, ok := exptRepo.(repo.IExptRetryRunStatusRepo); ok {
-		processing, err := marker.MarkRetryProcessing(ctx, event.SpaceID, event.ExptID, event.ExptRunID)
-		if err != nil {
-			return err
-		}
-		if processing {
-			expt.Status = entity.ExptStatus_Processing
-		}
-		return nil
+		_, err := marker.MarkRetryProcessing(ctx, event.SpaceID, event.ExptID, event.ExptRunID)
+		return err
 	}
 	return exptRepo.Update(ctx, &entity.Experiment{Status: entity.ExptStatus_Processing, ID: event.ExptID, SpaceID: event.SpaceID})
 }

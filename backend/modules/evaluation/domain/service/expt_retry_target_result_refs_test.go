@@ -18,6 +18,7 @@ import (
 	configmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	mock_repo "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -513,6 +514,21 @@ func TestResetRetryRunLogsForItems_TransactionError(t *testing.T) {
 
 	err := resetRetryItemsForNewRun(context.Background(), deps, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, &entity.Experiment{Status: entity.ExptStatus_Processing}, items, nil)
 	assert.Error(t, err)
+}
+
+type retryProcessingMarkerRepo struct {
+	repo.IExperimentRepo
+}
+
+func (r *retryProcessingMarkerRepo) MarkRetryProcessing(context.Context, int64, int64, int64) (bool, error) {
+	return true, nil
+}
+
+func TestFinishRetryMutationPreservesLifecycleSnapshot(t *testing.T) {
+	expt := &entity.Experiment{Status: entity.ExptStatus_Success}
+	err := finishRetryMutation(context.Background(), &retryProcessingMarkerRepo{}, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, expt)
+	require.NoError(t, err)
+	require.Equal(t, entity.ExptStatus_Success, expt.Status)
 }
 
 func TestResetRetryRunLogsForItems_StaleRunDoesNotMutateExperiment(t *testing.T) {

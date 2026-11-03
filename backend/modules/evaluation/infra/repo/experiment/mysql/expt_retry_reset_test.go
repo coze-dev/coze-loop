@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
@@ -51,9 +52,10 @@ func (p *retryResetFaultProvider) Transaction(ctx context.Context, fc func(*gorm
 
 func newRetryResetFixture(t *testing.T, operation, table string) (db.Provider, retryResetPort) {
 	t.Helper()
-	provider := db.NewTestDB(t, &model.Experiment{}, &model.ExptItemResult{}, &model.ExptItemResultRunLog{}, &model.ExptTurnResult{}, &model.ExptTurnResultRunLog{}, &model.ExptStats{})
+	provider := db.NewTestDB(t, &model.Experiment{}, &model.ExptRunLog{}, &model.ExptItemResult{}, &model.ExptItemResultRunLog{}, &model.ExptTurnResult{}, &model.ExptTurnResultRunLog{}, &model.ExptStats{})
 	ctx := context.Background()
 	require.NoError(t, provider.NewSession(ctx).Create(&model.Experiment{ID: 7, SpaceID: 9, LatestRunID: 2, Status: int32(entity.ExptStatus_Success)}).Error)
+	require.NoError(t, provider.NewSession(ctx).Create(&model.ExptRunLog{ID: 2, SpaceID: 9, ExptID: 7, ExptRunID: 2, Status: gptr.Of(int64(entity.ExptStatus_Processing))}).Error)
 	require.NoError(t, provider.NewSession(ctx).Create(&model.ExptItemResult{ID: 1, SpaceID: 9, ExptID: 7, ExptRunID: 1, ItemID: 11, ItemVersionID: 101, Status: int32(entity.ItemRunState_Success)}).Error)
 	require.NoError(t, provider.NewSession(ctx).Create(&model.ExptTurnResult{ID: 2, SpaceID: 9, ExptID: 7, ExptRunID: 1, ItemID: 11, ItemVersionID: 101, TurnID: 21, Status: int32(entity.TurnRunState_Success), TargetResultID: 31}).Error)
 	require.NoError(t, provider.NewSession(ctx).Create(&model.ExptStats{ID: 3, SpaceID: 9, ExptID: 7, SuccessCnt: 1}).Error)
@@ -174,6 +176,22 @@ func TestRetryResetRequiresCanonicalAndSkipsMaterializedItem(t *testing.T) {
 		require.Equal(t, int32(entity.ItemRunState_Success), item.Status)
 	})
 
+	t.Run("terminated_run_skips_reset", func(t *testing.T) {
+		provider, port := newRetryResetFixture(t, "", "")
+		ctx := context.Background()
+		require.NoError(t, provider.NewSession(ctx).Model(&model.ExptRunLog{}).Where("expt_run_id=2").Update("status", int64(entity.ExptStatus_Terminated)).Error)
+		applied, err := port.ResetItemForRetry(ctx, 9, 7, 2, retryResetRunLog(), []int64{21})
+		require.NoError(t, err)
+		require.False(t, applied)
+		var expt model.Experiment
+		require.NoError(t, provider.NewSession(ctx).Where("id=7").Take(&expt).Error)
+		require.Equal(t, int32(entity.ExptStatus_Success), expt.Status)
+		var item model.ExptItemResult
+		require.NoError(t, provider.NewSession(ctx).Where("id=1").Take(&item).Error)
+		require.Equal(t, int64(1), item.ExptRunID)
+		require.Equal(t, int32(entity.ItemRunState_Success), item.Status)
+	})
+
 	t.Run("canonical_current_run_still_backfills", func(t *testing.T) {
 		provider, port := newRetryResetFixture(t, "", "")
 		ctx := context.Background()
@@ -227,6 +245,7 @@ func TestMarkRetryProcessingGuardsRunAndTerminating(t *testing.T) {
 		name           string
 		latestRunID    int64
 		status         entity.ExptStatus
+		runStatus      entity.ExptStatus
 		wantProcessing bool
 		wantStatus     entity.ExptStatus
 		wantErr        bool
@@ -234,11 +253,17 @@ func TestMarkRetryProcessingGuardsRunAndTerminating(t *testing.T) {
 		{name: "current_finished", latestRunID: 2, status: entity.ExptStatus_Success, wantProcessing: true, wantStatus: entity.ExptStatus_Processing},
 		{name: "replaced", latestRunID: 3, status: entity.ExptStatus_Success, wantStatus: entity.ExptStatus_Success, wantErr: true},
 		{name: "terminating", latestRunID: 2, status: entity.ExptStatus_Terminating, wantStatus: entity.ExptStatus_Terminating},
+		{name: "terminated_run", latestRunID: 2, status: entity.ExptStatus_Success, runStatus: entity.ExptStatus_Terminated, wantStatus: entity.ExptStatus_Success},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			provider, _ := newRetryResetFixture(t, "", "")
 			ctx := context.Background()
 			require.NoError(t, provider.NewSession(ctx).Model(&model.Experiment{}).Where("id=7").Updates(map[string]any{"latest_run_id": tc.latestRunID, "status": int32(tc.status)}).Error)
+			runStatus := tc.runStatus
+			if runStatus == 0 {
+				runStatus = entity.ExptStatus_Processing
+			}
+			require.NoError(t, provider.NewSession(ctx).Model(&model.ExptRunLog{}).Where("expt_run_id=2").Update("status", int64(runStatus)).Error)
 			marker, ok := any(NewExptDAO(provider)).(IExptRetryRunStatusDAO)
 			require.True(t, ok)
 			processing, err := marker.MarkRetryProcessing(ctx, 9, 7, 2)

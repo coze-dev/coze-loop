@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/bytedance/gg/gptr"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -20,6 +21,17 @@ type IExptRetryRunStatusDAO interface {
 	MarkRetryProcessing(ctx context.Context, spaceID, exptID, runID int64) (bool, error)
 }
 
+func retryRunAllowsProcessing(tx *gorm.DB, spaceID, exptID, runID int64) (bool, error) {
+	var run model.ExptRunLog
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("space_id=? AND expt_id=? AND expt_run_id=?", spaceID, exptID, runID).
+		Take(&run).Error; err != nil {
+		return false, fmt.Errorf("retry processing run: %w", err)
+	}
+	status := entity.ExptStatus(gptr.Indirect(run.Status))
+	return status != entity.ExptStatus_Terminating && !entity.IsExptFinished(status), nil
+}
+
 func (dao *exptDAOImpl) MarkRetryProcessing(ctx context.Context, spaceID, exptID, runID int64) (processing bool, err error) {
 	err = dao.db.Transaction(ctx, func(tx *gorm.DB) error {
 		var expt model.Experiment
@@ -30,6 +42,10 @@ func (dao *exptDAOImpl) MarkRetryProcessing(ctx context.Context, spaceID, exptID
 		}
 		if expt.LatestRunID != runID {
 			return fmt.Errorf("retry processing experiment run replaced")
+		}
+		active, err := retryRunAllowsProcessing(tx, spaceID, exptID, runID)
+		if err != nil || !active {
+			return err
 		}
 		switch {
 		case expt.Status == int32(entity.ExptStatus_Terminating):
