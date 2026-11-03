@@ -865,6 +865,22 @@ func TestReleaseCurrentSupersededRunQuotaUnit(t *testing.T) {
 		d.guard.EXPECT().Release(gomock.Any(), "scope", int64(5), int64(9), "req", gomock.Any()).Return(errors.New("release"))
 		require.True(t, errno.NeedMQRetry(m.releaseCurrentSupersededRunQuota(context.Background(), 1, 3, 2, entity.EvaluationModeFailRetry)))
 	})
+	t.Run("finished_releases_space_quota", func(t *testing.T) {
+		d := newTermUnitDeps(t)
+		m := d.manager()
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 5, Status: entity.ExptStatus_Success, ExptDispatchMode: entity.ExptDispatchModeEnforce, SchedulerScope: "scope"}, nil)
+		quota := repomocks.NewMockQuotaRepo(d.ctrl)
+		quota.EXPECT().CreateOrUpdate(gomock.Any(), int64(3), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, update func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
+			next, changed, err := update(&entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{1: 123}})
+			require.NoError(t, err)
+			require.True(t, changed)
+			require.NotContains(t, next.ExptID2RunTime, int64(1))
+			return nil
+		})
+		m.quotaRepo = quota
+		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
+		require.NoError(t, m.releaseCurrentSupersededRunQuota(context.Background(), 1, 3, 2, entity.EvaluationModeFailRetry))
+	})
 	t.Run("success", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()

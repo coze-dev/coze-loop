@@ -601,6 +601,11 @@ func (e *ExptMangerImpl) releaseCurrentSupersededRunQuota(ctx context.Context, e
 	if !entity.IsCentralDispatch(current.ExptDispatchMode) || current.LatestRunID == 0 || current.LatestRunID == newRun {
 		return nil
 	}
+	if entity.IsExptFinished(current.Status) {
+		if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(ctx, expt, space, &entity.Session{}); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+	}
 	if e.centralGuard == nil || current.SchedulerScope == "" {
 		return errno.NewMQRetryErr("superseded quota provider or scope missing")
 	}
