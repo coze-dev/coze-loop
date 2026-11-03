@@ -2004,6 +2004,20 @@ func startRetryMutation(ctx context.Context, exptRepo repo.IExperimentRepo, even
 	return nil
 }
 
+func finishRetryMutation(ctx context.Context, exptRepo repo.IExperimentRepo, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
+	if marker, ok := exptRepo.(repo.IExptRetryRunStatusRepo); ok {
+		processing, err := marker.MarkRetryProcessing(ctx, event.SpaceID, event.ExptID, event.ExptRunID)
+		if err != nil {
+			return err
+		}
+		if processing {
+			expt.Status = entity.ExptStatus_Processing
+		}
+		return nil
+	}
+	return exptRepo.Update(ctx, &entity.Experiment{Status: entity.ExptStatus_Processing, ID: event.ExptID, SpaceID: event.SpaceID})
+}
+
 func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
 	idemKey := makeStartIdemKey(event)
 	exist, err := e.idem.Exist(ctx, idemKey)
@@ -2064,13 +2078,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		time.Sleep(time.Millisecond * 30)
 	}
 
-	exptDo := &entity.Experiment{
-		Status:  entity.ExptStatus_Processing,
-		ID:      event.ExptID,
-		SpaceID: event.SpaceID,
-	}
-
-	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
+	if err := finishRetryMutation(ctx, e.exptRepo, event, expt); err != nil {
 		return err
 	}
 
@@ -2214,7 +2222,7 @@ func (e *ExptRetryAllExec) exptStartMultiSet(ctx context.Context, event *entity.
 		time.Sleep(time.Millisecond * 30)
 	}
 
-	if err := e.exptRepo.Update(ctx, &entity.Experiment{Status: entity.ExptStatus_Processing, ID: event.ExptID, SpaceID: event.SpaceID}); err != nil {
+	if err := finishRetryMutation(ctx, e.exptRepo, event, expt); err != nil {
 		return err
 	}
 	if e.templateManager != nil {
@@ -2286,11 +2294,7 @@ func (e *ExptRetryItemsExec) ExptStart(ctx context.Context, event *entity.ExptSc
 		return err
 	}
 
-	if err := e.exptRepo.Update(ctx, &entity.Experiment{
-		Status:  entity.ExptStatus_Processing,
-		ID:      event.ExptID,
-		SpaceID: event.SpaceID,
-	}); err != nil {
+	if err := finishRetryMutation(ctx, e.exptRepo, event, expt); err != nil {
 		return err
 	}
 

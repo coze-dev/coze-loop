@@ -14,3 +14,9 @@ import (
 type IExptRetryItemResetRepo interface {
 	ResetItemForRetry(ctx context.Context, spaceID, exptID, runID int64, runLog *entity.ExptItemResultRunLog, turnIDs []int64) (applied bool, err error)
 }
+
+// IExptRetryRunStatusRepo guards the final Processing transition by current run
+// and preserves cancellation states such as Terminating.
+type IExptRetryRunStatusRepo interface {
+	MarkRetryProcessing(ctx context.Context, spaceID, exptID, runID int64) (processing bool, err error)
+}

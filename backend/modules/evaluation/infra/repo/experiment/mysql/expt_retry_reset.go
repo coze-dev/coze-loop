@@ -36,13 +36,6 @@ func (dao *exptItemResultDAOImpl) ResetItemForRetry(ctx context.Context, spaceID
 		if expt.LatestRunID != runID {
 			return fmt.Errorf("retry reset experiment run replaced")
 		}
-		if expt.Status != int32(entity.ExptStatus_Processing) {
-			if err := tx.Model(&model.Experiment{}).
-				Where("id=? AND space_id=? AND latest_run_id=?", expt.ID, spaceID, runID).
-				Update("status", int32(entity.ExptStatus_Processing)).Error; err != nil {
-				return err
-			}
-		}
 
 		var canonical model.ExptItemResult
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
@@ -62,6 +55,14 @@ func (dao *exptItemResultDAOImpl) ResetItemForRetry(ctx context.Context, spaceID
 			return err
 		}
 
+		if expt.Status != int32(entity.ExptStatus_Processing) && expt.Status != int32(entity.ExptStatus_Terminating) &&
+			(expt.Status == int32(entity.ExptStatus_Pending) || entity.IsExptFinished(entity.ExptStatus(expt.Status))) {
+			if err := tx.Model(&model.Experiment{}).
+				Where("id=? AND space_id=? AND latest_run_id=?", expt.ID, spaceID, runID).
+				Update("status", int32(entity.ExptStatus_Processing)).Error; err != nil {
+				return err
+			}
+		}
 		applied = true
 		fields, err := newRunItemResultFields(&canonical, runID, map[string]any{
 			"err_msg":     nil,
