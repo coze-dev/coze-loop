@@ -32,14 +32,18 @@ func (p *retryResetFaultProvider) Transaction(ctx context.Context, fc func(*gorm
 	return p.Provider.Transaction(ctx, func(tx *gorm.DB) error {
 		inject := func(tx *gorm.DB) {
 			if tx.Statement.Table == p.table && p.failed.CompareAndSwap(false, true) {
-				tx.AddError(errors.New("injected retry reset write failure"))
+				_ = tx.AddError(errors.New("injected retry reset write failure"))
 			}
 		}
 		switch p.operation {
 		case "create":
-			tx.Callback().Create().Before("gorm:create").Register("retry_reset_fault_create", inject)
+			if err := tx.Callback().Create().Before("gorm:create").Register("retry_reset_fault_create", inject); err != nil {
+				return err
+			}
 		case "update":
-			tx.Callback().Update().Before("gorm:update").Register("retry_reset_fault_update", inject)
+			if err := tx.Callback().Update().Before("gorm:update").Register("retry_reset_fault_update", inject); err != nil {
+				return err
+			}
 		}
 		return fc(tx)
 	}, opts...)
