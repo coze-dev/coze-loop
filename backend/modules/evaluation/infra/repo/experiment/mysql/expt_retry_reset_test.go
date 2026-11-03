@@ -51,8 +51,9 @@ func (p *retryResetFaultProvider) Transaction(ctx context.Context, fc func(*gorm
 
 func newRetryResetFixture(t *testing.T, operation, table string) (db.Provider, retryResetPort) {
 	t.Helper()
-	provider := db.NewTestDB(t, &model.ExptItemResult{}, &model.ExptItemResultRunLog{}, &model.ExptTurnResult{}, &model.ExptTurnResultRunLog{}, &model.ExptStats{})
+	provider := db.NewTestDB(t, &model.Experiment{}, &model.ExptItemResult{}, &model.ExptItemResultRunLog{}, &model.ExptTurnResult{}, &model.ExptTurnResultRunLog{}, &model.ExptStats{})
 	ctx := context.Background()
+	require.NoError(t, provider.NewSession(ctx).Create(&model.Experiment{ID: 7, SpaceID: 9, LatestRunID: 2, Status: int32(entity.ExptStatus_Success)}).Error)
 	require.NoError(t, provider.NewSession(ctx).Create(&model.ExptItemResult{ID: 1, SpaceID: 9, ExptID: 7, ExptRunID: 1, ItemID: 11, ItemVersionID: 101, Status: int32(entity.ItemRunState_Success)}).Error)
 	require.NoError(t, provider.NewSession(ctx).Create(&model.ExptTurnResult{ID: 2, SpaceID: 9, ExptID: 7, ExptRunID: 1, ItemID: 11, ItemVersionID: 101, TurnID: 21, Status: int32(entity.TurnRunState_Success), TargetResultID: 31}).Error)
 	require.NoError(t, provider.NewSession(ctx).Create(&model.ExptStats{ID: 3, SpaceID: 9, ExptID: 7, SuccessCnt: 1}).Error)
@@ -76,6 +77,9 @@ func retryResetRunLog() *entity.ExptItemResultRunLog {
 func requireRetryResetApplied(t *testing.T, provider db.Provider) {
 	t.Helper()
 	ctx := context.Background()
+	var expt model.Experiment
+	require.NoError(t, provider.NewSession(ctx).Where("space_id=9 AND id=7").Take(&expt).Error)
+	require.Equal(t, int32(entity.ExptStatus_Processing), expt.Status)
 	var item model.ExptItemResult
 	require.NoError(t, provider.NewSession(ctx).Where("space_id=9 AND expt_id=7 AND item_id=11").Take(&item).Error)
 	require.Equal(t, int64(2), item.ExptRunID)
@@ -152,6 +156,22 @@ func TestRetryResetRequiresCanonicalAndSkipsMaterializedItem(t *testing.T) {
 		var count int64
 		require.NoError(t, provider.NewSession(ctx).Model(&model.ExptItemResultRunLog{}).Where("expt_run_id=2").Count(&count).Error)
 		require.Zero(t, count)
+	})
+
+	t.Run("replaced_run_does_not_mutate_experiment_or_item", func(t *testing.T) {
+		provider, port := newRetryResetFixture(t, "", "")
+		ctx := context.Background()
+		require.NoError(t, provider.NewSession(ctx).Model(&model.Experiment{}).Where("id=7").Update("latest_run_id", int64(3)).Error)
+		applied, err := port.ResetItemForRetry(ctx, 9, 7, 2, retryResetRunLog(), []int64{21})
+		require.Error(t, err)
+		require.False(t, applied)
+		var expt model.Experiment
+		require.NoError(t, provider.NewSession(ctx).Where("id=7").Take(&expt).Error)
+		require.Equal(t, int32(entity.ExptStatus_Success), expt.Status)
+		var item model.ExptItemResult
+		require.NoError(t, provider.NewSession(ctx).Where("id=1").Take(&item).Error)
+		require.Equal(t, int64(1), item.ExptRunID)
+		require.Equal(t, int32(entity.ItemRunState_Success), item.Status)
 	})
 
 	t.Run("canonical_current_run_still_backfills", func(t *testing.T) {

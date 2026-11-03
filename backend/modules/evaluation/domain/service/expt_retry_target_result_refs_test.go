@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
@@ -535,19 +536,25 @@ func TestResetRetryRunLogsForItems_PartialCommitStillRefreshesFilter(t *testing.
 	deps := newRetryHelperDeps(ctrl)
 	items := []*entity.EvaluationSetItem{{ItemID: 1, Turns: []*entity.Turn{{ID: 10}}}, {ItemID: 2, Turns: []*entity.Turn{{ID: 20}}}}
 	deps.idgenerator.(*idgenmocks.MockIIDGenerator).EXPECT().GenMultiIDs(gomock.Any(), 4).Return([]int64{1, 2, 3, 4}, nil).Times(1)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	deps.exptItemResultRepo.(*retryTestItemResultRepo).reset.EXPECT().ResetItemForRetry(
 		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
 	).DoAndReturn(func(_ context.Context, _, _, _ int64, runLog *entity.ExptItemResultRunLog, _ []int64) (bool, error) {
 		if runLog.ItemID == 2 {
+			cancel()
 			return false, errors.New("boom")
 		}
 		return true, nil
 	}).Times(2)
 	resultSvc := svcmocks.NewMockExptResultService(ctrl)
-	resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), int64(3), int64(1), []int64{1}).Return(nil).Times(1)
+	resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), int64(3), int64(1), []int64{1}).DoAndReturn(func(ctx context.Context, _, _ int64, _ []int64) error {
+		require.NoError(t, ctx.Err())
+		return nil
+	}).Times(1)
 	deps.resultSvc = resultSvc
 
-	err := resetRetryItemsForNewRun(context.Background(), deps, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, &entity.Experiment{Status: entity.ExptStatus_Processing}, items, nil)
+	err := resetRetryItemsForNewRun(ctx, deps, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, &entity.Experiment{Status: entity.ExptStatus_Processing}, items, nil)
 	assert.Error(t, err)
 }
 

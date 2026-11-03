@@ -27,6 +27,23 @@ func (dao *exptItemResultDAOImpl) ResetItemForRetry(ctx context.Context, spaceID
 		return false, fmt.Errorf("invalid retry reset run log")
 	}
 	err = dao.provider.Transaction(ctx, func(tx *gorm.DB) error {
+		var expt model.Experiment
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("space_id=? AND id=?", spaceID, exptID).
+			Take(&expt).Error; err != nil {
+			return fmt.Errorf("retry reset experiment: %w", err)
+		}
+		if expt.LatestRunID != runID {
+			return fmt.Errorf("retry reset experiment run replaced")
+		}
+		if expt.Status != int32(entity.ExptStatus_Processing) {
+			if err := tx.Model(&model.Experiment{}).
+				Where("id=? AND space_id=? AND latest_run_id=?", expt.ID, spaceID, runID).
+				Update("status", int32(entity.ExptStatus_Processing)).Error; err != nil {
+				return err
+			}
+		}
+
 		var canonical model.ExptItemResult
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where("space_id=? AND expt_id=? AND item_id=?", spaceID, exptID, runLog.ItemID).
