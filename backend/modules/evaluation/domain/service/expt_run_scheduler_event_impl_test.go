@@ -754,6 +754,7 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 
 	type fields struct {
 		configer            *configmocks.MockIConfiger
+		mutex               *lockmocks.MockILocker
 		exptItemResultRepo  *mock_repo.MockIExptItemResultRepo
 		exptTurnResultRepo  *mock_repo.MockIExptTurnResultRepo
 		evaluatorRecordRepo *mock_repo.MockIEvaluatorRecordRepo
@@ -881,19 +882,20 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 				f.exptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(
 					gomock.Any(), int64(1), int64(2), []int64{1, 3}, int64(3),
 				).Return(nil, nil).Times(1)
-				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
+				f.exptItemResultRepo.EXPECT().CompareAndSwapItemRunLog(
 					gomock.Any(),
 					int64(1),
 					int64(2),
-					[]int64{1, 3},
+					gomock.Any(),
+					entity.ItemRunState_Processing,
 					gomock.Any(),
 					int64(3),
-				).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+				).DoAndReturn(func(_ context.Context, _, _, _ int64, _ entity.ItemRunState, ufields map[string]any, _ int64) (bool, error) {
 					assert.Equal(t, int32(entity.ItemRunState_Fail), ufields["status"])
 					assert.Equal(t, int32(entity.ExptItemResultStateLogged), ufields["result_state"])
 					assert.NotNil(t, ufields["err_msg"])
-					return nil
-				}).Times(1)
+					return true, nil
+				}).Times(2)
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(
 					gomock.Any(),
 					int64(3),
@@ -947,7 +949,7 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 			},
 		},
 		{
-			name: "Error case - UpdateItemRunLog failed",
+			name: "Error case - CompareAndSwapItemRunLog failed",
 			args: args{
 				ctx: session.WithCtxUser(context.Background(), &session.User{ID: testUserID}),
 				event: &entity.ExptScheduleEvent{
@@ -975,27 +977,22 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 						},
 					},
 				}).Times(1)
-				f.evaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(
-					gomock.Any(), gomock.Any(), false, false,
-				).Return(nil, nil).AnyTimes()
-				f.exptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(
-					gomock.Any(), int64(1), int64(2), []int64{1}, int64(3),
-				).Return(nil, nil).Times(1)
-				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
+				f.exptItemResultRepo.EXPECT().CompareAndSwapItemRunLog(
 					gomock.Any(),
 					int64(1),
 					int64(2),
-					[]int64{1},
+					int64(1),
+					entity.ItemRunState_Processing,
 					gomock.Any(),
 					int64(3),
-				).Return(errors.New("update item run log failed")).Times(1)
+				).Return(false, errors.New("compare and swap item run log failed")).Times(1)
 			},
 			wantAlives:  nil,
 			wantZombies: nil,
 			wantErr:     true,
 			assertErr: func(t *testing.T, err error) {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "update item run log failed")
+				assert.Contains(t, err.Error(), "compare and swap item run log failed")
 			},
 		},
 		{
@@ -1033,14 +1030,15 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 				f.exptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(
 					gomock.Any(), int64(1), int64(2), []int64{1}, int64(3),
 				).Return(nil, nil).Times(1)
-				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
+				f.exptItemResultRepo.EXPECT().CompareAndSwapItemRunLog(
 					gomock.Any(),
 					int64(1),
 					int64(2),
-					[]int64{1},
+					int64(1),
+					entity.ItemRunState_Processing,
 					gomock.Any(),
 					int64(3),
-				).Return(nil).Times(1)
+				).Return(true, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(
 					gomock.Any(),
 					int64(3),
@@ -1106,14 +1104,15 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 				f.exptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(
 					gomock.Any(), int64(1), int64(2), []int64{1, 2}, int64(3),
 				).Return(nil, nil).Times(1)
-				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
+				f.exptItemResultRepo.EXPECT().CompareAndSwapItemRunLog(
 					gomock.Any(),
 					int64(1),
 					int64(2),
-					[]int64{1, 2},
+					gomock.Any(),
+					entity.ItemRunState_Processing,
 					gomock.Any(),
 					int64(3),
-				).Return(nil).Times(1)
+				).Return(true, nil).Times(2)
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(
 					gomock.Any(),
 					int64(3),
@@ -1272,10 +1271,13 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 
 			f := &fields{
 				configer:            configmocks.NewMockIConfiger(ctrl),
+				mutex:               lockmocks.NewMockILocker(ctrl),
 				exptItemResultRepo:  mock_repo.NewMockIExptItemResultRepo(ctrl),
 				exptTurnResultRepo:  mock_repo.NewMockIExptTurnResultRepo(ctrl),
 				evaluatorRecordRepo: mock_repo.NewMockIEvaluatorRecordRepo(ctrl),
 			}
+			f.mutex.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+			f.mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
 
 			if tt.prepareMock != nil {
 				tt.prepareMock(f, ctrl, tt.args)
@@ -1283,6 +1285,7 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 
 			svc := &ExptSchedulerImpl{
 				Configer:            f.configer,
+				Mutex:               f.mutex,
 				ExptItemResultRepo:  f.exptItemResultRepo,
 				ExptTurnResultRepo:  f.exptTurnResultRepo,
 				EvaluatorRecordRepo: f.evaluatorRecordRepo,

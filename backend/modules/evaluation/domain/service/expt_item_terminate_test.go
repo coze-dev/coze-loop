@@ -587,11 +587,11 @@ func TestExptMangerImpl_CompleteExpt_TerminatedNotFailed(t *testing.T) {
 }
 
 // TestCompleteItemRun_TerminalNotOverwritten Terminal 吸收态（tasks 6.7 + P1 #4）：
-// 吸收态由**条件 UPDATE**（UpdateItemRunLogIfNotTerminal，WHERE status <> Terminal）原子保证，
+// 吸收态由**条件 UPDATE**（UpdateItemRunLogIfNotTerminal，WHERE status IN Queueing/Processing）原子保证，
 // 而不是「先 SELECT 判定再写」—— 后者的 SELECT 会走从库，延迟窗口内会把 Terminal 覆盖成 Success/Fail。
 // 断言：
 //   - status / err_msg 一律走条件写，不管当前状态是什么（判定下沉到 DB 的 WHERE）
-//   - result_state=Logged 另走一条无条件写，保证已 Terminal 的行也能被调度侧收口
+//   - 不再无条件补 result_state=Logged，避免把已经 Resulted 的终态重新打开
 func TestCompleteItemRun_TerminalNotOverwritten(t *testing.T) {
 	newExec := func(ctrl *gomock.Controller) (*ExptItemEvalCtxExecutor, *repoMocks.MockIExptItemResultRepo) {
 		itemRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
@@ -605,18 +605,6 @@ func TestCompleteItemRun_TerminalNotOverwritten(t *testing.T) {
 			Expt:  &entity.Experiment{ID: 1},
 		}
 	}
-	// expectUnconditionalResultState 无条件补 result_state 的那一条写：只允许带 result_state。
-	expectUnconditionalResultState := func(t *testing.T, itemRepo *repoMocks.MockIExptItemResultRepo) {
-		itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-			DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
-				assert.Equal(t, entity.ExptItemResultStateLogged, ufields["result_state"])
-				assert.NotContains(t, ufields, "status", "无条件写 MUST NOT 带 status，否则会覆盖 Terminal")
-				assert.NotContains(t, ufields, "err_msg", "无条件写 MUST NOT 带 err_msg")
-				assert.Len(t, ufields, 1)
-				return nil
-			})
-	}
-
 	t.Run("success_result_goes_through_conditional_update", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -624,13 +612,12 @@ func TestCompleteItemRun_TerminalNotOverwritten(t *testing.T) {
 
 		// ★ status 必须走条件写：这是 Terminal 吸收态的唯一保证（DB 层 WHERE status <> Terminal）。
 		// 一旦有人改回无条件 UpdateItemRunLog，这里会因 Unexpected call 而失败。
-		itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-			DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+		itemRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.ItemRunState_Processing, gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, _, _, _ int64, _ entity.ItemRunState, ufields map[string]any, _ int64) (bool, error) {
 				assert.Equal(t, int32(entity.ItemRunState_Success), ufields["status"])
 				assert.Equal(t, entity.ExptItemResultStateLogged, ufields["result_state"])
-				return nil
+				return true, nil
 			})
-		expectUnconditionalResultState(t, itemRepo)
 		require.NoError(t, exec.CompleteItemRun(context.Background(), eiec(), nil))
 	})
 
@@ -639,13 +626,12 @@ func TestCompleteItemRun_TerminalNotOverwritten(t *testing.T) {
 		defer ctrl.Finish()
 		exec, itemRepo := newExec(ctrl)
 
-		itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-			DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+		itemRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.ItemRunState_Processing, gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, _, _, _ int64, _ entity.ItemRunState, ufields map[string]any, _ int64) (bool, error) {
 				assert.Equal(t, int32(entity.ItemRunState_Fail), ufields["status"])
 				assert.NotEmpty(t, ufields["err_msg"], "err_msg 与 status 同批写，一起被 WHERE 拦下或一起生效")
-				return nil
+				return true, nil
 			})
-		expectUnconditionalResultState(t, itemRepo)
 		require.NoError(t, exec.CompleteItemRun(context.Background(), eiec(), errors.New("target boom")))
 	})
 
@@ -654,8 +640,8 @@ func TestCompleteItemRun_TerminalNotOverwritten(t *testing.T) {
 		defer ctrl.Finish()
 		exec, itemRepo := newExec(ctrl)
 
-		itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-			Return(errors.New("db down"))
+		itemRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.ItemRunState_Processing, gomock.Any(), gomock.Any()).
+			Return(false, errors.New("db down"))
 		assert.Error(t, exec.CompleteItemRun(context.Background(), eiec(), nil))
 	})
 }
@@ -676,27 +662,14 @@ func TestCompleteItemRunOnUnretriableErr_TerminalNotOverwritten(t *testing.T) {
 
 	event := &entity.ExptItemEvalEvent{SpaceID: 7, ExptID: 1001, ExptRunID: 2002, EvalSetItemID: 3003}
 
-	itemRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		AnyTimes().Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Terminal)}, nil)
-	// status/err_msg 走条件写：DB 层的 WHERE status <> Terminal 会把它整条拦下
-	itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+	itemRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.ItemRunState_Processing, gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _, _ int64, _ entity.ItemRunState, ufields map[string]any, _ int64) (bool, error) {
 			assert.Equal(t, int32(entity.ItemRunState_Fail), ufields["status"])
 			assert.NotEmpty(t, ufields["err_msg"])
-			return nil
+			return false, nil
 		})
-	// result_state 无条件补写，让已 Terminal 的行也能被调度侧收口
-	itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
-			assert.NotContains(t, ufields, "status", "无条件写 MUST NOT 带 status，否则会覆盖 Terminal")
-			assert.Equal(t, int32(entity.ExptItemResultStateLogged), ufields["result_state"])
-			return nil
-		})
-	turnRepo.EXPECT().
-		CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), int64(7), int64(1001), int64(2002), []int64{3003}, entity.TurnRunState_Terminal).
-		Return(nil)
 
-	svc.completeItemRunOnUnretriableErr(context.Background(), event, errors.New("build ctx failed"))
+	assert.False(t, svc.completeItemRunOnUnretriableErr(context.Background(), event, errors.New("build ctx failed")))
 }
 
 // TestHandleEventCheck_ItemLevelTerminalGate item 级闸门（tasks 6.8）：

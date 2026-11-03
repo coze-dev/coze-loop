@@ -179,6 +179,9 @@ func (e *ExptItemEvalCtxExecutor) isItemTerminated(ctx context.Context, eiec *en
 }
 
 func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *entity.ExptTurnEvalCtx, result *entity.ExptTurnRunResult) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if result == nil {
 		return fmt.Errorf("StoreTurnRunResult with nil result")
 	}
@@ -494,6 +497,9 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 }
 
 func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *entity.ExptItemEvalCtx, evalErr error) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	event := eiec.Event
 	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
 	defer cancel()
@@ -516,26 +522,18 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 		ufields["status"] = int32(entity.ItemRunState_Success)
 	}
 
-	// Terminal 是吸收态：该行已被用户行级终止时，在途执行的成功/失败结果 MUST NOT 回写 status / err_msg
-	// （对应 spec「终止后到达的执行结果不覆盖终止状态」）—— 用户要看到的是"被主动终止"，而不是终止前
-	// 那次执行的报错。
-	//
-	// ⚠️ 这里刻意**不**用「先 SELECT 判 Terminal 再 UPDATE」：普通 SELECT 会被路由到只读从库
-	// （商业化侧 db 以 WithReadReplicas 构建），主从延迟窗口内会读回终止前的旧状态并把 Terminal
-	// 覆盖成 Success —— 该行还会被重新扫成成功行、发 item-complete MQ、记进 success_cnt，
-	// 用户的终止操作被静默吞掉。即便读主库，读-判-写之间仍有 TOCTOU 窗口。
-	// 故拆成两条写，用 DB 的 WHERE 做原子判定：
-	//	 (1) 条件写：status/err_msg/result_state，仅对 status <> Terminal 的行生效；
-	//	 (2) 无条件写：result_state=Logged —— 对已 Terminal 的行也必须落，否则调度侧收不了口。
-	//	     该字段与终止语义无冲突（TerminateItems 自己也写 Logged），重复写幂等。
-	if err := e.ItemResultRepo.UpdateItemRunLogIfNotTerminal(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
+	// 只有从 Processing 原子迁移到完成态的执行者才能继续终态副作用。
+	// zombie、用户终止或另一个完成者已先收敛时，CAS 未命中即直接返回。
+	updated, err := e.ItemResultRepo.CompareAndSwapItemRunLog(
+		contexts.WithCtxWriteDB(persistCtx), event.ExptID, event.ExptRunID, event.EvalSetItemID,
+		entity.ItemRunState_Processing, ufields, event.SpaceID,
+	)
+	if err != nil {
 		return err
 	}
-
-	if err := e.ItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, map[string]any{
-		"result_state": entity.ExptItemResultStateLogged,
-	}, event.SpaceID); err != nil {
-		return err
+	if !updated {
+		logs.CtxInfo(persistCtx, "CompleteItemRun skipped by settled run log, expt_id: %v, expt_run_id: %v, item_id: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID)
+		return nil
 	}
 
 	// 沙箱 agent 实验:单行走到终态失败,立即发一张飞书卡。Notifier 内部做 sandbox agent + Enable 判定,

@@ -145,7 +145,16 @@ func TestRetryFailure_SourceReadErrorOuterClosurePreservesTargets(t *testing.T) 
 	}).AnyTimes()
 	itemLog := &entity.ExptItemResultRunLog{ExptID: exptID, ExptRunID: runID, ItemID: itemID, SpaceID: spaceID, Status: int32(entity.ItemRunState_Processing)}
 	itemRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
-	applyItemFields := func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
+	applyItemFields := func(_ context.Context, _, _, _ int64, _ entity.ItemRunState, fields map[string]any, _ int64) (bool, error) {
+		if status, ok := fields["status"].(int32); ok {
+			itemLog.Status = status
+		}
+		if state, ok := fields["result_state"].(int32); ok {
+			itemLog.ResultState = state
+		}
+		return true, nil
+	}
+	applyItemFieldsUnconditional := func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
 		if status, ok := fields["status"].(int32); ok {
 			itemLog.Status = status
 		}
@@ -154,8 +163,8 @@ func TestRetryFailure_SourceReadErrorOuterClosurePreservesTargets(t *testing.T) 
 		}
 		return nil
 	}
-	itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), exptID, runID, []int64{itemID}, gomock.Any(), spaceID).DoAndReturn(applyItemFields).AnyTimes()
-	itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), exptID, runID, []int64{itemID}, gomock.Any(), spaceID).DoAndReturn(applyItemFields).AnyTimes()
+	itemRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), exptID, runID, itemID, entity.ItemRunState_Processing, gomock.Any(), spaceID).DoAndReturn(applyItemFields).AnyTimes()
+	itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), exptID, runID, []int64{itemID}, gomock.Any(), spaceID).DoAndReturn(applyItemFieldsUnconditional).AnyTimes()
 	itemRepo.EXPECT().GetItemRunLog(gomock.Any(), exptID, runID, itemID, spaceID).Return(itemLog, nil).AnyTimes()
 	itemRepo.EXPECT().GetItemTurnResults(gomock.Any(), spaceID, exptID, itemID).Return(canonical, nil).AnyTimes()
 	itemRepo.EXPECT().BatchGet(gomock.Any(), spaceID, exptID, []int64{itemID}).Return([]*entity.ExptItemResult{{ItemID: itemID, Status: entity.ItemRunState_Processing}}, nil).AnyTimes()

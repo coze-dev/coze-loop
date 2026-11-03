@@ -730,20 +730,66 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 	return nil
 }
 
+const zombieItemClaimLockTTL = 5 * time.Minute
+
+func exptItemEvalRunLockKey(exptID, itemID int64) string {
+	return fmt.Sprintf("expt_item_eval_run_lock:%d:%d", exptID, itemID)
+}
+
 func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, expt *entity.Experiment) (alives, zombies []*entity.ExptEvalItem, err error) {
 	asyncExec := false
 	if expt != nil {
 		asyncExec = expt.AsyncExec()
 	}
 	zombieSecond := e.Configer.GetConsumerConf(ctx).GetExptExecConf(event.SpaceID).GetExptItemEvalConf().GetItemZombieSecond(asyncExec)
-	for _, item := range items {
-		if item.State == entity.ItemRunState_Processing && item.UpdatedAt != nil && !gptr.Indirect(item.UpdatedAt).IsZero() {
-			if time.Since(gptr.Indirect(item.UpdatedAt)).Seconds() > float64(zombieSecond) {
-				zombies = append(zombies, item.SetState(entity.ItemRunState_Fail))
-			} else {
-				alives = append(alives, item)
+	zombieErrBytes := []byte(errno.SerializeErr(errno.NewItemZombieTimeoutErr(zombieSecond, asyncExec)))
+	claimedLockKeys := make([]string, 0)
+	defer func() {
+		for _, key := range claimedLockKeys {
+			if _, unlockErr := e.Mutex.Unlock(key); unlockErr != nil {
+				logs.CtxWarn(ctx, "[ExptEval] release zombie item claim lock fail, key: %v, err: %v", key, unlockErr)
 			}
 		}
+	}()
+
+	for _, item := range items {
+		if item.State != entity.ItemRunState_Processing || item.UpdatedAt == nil || gptr.Indirect(item.UpdatedAt).IsZero() {
+			continue
+		}
+		if time.Since(gptr.Indirect(item.UpdatedAt)).Seconds() <= float64(zombieSecond) {
+			alives = append(alives, item)
+			continue
+		}
+
+		lockKey := exptItemEvalRunLockKey(event.ExptID, item.ItemID)
+		locked, lockErr := e.Mutex.Lock(ctx, lockKey, zombieItemClaimLockTTL)
+		if lockErr != nil {
+			return nil, nil, errorx.Wrapf(lockErr, "claim zombie item lock fail, expt_id: %v, expt_run_id: %v, item_id: %v", event.ExptID, event.ExptRunID, item.ItemID)
+		}
+		if !locked {
+			alives = append(alives, item)
+			continue
+		}
+
+		updated, casErr := e.ExptItemResultRepo.CompareAndSwapItemRunLog(
+			contexts.WithCtxWriteDB(ctx), event.ExptID, event.ExptRunID, item.ItemID, entity.ItemRunState_Processing,
+			map[string]any{
+				"status":       int32(entity.ItemRunState_Fail),
+				"result_state": int32(entity.ExptItemResultStateLogged),
+				"err_msg":      zombieErrBytes,
+			}, event.SpaceID,
+		)
+		if casErr != nil {
+			_, _ = e.Mutex.Unlock(lockKey)
+			return nil, nil, casErr
+		}
+		if !updated {
+			_, _ = e.Mutex.Unlock(lockKey)
+			alives = append(alives, item)
+			continue
+		}
+		claimedLockKeys = append(claimedLockKeys, lockKey)
+		zombies = append(zombies, item.SetState(entity.ItemRunState_Fail))
 	}
 
 	zombieItemIDs := gslice.Transform(zombies, func(e *entity.ExptEvalItem, _ int) int64 { return e.ItemID })
@@ -760,17 +806,6 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 
 	if err := e.terminateZombieEvalTargetRecords(ctx, event, expt, zombieItemIDs); err != nil {
 		logs.CtxError(ctx, "[ExptEval] terminate async eval target records for zombie items fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, zombieItemIDs, err)
-	}
-
-	// 把行超时错误写入 err_msg，供 API 层（ItemSystemInfo.Error）暴露给用户
-	zombieErrBytes := []byte(errno.SerializeErr(errno.NewItemZombieTimeoutErr(zombieSecond, asyncExec)))
-
-	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, map[string]any{
-		"status":       int32(entity.ItemRunState_Fail),
-		"result_state": int32(entity.ExptItemResultStateLogged),
-		"err_msg":      zombieErrBytes,
-	}, event.SpaceID); err != nil {
-		return nil, nil, err
 	}
 
 	// 主表 expt_item_result 只补 err_msg，供 MGetExperimentResult 构造 ItemSystemInfo 时读取。

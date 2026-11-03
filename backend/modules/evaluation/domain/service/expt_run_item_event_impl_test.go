@@ -1900,25 +1900,16 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr_Yield(t *testing.T) {
 			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
 				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
 			) {
-				itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
+				itemRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), int64(1), int64(2), int64(7), entity.ItemRunState_Processing, gomock.Any(), int64(3)).DoAndReturn(func(_ context.Context, _, _, _ int64, _ entity.ItemRunState, fields map[string]any, _ int64) (bool, error) {
 					assert.Equal(t, int32(entity.ItemRunState_Fail), fields["status"])
 					assert.NotEmpty(t, fields["err_msg"])
-					return nil
+					return true, nil
 				})
-				itemRepo.EXPECT().GetItemRunLog(gomock.Any(), int64(1), int64(2), int64(7), int64(3)).Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Fail)}, nil)
 
 				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: false})
 				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, false, gomock.Any(), gomock.Any(), gomock.Any())
-				// 走 completeItemRunOnUnretriableErr: run_log status=Fail + result_state=Logged, turn 置 Fail
-				itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).
-					DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
-						assert.NotContains(t, ufields, "status")
-						assert.NotContains(t, ufields, "err_msg")
-						assert.Equal(t, int32(entity.ExptItemResultStateLogged), ufields["result_state"])
-						assert.NotContains(t, ufields, "retry_times")
-						return nil
-					})
+				// 走 completeItemRunOnUnretriableErr: 条件写 run_log Fail，turn 置 Fail。
 				turnRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), int64(3), int64(1), int64(2), []int64{7}, entity.TurnRunState_Fail).Return(nil)
 				// 无 yield(UpdateItemsResult status=Queueing) / 无 MQ / 无 ArithOperateCount
 			},
@@ -1938,22 +1929,15 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr_Yield(t *testing.T) {
 			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
 				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
 			) {
-				itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
+				itemRepo.EXPECT().CompareAndSwapItemRunLog(gomock.Any(), int64(1), int64(2), int64(7), entity.ItemRunState_Processing, gomock.Any(), int64(3)).DoAndReturn(func(_ context.Context, _, _, _ int64, _ entity.ItemRunState, fields map[string]any, _ int64) (bool, error) {
 					assert.Equal(t, int32(entity.ItemRunState_Fail), fields["status"])
 					assert.NotEmpty(t, fields["err_msg"])
-					return nil
+					return true, nil
 				})
-				itemRepo.EXPECT().GetItemRunLog(gomock.Any(), int64(1), int64(2), int64(7), int64(3)).Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Fail)}, nil)
 
 				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: false})
 				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, false, gomock.Any(), gomock.Any(), gomock.Any())
-				itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).
-					DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
-						assert.NotContains(t, ufields, "status")
-						assert.NotContains(t, ufields, "err_msg")
-						return nil
-					})
 				turnRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.TurnRunState_Fail).Return(nil)
 			},
 		},
