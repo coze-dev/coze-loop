@@ -8,10 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	"github.com/google/uuid"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/cloudwego/kitex/pkg/kerrors"

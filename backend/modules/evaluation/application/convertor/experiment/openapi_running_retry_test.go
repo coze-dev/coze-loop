@@ -35,7 +35,7 @@ func TestOpenAPIRunningRetryLatestRun(t *testing.T) {
 
 func TestOpenAPIRunningRetryContractRoundTrip(t *testing.T) {
 	t.Run("request JSON and Thrift preserve identity", func(t *testing.T) {
-		input := `{"workspace_id":"9","experiment_id":"7","retry_mode":"retry_target_items","item_ids":["9223372036854775806"],"expected_run_id":"9223372036854775807","request_id":"72cc8921-40f4-4a43-b772-aaf2b5dcdf05"}`
+		input := `{"workspace_id":"9","experiment_id":"7","retry_mode":"retry_target_items","item_ids":["9223372036854775806"],"expected_run_id":"9223372036854775807"}`
 		var req openapi.RetryExperimentOApiRequest
 		require.NoError(t, js_conv.GetUnmarshaler()([]byte(input), &req))
 		buf := make([]byte, req.BLength())
@@ -48,8 +48,8 @@ func TestOpenAPIRunningRetryContractRoundTrip(t *testing.T) {
 		assert.JSONEq(t, input, string(body))
 	})
 	for _, input := range []string{
-		`{"run_id":"9223372036854775807","request_id":"72cc8921-40f4-4a43-b772-aaf2b5dcdf05","accepted_count":0,"rejected_items":[],"snapshot_at_ms":"1793275200123"}`,
-		`{"run_id":"9223372036854775807","request_id":"72cc8921-40f4-4a43-b772-aaf2b5dcdf05","accepted_count":1,"rejected_items":[{"item_id":"9223372036854775806","reason":"busy"}],"snapshot_at_ms":"1793275200123"}`,
+		`{"run_id":"9223372036854775807","accepted_count":0,"rejected_items":[],"snapshot_at_ms":"1793275200123"}`,
+		`{"run_id":"9223372036854775807","accepted_count":1,"rejected_items":[{"item_id":"9223372036854775806","reason":"busy"}],"snapshot_at_ms":"1793275200123"}`,
 	} {
 		t.Run(input, func(t *testing.T) {
 			var receipt openapi.RetryExperimentOpenAPIData

@@ -2737,7 +2737,7 @@ func TestToExptDTO_LatestRunID(t *testing.T) {
 
 func TestRetryExperimentContractRoundTrip(t *testing.T) {
 	t.Run("current run request survives JSON and Thrift", func(t *testing.T) {
-		input := `{"retry_mode":3,"workspace_id":7,"expt_id":42,"item_ids":[701],"expected_run_id":9007199254740993,"request_id":"72cc8921-40f4-4a43-b772-aaf2b5dcdf05"}`
+		input := `{"retry_mode":3,"workspace_id":7,"expt_id":42,"item_ids":[701],"expected_run_id":9007199254740993}`
 		var request expt.RetryExperimentRequest
 		require.NoError(t, stdjson.Unmarshal([]byte(input), &request))
 		buf := make([]byte, request.BLength())
@@ -2775,7 +2775,7 @@ func TestRetryExperimentContractRoundTrip(t *testing.T) {
 	})
 
 	t.Run("receipt preserves zero acceptance and rejected items", func(t *testing.T) {
-		input := `{"run_id":9007199254740993,"request_id":"72cc8921-40f4-4a43-b772-aaf2b5dcdf05","accepted_count":0,"rejected_items":[{"item_id":701,"reason":"busy"}],"snapshot_at_ms":1792497600000,"BaseResp":{"StatusCode":0,"StatusMessage":""}}`
+		input := `{"run_id":9007199254740993,"accepted_count":0,"rejected_items":[{"item_id":701,"reason":"busy"}],"snapshot_at_ms":1792497600000,"BaseResp":{"StatusCode":0,"StatusMessage":""}}`
 		var response expt.RetryExperimentResponse
 		require.NoError(t, stdjson.Unmarshal([]byte(input), &response))
 		buf := make([]byte, response.BLength())
