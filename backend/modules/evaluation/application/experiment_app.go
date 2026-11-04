@@ -2169,7 +2169,9 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 	}
 
 	goroutine.Go(ctx, func() {
-		if err := backoff.RetryWithElapsedTime(ctx, time.Minute*3, func() error {
+		// Cleanup stays blocked until a fresh legacy lifecycle holder ages past
+		// the migration grace, so the retry window must outlast that grace.
+		if err := backoff.RetryWithElapsedTime(ctx, service.LegacyLifecycleMigrationGrace+2*time.Minute, func() error {
 			return kill(ctx, req.GetExptID(), got.LatestRunID, req.GetWorkspaceID(), session)
 		}); err != nil {
 			logs.CtxInfo(ctx, "kill expt failed, expt_id: %v, err: %v", req.GetExptID(), err)

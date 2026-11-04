@@ -843,6 +843,14 @@ func TestHandleCurrentZombiesUnit(t *testing.T) {
 		require.Len(t, zombies, 0)
 		require.Len(t, alives, 2)
 	})
+	t.Run("unstable_source_missing_stays_alive", func(t *testing.T) {
+		d := newCurrentUnitDeps(t)
+		unstable := &entity.ExptEvalItem{ItemID: 9, State: entity.ItemRunState_Processing, UpdatedAt: &old, ObservationUnstable: true}
+		alives, zombies, err := d.scheduler().handleCurrentZombies(context.Background(), &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2}, []*entity.ExptEvalItem{unstable}, nil, 1, false)
+		require.NoError(t, err)
+		require.Len(t, zombies, 0)
+		require.Len(t, alives, 1)
+	})
 	t.Run("callback_error", func(t *testing.T) {
 		d := newCurrentUnitDeps(t)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil, nil, errors.New("lock"))
@@ -911,6 +919,14 @@ func TestSweepCurrentSandboxItemsUnit(t *testing.T) {
 		d.targets.EXPECT().CheckSandboxTerminated(gomock.Any(), int64(3), []int64{88}).Return(nil, nil)
 		alives, _, err := d.scheduler().sweepCurrentSandboxItems(context.Background(), &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2}, []*entity.ExptEvalItem{item(entity.ItemRunState_Processing, true)}, expt)
 		require.NoError(t, err)
+		require.Len(t, alives, 1)
+	})
+	t.Run("unstable_source_missing_stays_alive", func(t *testing.T) {
+		d := newCurrentUnitDeps(t)
+		unstable := &entity.ExptEvalItem{ItemID: 9, State: entity.ItemRunState_Processing, UpdatedAt: &old, ObservationUnstable: true}
+		alives, terminated, err := d.scheduler().sweepCurrentSandboxItems(context.Background(), &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2}, []*entity.ExptEvalItem{unstable}, expt)
+		require.NoError(t, err)
+		require.Len(t, terminated, 0)
 		require.Len(t, alives, 1)
 	})
 	t.Run("stopped_terminates", func(t *testing.T) {

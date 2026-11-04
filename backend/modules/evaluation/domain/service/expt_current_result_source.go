@@ -418,6 +418,12 @@ func (e *ExptSchedulerImpl) handleCurrentZombies(ctx context.Context, event *ent
 		if item == nil || item.State != entity.ItemRunState_Processing {
 			continue
 		}
+		if item.ObservationUnstable {
+			// The row is occupied but its source snapshot is not trustworthy;
+			// let the next stable scan judge it as a zombie.
+			alives = append(alives, item)
+			continue
+		}
 		if item.UpdatedAt == nil || item.UpdatedAt.IsZero() || time.Since(*item.UpdatedAt).Seconds() <= float64(zombieSecond) {
 			alives = append(alives, item)
 			continue
@@ -466,6 +472,10 @@ func (e *ExptSchedulerImpl) handleCurrentZombies(ctx context.Context, event *ent
 func (e *ExptSchedulerImpl) sweepCurrentSandboxItems(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, expt *entity.Experiment) (alives, terminated []*entity.ExptEvalItem, err error) {
 	for _, item := range items {
 		if item == nil || item.State != entity.ItemRunState_Processing {
+			alives = append(alives, item)
+			continue
+		}
+		if item.ObservationUnstable {
 			alives = append(alives, item)
 			continue
 		}

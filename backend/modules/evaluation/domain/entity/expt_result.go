@@ -303,6 +303,9 @@ type ExptEvalItem struct {
 	State               ItemRunState
 	RetryTimes          int32 // ★ 本轮 expt_run 内该 item 已被系统自动重试的次数; 供 handleToSubmits 回填事件
 	UpdatedAt           *time.Time
+	// ObservationUnstable marks a row whose concurrent read changed. It still
+	// occupies a slot, but Source-dependent recovery must not touch it.
+	ObservationUnstable bool
 }
 
 func (e *ExptEvalItem) SetState(state ItemRunState) *ExptEvalItem {

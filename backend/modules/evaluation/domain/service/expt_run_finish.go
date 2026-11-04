@@ -106,8 +106,9 @@ type lifecycleLockValueReader interface {
 }
 
 const (
-	legacyLifecycleMigrationGrace        = 5 * time.Minute
-	legacyLifecycleMigrationMaxRemaining = time.Hour
+	// LegacyLifecycleMigrationGrace is the minimum holder age before a
+	// pre-upgrade random holder may be migrated.
+	LegacyLifecycleMigrationGrace = 5 * time.Minute
 )
 
 // releasePreviousLifecycleHolder migrates a pre-upgrade random holder only when
@@ -143,15 +144,15 @@ func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, loc
 	}
 	lockTTL := 36 * time.Hour
 	if e.configer != nil {
-		if configured := time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second; configured > legacyLifecycleMigrationGrace {
-			lockTTL = configured
-		}
+		// The writer acquires this lock with the zombie interval as its TTL.
+		lockTTL = time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second
 	}
-	if lockTTL <= legacyLifecycleMigrationGrace {
+	if lockTTL <= LegacyLifecycleMigrationGrace {
+		// Too short a TTL leaves no provable age window; such a holder expires on its own.
 		logs.CtxWarn(ctx, "[ExptLifecycle] configured lock TTL is below migration grace; keep legacy holder, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
 		return nil
 	}
-	if ttl > legacyLifecycleMigrationMaxRemaining || ttl > lockTTL-legacyLifecycleMigrationGrace {
+	if ttl > lockTTL-LegacyLifecycleMigrationGrace {
 		// A freshly acquired old-writer holder may already belong to a newer
 		// run whose LatestRunID is not visible yet. Wait for ageing instead of
 		// deleting a lock we cannot prove belongs to this run.

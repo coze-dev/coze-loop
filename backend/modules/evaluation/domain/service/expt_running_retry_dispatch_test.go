@@ -195,5 +195,7 @@ func TestCurrentRequestScanUnstableItemKeepsOccupancy(t *testing.T) {
 	require.Empty(t, to, "unstable occupancy must not free a concurrency slot")
 	require.Len(t, incomplete, 1)
 	require.Equal(t, int64(10), incomplete[0].ItemID)
+	require.True(t, incomplete[0].ObservationUnstable, "downstream recovery must see the unstable marker")
+	require.Nil(t, incomplete[0].Source)
 	require.Empty(t, complete)
 }

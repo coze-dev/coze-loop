@@ -1399,7 +1399,7 @@ func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptSche
 		if source == nil {
 			return nil, nil, nil, errno.NewMQRetryErr("nil current item source")
 		}
-		item := &entity.ExptEvalItem{ExptID: event.ExptID, EvalSetVersionID: expt.EvalSet.EvaluationSetVersion.ID, ItemID: source.ItemID, Publication: source.Publication, PublicationObserved: source.PublicationObserved, Source: source.Source, State: source.Status, RequestID: source.RequestID, Mode: source.Mode, RetryTimes: source.RetryTimes, UpdatedAt: source.UpdatedAt}
+		item := &entity.ExptEvalItem{ExptID: event.ExptID, EvalSetVersionID: expt.EvalSet.EvaluationSetVersion.ID, ItemID: source.ItemID, Publication: source.Publication, PublicationObserved: source.PublicationObserved, Source: source.Source, State: source.Status, RequestID: source.RequestID, Mode: source.Mode, RetryTimes: source.RetryTimes, UpdatedAt: source.UpdatedAt, ObservationUnstable: source.ObservationUnstable}
 		if source.ObservationUnstable {
 			// Preserve an active item's concurrency slot, but do not let a
 			// terminal row's transient mismatch keep the run incomplete forever.

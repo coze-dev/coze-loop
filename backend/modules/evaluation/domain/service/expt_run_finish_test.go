@@ -276,6 +276,25 @@ func TestRunFinishCleanupDoesNotMigrateFreshLegacyHolder(t *testing.T) {
 	require.Equal(t, "newer-run-random-holder", owner)
 }
 
+func TestRunFinishCleanupKeepsLegacyHolderWhenLockTTLIsShort(t *testing.T) {
+	factory, server := finishRealLockerFactory(t)
+	key := "expt_run_mutex_lock:1"
+	require.NoError(t, server.Set(key, "legacy-random-holder"))
+	server.SetTTL(key, 30*time.Second)
+	ctrl := gomock.NewController(t)
+	config := componentmocks.NewMockIConfiger(ctrl)
+	config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{ZombieIntervalSecond: 60}).AnyTimes()
+	now := time.Now()
+	current := &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Success, EndAt: &now}
+	experiments := repomocks.NewMockIExperimentRepo(ctrl)
+	manager := &ExptMangerImpl{manualRetryLocker: factory, exptRepo: experiments, configer: config}
+	err := manager.cleanupNaturallyFinishedRun(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, current)
+	require.Error(t, err)
+	owner, getErr := server.Get(key)
+	require.NoError(t, getErr)
+	require.Equal(t, "legacy-random-holder", owner)
+}
+
 func TestRunFinishCleanupDoesNotMigrateCurrentCleanupHolder(t *testing.T) {
 	factory, server := finishRealLockerFactory(t)
 	key := "expt_run_mutex_lock:1"
