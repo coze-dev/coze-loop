@@ -49,7 +49,18 @@ type EvalTargetRecordDAOImpl struct {
 }
 
 func (e *EvalTargetRecordDAOImpl) Update(ctx context.Context, record *model.TargetRecord) error {
-	if err := e.db.NewSession(ctx).Model(&model.TargetRecord{}).Where("id = ?", record.ID).Updates(record).Error; err != nil {
+	if len(record.Ext) == 0 {
+		if err := e.db.NewSession(ctx).Model(&model.TargetRecord{}).Where("id = ?", record.ID).Updates(record).Error; err != nil {
+			return errorx.Wrapf(err, "TargetRecord update fail, id: %v, updated: %v", record.ID, json.Jsonify(record))
+		}
+		return nil
+	}
+	if err := e.db.NewSession(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := preserveFluxRunExt(ctx, tx, record); err != nil {
+			return err
+		}
+		return tx.Model(&model.TargetRecord{}).Where("id = ?", record.ID).Updates(record).Error
+	}); err != nil {
 		return errorx.Wrapf(err, "TargetRecord update fail, id: %v, updated: %v", record.ID, json.Jsonify(record))
 	}
 	return nil
@@ -61,32 +72,38 @@ func NewEvalTargetRecordDAO(db db.Provider) EvalTargetRecordDAO {
 
 func (e *EvalTargetRecordDAOImpl) Save(ctx context.Context, record *model.TargetRecord) error {
 	if err := e.db.NewSession(ctx).Transaction(func(tx *gorm.DB) error {
-		var current model.TargetRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "ext").Where("id = ? AND space_id = ?", record.ID, record.SpaceID).Take(&current).Error; err != nil {
+		if err := preserveFluxRunExt(ctx, tx, record); err != nil {
 			return err
-		}
-		// Result callbacks may carry an earlier snapshot; keep the run index written by CAS.
-		var latest, incoming map[string]string
-		if err := stdjson.Unmarshal(current.Ext, &latest); err != nil && len(current.Ext) != 0 {
-			return err
-		}
-		if err := stdjson.Unmarshal(record.Ext, &incoming); err != nil && len(record.Ext) != 0 {
-			return err
-		}
-		if run := latest["flux_workflow_run"]; run != "" {
-			if incoming == nil {
-				incoming = make(map[string]string)
-			}
-			incoming["flux_workflow_run"] = run
-			encoded, err := stdjson.Marshal(incoming)
-			if err != nil {
-				return err
-			}
-			record.Ext = encoded
 		}
 		return tx.Save(record).Error
 	}); err != nil {
 		return errorx.WrapByCode(err, errno.CommonMySqlErrorCode)
+	}
+	return nil
+}
+
+func preserveFluxRunExt(ctx context.Context, tx *gorm.DB, record *model.TargetRecord) error {
+	var current model.TargetRecord
+	if err := tx.WithContext(ctx).Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "ext").Where("id = ? AND space_id = ?", record.ID, record.SpaceID).Take(&current).Error; err != nil {
+		return err
+	}
+	var latest, incoming map[string]string
+	if err := stdjson.Unmarshal(current.Ext, &latest); err != nil && len(current.Ext) != 0 {
+		return err
+	}
+	if err := stdjson.Unmarshal(record.Ext, &incoming); err != nil && len(record.Ext) != 0 {
+		return err
+	}
+	if run := latest["flux_workflow_run"]; run != "" {
+		if incoming == nil {
+			incoming = make(map[string]string)
+		}
+		incoming["flux_workflow_run"] = run
+		encoded, err := stdjson.Marshal(incoming)
+		if err != nil {
+			return err
+		}
+		record.Ext = encoded
 	}
 	return nil
 }

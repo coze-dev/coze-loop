@@ -53,7 +53,7 @@ func (r *fluxWorkflowBindingRepo) ReserveFluxWorkflowBinding(ctx context.Context
 		copy := *pending
 		copy.SpaceID, copy.ExperimentID = spaceID, exptID
 		conf.FluxWorkflowBinding = &copy
-		if err := saveFluxExperimentConf(tx, row.ID, conf); err != nil {
+		if err := saveFluxExperimentConf(tx, row.ID, row.EvalConf, &copy); err != nil {
 			return err
 		}
 		result = &copy
@@ -87,7 +87,7 @@ func (r *fluxWorkflowBindingRepo) PutReadyFluxWorkflowBinding(ctx context.Contex
 		copy := *ready
 		copy.SpaceID, copy.ExperimentID = spaceID, exptID
 		conf.FluxWorkflowBinding = &copy
-		return saveFluxExperimentConf(tx, row.ID, conf)
+		return saveFluxExperimentConf(tx, row.ID, row.EvalConf, &copy)
 	})
 }
 
@@ -110,8 +110,22 @@ func decodeFluxExperimentConf(raw *[]byte) (*entity.EvaluationConfiguration, err
 	return conf, nil
 }
 
-func saveFluxExperimentConf(tx *gorm.DB, exptID int64, conf *entity.EvaluationConfiguration) error {
-	encoded, err := json.Marshal(conf)
+func saveFluxExperimentConf(tx *gorm.DB, exptID int64, original *[]byte, binding *entity.FluxWorkflowBinding) error {
+	fields := make(map[string]json.RawMessage)
+	if original != nil && len(*original) != 0 {
+		if err := json.Unmarshal(*original, &fields); err != nil {
+			return err
+		}
+	}
+	if fields == nil {
+		fields = make(map[string]json.RawMessage)
+	}
+	encodedBinding, err := json.Marshal(binding)
+	if err != nil {
+		return err
+	}
+	fields["flux_workflow_binding"] = encodedBinding
+	encoded, err := json.Marshal(fields)
 	if err != nil {
 		return err
 	}

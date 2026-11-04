@@ -2,6 +2,8 @@ package experiment
 
 import (
 	"context"
+	"database/sql/driver"
+	"encoding/json"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -12,6 +14,22 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
+
+type keepsFluxExperimentField struct{}
+
+func (keepsFluxExperimentField) Match(value driver.Value) bool {
+	var raw []byte
+	switch v := value.(type) {
+	case []byte:
+		raw = v
+	case string:
+		raw = []byte(v)
+	default:
+		return false
+	}
+	var conf map[string]json.RawMessage
+	return json.Unmarshal(raw, &conf) == nil && string(conf["existing"]) == `"keep"`
+}
 
 func TestReserveFluxWorkflowBindingOnlyFirstCallerOwnsCopy(t *testing.T) {
 	sqlDB, mock, err := sqlmock.New()
@@ -26,7 +44,7 @@ func TestReserveFluxWorkflowBindingOnlyFirstCallerOwnsCopy(t *testing.T) {
 	mock.ExpectQuery("SELECT .* FROM `experiment` WHERE .* FOR UPDATE").
 		WithArgs(int64(9), int64(8), 1).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "eval_conf"}).AddRow(9, []byte(`{"existing":"keep"}`)))
-	mock.ExpectExec("UPDATE `experiment` SET `eval_conf`=.*").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("UPDATE `experiment` SET `eval_conf`=.*").WithArgs(keepsFluxExperimentField{}, int64(9)).WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 	first, err := repo.ReserveFluxWorkflowBinding(context.Background(), 8, 9, &entity.FluxWorkflowBinding{BindingID: "owner-1", State: "preparing"})
 	require.NoError(t, err)
