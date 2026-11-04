@@ -572,6 +572,12 @@ func (l *filterTestLocker) GetLifecycleLockValue(ctx context.Context, key string
 	}).GetLifecycleLockValue(ctx, key)
 }
 
+func (l *filterTestLocker) GetLifecycleLockTTL(ctx context.Context, key string) (time.Duration, bool, error) {
+	return l.ILocker.(interface {
+		GetLifecycleLockTTL(context.Context, string) (time.Duration, bool, error)
+	}).GetLifecycleLockTTL(ctx, key)
+}
+
 func (l *filterTestLocker) LockWithRenew(ctx context.Context, key string, ttl, hold time.Duration) (bool, context.Context, func(), error) {
 	ok, child, cancel, err := l.ILocker.LockWithRenew(ctx, key, ttl, hold)
 	if !ok || err != nil {

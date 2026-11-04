@@ -231,6 +231,7 @@ func TestRunFinishCleanupMigratesLegacyLifecycleHolder(t *testing.T) {
 			factory, server := finishRealLockerFactory(t)
 			key := "expt_run_mutex_lock:1"
 			require.NoError(t, server.Set(key, "legacy-random-holder"))
+			server.SetTTL(key, time.Hour)
 			ctrl := gomock.NewController(t)
 			now := time.Now()
 			current := &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Success, EndAt: &now}
@@ -256,6 +257,23 @@ func TestRunFinishCleanupMigratesLegacyLifecycleHolder(t *testing.T) {
 			require.Error(t, err, "cleanup must release the migrated lifecycle lock")
 		})
 	}
+}
+
+func TestRunFinishCleanupDoesNotMigrateFreshLegacyHolder(t *testing.T) {
+	factory, server := finishRealLockerFactory(t)
+	key := "expt_run_mutex_lock:1"
+	require.NoError(t, server.Set(key, "newer-run-random-holder"))
+	server.SetTTL(key, 36*time.Hour)
+	ctrl := gomock.NewController(t)
+	now := time.Now()
+	current := &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Success, EndAt: &now}
+	experiments := repomocks.NewMockIExperimentRepo(ctrl)
+	manager := &ExptMangerImpl{manualRetryLocker: factory, exptRepo: experiments}
+	err := manager.cleanupNaturallyFinishedRun(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, current)
+	require.Error(t, err)
+	owner, getErr := server.Get(key)
+	require.NoError(t, getErr)
+	require.Equal(t, "newer-run-random-holder", owner)
 }
 
 func TestRunFinishCleanupDoesNotMigrateCurrentCleanupHolder(t *testing.T) {

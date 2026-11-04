@@ -179,6 +179,17 @@ func (r *redisLocker) GetLifecycleLockValue(ctx context.Context, key string) (st
 	return value, true, nil
 }
 
+func (r *redisLocker) GetLifecycleLockTTL(ctx context.Context, key string) (time.Duration, bool, error) {
+	ttl, err := r.c.TTL(ctx, key).Result()
+	if err != nil {
+		return 0, false, err
+	}
+	if ttl < 0 {
+		return 0, false, nil
+	}
+	return ttl, true, nil
+}
+
 func (r *redisLocker) UnlockForce(ctx context.Context, key string) (bool, error) {
 	n, err := r.c.Del(ctx, key).Result()
 	if err != nil {

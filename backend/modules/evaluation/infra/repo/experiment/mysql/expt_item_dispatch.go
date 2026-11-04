@@ -36,6 +36,15 @@ func NewExptItemDispatchDAO(provider db.Provider) IExptItemDispatchDAO {
 
 type exptItemDispatchDAOImpl struct{ db db.Provider }
 
+// FailRetry keeps a successful canonical turn in its original run while the
+// current run log may still be Processing/Queueing until the reused result is
+// persisted. That pair is a recoverable intermediate state, not corruption.
+func failRetryHistoricalSuccessLog(s *lockedDispatchItem, turn model.ExptTurnResult, log model.ExptTurnResultRunLog) bool {
+	return s.mode == entity.EvaluationModeFailRetry &&
+		turn.ExptRunID != s.item.ExptRunID &&
+		(log.Status == int32(entity.TurnRunState_Processing) || log.Status == int32(entity.TurnRunState_Queueing))
+}
+
 func dispatchRequest(ext []byte, runID int64) (string, *entity.ManualRetryContext, error) {
 	parsed, err := entity.ParseExptItemResultExt(ext)
 	if err != nil {
@@ -356,7 +365,7 @@ func transitionDispatchItem(tx *gorm.DB, s *lockedDispatchItem, next entity.Item
 			return fmt.Errorf("dispatch frozen turn log missing")
 		}
 		if turn.Status == int32(entity.TurnRunState_Success) {
-			if exists && log.Status != turn.Status {
+			if exists && log.Status != turn.Status && !failRetryHistoricalSuccessLog(s, turn, log) {
 				return fmt.Errorf("dispatch success turn mismatch")
 			}
 			continue

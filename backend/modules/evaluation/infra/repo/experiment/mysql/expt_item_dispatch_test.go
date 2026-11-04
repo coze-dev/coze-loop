@@ -738,24 +738,32 @@ func TestDispatchMySQLSuccessTurnPayloadPreserved(t *testing.T) {
 }
 
 func TestDispatchMySQLFailRetryHistoricalSuccessTurnRecovery(t *testing.T) {
-	f, dao := prepareDispatchMySQL(t)
-	// FailRetry leaves a successful canonical turn in R1 while its R2 run log
-	// is already present. Yield/resume must not mistake that pair for an orphan.
-	require.NoError(t, f.conn.Model(&model.ExptTurnResult{}).
-		Where("space_id=? AND expt_id=? AND turn_id=22", f.space, f.expt).
-		Update("expt_run_id", f.run-1).Error)
-	_, err := dao.ClaimQuotaReserved(context.Background(), f.space, f.expt, f.run, []int64{11}, map[int64]string{11: "rq1"})
-	require.NoError(t, err)
-	started, err := dao.StartReservedItem(context.Background(), f.space, f.expt, f.run, 11, "rq1")
-	require.NoError(t, err)
-	require.True(t, started.Started)
-	requeued, err := dao.RequeueProcessingItem(context.Background(), f.space, f.expt, f.run, 11, "rq1")
-	require.NoError(t, err)
-	require.True(t, requeued)
-	var historical model.ExptTurnResult
-	require.NoError(t, f.conn.Where("space_id=? AND expt_id=? AND turn_id=22", f.space, f.expt).Take(&historical).Error)
-	require.Equal(t, f.run-1, historical.ExptRunID)
-	require.Equal(t, int32(entity.TurnRunState_Success), historical.Status)
+	for _, logStatus := range []entity.TurnRunState{entity.TurnRunState_Success, entity.TurnRunState_Processing, entity.TurnRunState_Queueing} {
+		t.Run(fmt.Sprintf("log_status_%d", logStatus), func(t *testing.T) {
+			f, dao := prepareDispatchMySQL(t)
+			// FailRetry leaves a successful canonical turn in R1 while its R2 run
+			// log may be Success, Processing, or Queueing before the reused result
+			// is persisted. Yield/resume must recover all three intermediate states.
+			require.NoError(t, f.conn.Model(&model.ExptTurnResult{}).
+				Where("space_id=? AND expt_id=? AND turn_id=22", f.space, f.expt).
+				Update("expt_run_id", f.run-1).Error)
+			require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).
+				Where("space_id=? AND expt_id=? AND turn_id=22", f.space, f.expt).
+				Update("status", int32(logStatus)).Error)
+			_, err := dao.ClaimQuotaReserved(context.Background(), f.space, f.expt, f.run, []int64{11}, map[int64]string{11: "rq1"})
+			require.NoError(t, err)
+			started, err := dao.StartReservedItem(context.Background(), f.space, f.expt, f.run, 11, "rq1")
+			require.NoError(t, err)
+			require.True(t, started.Started)
+			requeued, err := dao.RequeueProcessingItem(context.Background(), f.space, f.expt, f.run, 11, "rq1")
+			require.NoError(t, err)
+			require.True(t, requeued)
+			var historical model.ExptTurnResult
+			require.NoError(t, f.conn.Where("space_id=? AND expt_id=? AND turn_id=22", f.space, f.expt).Take(&historical).Error)
+			require.Equal(t, f.run-1, historical.ExptRunID)
+			require.Equal(t, int32(entity.TurnRunState_Success), historical.Status)
+		})
+	}
 }
 
 func TestDispatchReadForcesPrimary(t *testing.T) {

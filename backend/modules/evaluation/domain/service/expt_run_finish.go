@@ -101,7 +101,10 @@ func (e *ExptMangerImpl) FinishCurrentRunWithHeldTickLock(ctx context.Context, e
 
 type lifecycleLockValueReader interface {
 	GetLifecycleLockValue(context.Context, string) (string, bool, error)
+	GetLifecycleLockTTL(context.Context, string) (time.Duration, bool, error)
 }
+
+const legacyLifecycleMigrationGrace = 5 * time.Minute
 
 // releasePreviousLifecycleHolder migrates a pre-upgrade random holder only when
 // the current run is already terminal. Numeric holders belong to another run,
@@ -120,6 +123,20 @@ func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, loc
 		return err
 	}
 	if _, err := strconv.ParseInt(holder, 10, 64); err == nil || strings.HasPrefix(holder, lock.LifecycleCleanupHolderPrefix) {
+		return nil
+	}
+	ttl, exists, err := reader.GetLifecycleLockTTL(ctx, key)
+	if err != nil || !exists {
+		return err
+	}
+	lockTTL := 36 * time.Hour
+	if e.configer != nil {
+		lockTTL = time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second
+	}
+	if ttl > lockTTL-legacyLifecycleMigrationGrace {
+		// A freshly acquired old-writer holder may already belong to a newer
+		// run whose LatestRunID is not visible yet. Wait for ageing instead of
+		// deleting a lock we cannot prove belongs to this run.
 		return nil
 	}
 	if e.exptRepo == nil {
