@@ -178,3 +178,22 @@ func TestCurrentRequestProducerSameBatchModes(t *testing.T) {
 	}
 	require.Equal(t, entity.EvaluationModeSubmit, event.ExptRunMode)
 }
+
+func TestCurrentRequestScanUnstableItemKeepsOccupancy(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	items := repomocks.NewMockIExptItemResultRepo(ctrl)
+	config := componentmocks.NewMockIConfiger(ctrl)
+	config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{ConcurNum: 1, MaxItemConcurNum: 1}}).AnyTimes()
+	items.EXPECT().ScanCurrentRequests(gomock.Any(), int64(3), int64(1), int64(2), false).Return([]*entity.ExptItemCurrentRequest{
+		{ItemID: 10, Status: entity.ItemRunState_Processing, ObservationUnstable: true},
+		{ItemID: 11, Status: entity.ItemRunState_Queueing, RequestID: "rq1"},
+	}, nil)
+	expt := &entity.Experiment{SpaceID: 3, EvalConf: &entity.EvaluationConfiguration{}, EvalSet: &entity.EvaluationSet{EvaluationSetVersion: &entity.EvaluationSetVersion{ID: 7}}}
+	exec := &exptBaseExec{exptItemResultRepo: items, configer: config}
+	to, incomplete, complete, err := exec.ScanEvalItems(context.Background(), &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2}, expt)
+	require.NoError(t, err)
+	require.Empty(t, to, "unstable occupancy must not free a concurrency slot")
+	require.Len(t, incomplete, 1)
+	require.Equal(t, int64(10), incomplete[0].ItemID)
+	require.Empty(t, complete)
+}

@@ -22,6 +22,9 @@ type ExptItemCurrentRequest struct {
 	RetryTimes                                    int32
 	UpdatedAt                                     *time.Time
 	QuotaReservationState                         QuotaReservationState
+	// ObservationUnstable marks a row whose concurrent read changed. Its source
+	// cannot be dispatched or published, but it must still count as occupied.
+	ObservationUnstable bool
 }
 
 func (s *ExptItemCurrentRequest) Matches(runID int64, requestID string) bool {

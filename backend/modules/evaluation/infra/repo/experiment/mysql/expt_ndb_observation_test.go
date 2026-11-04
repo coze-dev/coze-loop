@@ -167,7 +167,9 @@ func TestNDBObservationMySQLFullSourceChanges(t *testing.T) {
 				rows, err := NewExptItemResultDAO(provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, false)
 				if isolation == "READ-COMMITTED" && change != "latest" && change != "new_run" && change != "run_terminal" {
 					require.NoError(t, err)
-					require.Equal(t, withoutItem(expectedRows, f.item), rows)
+					require.Len(t, rows, len(expectedRows))
+					require.Equal(t, withoutItem(expectedRows, f.item), stableRows(rows))
+					require.True(t, unstableRow(rows, f.item))
 				} else if isolation == "READ-COMMITTED" {
 					require.Error(t, err)
 					require.Nil(t, rows)
@@ -200,8 +202,29 @@ func TestNDBObservationMySQLChangedSourceIsolatedToItem(t *testing.T) {
 		defer func() { require.NoError(t, conn.Callback().Query().Remove("change_after_first_config")) }()
 		rows, err := NewExptItemResultDAO(provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, false)
 		require.NoError(t, err)
-		require.Equal(t, withoutItem(expectedRows, f.item), rows)
+		require.Len(t, rows, len(expectedRows))
+		require.Equal(t, withoutItem(expectedRows, f.item), stableRows(rows))
+		require.True(t, unstableRow(rows, f.item))
 	})
+}
+
+func stableRows(rows []*entity.ExptItemCurrentRequest) []*entity.ExptItemCurrentRequest {
+	out := make([]*entity.ExptItemCurrentRequest, 0, len(rows))
+	for _, row := range rows {
+		if !row.ObservationUnstable {
+			out = append(out, row)
+		}
+	}
+	return out
+}
+
+func unstableRow(rows []*entity.ExptItemCurrentRequest, itemID int64) bool {
+	for _, row := range rows {
+		if row.ItemID == itemID {
+			return row.ObservationUnstable
+		}
+	}
+	return false
 }
 
 func withoutItem(rows []*entity.ExptItemCurrentRequest, itemID int64) []*entity.ExptItemCurrentRequest {

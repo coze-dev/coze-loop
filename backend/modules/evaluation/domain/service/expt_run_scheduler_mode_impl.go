@@ -1400,6 +1400,12 @@ func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptSche
 			return nil, nil, nil, errno.NewMQRetryErr("nil current item source")
 		}
 		item := &entity.ExptEvalItem{ExptID: event.ExptID, EvalSetVersionID: expt.EvalSet.EvaluationSetVersion.ID, ItemID: source.ItemID, Publication: source.Publication, PublicationObserved: source.PublicationObserved, Source: source.Source, State: source.Status, RequestID: source.RequestID, Mode: source.Mode, RetryTimes: source.RetryTimes, UpdatedAt: source.UpdatedAt}
+		if source.ObservationUnstable {
+			// A concurrent update makes the source untrustworthy for dispatch and
+			// publication, but the item may still hold an execution slot.
+			incomplete = append(incomplete, item)
+			continue
+		}
 		if source.Status == entity.ItemRunState_Processing || source.QuotaReservationState.IsQuotaReserved() {
 			incomplete = append(incomplete, item)
 		}

@@ -163,9 +163,13 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 		}
 		stableRows := make([]*entity.ExptItemCurrentRequest, 0, len(rows))
 		for _, row := range rows {
-			if stableItems[row.ItemID] {
-				stableRows = append(stableRows, row)
+			if !stableItems[row.ItemID] {
+				row.ObservationUnstable = true
+				row.Source = nil
+				row.Publication = nil
+				row.PublicationObserved = false
 			}
+			stableRows = append(stableRows, row)
 		}
 		rows = stableRows
 		return ctx.Err()
