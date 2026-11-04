@@ -766,6 +766,20 @@ func TestDispatchMySQLFailRetryHistoricalSuccessTurnRecovery(t *testing.T) {
 	}
 }
 
+func TestDispatchMySQLFailRetryRejectsNewerRunTurn(t *testing.T) {
+	f, dao := prepareDispatchMySQL(t)
+	require.NoError(t, f.conn.Model(&model.ExptTurnResult{}).
+		Where("space_id=? AND expt_id=? AND turn_id=22", f.space, f.expt).
+		Update("expt_run_id", f.run+1).Error)
+	require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).
+		Where("space_id=? AND expt_id=? AND turn_id=22", f.space, f.expt).
+		Update("status", int32(entity.TurnRunState_Queueing)).Error)
+	_, err := dao.ClaimQuotaReserved(context.Background(), f.space, f.expt, f.run, []int64{11}, map[int64]string{11: "rq1"})
+	require.NoError(t, err)
+	_, err = dao.StartReservedItem(context.Background(), f.space, f.expt, f.run, 11, "rq1")
+	require.Error(t, err, "a canonical turn from a newer run must not be adopted")
+}
+
 func TestDispatchReadForcesPrimary(t *testing.T) {
 	for _, kind := range []string{"runtime", "observations"} {
 		t.Run(kind, func(t *testing.T) {

@@ -41,7 +41,7 @@ type exptItemDispatchDAOImpl struct{ db db.Provider }
 // persisted. That pair is a recoverable intermediate state, not corruption.
 func failRetryHistoricalSuccessLog(s *lockedDispatchItem, turn model.ExptTurnResult, log model.ExptTurnResultRunLog) bool {
 	return s.mode == entity.EvaluationModeFailRetry &&
-		turn.ExptRunID != s.item.ExptRunID &&
+		turn.ExptRunID < s.item.ExptRunID &&
 		(log.Status == int32(entity.TurnRunState_Processing) || log.Status == int32(entity.TurnRunState_Queueing))
 }
 
@@ -344,14 +344,15 @@ func transitionDispatchItem(tx *gorm.DB, s *lockedDispatchItem, next entity.Item
 	if s.manual != nil && (len(turns) == 0 || len(turns) != len(logs)) {
 		return fmt.Errorf("dispatch frozen turns incomplete")
 	}
-	pendingTurns, pendingLogs := []int64{}, []int64{}
+	pendingTurns, pendingLogs, successLogs := []int64{}, []int64{}, []int64{}
 	matchedLogs := 0
 	fromTurn, toTurn := int32(entity.TurnRunState_Queueing), int32(entity.TurnRunState_Processing)
 	if next == entity.ItemRunState_Queueing {
 		fromTurn, toTurn = toTurn, fromTurn
 	}
 	for _, turn := range turns {
-		if turn.ExptRunID != s.item.ExptRunID && (s.mode != entity.EvaluationModeFailRetry || turn.Status != int32(entity.TurnRunState_Success)) {
+		if turn.ExptRunID != s.item.ExptRunID &&
+			(s.mode != entity.EvaluationModeFailRetry || turn.Status != int32(entity.TurnRunState_Success) || turn.ExptRunID > s.item.ExptRunID) {
 			continue
 		}
 		log, exists := byTurn[turn.TurnID]
@@ -365,8 +366,11 @@ func transitionDispatchItem(tx *gorm.DB, s *lockedDispatchItem, next entity.Item
 			return fmt.Errorf("dispatch frozen turn log missing")
 		}
 		if turn.Status == int32(entity.TurnRunState_Success) {
-			if exists && log.Status != turn.Status && !failRetryHistoricalSuccessLog(s, turn, log) {
-				return fmt.Errorf("dispatch success turn mismatch")
+			if exists && log.Status != turn.Status {
+				if !failRetryHistoricalSuccessLog(s, turn, log) {
+					return fmt.Errorf("dispatch success turn mismatch")
+				}
+				successLogs = append(successLogs, log.ID)
 			}
 			continue
 		}
@@ -430,6 +434,9 @@ func transitionDispatchItem(tx *gorm.DB, s *lockedDispatchItem, next entity.Item
 		return err
 	}
 	if err := update(&model.ExptTurnResultRunLog{}, pendingLogs, map[string]any{"status": toTurn}); err != nil {
+		return err
+	}
+	if err := update(&model.ExptTurnResultRunLog{}, successLogs, map[string]any{"status": int32(entity.TurnRunState_Success)}); err != nil {
 		return err
 	}
 	if old != next {

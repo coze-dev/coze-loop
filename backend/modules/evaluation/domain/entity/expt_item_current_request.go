@@ -24,7 +24,7 @@ type ExptItemCurrentRequest struct {
 	QuotaReservationState                         QuotaReservationState
 	// ObservationUnstable marks a row whose concurrent read changed. Its source
 	// cannot be dispatched or published, but it must still count as occupied.
-	ObservationUnstable bool
+	ObservationUnstable bool `gorm:"-" json:"-"`
 }
 
 func (s *ExptItemCurrentRequest) Matches(runID int64, requestID string) bool {

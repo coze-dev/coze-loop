@@ -14,6 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 // IExptNaturalRunFinisher keeps the broad manager and old test doubles compatible.
@@ -104,18 +105,25 @@ type lifecycleLockValueReader interface {
 	GetLifecycleLockTTL(context.Context, string) (time.Duration, bool, error)
 }
 
-const legacyLifecycleMigrationGrace = 5 * time.Minute
+const (
+	legacyLifecycleMigrationGrace        = 5 * time.Minute
+	legacyLifecycleMigrationMaxRemaining = time.Hour
+)
 
 // releasePreviousLifecycleHolder migrates a pre-upgrade random holder only when
 // the current run is already terminal. Numeric holders belong to another run,
 // and prefixed holders belong to a live new cleanup lease; neither is migrated.
 func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, locker lock.ILocker, key string, event *entity.ExptScheduleEvent) error {
+	if event == nil {
+		return errno.NewMQRetryErr("legacy lifecycle event missing")
+	}
 	released, err := locker.UnlockWithValue(ctx, key, strconv.FormatInt(event.ExptRunID, 10))
 	if err != nil || released {
 		return err
 	}
 	reader, ok := locker.(lifecycleLockValueReader)
 	if !ok {
+		logs.CtxWarn(ctx, "[ExptLifecycle] TTL reader unavailable; keep legacy holder, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
 		return nil
 	}
 	holder, exists, err := reader.GetLifecycleLockValue(ctx, key)
@@ -131,9 +139,11 @@ func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, loc
 	}
 	lockTTL := 36 * time.Hour
 	if e.configer != nil {
-		lockTTL = time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second
+		if configured := time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second; configured > legacyLifecycleMigrationGrace {
+			lockTTL = configured
+		}
 	}
-	if ttl > lockTTL-legacyLifecycleMigrationGrace {
+	if ttl > legacyLifecycleMigrationMaxRemaining || ttl > lockTTL-legacyLifecycleMigrationGrace {
 		// A freshly acquired old-writer holder may already belong to a newer
 		// run whose LatestRunID is not visible yet. Wait for ageing instead of
 		// deleting a lock we cannot prove belongs to this run.
