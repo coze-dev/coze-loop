@@ -2371,12 +2371,11 @@ func (e *EvalOpenAPIApplication) RetryExperimentOApi(ctx context.Context, req *o
 		return nil, err
 	}
 
-	var rejected []*experiment.RetryRejectedItem
-	if resp.RejectedItems != nil {
-		rejected = make([]*experiment.RetryRejectedItem, 0, len(resp.RejectedItems))
-		for _, item := range resp.RejectedItems {
-			rejected = append(rejected, &experiment.RetryRejectedItem{ItemID: item.ItemID, Reason: item.Reason})
-		}
+	// New-run responses have no per-item receipt; keep the field an explicit empty list
+	// so both branches serialize the same shape instead of null.
+	rejected := make([]*experiment.RetryRejectedItem, 0, len(resp.RejectedItems))
+	for _, item := range resp.RejectedItems {
+		rejected = append(rejected, &experiment.RetryRejectedItem{ItemID: item.ItemID, Reason: item.Reason})
 	}
 
 	return &openapi.RetryExperimentOApiResponse{

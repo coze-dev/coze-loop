@@ -117,7 +117,7 @@ func TestRunningRetryWithoutIdentityUsesResolvedRun(t *testing.T) {
 }
 
 func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
-	for _, kind := range []string{"explicit_sandbox", "old_live_join", "old_terminal_failure", "old_terminal_all", "old_terminal_items", "enabled_without_identity", "enabled_online_live", "enabled_pending_offline", "enabled_finishing_offline", "enabled_processing_retry_all"} {
+	for _, kind := range []string{"explicit_sandbox", "old_live_join", "old_terminal_failure", "old_terminal_all", "old_terminal_items", "enabled_without_identity", "enabled_online_live", "enabled_pending_offline", "enabled_finishing_offline", "enabled_processing_retry_all", "explicit_retry_all"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			manager := svcmocks.NewMockIExptManager(ctrl)
@@ -132,6 +132,9 @@ func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
 				req.ExpectedRunID = gptr.Of(int64(8))
 				req.Ext = map[string]string{"caller": "keep"}
 				got.Target = &entity.EvalTarget{EvalTargetType: entity.EvalTargetTypeSandboxAgent}
+			case "explicit_retry_all":
+				req.ExpectedRunID = gptr.Of(int64(8))
+				req.RetryMode = gptr.Of(domain_expt.ExptRetryMode_RetryAll)
 			case "old_live_join", "old_terminal_items":
 				req.RetryMode = gptr.Of(domain_expt.ExptRetryMode_RetryTargetItems)
 			case "old_terminal_all", "enabled_processing_retry_all":
@@ -175,7 +178,7 @@ func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
 				manager.EXPECT().RetryItems(gomock.Any(), int64(7), int64(18), int64(9), 3, []int64{11}, gomock.Any(), gomock.Any()).Return(nil)
 			default:
 				mode := entity.EvaluationModeFailRetry
-				if kind == "old_terminal_all" || kind == "enabled_processing_retry_all" {
+				if kind == "old_terminal_all" || kind == "enabled_processing_retry_all" || kind == "explicit_retry_all" {
 					mode = entity.EvaluationModeRetryAll
 				}
 				generator.EXPECT().GenID(gomock.Any()).Return(int64(18), nil)

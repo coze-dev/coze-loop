@@ -1766,7 +1766,7 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 	// expected_run_id 可省略：开关开启的运行中离线实验由服务端解析当前 run。
 	// RetryAll 语义是「整份重跑」，仍在跑的实验必须走原有起新 run 的链路；
 	// 当前 run 内重排只接受 RetryFailure / RetryTargetItems。
-	if req.ExpectedRunID != nil || (runMode != entity.EvaluationModeRetryAll && got.ExptType == entity.ExptType_Offline && got.Status == entity.ExptStatus_Processing && e.configer != nil && e.configer.GetExptExecConf(ctx, req.GetWorkspaceID()).IsRunningRetryEnabled()) {
+	if runMode != entity.EvaluationModeRetryAll && (req.ExpectedRunID != nil || (got.ExptType == entity.ExptType_Offline && got.Status == entity.ExptStatus_Processing && e.configer != nil && e.configer.GetExptExecConf(ctx, req.GetWorkspaceID()).IsRunningRetryEnabled())) {
 		if req.GetExpectedRunID() < 0 {
 			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid current run retry identity"))
 		}
