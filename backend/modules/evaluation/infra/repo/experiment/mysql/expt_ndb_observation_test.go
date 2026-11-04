@@ -165,7 +165,10 @@ func TestNDBObservationMySQLFullSourceChanges(t *testing.T) {
 				}))
 				defer func() { require.NoError(t, conn.Callback().Query().Remove("observation_change")) }()
 				rows, err := NewExptItemResultDAO(provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, false)
-				if isolation == "READ-COMMITTED" {
+				if isolation == "READ-COMMITTED" && change != "latest" && change != "new_run" && change != "run_terminal" {
+					require.NoError(t, err)
+					require.Equal(t, withoutItem(expectedRows, f.item), rows)
+				} else if isolation == "READ-COMMITTED" {
 					require.Error(t, err)
 					require.Nil(t, rows)
 				} else {
@@ -178,11 +181,12 @@ func TestNDBObservationMySQLFullSourceChanges(t *testing.T) {
 	}
 }
 
-// After its first value was observed, a config mutation must invalidate the
-// complete RC observation rather than return any partially collected source.
-func TestNDBObservationMySQLChangedSourceDiscardsAll(t *testing.T) {
+// A changed item is withheld from this scan; other stable items remain dispatchable.
+func TestNDBObservationMySQLChangedSourceIsolatedToItem(t *testing.T) {
 	t.Run("scan", func(t *testing.T) {
 		f := newScanObservationFixture(t)
+		expectedRows, err := NewExptItemResultDAO(f.provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, false)
+		require.NoError(t, err)
 		provider := newObservationProvider(t, "READ-COMMITTED")
 		conn := provider.NewSession(context.Background())
 		var once sync.Once
@@ -195,9 +199,19 @@ func TestNDBObservationMySQLChangedSourceDiscardsAll(t *testing.T) {
 		}))
 		defer func() { require.NoError(t, conn.Callback().Query().Remove("change_after_first_config")) }()
 		rows, err := NewExptItemResultDAO(provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, false)
-		require.Error(t, err, "RC change must fail closed without partial scan rows")
-		require.Nil(t, rows)
+		require.NoError(t, err)
+		require.Equal(t, withoutItem(expectedRows, f.item), rows)
 	})
+}
+
+func withoutItem(rows []*entity.ExptItemCurrentRequest, itemID int64) []*entity.ExptItemCurrentRequest {
+	out := make([]*entity.ExptItemCurrentRequest, 0, len(rows))
+	for _, row := range rows {
+		if row.ItemID != itemID {
+			out = append(out, row)
+		}
+	}
+	return out
 }
 
 func TestNDBObservationMySQLStableFullSource(t *testing.T) {
