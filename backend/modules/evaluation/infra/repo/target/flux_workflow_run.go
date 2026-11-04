@@ -62,6 +62,26 @@ func (r *fluxItemRunRepo) CompareAndSwapFluxItemRun(ctx context.Context, spaceID
 		if version != expectedVersion {
 			return nil
 		}
+		if current == nil && next.State != "reserved" {
+			return errors.New("Flux Workflow run must be reserved before progressing")
+		}
+		if current != nil {
+			if current.BindingID != "" && next.BindingID != current.BindingID {
+				return errors.New("Flux Workflow run binding changed")
+			}
+			if current.QueryDigest != "" && next.QueryDigest != current.QueryDigest {
+				return errors.New("Flux Workflow query changed")
+			}
+			if current.IdempotencyKey != "" && next.IdempotencyKey != current.IdempotencyKey {
+				return errors.New("Flux Workflow idempotency key changed")
+			}
+			if current.DeliveryID != "" && next.DeliveryID != current.DeliveryID {
+				return errors.New("Flux Workflow delivery changed")
+			}
+			if (current.State == "delivery_created" && next.State == "reserved") || (current.State == "finalized" && next.State != "finalized") {
+				return errors.New("Flux Workflow run state regressed")
+			}
+		}
 		copy := *next
 		copy.Version = version + 1
 		encoded, err := json.Marshal(&copy)

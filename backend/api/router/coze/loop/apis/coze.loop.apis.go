@@ -514,6 +514,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_flux_workflow_run := _eval_targets0.Group("/flux_workflow_run", _flux_workflow_runMw(handler)...)
 					_flux_workflow_run.POST("/cas", append(_compareandswapfluxworkflowrunMw(handler), apis.CompareAndSwapFluxWorkflowRun)...)
 					_flux_workflow_run.POST("/get", append(_getfluxworkflowrunMw(handler), apis.GetFluxWorkflowRun)...)
+					{
+						_copy_yaml := _flux_workflow_run.Group("/copy_yaml", _copy_yamlMw(handler)...)
+						_copy_yaml.POST("/get", append(_getfluxworkflowcopyyamlMw(handler), apis.GetFluxWorkflowCopyYAML)...)
+					}
 				}
 			}
 			{

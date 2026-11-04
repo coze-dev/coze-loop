@@ -73853,6 +73853,658 @@ func (p *CompareAndSwapFluxWorkflowRunResponse) Field255DeepEqual(src *base.Base
 	return true
 }
 
+type GetFluxWorkflowCopyYAMLRequest struct {
+	WorkspaceID *int64     `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	InvokeID    *int64     `thrift:"invoke_id,2,optional" frugal:"2,optional,i64" json:"invoke_id" form:"invoke_id" query:"invoke_id"`
+	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewGetFluxWorkflowCopyYAMLRequest() *GetFluxWorkflowCopyYAMLRequest {
+	return &GetFluxWorkflowCopyYAMLRequest{}
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) InitDefault() {
+}
+
+var GetFluxWorkflowCopyYAMLRequest_WorkspaceID_DEFAULT int64
+
+func (p *GetFluxWorkflowCopyYAMLRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return GetFluxWorkflowCopyYAMLRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var GetFluxWorkflowCopyYAMLRequest_InvokeID_DEFAULT int64
+
+func (p *GetFluxWorkflowCopyYAMLRequest) GetInvokeID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInvokeID() {
+		return GetFluxWorkflowCopyYAMLRequest_InvokeID_DEFAULT
+	}
+	return *p.InvokeID
+}
+
+var GetFluxWorkflowCopyYAMLRequest_Base_DEFAULT *base.Base
+
+func (p *GetFluxWorkflowCopyYAMLRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return GetFluxWorkflowCopyYAMLRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) SetInvokeID(val *int64) {
+	p.InvokeID = val
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_GetFluxWorkflowCopyYAMLRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "invoke_id",
+	255: "Base",
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) IsSetInvokeID() bool {
+	return p.InvokeID != nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetFluxWorkflowCopyYAMLRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.InvokeID = _field
+	return nil
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetFluxWorkflowCopyYAMLRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvokeID() {
+		if err = oprot.WriteFieldBegin("invoke_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.InvokeID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetFluxWorkflowCopyYAMLRequest(%+v)", *p)
+
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) DeepEqual(ano *GetFluxWorkflowCopyYAMLRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.InvokeID) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.InvokeID == src {
+		return true
+	} else if p.InvokeID == nil || src == nil {
+		return false
+	}
+	if *p.InvokeID != *src {
+		return false
+	}
+	return true
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type GetFluxWorkflowCopyYAMLResponse struct {
+	YamlContent *string        `thrift:"yaml_content,1,optional" frugal:"1,optional,string" form:"yaml_content" json:"yaml_content,omitempty" query:"yaml_content"`
+	Sha256      *string        `thrift:"sha256,2,optional" frugal:"2,optional,string" form:"sha256" json:"sha256,omitempty" query:"sha256"`
+	BaseResp    *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewGetFluxWorkflowCopyYAMLResponse() *GetFluxWorkflowCopyYAMLResponse {
+	return &GetFluxWorkflowCopyYAMLResponse{}
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) InitDefault() {
+}
+
+var GetFluxWorkflowCopyYAMLResponse_YamlContent_DEFAULT string
+
+func (p *GetFluxWorkflowCopyYAMLResponse) GetYamlContent() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetYamlContent() {
+		return GetFluxWorkflowCopyYAMLResponse_YamlContent_DEFAULT
+	}
+	return *p.YamlContent
+}
+
+var GetFluxWorkflowCopyYAMLResponse_Sha256_DEFAULT string
+
+func (p *GetFluxWorkflowCopyYAMLResponse) GetSha256() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSha256() {
+		return GetFluxWorkflowCopyYAMLResponse_Sha256_DEFAULT
+	}
+	return *p.Sha256
+}
+
+var GetFluxWorkflowCopyYAMLResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *GetFluxWorkflowCopyYAMLResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return GetFluxWorkflowCopyYAMLResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) SetYamlContent(val *string) {
+	p.YamlContent = val
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) SetSha256(val *string) {
+	p.Sha256 = val
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_GetFluxWorkflowCopyYAMLResponse = map[int16]string{
+	1:   "yaml_content",
+	2:   "sha256",
+	255: "BaseResp",
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) IsSetYamlContent() bool {
+	return p.YamlContent != nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) IsSetSha256() bool {
+	return p.Sha256 != nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetFluxWorkflowCopyYAMLResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.YamlContent = _field
+	return nil
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Sha256 = _field
+	return nil
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetFluxWorkflowCopyYAMLResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetYamlContent() {
+		if err = oprot.WriteFieldBegin("yaml_content", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.YamlContent); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSha256() {
+		if err = oprot.WriteFieldBegin("sha256", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Sha256); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetFluxWorkflowCopyYAMLResponse(%+v)", *p)
+
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) DeepEqual(ano *GetFluxWorkflowCopyYAMLResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.YamlContent) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Sha256) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) Field1DeepEqual(src *string) bool {
+
+	if p.YamlContent == src {
+		return true
+	} else if p.YamlContent == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.YamlContent, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) Field2DeepEqual(src *string) bool {
+
+	if p.Sha256 == src {
+		return true
+	} else if p.Sha256 == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Sha256, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type EvaluationOpenAPIService interface {
 	// 评测集接口
 	// 创建评测集
@@ -73979,6 +74631,8 @@ type EvaluationOpenAPIService interface {
 	GetFluxWorkflowRun(ctx context.Context, req *GetFluxWorkflowRunRequest) (r *GetFluxWorkflowRunResponse, err error)
 
 	CompareAndSwapFluxWorkflowRun(ctx context.Context, req *CompareAndSwapFluxWorkflowRunRequest) (r *CompareAndSwapFluxWorkflowRunResponse, err error)
+
+	GetFluxWorkflowCopyYAML(ctx context.Context, req *GetFluxWorkflowCopyYAMLRequest) (r *GetFluxWorkflowCopyYAMLResponse, err error)
 }
 
 type EvaluationOpenAPIServiceClient struct {
@@ -74547,6 +75201,15 @@ func (p *EvaluationOpenAPIServiceClient) CompareAndSwapFluxWorkflowRun(ctx conte
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *EvaluationOpenAPIServiceClient) GetFluxWorkflowCopyYAML(ctx context.Context, req *GetFluxWorkflowCopyYAMLRequest) (r *GetFluxWorkflowCopyYAMLResponse, err error) {
+	var _args EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs
+	_args.Req = req
+	var _result EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult
+	if err = p.Client_().Call(ctx, "GetFluxWorkflowCopyYAML", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 
 type EvaluationOpenAPIServiceProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
@@ -74628,6 +75291,7 @@ func NewEvaluationOpenAPIServiceProcessor(handler EvaluationOpenAPIService) *Eva
 	self.AddToProcessorMap("ReportEvaluatorInvokeResult", &evaluationOpenAPIServiceProcessorReportEvaluatorInvokeResult_{handler: handler})
 	self.AddToProcessorMap("GetFluxWorkflowRun", &evaluationOpenAPIServiceProcessorGetFluxWorkflowRun{handler: handler})
 	self.AddToProcessorMap("CompareAndSwapFluxWorkflowRun", &evaluationOpenAPIServiceProcessorCompareAndSwapFluxWorkflowRun{handler: handler})
+	self.AddToProcessorMap("GetFluxWorkflowCopyYAML", &evaluationOpenAPIServiceProcessorGetFluxWorkflowCopyYAML{handler: handler})
 	return self
 }
 func (p *EvaluationOpenAPIServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -77511,6 +78175,54 @@ func (p *evaluationOpenAPIServiceProcessorCompareAndSwapFluxWorkflowRun) Process
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("CompareAndSwapFluxWorkflowRun", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type evaluationOpenAPIServiceProcessorGetFluxWorkflowCopyYAML struct {
+	handler EvaluationOpenAPIService
+}
+
+func (p *evaluationOpenAPIServiceProcessorGetFluxWorkflowCopyYAML) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("GetFluxWorkflowCopyYAML", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult{}
+	var retval *GetFluxWorkflowCopyYAMLResponse
+	if retval, err2 = p.handler.GetFluxWorkflowCopyYAML(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetFluxWorkflowCopyYAML: "+err2.Error())
+		oprot.WriteMessageBegin("GetFluxWorkflowCopyYAML", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("GetFluxWorkflowCopyYAML", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -98161,6 +98873,350 @@ func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult) DeepEqual(
 }
 
 func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult) Field0DeepEqual(src *CompareAndSwapFluxWorkflowRunResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs struct {
+	Req *GetFluxWorkflowCopyYAMLRequest `thrift:"req,1" frugal:"1,default,GetFluxWorkflowCopyYAMLRequest"`
+}
+
+func NewEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs() *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs {
+	return &EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs{}
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs_Req_DEFAULT *GetFluxWorkflowCopyYAMLRequest
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) GetReq() (v *GetFluxWorkflowCopyYAMLRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) SetReq(val *GetFluxWorkflowCopyYAMLRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewGetFluxWorkflowCopyYAMLRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetFluxWorkflowCopyYAML_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) DeepEqual(ano *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) Field1DeepEqual(src *GetFluxWorkflowCopyYAMLRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult struct {
+	Success *GetFluxWorkflowCopyYAMLResponse `thrift:"success,0,optional" frugal:"0,optional,GetFluxWorkflowCopyYAMLResponse"`
+}
+
+func NewEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult() *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult {
+	return &EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult{}
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult_Success_DEFAULT *GetFluxWorkflowCopyYAMLResponse
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) GetSuccess() (v *GetFluxWorkflowCopyYAMLResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetFluxWorkflowCopyYAMLResponse)
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult = map[int16]string{
+	0: "success",
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewGetFluxWorkflowCopyYAMLResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetFluxWorkflowCopyYAML_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) DeepEqual(ano *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) Field0DeepEqual(src *GetFluxWorkflowCopyYAMLResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

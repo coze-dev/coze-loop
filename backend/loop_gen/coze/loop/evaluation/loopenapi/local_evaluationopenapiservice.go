@@ -1403,6 +1403,27 @@ func (l *LocalEvaluationOpenAPIService) CompareAndSwapFluxWorkflowRun(ctx contex
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvaluationOpenAPIService) GetFluxWorkflowCopyYAML(ctx context.Context, req *openapi.GetFluxWorkflowCopyYAMLRequest, callOptions ...callopt.Option) (*openapi.GetFluxWorkflowCopyYAMLResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult)
+		resp, err := l.impl.GetFluxWorkflowCopyYAML(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult{}
+	ctx = l.injectRPCInfo(ctx, "GetFluxWorkflowCopyYAML")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvaluationOpenAPIService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

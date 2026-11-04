@@ -71,6 +71,7 @@ type Client interface {
 	ReportEvaluatorInvokeResult_(ctx context.Context, req *openapi.ReportEvaluatorInvokeResultRequest, callOptions ...callopt.Option) (r *openapi.ReportEvaluatorInvokeResultResponse, err error)
 	GetFluxWorkflowRun(ctx context.Context, req *openapi.GetFluxWorkflowRunRequest, callOptions ...callopt.Option) (r *openapi.GetFluxWorkflowRunResponse, err error)
 	CompareAndSwapFluxWorkflowRun(ctx context.Context, req *openapi.CompareAndSwapFluxWorkflowRunRequest, callOptions ...callopt.Option) (r *openapi.CompareAndSwapFluxWorkflowRunResponse, err error)
+	GetFluxWorkflowCopyYAML(ctx context.Context, req *openapi.GetFluxWorkflowCopyYAMLRequest, callOptions ...callopt.Option) (r *openapi.GetFluxWorkflowCopyYAMLResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -400,4 +401,9 @@ func (p *kEvaluationOpenAPIServiceClient) GetFluxWorkflowRun(ctx context.Context
 func (p *kEvaluationOpenAPIServiceClient) CompareAndSwapFluxWorkflowRun(ctx context.Context, req *openapi.CompareAndSwapFluxWorkflowRunRequest, callOptions ...callopt.Option) (r *openapi.CompareAndSwapFluxWorkflowRunResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.CompareAndSwapFluxWorkflowRun(ctx, req)
+}
+
+func (p *kEvaluationOpenAPIServiceClient) GetFluxWorkflowCopyYAML(ctx context.Context, req *openapi.GetFluxWorkflowCopyYAMLRequest, callOptions ...callopt.Option) (r *openapi.GetFluxWorkflowCopyYAMLResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetFluxWorkflowCopyYAML(ctx, req)
 }

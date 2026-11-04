@@ -47,6 +47,10 @@ type FluxItemRun struct {
 	SpaceID              int64  `json:"space_id,omitempty"`
 	InvokeID             int64  `json:"invoke_id,omitempty"`
 	BindingID            string `json:"binding_id,omitempty"`
+	QueryDigest          string `json:"query_digest,omitempty"`
+	SourceKind           string `json:"source_kind,omitempty"`
+	TemplateID           string `json:"template_id,omitempty"`
+	IdempotencyKey       string `json:"idempotency_key,omitempty"`
 	DeliveryID           string `json:"delivery_id,omitempty"`
 	RequestID            string `json:"request_id,omitempty"`
 	RunIdempotencyKey    string `json:"run_idempotency_key,omitempty"`

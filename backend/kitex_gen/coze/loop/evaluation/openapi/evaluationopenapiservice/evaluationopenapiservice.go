@@ -433,6 +433,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetFluxWorkflowCopyYAML": kitex.NewMethodInfo(
+		getFluxWorkflowCopyYAMLHandler,
+		newEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs,
+		newEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -1606,6 +1613,25 @@ func newEvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult() interface{
 	return openapi.NewEvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult()
 }
 
+func getFluxWorkflowCopyYAMLHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).GetFluxWorkflowCopyYAML(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs()
+}
+
+func newEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -2213,6 +2239,16 @@ func (p *kClient) CompareAndSwapFluxWorkflowRun(ctx context.Context, req *openap
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult
 	if err = p.c.Call(ctx, "CompareAndSwapFluxWorkflowRun", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetFluxWorkflowCopyYAML(ctx context.Context, req *openapi.GetFluxWorkflowCopyYAMLRequest) (r *openapi.GetFluxWorkflowCopyYAMLResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult
+	if err = p.c.Call(ctx, "GetFluxWorkflowCopyYAML", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

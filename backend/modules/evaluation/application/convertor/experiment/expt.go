@@ -1560,7 +1560,7 @@ func fluxWorkflowDTO2DO(in *domain_expt.FluxWorkflowConfig) *entity.FluxWorkflow
 		return nil
 	}
 	out := &entity.FluxWorkflowConfig{
-		SourceKind: in.GetSourceKind(), SourceSpaceID: in.GetSourceSpaceID(),
+		SourceKind: in.GetSourceKind(), SourceSpaceID: in.GetSourceSpaceID(), ConsumerSpaceID: in.GetConsumerSpaceID(),
 		SourceWorkflowID: in.GetSourceWorkflowID(), SourceRevision: in.GetSourceRevision(),
 		SourceDigest: in.GetSourceDigest(), SourceTemplateID: in.GetSourceTemplateID(),
 		SourceSnapshotID: in.GetSourceSnapshotID(), SourceReleaseID: in.GetSourceReleaseID(),
@@ -1592,7 +1592,7 @@ func fluxWorkflowDO2DTO(in *entity.FluxWorkflowConfig) *domain_expt.FluxWorkflow
 		return nil
 	}
 	out := &domain_expt.FluxWorkflowConfig{
-		SourceKind: gptr.Of(in.SourceKind), SourceSpaceID: gptr.Of(in.SourceSpaceID),
+		SourceKind: gptr.Of(in.SourceKind), SourceSpaceID: gptr.Of(in.SourceSpaceID), ConsumerSpaceID: gptr.Of(in.ConsumerSpaceID),
 		SourceWorkflowID: gptr.Of(in.SourceWorkflowID), SourceRevision: gptr.Of(in.SourceRevision),
 		SourceDigest: gptr.Of(in.SourceDigest), SourceTemplateID: gptr.Of(in.SourceTemplateID),
 		SourceSnapshotID: gptr.Of(in.SourceSnapshotID), SourceReleaseID: gptr.Of(in.SourceReleaseID),

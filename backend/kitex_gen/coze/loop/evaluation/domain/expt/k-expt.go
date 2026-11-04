@@ -2165,6 +2165,20 @@ func (p *FluxWorkflowConfig) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 12:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2344,6 +2358,20 @@ func (p *FluxWorkflowConfig) FastReadField11(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *FluxWorkflowConfig) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ConsumerSpaceID = _field
+	return offset, nil
+}
+
 func (p *FluxWorkflowConfig) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -2362,6 +2390,7 @@ func (p *FluxWorkflowConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) 
 		offset += p.fastWriteField9(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
+		offset += p.fastWriteField12(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -2381,6 +2410,7 @@ func (p *FluxWorkflowConfig) BLength() int {
 		l += p.field9Length()
 		l += p.field10Length()
 		l += p.field11Length()
+		l += p.field12Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2492,6 +2522,15 @@ func (p *FluxWorkflowConfig) fastWriteField11(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
+func (p *FluxWorkflowConfig) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetConsumerSpaceID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 12)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ConsumerSpaceID)
+	}
+	return offset
+}
+
 func (p *FluxWorkflowConfig) field1Length() int {
 	l := 0
 	if p.IsSetSourceKind() {
@@ -2595,6 +2634,15 @@ func (p *FluxWorkflowConfig) field11Length() int {
 	return l
 }
 
+func (p *FluxWorkflowConfig) field12Length() int {
+	l := 0
+	if p.IsSetConsumerSpaceID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ConsumerSpaceID)
+	}
+	return l
+}
+
 func (p *FluxWorkflowConfig) DeepCopy(s interface{}) error {
 	src, ok := s.(*FluxWorkflowConfig)
 	if !ok {
@@ -2693,6 +2741,14 @@ func (p *FluxWorkflowConfig) DeepCopy(s interface{}) error {
 
 			p.Nodes = append(p.Nodes, _elem)
 		}
+	}
+
+	if src.ConsumerSpaceID != nil {
+		var tmp string
+		if *src.ConsumerSpaceID != "" {
+			tmp = kutils.StringDeepCopy(*src.ConsumerSpaceID)
+		}
+		p.ConsumerSpaceID = &tmp
 	}
 
 	return nil

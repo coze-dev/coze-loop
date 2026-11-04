@@ -396,3 +396,9 @@ func GetFluxWorkflowRun(ctx context.Context, c *app.RequestContext) {
 func CompareAndSwapFluxWorkflowRun(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.CompareAndSwapFluxWorkflowRun)
 }
+
+// GetFluxWorkflowCopyYAML .
+// @router /v1/loop/eval_targets/flux_workflow_run/copy_yaml/get [POST]
+func GetFluxWorkflowCopyYAML(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetFluxWorkflowCopyYAML)
+}

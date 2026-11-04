@@ -1561,6 +1561,18 @@ struct CompareAndSwapFluxWorkflowRunResponse {
     255: base.BaseResp BaseResp
 }
 
+struct GetFluxWorkflowCopyYAMLRequest {
+    1: optional i64 workspace_id (api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: optional i64 invoke_id (api.js_conv = "true", go.tag = 'json:"invoke_id"')
+    255: optional base.Base Base
+}
+
+struct GetFluxWorkflowCopyYAMLResponse {
+    1: optional string yaml_content
+    2: optional string sha256
+    255: base.BaseResp BaseResp
+}
+
 service EvaluationOpenAPIService {
     // 评测集接口
     // 创建评测集
@@ -1693,5 +1705,6 @@ service EvaluationOpenAPIService {
     ReportEvaluatorInvokeResultResponse ReportEvaluatorInvokeResult(1: ReportEvaluatorInvokeResultRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/evaluators/result")
     GetFluxWorkflowRunResponse GetFluxWorkflowRun(1: GetFluxWorkflowRunRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/flux_workflow_run/get")
     CompareAndSwapFluxWorkflowRunResponse CompareAndSwapFluxWorkflowRun(1: CompareAndSwapFluxWorkflowRunRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/flux_workflow_run/cas")
+    GetFluxWorkflowCopyYAMLResponse GetFluxWorkflowCopyYAML(1: GetFluxWorkflowCopyYAMLRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/flux_workflow_run/copy_yaml/get")
 
 }

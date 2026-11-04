@@ -79,6 +79,11 @@ func (e *EvalOpenAPIApplication) CompareAndSwapFluxWorkflowRun(ctx context.Conte
 	return resp, nil
 }
 
+// The private copy is served only by the commercial storage wrapper.
+func (e *EvalOpenAPIApplication) GetFluxWorkflowCopyYAML(_ context.Context, _ *openapi.GetFluxWorkflowCopyYAMLRequest) (*openapi.GetFluxWorkflowCopyYAMLResponse, error) {
+	return nil, errorx.NewByCode(errno.ResourceNotFoundCode)
+}
+
 func (e *EvalOpenAPIApplication) authorizeFluxWorkflowRun(ctx context.Context, spaceID, invokeID int64, current *entity.FluxItemRun) (int64, string, error) {
 	var exptID int64
 	actx, err := e.asyncRepo.GetEvalAsyncCtx(ctx, strconv.FormatInt(invokeID, 10))

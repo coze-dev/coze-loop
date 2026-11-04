@@ -4092,6 +4092,7 @@ type FluxWorkflowConfig struct {
 	PhaseReview      *FluxWorkflowPhaseReview    `thrift:"phase_review,9,optional" frugal:"9,optional,FluxWorkflowPhaseReview" form:"phase_review" json:"phase_review,omitempty" query:"phase_review"`
 	InteractionSua   *FluxWorkflowInteractionSUA `thrift:"interaction_sua,10,optional" frugal:"10,optional,FluxWorkflowInteractionSUA" form:"interaction_sua" json:"interaction_sua,omitempty" query:"interaction_sua"`
 	Nodes            []*FluxWorkflowNodePolicy   `thrift:"nodes,11,optional" frugal:"11,optional,list<FluxWorkflowNodePolicy>" form:"nodes" json:"nodes,omitempty" query:"nodes"`
+	ConsumerSpaceID  *string                     `thrift:"consumer_space_id,12,optional" frugal:"12,optional,string" form:"consumer_space_id" json:"consumer_space_id,omitempty" query:"consumer_space_id"`
 }
 
 func NewFluxWorkflowConfig() *FluxWorkflowConfig {
@@ -4232,6 +4233,18 @@ func (p *FluxWorkflowConfig) GetNodes() (v []*FluxWorkflowNodePolicy) {
 	}
 	return p.Nodes
 }
+
+var FluxWorkflowConfig_ConsumerSpaceID_DEFAULT string
+
+func (p *FluxWorkflowConfig) GetConsumerSpaceID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetConsumerSpaceID() {
+		return FluxWorkflowConfig_ConsumerSpaceID_DEFAULT
+	}
+	return *p.ConsumerSpaceID
+}
 func (p *FluxWorkflowConfig) SetSourceKind(val *string) {
 	p.SourceKind = val
 }
@@ -4265,6 +4278,9 @@ func (p *FluxWorkflowConfig) SetInteractionSua(val *FluxWorkflowInteractionSUA) 
 func (p *FluxWorkflowConfig) SetNodes(val []*FluxWorkflowNodePolicy) {
 	p.Nodes = val
 }
+func (p *FluxWorkflowConfig) SetConsumerSpaceID(val *string) {
+	p.ConsumerSpaceID = val
+}
 
 var fieldIDToName_FluxWorkflowConfig = map[int16]string{
 	1:  "source_kind",
@@ -4278,6 +4294,7 @@ var fieldIDToName_FluxWorkflowConfig = map[int16]string{
 	9:  "phase_review",
 	10: "interaction_sua",
 	11: "nodes",
+	12: "consumer_space_id",
 }
 
 func (p *FluxWorkflowConfig) IsSetSourceKind() bool {
@@ -4322,6 +4339,10 @@ func (p *FluxWorkflowConfig) IsSetInteractionSua() bool {
 
 func (p *FluxWorkflowConfig) IsSetNodes() bool {
 	return p.Nodes != nil
+}
+
+func (p *FluxWorkflowConfig) IsSetConsumerSpaceID() bool {
+	return p.ConsumerSpaceID != nil
 }
 
 func (p *FluxWorkflowConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -4425,6 +4446,14 @@ func (p *FluxWorkflowConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4586,6 +4615,17 @@ func (p *FluxWorkflowConfig) ReadField11(iprot thrift.TProtocol) error {
 	p.Nodes = _field
 	return nil
 }
+func (p *FluxWorkflowConfig) ReadField12(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ConsumerSpaceID = _field
+	return nil
+}
 
 func (p *FluxWorkflowConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4635,6 +4675,10 @@ func (p *FluxWorkflowConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 	}
@@ -4861,6 +4905,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
+func (p *FluxWorkflowConfig) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetConsumerSpaceID() {
+		if err = oprot.WriteFieldBegin("consumer_space_id", thrift.STRING, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ConsumerSpaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
 
 func (p *FluxWorkflowConfig) String() string {
 	if p == nil {
@@ -4907,6 +4969,9 @@ func (p *FluxWorkflowConfig) DeepEqual(ano *FluxWorkflowConfig) bool {
 		return false
 	}
 	if !p.Field11DeepEqual(ano.Nodes) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.ConsumerSpaceID) {
 		return false
 	}
 	return true
@@ -5032,6 +5097,18 @@ func (p *FluxWorkflowConfig) Field11DeepEqual(src []*FluxWorkflowNodePolicy) boo
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *FluxWorkflowConfig) Field12DeepEqual(src *string) bool {
+
+	if p.ConsumerSpaceID == src {
+		return true
+	} else if p.ConsumerSpaceID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ConsumerSpaceID, *src) != 0 {
+		return false
 	}
 	return true
 }

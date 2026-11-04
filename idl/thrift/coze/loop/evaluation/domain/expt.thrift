@@ -163,6 +163,7 @@ struct FluxWorkflowConfig {
     9: optional FluxWorkflowPhaseReview phase_review
     10: optional FluxWorkflowInteractionSUA interaction_sua
     11: optional list<FluxWorkflowNodePolicy> nodes
+    12: optional string consumer_space_id
 }
 
 struct RunModeConfig {

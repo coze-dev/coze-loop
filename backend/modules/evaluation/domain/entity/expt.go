@@ -709,9 +709,10 @@ type ItemRunConf struct {
 	// SuaPETemplate 是 SUA loop 跑法必需的 PE 模板 (含 {{eval_result}} 占位符, sua-cli 用它
 	// 把上一轮评分拼成下一轮追问); 缺失时 runtime 在 prepare 阶段即拒绝该 trial。
 	// 题目级配置优先于实验级配置。
-	SuaPETemplate      string `json:"sua_pe_template,omitempty"`
-	SuaQAReplyTemplate string `json:"sua_qa_reply_template,omitempty"`
-	MaxQATurns         int    `json:"max_qa_turns,omitempty"`
+	SuaPETemplate      string             `json:"sua_pe_template,omitempty"`
+	SuaQAReplyTemplate string             `json:"sua_qa_reply_template,omitempty"`
+	MaxQATurns         int                `json:"max_qa_turns,omitempty"`
+	FluxWorkflowInputs stdjson.RawMessage `json:"flux_workflow_inputs,omitempty"`
 	// EvaluatorTrigger 决定该题目**什么时候**跑评估器: never / after_each_turn /
 	// final_turn_only / by_testcase_config (空 = 未配, 回落到 by_testcase_config)。
 	//

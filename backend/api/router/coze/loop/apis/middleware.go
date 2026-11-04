@@ -2514,3 +2514,13 @@ func _getfluxworkflowrunMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _copy_yamlMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getfluxworkflowcopyyamlMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
