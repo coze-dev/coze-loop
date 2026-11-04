@@ -4806,4 +4806,3 @@ func TestDomainExperimentDTO2OpenAPI_RunnerEnvs(t *testing.T) {
 	require.NotNil(t, got)
 	assert.Equal(t, map[string]string{"OPENAI_API_KEY": "***"}, got.RunnerEnvs)
 }
-
