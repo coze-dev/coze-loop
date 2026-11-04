@@ -38,6 +38,7 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, eva
 		VerificationConfig: verificationConfigDTO2DO(cer.GetVerificationConfig()),
 		ItemConcurNum:      entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
 		Ext:                cer.Ext,
+		RunnerEnvs:         cer.RunnerEnvs,
 		RunModeConfig:      runModeConfigDTO2DO(cer.GetRunModeConfig()),
 	}
 
@@ -402,6 +403,7 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		}
 		res.EnableExtractTrajectory = experiment.EvalConf.EnableExtractTrajectory
 		res.Ext = experiment.EvalConf.Ext
+		res.RunnerEnvs = experiment.EvalConf.RunnerEnvs
 	}
 
 	// 填充权重配置（score_weight_config 和 enable_weighted_score）
@@ -1023,6 +1025,7 @@ func buildExptConfFromEvalSetConfigs(cer *expt.CreateExperimentRequest, runConfi
 		VerificationConfig: verificationConfigDTO2DO(cer.GetVerificationConfig()),
 		ItemConcurNum:      entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
 		Ext:                cer.Ext,
+		RunnerEnvs:         cer.RunnerEnvs,
 		RunModeConfig:      runModeConfigDTO2DO(cer.GetRunModeConfig()),
 	}
 	if cer.IsSetItemRetryNum() && cer.GetItemRetryNum() >= 0 {
