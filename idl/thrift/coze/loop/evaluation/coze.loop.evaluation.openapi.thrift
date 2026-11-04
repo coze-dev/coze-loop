@@ -669,6 +669,7 @@ struct SubmitExperimentOApiRequest {
     62: optional string trigger_type (api.body = 'trigger_type')
 
     100: optional map<string, string> ext (api.body = 'ext')
+    101: optional map<string, string> runner_envs (api.body = "runner_envs")
 
     // 实验分组 key 默认以实验 ID 兜底；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）。
     // 引用分组实验 id: 填写时校验其为当前空间内的实验 id。

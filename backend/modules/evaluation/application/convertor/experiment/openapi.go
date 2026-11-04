@@ -428,6 +428,7 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	result.PriorityLevel = dto.PriorityLevel
 	result.SchedulerMode = dto.SchedulerMode
 	result.ExpectedQuotaConsumption = ExpectedQuotaConsumptionDomain2OpenAPI(dto.ExpectedQuotaConsumption)
+	result.RunnerEnvs = dto.RunnerEnvs
 	return result
 }
 
@@ -762,6 +763,7 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 		}
 
 		result.EnableExtractTrajectory = experiment.EvalConf.EnableExtractTrajectory
+		result.RunnerEnvs = experiment.EvalConf.RunnerEnvs
 	}
 
 	if experiment.Target != nil {

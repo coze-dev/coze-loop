@@ -1844,6 +1844,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		TriggerType:             gptr.Of(openAPITriggerType(req.GetTriggerType())),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.GetExt(),
+		RunnerEnvs:              req.GetRunnerEnvs(),
 		// ★ 透传分流依据: OpenAPI 字符串枚举 → kitex enum, 供下游平台层统一以 source_type 分流。
 		EvalSetSourceType: gptr.Of(srcType),
 		// ★ 透传引用分组实验 id: 命中当前空间实验则复用其 group key(归入同一分组); 缺省则以实验 id 兜底。

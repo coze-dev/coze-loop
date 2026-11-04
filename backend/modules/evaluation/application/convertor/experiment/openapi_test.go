@@ -4766,3 +4766,44 @@ func TestOpenAPIResultPayloadDO2DTO_TurnError(t *testing.T) {
 	require.NotNil(t, got.SystemInfo.Error.Detail)
 	assert.Equal(t, "详情", *got.SystemInfo.Error.Detail)
 }
+
+func TestOpenAPIExptDO2DTO_RunnerEnvs(t *testing.T) {
+	t.Parallel()
+
+	expt := &entity.Experiment{
+		ID:      101,
+		SpaceID: 202,
+		EvalConf: &entity.EvaluationConfiguration{
+			RunnerEnvs: map[string]string{
+				"OPENAI_API_KEY": "***",
+				"HTTP_PROXY":     "***",
+			},
+		},
+	}
+	got := OpenAPIExptDO2DTO(expt)
+	require.NotNil(t, got)
+	assert.Equal(t, map[string]string{
+		"OPENAI_API_KEY": "***",
+		"HTTP_PROXY":     "***",
+	}, got.RunnerEnvs)
+
+	noConf := &entity.Experiment{ID: 102, SpaceID: 202}
+	gotNoConf := OpenAPIExptDO2DTO(noConf)
+	require.NotNil(t, gotNoConf)
+	assert.Nil(t, gotNoConf.RunnerEnvs)
+}
+
+func TestDomainExperimentDTO2OpenAPI_RunnerEnvs(t *testing.T) {
+	t.Parallel()
+
+	dto := &domainExpt.Experiment{
+		ID: gptr.Of(int64(301)),
+		RunnerEnvs: map[string]string{
+			"OPENAI_API_KEY": "***",
+		},
+	}
+	got := DomainExperimentDTO2OpenAPI(dto)
+	require.NotNil(t, got)
+	assert.Equal(t, map[string]string{"OPENAI_API_KEY": "***"}, got.RunnerEnvs)
+}
+

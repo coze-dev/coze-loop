@@ -2865,6 +2865,7 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 			buildReq: func() *openapi.SubmitExperimentOApiRequest {
 				req := buildBaseReq()
 				req.RefGroupExperimentID = gptr.Of(int64(6001))
+				req.RunnerEnvs = map[string]string{"OPENAI_API_KEY": "sk-test"}
 				return req
 			},
 			setup: func(req *openapi.SubmitExperimentOApiRequest, auth *rpcmocks.MockIAuthProvider, manager *servicemocks.MockIExptManager, versionSvc *servicemocks.MockEvaluationSetVersionService, evaluatorSvc *servicemocks.MockEvaluatorService, fakeApp *fakeExperimentApp) {
@@ -2880,7 +2881,10 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 					},
 				}
 				evaluatorSvc.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluatorVersionRequest{})).Return([]*entity.Evaluator{evaluator}, int64(1), nil)
-				fakeApp.submitResp = &exptpb.SubmitExperimentResponse{Experiment: &domainexpt.Experiment{ID: gptr.Of(int64(8892))}}
+				fakeApp.submitResp = &exptpb.SubmitExperimentResponse{Experiment: &domainexpt.Experiment{
+					ID:         gptr.Of(int64(8892)),
+					RunnerEnvs: map[string]string{"OPENAI_API_KEY": "***"},
+				}}
 			},
 		},
 		{
@@ -2972,6 +2976,7 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 				if assert.NotNil(t, resp) && assert.NotNil(t, resp.Data) {
 					assert.NotNil(t, resp.Data.Experiment)
 					assert.Equal(t, fakeApp.submitResp.Experiment.GetID(), resp.Data.Experiment.GetID())
+					assert.Equal(t, fakeApp.submitResp.Experiment.GetRunnerEnvs(), resp.Data.Experiment.GetRunnerEnvs())
 				}
 				if assert.NotNil(t, fakeApp.lastReq) {
 					assert.Equal(t, workspaceID, fakeApp.lastReq.GetWorkspaceID())
@@ -2979,6 +2984,7 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 					assert.Equal(t, evaluatorVersionID, fakeApp.lastReq.EvaluatorVersionIds[0])
 					// ref_group_experiment_id 透传: 显式传入时应原样透传给内部 SubmitExperimentRequest。
 					assert.Equal(t, req.RefGroupExperimentID, fakeApp.lastReq.RefGroupExperimentID)
+					assert.Equal(t, req.GetRunnerEnvs(), fakeApp.lastReq.GetRunnerEnvs())
 				}
 			}
 
