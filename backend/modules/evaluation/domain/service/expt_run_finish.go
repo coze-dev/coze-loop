@@ -134,14 +134,22 @@ func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, loc
 		return nil
 	}
 	ttl, exists, err := reader.GetLifecycleLockTTL(ctx, key)
-	if err != nil || !exists {
+	if err != nil {
 		return err
+	}
+	if !exists {
+		logs.CtxWarn(ctx, "[ExptLifecycle] legacy holder has no expiry or TTL is unavailable; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
+		return nil
 	}
 	lockTTL := 36 * time.Hour
 	if e.configer != nil {
 		if configured := time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second; configured > legacyLifecycleMigrationGrace {
 			lockTTL = configured
 		}
+	}
+	if lockTTL <= legacyLifecycleMigrationGrace {
+		logs.CtxWarn(ctx, "[ExptLifecycle] configured lock TTL is below migration grace; keep legacy holder, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
+		return nil
 	}
 	if ttl > legacyLifecycleMigrationMaxRemaining || ttl > lockTTL-legacyLifecycleMigrationGrace {
 		// A freshly acquired old-writer holder may already belong to a newer
