@@ -510,6 +510,11 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_eval_targets0.POST("/list", append(_listevaltargetsoapiMw(handler), apis.ListEvalTargetsOApi)...)
 				_eval_targets0.POST("/result", append(_reportevaltargetinvokeresultMw(handler), apis.ReportEvalTargetInvokeResult)...)
 				_eval_targets0.POST("/step_metric", append(_reportevaltargetstepmetricMw(handler), apis.ReportEvalTargetStepMetric)...)
+				{
+					_flux_workflow_run := _eval_targets0.Group("/flux_workflow_run", _flux_workflow_runMw(handler)...)
+					_flux_workflow_run.POST("/cas", append(_compareandswapfluxworkflowrunMw(handler), apis.CompareAndSwapFluxWorkflowRun)...)
+					_flux_workflow_run.POST("/get", append(_getfluxworkflowrunMw(handler), apis.GetFluxWorkflowRun)...)
+				}
 			}
 			{
 				_evaluation0 := _loop.Group("/evaluation", _evaluation0Mw(handler)...)

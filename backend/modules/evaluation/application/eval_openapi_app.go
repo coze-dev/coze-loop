@@ -70,6 +70,8 @@ func redactOpenAPIEvaluationSetVersionSchemas(accessCtx *entity.ResourceAccessCo
 type EvalOpenAPIApplication struct {
 	targetSvc                   service.IEvalTargetService
 	evalTargetRepo              repo.IEvalTargetRepo
+	fluxItemRunRepo             repo.IFluxItemRunRepo
+	fluxBindingRepo             repo.IFluxWorkflowBindingRepo
 	asyncRepo                   repo.IEvalAsyncRepo
 	publisher                   events.ExptEventPublisher
 	auth                        rpc.IAuthProvider
@@ -98,6 +100,8 @@ type EvalOpenAPIApplication struct {
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
 	targetSvc service.IEvalTargetService,
 	evalTargetRepo repo.IEvalTargetRepo,
+	fluxItemRunRepo repo.IFluxItemRunRepo,
+	fluxBindingRepo repo.IFluxWorkflowBindingRepo,
 	auth rpc.IAuthProvider,
 	evaluationSetService service.IEvaluationSetService,
 	evaluationSetVersionService service.EvaluationSetVersionService,
@@ -124,6 +128,8 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		publisher:                   publisher,
 		targetSvc:                   targetSvc,
 		evalTargetRepo:              evalTargetRepo,
+		fluxItemRunRepo:             fluxItemRunRepo,
+		fluxBindingRepo:             fluxBindingRepo,
 		auth:                        auth,
 		evaluationSetService:        evaluationSetService,
 		evaluationSetVersionService: evaluationSetVersionService,

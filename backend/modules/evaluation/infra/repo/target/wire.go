@@ -11,6 +11,7 @@ import (
 
 var TargetRepoSet = wire.NewSet(
 	NewEvalTargetRepo,
+	NewFluxItemRunRepo,
 	// DAO Sets
 	targetmysql.TargetMySQLDAOSet,
 )

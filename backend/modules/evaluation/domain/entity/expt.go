@@ -372,6 +372,8 @@ type EvaluationConfiguration struct {
 	// RunModeConfig 实验级跑法配置 (仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效)。
 	// 序列化进 experiment.eval_conf; 提交时展开到各 item 的 ItemTargetConf.RunConf 兜底默认值。
 	RunModeConfig *RunModeConfig `json:"run_mode_config,omitempty"`
+	// FluxWorkflowBinding is prepared by the service before scheduling; callers cannot set it.
+	FluxWorkflowBinding *FluxWorkflowBinding `json:"flux_workflow_binding,omitempty"`
 
 	// ExpectedQuotaConsumption 单 item 预期资源消耗向量 (中心化调度用)。
 	// 创建期一次性冻结进 experiment.eval_conf, 之后只读: 调度预占、释放、账本重建全部读这同一份快照,
@@ -637,6 +639,7 @@ type RunModeConfig struct {
 type FluxWorkflowConfig struct {
 	SourceKind       string                      `json:"source_kind,omitempty"`
 	SourceSpaceID    string                      `json:"source_space_id,omitempty"`
+	ConsumerSpaceID  string                      `json:"consumer_space_id,omitempty"`
 	SourceWorkflowID string                      `json:"source_workflow_id,omitempty"`
 	SourceRevision   int64                       `json:"source_revision,omitempty"`
 	SourceDigest     string                      `json:"source_digest,omitempty"`

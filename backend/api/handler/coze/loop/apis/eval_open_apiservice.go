@@ -384,3 +384,15 @@ func GetExperimentIDsByGroupOApi(ctx context.Context, c *app.RequestContext) {
 func TerminateExperimentItemsOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.TerminateExperimentItemsOApi)
 }
+
+// GetFluxWorkflowRun .
+// @router /v1/loop/eval_targets/flux_workflow_run/get [POST]
+func GetFluxWorkflowRun(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetFluxWorkflowRun)
+}
+
+// CompareAndSwapFluxWorkflowRun .
+// @router /v1/loop/eval_targets/flux_workflow_run/cas [POST]
+func CompareAndSwapFluxWorkflowRun(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.CompareAndSwapFluxWorkflowRun)
+}

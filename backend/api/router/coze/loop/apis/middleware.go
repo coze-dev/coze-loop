@@ -2499,3 +2499,18 @@ func _terminateexperimentitemsoapiMw(handler *apis.APIHandler) []app.HandlerFunc
 	// your code...
 	return nil
 }
+
+func _flux_workflow_runMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _compareandswapfluxworkflowrunMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getfluxworkflowrunMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

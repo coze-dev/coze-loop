@@ -17,6 +17,7 @@ var ExperimentRepoSet = wire.NewSet(
 	NewExptRepo,
 	NewExptManualRetryRepo,
 	NewExptResultPublishRepo,
+	NewFluxWorkflowBindingRepo,
 	NewExptSchedulerQueueRepo,
 	NewExptStatsRepo,
 	NewExptAggrResultRepo,

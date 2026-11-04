@@ -1361,6 +1361,48 @@ func (l *LocalEvaluationOpenAPIService) ReportEvaluatorInvokeResult_(ctx context
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvaluationOpenAPIService) GetFluxWorkflowRun(ctx context.Context, req *openapi.GetFluxWorkflowRunRequest, callOptions ...callopt.Option) (*openapi.GetFluxWorkflowRunResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceGetFluxWorkflowRunArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceGetFluxWorkflowRunResult)
+		resp, err := l.impl.GetFluxWorkflowRun(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceGetFluxWorkflowRunArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceGetFluxWorkflowRunResult{}
+	ctx = l.injectRPCInfo(ctx, "GetFluxWorkflowRun")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalEvaluationOpenAPIService) CompareAndSwapFluxWorkflowRun(ctx context.Context, req *openapi.CompareAndSwapFluxWorkflowRunRequest, callOptions ...callopt.Option) (*openapi.CompareAndSwapFluxWorkflowRunResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult)
+		resp, err := l.impl.CompareAndSwapFluxWorkflowRun(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult{}
+	ctx = l.injectRPCInfo(ctx, "CompareAndSwapFluxWorkflowRun")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvaluationOpenAPIService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(
