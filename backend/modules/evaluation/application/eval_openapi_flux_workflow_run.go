@@ -27,7 +27,7 @@ func (e *EvalOpenAPIApplication) GetFluxWorkflowRun(ctx context.Context, req *op
 		}
 		return nil, err
 	}
-	if _, _, err = e.authorizeFluxWorkflowRun(ctx, req.GetWorkspaceID(), req.GetInvokeID(), run); err != nil {
+	if _, _, _, err = e.authorizeFluxWorkflowRun(ctx, req.GetWorkspaceID(), req.GetInvokeID(), run); err != nil {
 		return nil, err
 	}
 	resp := &openapi.GetFluxWorkflowRunResponse{BaseResp: base.NewBaseResp()}
@@ -57,13 +57,15 @@ func (e *EvalOpenAPIApplication) CompareAndSwapFluxWorkflowRun(ctx context.Conte
 		}
 		return nil, err
 	}
-	exptID, bindingID, err := e.authorizeFluxWorkflowRun(ctx, req.GetWorkspaceID(), req.GetInvokeID(), current)
+	exptID, exptSpaceID, bindingID, err := e.authorizeFluxWorkflowRun(ctx, req.GetWorkspaceID(), req.GetInvokeID(), current)
 	if err != nil {
 		return nil, err
 	}
-	if next.SpaceID != req.GetWorkspaceID() || next.InvokeID != req.GetInvokeID() || next.ExperimentID != exptID || next.BindingID != bindingID {
+	if next.SpaceID != req.GetWorkspaceID() || next.InvokeID != req.GetInvokeID() || next.ExperimentID != exptID || next.BindingID != bindingID ||
+		next.ExperimentSpaceID != 0 && next.ExperimentSpaceID != exptSpaceID {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("run identity mismatch"))
 	}
+	next.ExperimentSpaceID = exptSpaceID
 	updated, latest, err := e.fluxItemRunRepo.CompareAndSwapFluxItemRun(ctx, req.GetWorkspaceID(), req.GetInvokeID(), req.GetExpectedVersion(), &next)
 	if err != nil {
 		return nil, err
@@ -84,33 +86,38 @@ func (e *EvalOpenAPIApplication) GetFluxWorkflowCopyYAML(_ context.Context, _ *o
 	return nil, errorx.NewByCode(errno.ResourceNotFoundCode)
 }
 
-func (e *EvalOpenAPIApplication) authorizeFluxWorkflowRun(ctx context.Context, spaceID, invokeID int64, current *entity.FluxItemRun) (int64, string, error) {
-	var exptID int64
+func (e *EvalOpenAPIApplication) authorizeFluxWorkflowRun(ctx context.Context, spaceID, invokeID int64, current *entity.FluxItemRun) (int64, int64, string, error) {
+	var exptID, exptSpaceID int64
 	actx, err := e.asyncRepo.GetEvalAsyncCtx(ctx, strconv.FormatInt(invokeID, 10))
-	if err == nil && actx != nil && actx.Event != nil && actx.Event.SpaceID == spaceID && actx.Callee == sandboxAgentAsyncCallee {
+	if err == nil && actx != nil && actx.Event != nil && actx.RecordID == invokeID && actx.Callee == sandboxAgentAsyncCallee {
 		exptID = actx.Event.ExptID
+		exptSpaceID = actx.Event.SpaceID
 	}
 	if exptID == 0 && current != nil && current.SpaceID == spaceID && current.InvokeID == invokeID {
 		exptID = current.ExperimentID
+		exptSpaceID = current.ExperimentSpaceID
+		if exptSpaceID == 0 {
+			exptSpaceID = spaceID
+		}
 	}
-	if exptID == 0 {
-		return 0, "", errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("Flux Workflow invoke %d not ready", invokeID)))
+	if exptID == 0 || exptSpaceID == 0 {
+		return 0, 0, "", errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("Flux Workflow invoke %d not ready", invokeID)))
 	}
-	if current != nil && current.ExperimentID != exptID {
-		return 0, "", errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("Flux Workflow experiment mismatch"))
+	if current != nil && (current.ExperimentID != exptID || current.ExperimentSpaceID != 0 && current.ExperimentSpaceID != exptSpaceID) {
+		return 0, 0, "", errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("Flux Workflow experiment mismatch"))
 	}
-	binding, err := e.fluxBindingRepo.GetFluxWorkflowBinding(ctx, spaceID, exptID)
+	binding, err := e.fluxBindingRepo.GetFluxWorkflowBinding(ctx, exptSpaceID, exptID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return 0, "", errorx.NewByCode(errno.ResourceNotFoundCode)
+		return 0, 0, "", errorx.NewByCode(errno.ResourceNotFoundCode)
 	}
 	if err != nil {
-		return 0, "", err
+		return 0, 0, "", err
 	}
 	if binding == nil || binding.State != "ready" {
-		return 0, "", errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("Flux Workflow binding not ready"))
+		return 0, 0, "", errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("Flux Workflow binding not ready"))
 	}
 	if current != nil && current.BindingID != binding.BindingID {
-		return 0, "", errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("Flux Workflow binding mismatch"))
+		return 0, 0, "", errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("Flux Workflow binding mismatch"))
 	}
-	return exptID, binding.BindingID, nil
+	return exptID, exptSpaceID, binding.BindingID, nil
 }

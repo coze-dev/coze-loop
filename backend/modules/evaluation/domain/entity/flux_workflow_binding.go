@@ -44,6 +44,7 @@ type FluxWorkflowBinding struct {
 // FluxItemRun is the run state kept in eval_target_record.ext for one invoke_id.
 type FluxItemRun struct {
 	ExperimentID         int64  `json:"experiment_id,omitempty"`
+	ExperimentSpaceID    int64  `json:"experiment_space_id,omitempty"`
 	SpaceID              int64  `json:"space_id,omitempty"`
 	InvokeID             int64  `json:"invoke_id,omitempty"`
 	BindingID            string `json:"binding_id,omitempty"`
@@ -117,5 +118,11 @@ func (r FluxItemRun) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	fields["version"] = version
+	if r.ExperimentSpaceID > 0 {
+		fields["experiment_space_id"], err = json.Marshal(r.ExperimentSpaceID)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return json.Marshal(fields)
 }

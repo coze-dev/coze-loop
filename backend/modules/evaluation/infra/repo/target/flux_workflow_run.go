@@ -58,6 +58,9 @@ func (r *fluxItemRunRepo) CompareAndSwapFluxItemRun(ctx context.Context, spaceID
 			if next.ExperimentID != current.ExperimentID {
 				return errors.New("Flux Workflow run experiment changed")
 			}
+			if current.ExperimentSpaceID != 0 && next.ExperimentSpaceID != current.ExperimentSpaceID {
+				return errors.New("Flux Workflow run experiment space changed")
+			}
 		}
 		if version != expectedVersion {
 			return nil
