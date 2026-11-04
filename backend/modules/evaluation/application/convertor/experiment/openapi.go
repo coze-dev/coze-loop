@@ -3232,7 +3232,7 @@ func validateFluxWorkflowOpenAPI(c *openapiExperiment.FluxWorkflowConfig) error 
 	default:
 		return fmt.Errorf("flux_workflow source_kind must be space-flow or task-template")
 	}
-	if len(c.GetNodes()) == 0 && !(c.GetSourceKind() == "space-flow" && c.PhaseReview != nil) {
+	if len(c.GetNodes()) == 0 && c.PhaseReview == nil {
 		return fmt.Errorf("flux_workflow nodes must not be empty")
 	}
 	for i, n := range c.GetNodes() {

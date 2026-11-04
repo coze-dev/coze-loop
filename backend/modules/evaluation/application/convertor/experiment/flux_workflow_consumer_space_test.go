@@ -35,6 +35,8 @@ func TestFluxWorkflowOfficialBlackBoxAllowsPhaseReviewWithoutNodes(t *testing.T)
 	config.SourceWorkflowID = nil
 	config.SourceTemplateID = gptr.Of("template")
 	config.SourceReleaseID = gptr.Of("release")
-	config.PhaseReview = &openapiExperiment.FluxWorkflowPhaseReview{Mode: gptr.Of("auto")}
+	config.PhaseReview = &openapiExperiment.FluxWorkflowPhaseReview{Mode: gptr.Of("manual")}
+	require.NoError(t, validateFluxWorkflowOpenAPI(config))
+	config.PhaseReview = nil
 	require.Error(t, validateFluxWorkflowOpenAPI(config))
 }
