@@ -31,7 +31,6 @@ type SimpleCmdable interface {
 	Del(ctx context.Context, keys ...string) *redis.IntCmd
 	Eval(ctx context.Context, script string, keys []string, args ...any) *redis.Cmd
 	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
-	TTL(ctx context.Context, key string) *redis.DurationCmd
 	Exists(ctx context.Context, keys ...string) *redis.IntCmd
 }
 

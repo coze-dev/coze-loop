@@ -529,6 +529,11 @@ type filterTestRedis struct {
 	changed chan struct{}
 }
 
+func (r *filterTestRedis) TTL(ctx context.Context, key string) *redis.DurationCmd {
+	raw, _ := infraredis.Unwrap(r.Cmdable)
+	return raw.TTL(ctx, key)
+}
+
 func (r *filterTestRedis) Eval(ctx context.Context, script string, keys []string, args ...any) *redis.Cmd {
 	result := r.Cmdable.Eval(ctx, script, keys, args...)
 	if strings.Contains(script, "redis.call('DEL'") && len(args) > 0 {

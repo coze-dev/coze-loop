@@ -180,7 +180,13 @@ func (r *redisLocker) GetLifecycleLockValue(ctx context.Context, key string) (st
 }
 
 func (r *redisLocker) GetLifecycleLockTTL(ctx context.Context, key string) (time.Duration, bool, error) {
-	ttl, err := r.c.TTL(ctx, key).Result()
+	reader, ok := r.c.(interface {
+		TTL(context.Context, string) *goredis.DurationCmd
+	})
+	if !ok {
+		return 0, false, nil
+	}
+	ttl, err := reader.TTL(ctx, key).Result()
 	if err != nil {
 		return 0, false, err
 	}
