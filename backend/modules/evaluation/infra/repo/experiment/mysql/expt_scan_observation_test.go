@@ -265,8 +265,8 @@ func TestScanObservationMySQLConsistentAcrossSessionIsolation(t *testing.T) {
 			result := <-done
 			require.NoError(t, writeErr)
 			if isolation == "READ-COMMITTED" {
-				require.Error(t, result.err, "changed RC observation must be retried")
-				require.Nil(t, result.rows, "no mixed or partial source can escape")
+				require.NoError(t, result.err, "changed RC items are isolated instead of aborting the whole scan")
+				require.Len(t, result.rows, 2, "stable rows remain usable; only the changed item is deferred")
 			} else {
 				require.NoError(t, result.err)
 				require.Len(t, result.rows, 3)
@@ -437,8 +437,14 @@ func TestScanObservationMySQLProcessingSharesSnapshot(t *testing.T) {
 	require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=? AND turn_id=0", f.space, f.item).Update("target_result_id", f.base+71).Error)
 	once.Do(func() { close(resume) })
 	observed := <-done
-	require.Error(t, observed.err, "Processing source changed during RC scan")
-	require.Nil(t, observed.rows, "Logged and Queueing rows cannot escape the failed observation")
+	require.NoError(t, observed.err, "one changed Processing item must not invalidate the whole RC scan")
+	require.Len(t, observed.rows, 2, "only the changed item is deferred; stable Logged and Queueing rows still progress")
+	for _, row := range observed.rows {
+		require.NotEqual(t, f.item, row.ItemID, "the mixed Processing source cannot escape")
+		if row.ResultState == entity.ExptItemResultStateLogged {
+			require.NotNil(t, row.Publication, "unchanged Logged rows keep their frozen publication")
+		}
+	}
 	require.Zero(t, locks)
-	t.Log("REAL_MYSQL_PROCESSING_SNAPSHOT changed_source_discarded=true mixed_logged_processing_queueing_discarded=3 locking_queries=0")
+	t.Log("REAL_MYSQL_PROCESSING_SNAPSHOT changed_item_deferred=true stable_logged_queueing_returned=2 locking_queries=0")
 }

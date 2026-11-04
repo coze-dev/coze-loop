@@ -78,9 +78,72 @@ func collectItemReadObservation(tx *gorm.DB, space, expt, run int64, frozen *ite
 	return o, nil
 }
 
-func verifyItemReadObservation(before, after *itemReadObservation) error {
-	if !reflect.DeepEqual(before, after) {
-		return fmt.Errorf("current item observation changed; retry primary read")
+func stableItemsAfterObservation(before, after *itemReadObservation) (map[int64]bool, error) {
+	if !reflect.DeepEqual(before.Experiment, after.Experiment) || !reflect.DeepEqual(before.Runs, after.Runs) {
+		return nil, fmt.Errorf("current run observation changed; retry primary read")
 	}
-	return nil
+	turnItems := make(map[int64]int64, len(before.Turns)+len(after.Turns))
+	for _, turn := range before.Turns {
+		turnItems[turn.ID] = turn.ItemID
+	}
+	for _, turn := range after.Turns {
+		turnItems[turn.ID] = turn.ItemID
+	}
+	beforeItems, err := splitItemReadObservation(before, turnItems)
+	if err != nil {
+		return nil, err
+	}
+	afterItems, err := splitItemReadObservation(after, turnItems)
+	if err != nil {
+		return nil, err
+	}
+	stable := make(map[int64]bool, len(beforeItems))
+	for itemID, beforeItem := range beforeItems {
+		afterItem, ok := afterItems[itemID]
+		if ok && reflect.DeepEqual(beforeItem, afterItem) {
+			stable[itemID] = true
+		}
+	}
+	return stable, nil
+}
+
+func splitItemReadObservation(o *itemReadObservation, turnItems map[int64]int64) (map[int64]*itemReadObservation, error) {
+	items := make(map[int64]*itemReadObservation)
+	scoped := func(itemID int64) *itemReadObservation {
+		item := items[itemID]
+		if item == nil {
+			item = &itemReadObservation{}
+			items[itemID] = item
+		}
+		return item
+	}
+	for _, row := range o.Items {
+		item := scoped(row.ItemID)
+		item.Items = append(item.Items, row)
+	}
+	for _, row := range o.ItemLogs {
+		item := scoped(row.ItemID)
+		item.ItemLogs = append(item.ItemLogs, row)
+	}
+	for _, row := range o.Turns {
+		item := scoped(row.ItemID)
+		item.Turns = append(item.Turns, row)
+	}
+	for _, row := range o.TurnLogs {
+		item := scoped(row.ItemID)
+		item.TurnLogs = append(item.TurnLogs, row)
+	}
+	for _, row := range o.ItemRefs {
+		item := scoped(row.ItemID)
+		item.ItemRefs = append(item.ItemRefs, row)
+	}
+	for _, row := range o.Refs {
+		itemID, ok := turnItems[row.ExptTurnResultID]
+		if !ok {
+			return nil, fmt.Errorf("current item observation ref turn missing")
+		}
+		item := scoped(itemID)
+		item.Refs = append(item.Refs, row)
+	}
+	return items, nil
 }

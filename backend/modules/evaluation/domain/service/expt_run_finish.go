@@ -6,9 +6,11 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -97,6 +99,49 @@ func (e *ExptMangerImpl) FinishCurrentRunWithHeldTickLock(ctx context.Context, e
 	}
 }
 
+type lifecycleLockValueReader interface {
+	GetLifecycleLockValue(context.Context, string) (string, bool, error)
+}
+
+// releasePreviousLifecycleHolder migrates a pre-upgrade random holder only when
+// the current run is already terminal. Numeric holders belong to another run,
+// and prefixed holders belong to a live new cleanup lease; neither is migrated.
+func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, locker lock.ILocker, key string, event *entity.ExptScheduleEvent) error {
+	released, err := locker.UnlockWithValue(ctx, key, strconv.FormatInt(event.ExptRunID, 10))
+	if err != nil || released {
+		return err
+	}
+	reader, ok := locker.(lifecycleLockValueReader)
+	if !ok {
+		return nil
+	}
+	holder, exists, err := reader.GetLifecycleLockValue(ctx, key)
+	if err != nil || !exists {
+		return err
+	}
+	if _, err := strconv.ParseInt(holder, 10, 64); err == nil || strings.HasPrefix(holder, lock.LifecycleCleanupHolderPrefix) {
+		return nil
+	}
+	if e.exptRepo == nil {
+		return errno.NewMQRetryErr("legacy lifecycle ownership repository missing")
+	}
+	current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), event.ExptID, event.SpaceID)
+	if err != nil {
+		return err
+	}
+	if current == nil || current.LatestRunID != event.ExptRunID || !entity.IsExptFinished(current.Status) {
+		return nil
+	}
+	released, err = locker.UnlockWithValue(ctx, key, holder)
+	if err != nil {
+		return err
+	}
+	if !released {
+		return errno.NewMQRetryErr("legacy lifecycle holder changed during migration")
+	}
+	return nil
+}
+
 func (e *ExptMangerImpl) cleanupNaturallyFinishedRun(ctx context.Context, event *entity.ExptScheduleEvent, finished *entity.Experiment) error {
 	if finished == nil {
 		return fmt.Errorf("finished experiment missing")
@@ -110,8 +155,8 @@ func (e *ExptMangerImpl) cleanupNaturallyFinishedRun(ctx context.Context, event 
 	}
 	key := e.makeExptMutexLockKey(event.ExptID)
 	// Remove only this run's original value, then acquire the same lifecycle key.
-	// If R2 wins the gap we do no cleanup. A legacy random holder is never forced.
-	if _, err := locker.UnlockWithValue(ctx, key, strconv.FormatInt(event.ExptRunID, 10)); err != nil {
+	// A pre-upgrade random holder is migrated by value only after terminal ownership checks.
+	if err := e.releasePreviousLifecycleHolder(ctx, locker, key, event); err != nil {
 		return err
 	}
 	locked, cleanupCtx, cancel, err := locker.LockWithRenew(ctx, key, 5*time.Second, 5*time.Minute)

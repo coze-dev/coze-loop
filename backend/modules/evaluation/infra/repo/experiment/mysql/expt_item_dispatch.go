@@ -308,7 +308,12 @@ func transitionDispatchItem(tx *gorm.DB, s *lockedDispatchItem, next entity.Item
 	lock := clause.Locking{Strength: "UPDATE"}
 	where := "space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND deleted_at IS NULL"
 	args := []any{s.item.SpaceID, s.item.ExptID, s.item.ExptRunID, s.item.ItemID}
-	if err := tx.Clauses(lock).Where(where, args...).Order("id ASC").Find(&turns).Error; err != nil {
+	turnQuery := tx.Clauses(lock).Where("space_id=? AND expt_id=? AND item_id=? AND deleted_at IS NULL", s.item.SpaceID, s.item.ExptID, s.item.ItemID)
+	if s.mode != entity.EvaluationModeFailRetry {
+		turnQuery = turnQuery.Where("expt_run_id=?", s.item.ExptRunID)
+	}
+	// FailRetry keeps successful canonical turns in their original run until publication.
+	if err := turnQuery.Order("id ASC").Find(&turns).Error; err != nil {
 		return err
 	}
 	if err := tx.Clauses(lock).Where(where, args...).Order("id ASC").Find(&logs).Error; err != nil {
@@ -337,6 +342,9 @@ func transitionDispatchItem(tx *gorm.DB, s *lockedDispatchItem, next entity.Item
 		fromTurn, toTurn = toTurn, fromTurn
 	}
 	for _, turn := range turns {
+		if turn.ExptRunID != s.item.ExptRunID && (s.mode != entity.EvaluationModeFailRetry || turn.Status != int32(entity.TurnRunState_Success)) {
+			continue
+		}
 		log, exists := byTurn[turn.TurnID]
 		if exists {
 			matchedLogs++

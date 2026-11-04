@@ -566,6 +566,12 @@ type filterTestLocker struct {
 	releases int
 }
 
+func (l *filterTestLocker) GetLifecycleLockValue(ctx context.Context, key string) (string, bool, error) {
+	return l.ILocker.(interface {
+		GetLifecycleLockValue(context.Context, string) (string, bool, error)
+	}).GetLifecycleLockValue(ctx, key)
+}
+
 func (l *filterTestLocker) LockWithRenew(ctx context.Context, key string, ttl, hold time.Duration) (bool, context.Context, func(), error) {
 	ok, child, cancel, err := l.ILocker.LockWithRenew(ctx, key, ttl, hold)
 	if !ok || err != nil {

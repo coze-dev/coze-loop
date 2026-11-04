@@ -340,7 +340,7 @@ func (e *ExptMangerImpl) cleanupTerminatedRun(ctx context.Context, event *entity
 		return errno.NewMQRetryErr("termination lifecycle locker missing")
 	}
 	key := e.makeExptMutexLockKey(event.ExptID)
-	if _, err := locker.UnlockWithValue(resourceCtx, key, strconv.FormatInt(event.ExptRunID, 10)); err != nil {
+	if err := e.releasePreviousLifecycleHolder(resourceCtx, locker, key, event); err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
 	if err := ctx.Err(); err != nil {

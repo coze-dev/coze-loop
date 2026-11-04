@@ -157,9 +157,17 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 		if err != nil {
 			return err
 		}
-		if err := verifyItemReadObservation(before, after); err != nil {
+		stableItems, err := stableItemsAfterObservation(before, after)
+		if err != nil {
 			return err
 		}
+		stableRows := make([]*entity.ExptItemCurrentRequest, 0, len(rows))
+		for _, row := range rows {
+			if stableItems[row.ItemID] {
+				stableRows = append(stableRows, row)
+			}
+		}
+		rows = stableRows
 		return ctx.Err()
 	})
 	if err != nil {

@@ -12,12 +12,17 @@ import (
 	"github.com/bytedance/gg/gvalue"
 	"github.com/cenk/backoff"
 	"github.com/pkg/errors"
+	goredis "github.com/redis/go-redis/v9"
 	"github.com/rs/xid"
 
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
+
+// LifecycleCleanupHolderPrefix marks cleanup leases created by the new lifecycle
+// implementation, distinguishing them from pre-upgrade random LockBackoff holders.
+const LifecycleCleanupHolderPrefix = "run-cleanup-"
 
 //go:generate mockgen -destination=mocks/lock.go -package=mocks . ILocker
 type ILocker interface {
@@ -161,6 +166,17 @@ func (r *redisLocker) UnlockWithValue(ctx context.Context, key, val string) (boo
 		return false, errors.Errorf("unknown result type %T", result)
 	}
 	return rt == 1, nil
+}
+
+func (r *redisLocker) GetLifecycleLockValue(ctx context.Context, key string) (string, bool, error) {
+	value, err := r.c.Get(ctx, key).Result()
+	if errors.Is(err, goredis.Nil) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return value, true, nil
 }
 
 func (r *redisLocker) UnlockForce(ctx context.Context, key string) (bool, error) {
