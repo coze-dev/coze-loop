@@ -17,7 +17,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	looplogs "github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -56,7 +55,7 @@ func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, space
 				return nil, err
 			}
 			current.ObservationUnstable = true
-			logs.CtxWarn(ctx, "invalid current item source remains pending, item_id: %d, err: %v", row.ItemID, err)
+			looplogs.CtxWarn(ctx, "invalid current item source remains pending, item_id: %d, err: %v", row.ItemID, err)
 		}
 		if current != nil {
 			out = append(out, current)
