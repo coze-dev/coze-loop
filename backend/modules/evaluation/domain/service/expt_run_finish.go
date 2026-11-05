@@ -113,19 +113,29 @@ const (
 	LegacyLifecycleMigrationGrace = 5 * time.Minute
 )
 
-// legacyLifecycleHolderAge derives the acquisition time from the legacy writer's
-// "<hostname>-<xid>" holder. XID embeds an immutable creation timestamp, so age
-// is independent of any configuration change between acquisition and migration.
-func legacyLifecycleHolderAge(holder string) (time.Time, bool) {
-	sep := strings.LastIndex(holder, "-")
-	if sep <= 0 || sep+1 >= len(holder) {
+// legacyLifecycleHolderAcquiredAt derives the acquisition time of a pre-upgrade
+// lifecycle holder. "<hostname>-<xid>" holders embed an immutable creation
+// timestamp. The fixed "evaluation" holder carries no timestamp; the legacy
+// writer set it once with the zombie interval as TTL and never renewed it, so
+// its elapsed time is configuredTTL - remainingTTL. Missing configuration or a
+// remaining TTL that the configuration cannot cover leaves the age unproven.
+func (e *ExptMangerImpl) legacyLifecycleHolderAcquiredAt(ctx context.Context, spaceID int64, holder string, remaining time.Duration) (time.Time, bool) {
+	if sep := strings.LastIndex(holder, "-"); sep > 0 && sep+1 < len(holder) {
+		if id, err := xid.FromString(holder[sep+1:]); err == nil {
+			return id.Time(), true
+		}
+	}
+	if holder != lock.LegacyStaticLifecycleHolder {
 		return time.Time{}, false
 	}
-	id, err := xid.FromString(holder[sep+1:])
-	if err != nil {
+	if e.configer == nil {
 		return time.Time{}, false
 	}
-	return id.Time(), true
+	configured := time.Duration(e.configer.GetExptExecConf(ctx, spaceID).GetZombieIntervalSecond()) * time.Second
+	if configured <= 0 || remaining <= 0 || remaining > configured {
+		return time.Time{}, false
+	}
+	return time.Now().Add(-(configured - remaining)), true
 }
 
 // releasePreviousLifecycleHolder migrates a pre-upgrade random holder only when
@@ -152,19 +162,21 @@ func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, loc
 		return nil
 	}
 	// 无过期时间的锁永远等不到自然过期，迁移前先暴露出来。
-	if _, exists, err := reader.GetLifecycleLockTTL(ctx, key); err != nil {
+	remaining, hasTTL, err := reader.GetLifecycleLockTTL(ctx, key)
+	if err != nil {
 		return err
-	} else if !exists {
+	}
+	if !hasTTL {
 		logs.CtxWarn(ctx, "[ExptLifecycle] legacy holder has no expiry or TTL is unavailable; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
 		return nil
 	}
-	acquiredAt, ok := legacyLifecycleHolderAge(holder)
+	acquiredAt, ok := e.legacyLifecycleHolderAcquiredAt(ctx, event.SpaceID, holder, remaining)
 	if !ok {
-		// 不认识的老 holder 格式：无法证明获取时间，宁可等自然过期也不删。
+		// 不认识的老 holder 格式，或 TTL/配置无法证明获取时间：宁可等自然过期也不删。
 		logs.CtxWarn(ctx, "[ExptLifecycle] legacy holder age unverifiable; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
 		return nil
 	}
-	// holder 内的 XID 时间戳是写入时刻的不可变证据，与当前配置无关。
+	// holder 内的 XID 时间戳或静态 holder 的 TTL 推导都是写入时刻的证据。
 	if age := time.Since(acquiredAt); age < LegacyLifecycleMigrationGrace {
 		return nil
 	}
