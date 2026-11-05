@@ -43,7 +43,6 @@ func TestManualRetryAdmissionUsesLatestRunID(t *testing.T) {
 			req.ExpectedRunID = 0
 			expt := &entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}
 			expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(expt, nil).Times(6)
-			config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)}).Times(2)
 			items.EXPECT().BatchGet(gomock.Any(), int64(9), int64(7), []int64{11}).Return([]*entity.ExptItemResult{{ItemID: 11, Status: status}}, nil).Times(2)
 			mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:7:8", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil).Times(2)
 			runs.EXPECT().Get(gomock.Any(), int64(7), int64(8)).Return(&entity.ExptRunLog{SpaceID: 9, ExptID: 7, ExptRunID: 8, Status: int64(entity.ExptStatus_Processing)}, nil).Times(2)
@@ -123,12 +122,16 @@ func TestManualRetryAdmissionHistoricalReceiptCannotBypassDependencies(t *testin
 	raw := `[{"ItemIDs":[11],"CreateAt":null,"manual_retry_receipt":{"request_id":"old-operation","payload_hash":"old-payload","accepted_count":1,"rejected_items":[{"item_id":9223372036854775806,"reason":"busy"}],"snapshot_at_ms":1700000000123}}]`
 	port := &admissionMemoryRepo{}
 	require.NoError(t, json.Unmarshal([]byte(raw), &port.chunks))
-	manager := &ExptMangerImpl{manualRetryRepo: port}
+	ctrl := gomock.NewController(t)
+	expts := repomocks.NewMockIExperimentRepo(ctrl)
+	cause := errors.New("experiment repository unavailable")
+	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(nil, cause).Times(2)
+	manager := &ExptMangerImpl{manualRetryRepo: port, exptRepo: expts}
 	for _, ext := range []map[string]string{nil, {"business": "changed"}} {
 		req.Ext = ext
 		got, err := manager.RetryInCurrentRun(context.Background(), req)
 		require.Nil(t, got)
-		require.ErrorContains(t, err, "manual retry configer unavailable")
+		require.ErrorIs(t, err, cause)
 		require.Empty(t, port.calls)
 		stored, err := json.Marshal(port.chunks)
 		require.NoError(t, err)
@@ -147,7 +150,7 @@ func admissionRequest() *entity.RetryInCurrentRunRequest {
 }
 
 func TestManualRetryAdmissionGuards(t *testing.T) {
-	for _, kind := range []string{"disabled", "bad_space", "bad_experiment", "internal_ext", "failure_selection", "empty_selection", "retry_all", "negative_item", "negative_run", "foreign_run", "unknown_run", "pending", "terminating", "draining", "online", "run_busy", "lost_run_lock"} {
+	for _, kind := range []string{"bad_space", "bad_experiment", "internal_ext", "failure_selection", "empty_selection", "retry_all", "negative_item", "negative_run", "foreign_run", "unknown_run", "pending", "terminating", "draining", "online", "run_busy", "lost_run_lock"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			config := componentmocks.NewMockIConfiger(ctrl)
@@ -198,10 +201,7 @@ func TestManualRetryAdmissionGuards(t *testing.T) {
 				got.ExptType = entity.ExptType_Online
 			}
 			if !shape {
-				config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(kind != "disabled")})
-				if kind != "disabled" {
-					expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(got, nil)
-				}
+				expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(got, nil)
 			}
 			if kind == "run_busy" || kind == "lost_run_lock" {
 				items.EXPECT().BatchGet(gomock.Any(), int64(9), int64(7), []int64{11}).Return(nil, nil)
@@ -231,8 +231,6 @@ func TestManualRetryAdmissionGuards(t *testing.T) {
 				switch {
 				case shape:
 					expected = 601200202
-				case kind == "disabled":
-					expected = 601204106
 				case kind == "foreign_run" || kind == "unknown_run":
 					expected = 601204101
 				case kind == "online":
@@ -365,7 +363,6 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 				expt.SchedulerScope = "test-scope"
 			}
 			run := &entity.ExptRunLog{ID: 8, SpaceID: 9, ExptID: 7, ExptRunID: 8, Status: int64(entity.ExptStatus_Processing), Mode: int32(entity.EvaluationModeSubmit), CreatedBy: "original"}
-			config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)})
 			expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(expt, nil)
 			oldRun := int64(6)
 			oldToken := "prior-request"
@@ -487,7 +484,6 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 					expt.LatestRunID = 18
 					expt.Status = entity.ExptStatus_Processing
 				}
-				config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)}).Times(2)
 				expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(expt, nil).Times(2)
 			}
 			if kind == "receipt_after_close" || kind == "receipt_after_replacement" {
@@ -517,7 +513,6 @@ func TestManualRetryAdmissionUsesIndependentLocker(t *testing.T) {
 	owned := lockmocks.NewMockILocker(ctrl)
 	manager := &ExptMangerImpl{manualRetryRepo: &admissionReceiptRepo{}, configer: config, exptRepo: expts, itemResultRepo: items, mutex: shared}
 	req := admissionRequest()
-	config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)})
 	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(&entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil)
 	items.EXPECT().BatchGet(gomock.Any(), int64(9), int64(7), []int64{11}).Return(nil, nil)
 	owned.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:7:8", gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
@@ -579,7 +574,6 @@ func TestManualRetryDependencyErrorRetainsCause(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	config := componentmocks.NewMockIConfiger(ctrl)
 	expts := repomocks.NewMockIExperimentRepo(ctrl)
-	config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)}).Times(2)
 	cause := errors.New("RPC read unavailable")
 	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(nil, cause)
 	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(nil, nil)

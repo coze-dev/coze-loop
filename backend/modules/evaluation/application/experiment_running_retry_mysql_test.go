@@ -76,9 +76,9 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 	lwt := lwtmocks.NewMockILatestWriteTracker(ctrl)
 	mutex := lockmocks.NewMockILocker(ctrl)
 	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
-	enabled := true
+	// Default configuration must admit current-run retry in every space.
 	config.EXPECT().GetExptExecConf(gomock.Any(), space).DoAndReturn(func(context.Context, int64) *entity.ExptExecConf {
-		return &entity.ExptExecConf{RunningRetryEnabled: &enabled}
+		return &entity.ExptExecConf{}
 	}).AnyTimes()
 	lwt.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), expt).Return(false).AnyTimes()
 	auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -91,7 +91,7 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 		exptrepo.NewExptRepo(exptmysql.NewExptDAO(provider), exptmysql.NewExptEvaluatorRefDAO(provider), generator),
 		exptrepo.NewExptRunLogRepo(exptmysql.NewExptRunLogDAO(provider)), exptrepo.NewExptStatsRepo(exptmysql.NewExptStatsDAO(provider)), exptrepo.NewExptItemResultRepo(exptmysql.NewExptItemResultDAO(provider)), exptrepo.NewExptItemRefRepo(exptmysql.NewExptItemRefDAO(provider)), exptrepo.NewExptTurnResultRepo(generator, exptmysql.NewExptTurnResultDAO(provider), exptmysql.NewExptTurnEvaluatorResultRefDAO(provider)), config, nil, mutex, nil, publisher, nil, generator, nil, lwt, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, component.NewNoopCentralSchedulerScopeProvider(), component.NewNoopCentralAdmissionPolicy(), component.NewNoopCentralReservationGuard(), exptrepo.NewExptManualRetryRepo(provider, generator), nil, component.NewNoopCurrentRunSchedulerWaker(), func() lock.ILocker { return mutex })
 	app := &experimentApplication{manager: manager, auth: auth, idgen: generator, configer: config}
-	req := &exptpb.RetryExperimentRequest{WorkspaceID: &space, ExptID: &expt, ExpectedRunID: &run, RetryMode: gptr.Of(dexpt.ExptRetryMode_RetryTargetItems), ItemIds: []int64{item, item}, Ext: map[string]string{"caller": "identity"}}
+	req := &exptpb.RetryExperimentRequest{WorkspaceID: &space, ExptID: &expt, RetryMode: gptr.Of(dexpt.ExptRetryMode_RetryTargetItems), ItemIds: []int64{item, item}, Ext: map[string]string{"caller": "identity"}}
 	response, err := app.RetryExperiment(context.Background(), req)
 	require.NoError(t, err)
 	require.Equal(t, int32(1), response.GetAcceptedCount())
@@ -120,10 +120,7 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 	require.Equal(t, "queueing", again.RejectedItems[0].GetReason())
 	require.Equal(t, item, again.RejectedItems[0].GetItemID())
 	require.Equal(t, run, again.GetRunID())
-	enabled = false
-	_, err = app.RetryExperiment(context.Background(), req)
-	require.ErrorContains(t, err, "disabled")
-	enabled = true
+	req.ExpectedRunID = &run // Keep explicit stale/lifecycle fences below.
 	require.NoError(t, conn.Model(&model.Experiment{}).Where("id=?", expt).Update("status", entity.ExptStatus_Success).Error)
 	_, err = app.RetryExperiment(context.Background(), req)
 	require.ErrorContains(t, err, "run_finished")

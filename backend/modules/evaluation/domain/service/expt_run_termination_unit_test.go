@@ -240,11 +240,11 @@ func TestCommitTerminationItems(t *testing.T) {
 		_, err := m.commitTerminationItems(context.Background(), d.termination, &entity.ExptRunTerminationRequest{Items: []*entity.ExptCurrentItemRunSource{termUnitSource(9, entity.ItemRunState_Processing)}})
 		require.True(t, errno.NeedMQRetry(err))
 	})
-	t.Run("busy", func(t *testing.T) {
+	t.Run("busy_nonprocessing", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(false, context.Background())
-		_, err := m.commitTerminationItems(context.Background(), d.termination, &entity.ExptRunTerminationRequest{Items: []*entity.ExptCurrentItemRunSource{termUnitSource(9, entity.ItemRunState_Processing)}})
+		_, err := m.commitTerminationItems(context.Background(), d.termination, &entity.ExptRunTerminationRequest{Items: []*entity.ExptCurrentItemRunSource{termUnitSource(9, entity.ItemRunState_Queueing)}})
 		require.True(t, errno.NeedMQRetry(err))
 	})
 	t.Run("cancelled_context", func(t *testing.T) {
@@ -1382,9 +1382,6 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		return d, repomocks.NewMockIExptManualRetryRepo(d.ctrl), componentmocks.NewMockIConfiger(d.ctrl), repomocks.NewMockIExptRunLogRepo(d.ctrl)
 	}
-	enabled := func(config *componentmocks.MockIConfiger) {
-		config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)}).AnyTimes()
-	}
 
 	t.Run("repo_missing", func(t *testing.T) {
 		d := newTermUnitDeps(t)
@@ -1392,26 +1389,19 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 		_, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
 		require.Error(t, err)
 	})
-	t.Run("config_required", func(t *testing.T) {
+	t.Run("nil_config_keeps_lifecycle_guard", func(t *testing.T) {
 		d, retryRepo, _, _ := newDeps(t)
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
+		expt := manualRetryUnitExperiment()
+		expt.LatestRunID++
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(expt, nil)
 		got, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
-		require.ErrorContains(t, err, "manual retry configer unavailable")
+		require.ErrorContains(t, err, "run_conflict")
 		require.Nil(t, got)
-	})
-	t.Run("disabled", func(t *testing.T) {
-		d, retryRepo, config, _ := newDeps(t)
-		config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(false)})
-		m := d.manager()
-		m.manualRetryRepo = retryRepo
-		m.configer = config
-		_, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
-		require.Error(t, err)
 	})
 	t.Run("lock_busy", func(t *testing.T) {
 		d, retryRepo, config, _ := newDeps(t)
-		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), int64(1), int64(0), int64(500), []int32{int32(entity.ItemRunState_Fail)}, int64(3)).Return(nil, int64(0), nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
@@ -1423,7 +1413,6 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 	})
 	t.Run("run_finished", func(t *testing.T) {
 		d, retryRepo, config, runs := newDeps(t)
-		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
@@ -1437,7 +1426,6 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 	})
 	t.Run("prepare_error", func(t *testing.T) {
 		d, retryRepo, config, _ := newDeps(t)
-		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("scan"))
 		m := d.manager()
@@ -1448,7 +1436,6 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 	})
 	t.Run("happy_path_empty_plan", func(t *testing.T) {
 		d, retryRepo, config, runs := newDeps(t)
-		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
@@ -1836,9 +1823,6 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 		d := newTermUnitDeps(t)
 		return d, repomocks.NewMockIExptManualRetryRepo(d.ctrl), componentmocks.NewMockIConfiger(d.ctrl), repomocks.NewMockIExptRunLogRepo(d.ctrl)
 	}
-	enabled := func(config *componentmocks.MockIConfiger) {
-		config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)}).AnyTimes()
-	}
 	req := func() *entity.RetryInCurrentRunRequest { return manualRetryUnitRequest() }
 
 	t.Run("latest_run_read_error", func(t *testing.T) {
@@ -1854,7 +1838,6 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 	})
 	t.Run("locker_nil", func(t *testing.T) {
 		d, retryRepo, config, _ := newDeps(t)
-		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		m := d.manager()
@@ -1866,7 +1849,6 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 	})
 	t.Run("run_missing", func(t *testing.T) {
 		d, retryRepo, config, runs := newDeps(t)
-		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
@@ -1880,7 +1862,6 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 	})
 	t.Run("run_mismatch", func(t *testing.T) {
 		d, retryRepo, config, runs := newDeps(t)
-		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
@@ -1894,7 +1875,6 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 	})
 	t.Run("preflight_error", func(t *testing.T) {
 		d, retryRepo, config, runs := newDeps(t)
-		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
@@ -1909,7 +1889,6 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 	})
 	t.Run("requeue_error", func(t *testing.T) {
 		d, retryRepo, config, runs := newDeps(t)
-		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)

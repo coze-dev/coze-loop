@@ -18,7 +18,6 @@ import (
 
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
-	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -101,9 +100,8 @@ func TestRunningRetryWithoutIdentityUsesResolvedRun(t *testing.T) {
 		SpaceID: 9, ExptID: 7, ExpectedRunID: 0,
 		Mode: entity.EvaluationModeRetryItems, ItemIDs: []int64{11}, Ext: req.Ext, Session: session,
 	}).Return(&entity.ManualRetryReceipt{RunID: 18, AcceptedCount: 1, SnapshotAtMS: 1700000000123}, nil)
-	config := componentmocks.NewMockIConfiger(ctrl)
-	config.EXPECT().GetExptExecConf(ctx, int64(9)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)})
-	app := &experimentApplication{manager: manager, auth: auth, configer: config}
+
+	app := &experimentApplication{manager: manager, auth: auth}
 	resp, err := app.RetryExperiment(ctx, req)
 	require.NoError(t, err)
 	require.Nil(t, req.ExpectedRunID)
@@ -117,12 +115,11 @@ func TestRunningRetryWithoutIdentityUsesResolvedRun(t *testing.T) {
 }
 
 func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
-	for _, kind := range []string{"explicit_sandbox", "old_live_join", "old_terminal_failure", "old_terminal_all", "old_terminal_items", "enabled_without_identity", "enabled_online_live", "enabled_pending_offline", "enabled_finishing_offline", "enabled_processing_retry_all", "explicit_retry_all"} {
+	for _, kind := range []string{"explicit_sandbox", "old_live_join", "old_terminal_failure", "old_terminal_all", "old_terminal_items", "default_without_identity", "online_live", "pending_offline", "finishing_offline", "processing_retry_all", "explicit_retry_all"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			manager := svcmocks.NewMockIExptManager(ctrl)
 			auth := rpcmocks.NewMockIAuthProvider(ctrl)
-			config := componentmocks.NewMockIConfiger(ctrl)
 			generator := idgenmocks.NewMockIIDGenerator(ctrl)
 			sandbox := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
 			got := &entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, CreatedBy: "owner", Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline, EvalConf: &entity.EvaluationConfiguration{ItemRetryNum: gptr.Of(3)}}
@@ -139,32 +136,29 @@ func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
 				got.Target = &entity.EvalTarget{EvalTargetType: entity.EvalTargetTypeSandboxAgent}
 			case "old_live_join", "old_terminal_items":
 				req.RetryMode = gptr.Of(domain_expt.ExptRetryMode_RetryTargetItems)
-			case "old_terminal_all", "enabled_processing_retry_all":
+			case "old_terminal_all", "processing_retry_all":
 				req.RetryMode = gptr.Of(domain_expt.ExptRetryMode_RetryAll)
-			}
-			if kind == "enabled_processing_retry_all" {
-				config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)}).AnyTimes()
 			}
 			if strings.HasPrefix(kind, "old_terminal") {
 				got.Status = entity.ExptStatus_Success
 			}
 			switch kind {
-			case "enabled_online_live":
+			case "online_live":
 				got.ExptType = entity.ExptType_Online
-			case "enabled_pending_offline":
+			case "pending_offline":
 				got.Status = entity.ExptStatus_Pending
-			case "enabled_finishing_offline":
+			case "finishing_offline":
 				got.Status = entity.ExptStatus_Terminating
 			}
 			manager.EXPECT().Get(gomock.Any(), int64(7), int64(9), gomock.Any()).Return(got, nil)
 			auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 			switch kind {
-			case "explicit_sandbox", "enabled_without_identity":
-				if kind == "enabled_without_identity" {
-					config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)})
-				}
+			case "explicit_sandbox", "default_without_identity", "old_live_join":
 				manager.EXPECT().RetryInCurrentRun(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.RetryInCurrentRunRequest) (*entity.ManualRetryReceipt, error) {
 					want := &entity.RetryInCurrentRunRequest{SpaceID: 9, ExptID: 7, Mode: entity.EvaluationModeFailRetry, ItemIDs: []int64{11}, Session: entity.NewSession(context.Background())}
+					if kind == "old_live_join" {
+						want.Mode = entity.EvaluationModeRetryItems
+					}
 					if kind == "explicit_sandbox" {
 						want.ExpectedRunID = 8
 						want.Ext = map[string]string{"caller": "keep"}
@@ -172,9 +166,6 @@ func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
 					require.Equal(t, want, r)
 					return &entity.ManualRetryReceipt{RunID: 8, AcceptedCount: 1, RejectedItems: []*entity.ManualRetryRejectedItem{{ItemID: 12, Reason: "busy"}}, SnapshotAtMS: 1700000000123}, nil
 				})
-			case "old_live_join":
-				config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{})
-				manager.EXPECT().LogRetryItemsRun(gomock.Any(), int64(7), entity.EvaluationModeRetryItems, int64(9), []int64{11}, gomock.Any()).Return(int64(8), true, nil)
 			case "old_terminal_items":
 				manager.EXPECT().LogRetryItemsRun(gomock.Any(), int64(7), entity.EvaluationModeRetryItems, int64(9), []int64{11}, gomock.Any()).Return(int64(18), false, nil)
 				manager.EXPECT().RetryItems(gomock.Any(), int64(7), int64(18), int64(9), 3, []int64{11}, gomock.Any(), gomock.Any()).Return(nil)
@@ -183,7 +174,7 @@ func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
 					// 仅验证拒绝分支：没有任何 GenID/LogRun/Run 期望。
 				} else {
 					mode := entity.EvaluationModeFailRetry
-					if kind == "old_terminal_all" || kind == "enabled_processing_retry_all" {
+					if kind == "old_terminal_all" || kind == "processing_retry_all" {
 						mode = entity.EvaluationModeRetryAll
 					}
 					generator.EXPECT().GenID(gomock.Any()).Return(int64(18), nil)
@@ -191,7 +182,7 @@ func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
 					manager.EXPECT().Run(gomock.Any(), int64(7), int64(18), int64(9), 3, gomock.Any(), mode, gomock.Any()).Return(nil)
 				}
 			}
-			app := &experimentApplication{manager: manager, auth: auth, idgen: generator, configer: config, sandboxSchedulerAdapter: sandbox}
+			app := &experimentApplication{manager: manager, auth: auth, idgen: generator, sandboxSchedulerAdapter: sandbox}
 			resp, err := app.RetryExperiment(context.Background(), req)
 			if kind == "explicit_retry_all" {
 				require.Error(t, err)
@@ -199,7 +190,7 @@ func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			if kind == "explicit_sandbox" || kind == "enabled_without_identity" {
+			if kind == "explicit_sandbox" || kind == "default_without_identity" || kind == "old_live_join" {
 				require.Equal(t, int64(8), resp.GetRunID())
 				require.NotContains(t, fmt.Sprintf("%+v", resp), "RequestID")
 				require.Equal(t, int32(1), resp.GetAcceptedCount())

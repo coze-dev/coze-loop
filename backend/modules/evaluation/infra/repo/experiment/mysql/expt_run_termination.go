@@ -53,6 +53,7 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 		actual := make([]*entity.ExptCurrentItemRunSource, 0, len(r.Items))
 		prior := map[int64]entity.ItemRunState{}
 		changed := map[int64]bool{}
+		processingChecked := map[int64]bool{}
 		var lastItem int64
 		for _, source := range r.Items {
 			if source == nil || source.Current.ItemID <= lastItem {
@@ -81,7 +82,19 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 				result.NonCurrent = true
 				return nil
 			}
+			if r.ProcessingOnlyItems[source.Current.ItemID] {
+				if source.Current.Status != entity.ItemRunState_Processing ||
+					canonical.Status != int32(entity.ItemRunState_Processing) || s.Current.Status != entity.ItemRunState_Processing {
+					return fmt.Errorf("busy termination source no longer processing")
+				}
+				processingChecked[source.Current.ItemID] = true
+			}
 			actual = append(actual, s)
+		}
+		for item, required := range r.ProcessingOnlyItems {
+			if required && !processingChecked[item] {
+				return fmt.Errorf("busy termination item missing from frozen sources")
+			}
 		}
 		if r.ExpectedSource != nil {
 			c := r.ExpectedSource.Current

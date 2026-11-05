@@ -60,7 +60,7 @@ func newPendingRunFixture(t *testing.T, initMode entity.ExptRunMode) *pendingRun
 	t.Cleanup(func() { _ = raw.Close() })
 	idem := idemrepo.NewIdempotentService(idemredis.NewIdemDAO(client))
 	config := confmocks.NewMockIConfiger(ctrl)
-	config.EXPECT().GetExptExecConf(gomock.Any(), f.space).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)}).AnyTimes()
+	config.EXPECT().GetExptExecConf(gomock.Any(), f.space).Return(&entity.ExptExecConf{}).AnyTimes()
 	ids := idmocks.NewMockIIDGenerator(ctrl)
 	ids.EXPECT().GenID(gomock.Any()).Return(f.run, nil).AnyTimes()
 	var seq atomic.Int64

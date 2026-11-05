@@ -31,6 +31,9 @@ type ExptRunTerminationRequest struct {
 	ExpectedSource         *ExptCurrentItemRunSource
 	Items                  []*ExptCurrentItemRunSource
 	MissingTurnLogs        []*ExptTurnResultRunLog
+	// ProcessingOnlyItems marks busy worker leases for this call only. SQL must
+	// recheck both locked item states before allowing termination without a lease.
+	ProcessingOnlyItems map[int64]bool `json:"-"`
 }
 type ExptRunTerminationResult struct {
 	Applied    bool

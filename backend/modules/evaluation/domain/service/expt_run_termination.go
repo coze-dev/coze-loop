@@ -108,6 +108,8 @@ func (e *ExptMangerImpl) captureTerminationSources(ctx context.Context, port rep
 func (e *ExptMangerImpl) commitTerminationItems(ctx context.Context, port repo.IExptRunTerminationRepo, request *entity.ExptRunTerminationRequest) (*entity.ExptRunTerminationResult, error) {
 	opCtx, stop := context.WithCancel(ctx)
 	defer stop()
+	request.ProcessingOnlyItems = nil
+	var held []context.Context
 	for _, source := range request.Items {
 		locker := e.manualRetryLocker()
 		if locker == nil {
@@ -122,13 +124,23 @@ func (e *ExptMangerImpl) commitTerminationItems(ctx context.Context, port repo.I
 			return nil, errno.WrapMQRetryErr(err)
 		}
 		if !locked {
-			return nil, errno.NewMQRetryErr("termination item lease busy")
-		}
-		defer cancel()
-		unregister := context.AfterFunc(itemCtx, stop)
-		defer unregister()
-		if err := itemCtx.Err(); err != nil {
-			return nil, errno.WrapMQRetryErr(err)
+			if source.Current.Status != entity.ItemRunState_Processing {
+				return nil, errno.NewMQRetryErr("termination item lease busy")
+			}
+			// Preserve the worker's lease. The DAO fences this frozen source and
+			// requires both canonical and run log to remain Processing under lock.
+			if request.ProcessingOnlyItems == nil {
+				request.ProcessingOnlyItems = map[int64]bool{}
+			}
+			request.ProcessingOnlyItems[source.Current.ItemID] = true
+		} else {
+			defer cancel()
+			unregister := context.AfterFunc(itemCtx, stop)
+			defer unregister()
+			if err := itemCtx.Err(); err != nil {
+				return nil, errno.WrapMQRetryErr(err)
+			}
+			held = append(held, itemCtx)
 		}
 		if source.Current.Status == entity.ItemRunState_Success || source.Current.Status == entity.ItemRunState_Fail {
 			continue
@@ -138,6 +150,14 @@ func (e *ExptMangerImpl) commitTerminationItems(ctx context.Context, port repo.I
 			return nil, err
 		}
 		request.MissingTurnLogs = append(request.MissingTurnLogs, write.MissingTurnLogs...)
+	}
+	for _, leaseCtx := range held {
+		if err := leaseCtx.Err(); err != nil {
+			return nil, errno.WrapMQRetryErr(err)
+		}
+	}
+	if err := opCtx.Err(); err != nil {
+		return nil, errno.WrapMQRetryErr(err)
 	}
 	result, err := port.TerminateCurrentRun(opCtx, request)
 	if err != nil {

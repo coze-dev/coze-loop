@@ -391,12 +391,6 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	if err := validateCurrentRunRetry(normalized); err != nil {
 		return nil, err
 	}
-	if m.configer == nil {
-		return nil, fmt.Errorf("manual retry configer unavailable")
-	}
-	if !m.configer.GetExptExecConf(ctx, normalized.SpaceID).IsRunningRetryEnabled() {
-		return nil, errorx.NewByCode(errno.ManualRetryDisabledCode)
-	}
 	ctx = contexts.WithCtxWriteDB(ctx)
 	expt, err := m.exptRepo.GetByID(ctx, normalized.ExptID, normalized.SpaceID)
 	if err != nil {
