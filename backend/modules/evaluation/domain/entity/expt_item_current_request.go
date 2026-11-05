@@ -31,6 +31,12 @@ func (s *ExptItemCurrentRequest) Matches(runID int64, requestID string) bool {
 	return s != nil && s.RunID == runID && s.RequestID == requestID && !IsItemRunFinished(s.Status)
 }
 
+// Call after validating the frozen run/turn binding and the persisted current
+// or previous request. Only ordinary legacy turn logs may omit their version.
+func MatchesExptTurnRunLogVersion(logVersion, itemVersion int64, requestID string) bool {
+	return logVersion == itemVersion || logVersion == 0 && requestID == ""
+}
+
 // ExptCurrentItemRunSource freezes the item and invocation references before execution.
 // It is internal and is never serialized into provider requests or MQ messages.
 type ExptCurrentItemRunSource struct {

@@ -96,6 +96,38 @@ func TestTerminateRawZeroVersionAndMissingLogs(t *testing.T) {
 	require.Equal(t, int32(entity.ExptItemResultStateLogged), gptr.Indirect(item.ResultState))
 }
 
+func TestLegacyCompatTerminateZeroVersionPublication(t *testing.T) {
+	f := newCurrentResultFixture(t, "")
+	require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("id=?", f.base+500).Update("item_version_id", 0).Error)
+	require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=?", f.space).Update("evaluator_result_ids", []byte(`{}`)).Error)
+	require.NoError(t, f.conn.Where("space_id=?", f.space).Delete(&model.ExptTurnEvaluatorResultRef{}).Error)
+	source := f.source()
+	result, err := NewExptRunFinishDAO(f.provider).(repo.IExptRunTerminationRepo).TerminateCurrentRun(context.Background(), &entity.ExptRunTerminationRequest{SpaceID: f.space, ExptID: f.expt, RunID: f.run, Items: []*entity.ExptCurrentItemRunSource{source}})
+	require.NoError(t, err)
+	require.True(t, result.Applied)
+	var log model.ExptTurnResultRunLog
+	require.NoError(t, f.conn.Where("id=?", f.base+500).Take(&log).Error)
+	require.Zero(t, log.ItemVersionID)
+	require.Equal(t, int32(entity.TurnRunState_Terminal), log.Status)
+	port := NewExptResultPublishDAO(f.provider)
+	published, err := port.GetItemResultPublishSource(context.Background(), f.space, f.expt, f.run, f.item)
+	require.NoError(t, err)
+	publication := &entity.ExptItemResultPublication{Source: published}
+	for _, old := range published.Source.CanonicalTurns {
+		turn := *old
+		log := published.Source.Turns[old.TurnID]
+		turn.Status, turn.TargetResultID, turn.TraceID = int32(log.Status), log.TargetResultID, log.TraceID
+		turn.LogID, turn.ErrMsg, turn.WeightedScore = log.LogID, log.ErrMsg, nil
+		publication.Turns = append(publication.Turns, &turn)
+	}
+	applied, err := port.CommitItemResult(context.Background(), publication)
+	require.NoError(t, err)
+	require.True(t, applied)
+	var canonical model.ExptTurnResult
+	require.NoError(t, f.conn.Where("id=?", f.base+400).Take(&canonical).Error)
+	require.Equal(t, int32(entity.TurnRunState_Terminal), canonical.Status)
+}
+
 func TestNewRunResetRemovesOnlyManualContextAtMigration(t *testing.T) {
 	f := newCurrentResultFixture(t, "9f6fe7ea-7db6-4d16-8f5b-2d1344556677")
 	replacement := f.run + 100

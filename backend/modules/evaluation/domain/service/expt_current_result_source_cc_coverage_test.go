@@ -490,18 +490,25 @@ func TestCCCurrentSourceCoverageValidateResumeWithoutSource(t *testing.T) {
 		name   string
 		async  bool
 		asyncE bool
+		manual bool
 		want   bool
 		retry  bool
 	}{
 		{name: "plain_legacy_event", want: true},
-		{name: "async_report_without_identity", async: true, retry: true},
-		{name: "async_evaluator_report_without_identity", asyncE: true, retry: true},
+		{name: "ordinary_async_report_without_identity", async: true, want: true},
+		{name: "ordinary_async_evaluator_report_without_identity", asyncE: true, want: true},
+		{name: "manual_async_report_without_identity", async: true, manual: true, retry: true},
+		{name: "manual_async_evaluator_report_without_identity", asyncE: true, manual: true, retry: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := ccCurrentSourceCoverageNewResumeFixture(t, "target")
 			f.event.ResumeSource = nil
 			f.event.AsyncReportTrigger = tc.async
 			f.event.AsyncEvaluatorReportTrigger = tc.asyncE
+			if tc.manual {
+				f.event.RequestID, f.current.RequestID = "rq1", "rq1"
+				f.current.Mode = entity.EvaluationModeFailRetry
+			}
 			valid, err := f.svc.validateResumeSource(context.Background(), f.event, f.current)
 			require.Equal(t, tc.want, valid)
 			if tc.retry {

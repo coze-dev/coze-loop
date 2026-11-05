@@ -593,7 +593,7 @@ func TestExptSchedulerImpl_HandleEventLock(t *testing.T) {
 			wantNil: false,
 		},
 		{
-			name: "Return nil directly if lock is not obtained",
+			name: "Lock busy requests broker retry",
 			args: lockArgs{
 				event:   &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2},
 				locked:  false,
@@ -602,8 +602,8 @@ func TestExptSchedulerImpl_HandleEventLock(t *testing.T) {
 			next: func(ctx context.Context, event *entity.ExptScheduleEvent) error {
 				return errors.New("should not be called")
 			},
-			wantErr: false,
-			wantNil: true,
+			wantErr: true,
+			wantNil: false,
 		},
 	}
 
@@ -623,6 +623,9 @@ func TestExptSchedulerImpl_HandleEventLock(t *testing.T) {
 			}
 			if tt.wantNil {
 				assert.Nil(t, err)
+			}
+			if !tt.args.locked && tt.args.lockErr == nil {
+				assert.True(t, errno.NeedMQRetry(err))
 			}
 			if tt.args.locked && !tt.wantErr {
 				assert.True(t, unlockCalled, "unlock should be called when locked")

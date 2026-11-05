@@ -22,7 +22,7 @@ import (
 
 // Removing the source check would let the endpoint confirm quota or call providers.
 func TestLateWriteConsumerOriginalResume(t *testing.T) {
-	for _, kind := range []string{"target_stale", "evaluator_stale", "reader_failure", "turn0", "builtin0", "inline_stale", "alias_stale", "oldmap_stale", "missing_legacy", "incomplete_record", "unknown_record"} {
+	for _, kind := range []string{"target_stale", "evaluator_stale", "reader_failure", "turn0", "builtin0", "inline_stale", "alias_stale", "oldmap_stale", "ordinary_legacy", "manual_missing_source", "incomplete_record", "unknown_record"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			items := repomocks.NewMockIExptItemResultRepo(ctrl)
@@ -67,18 +67,20 @@ func TestLateWriteConsumerOriginalResume(t *testing.T) {
 				record.ExperimentRunID = 0
 			case "unknown_record":
 				record.Status = entity.EvaluatorRunStatusUnknown
-			case "missing_legacy":
+			case "ordinary_legacy":
 				event.ResumeSource = nil
 				event.RequestID = ""
 				source.RequestID = ""
+			case "manual_missing_source":
+				event.ResumeSource = nil
 			}
 			turns.EXPECT().GetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), int64(11), int64(3)).Return([]*entity.ExptTurnResultRunLog{log}, readErr).AnyTimes()
 			records.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(61), false).Return(record, nil).AnyTimes()
 			svc := &ExptItemEventEvalServiceImpl{exptItemResultRepo: items, exptTurnResultRepo: turns, evaluatorRecordService: records, evaTargetService: target}
 			called := false
 			err := svc.HandleCurrentSource(func(context.Context, *entity.ExptItemEvalEvent) error { called = true; return nil })(context.Background(), event)
-			require.Equal(t, kind == "turn0" || kind == "builtin0", called, "noncurrent original invocation must have zero downstream side effects")
-			if kind == "reader_failure" || kind == "missing_legacy" || kind == "incomplete_record" || kind == "unknown_record" {
+			require.Equal(t, kind == "turn0" || kind == "builtin0" || kind == "ordinary_legacy", called, "only a current, validated continuation may execute")
+			if kind == "reader_failure" || kind == "manual_missing_source" || kind == "incomplete_record" || kind == "unknown_record" {
 				require.True(t, errno.NeedMQRetry(err))
 			} else {
 				require.NoError(t, err)

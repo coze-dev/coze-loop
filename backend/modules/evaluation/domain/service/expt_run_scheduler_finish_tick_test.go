@@ -4,6 +4,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -279,3 +280,36 @@ func TestFinishCalibrationTickDuplicateUsesRunLock(t *testing.T) {
 }
 
 var _ lock.ILocker = (*lockmocks.MockILocker)(nil)
+
+func TestLegacyCompatSchedulerBusyTick(t *testing.T) {
+	f := newFinishTickFixture(t, entity.EvaluationModeSubmit, entity.ExptDispatchModeLegacy)
+	locker := lockmocks.NewMockILocker(gomock.NewController(t))
+	manualHolding := true
+	locker.EXPECT().LockBackoffWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, _ string, _, _ time.Duration) (bool, context.Context, func(), error) {
+		return !manualHolding, ctx, func() {}, nil
+	}).AnyTimes()
+	locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil).MaxTimes(1)
+	f.scheduler.Mutex = locker
+	before, err := json.Marshal(f.event)
+	require.NoError(t, err)
+	var published *entity.ExptScheduleEvent
+	f.publisher.EXPECT().PublishExptScheduleEvent(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, next *entity.ExptScheduleEvent, delay *time.Duration) error {
+		require.Equal(t, 17*time.Second, *delay)
+		published = next
+		return nil
+	}).MaxTimes(1)
+	endpoint := f.scheduler.HandleEventErr(f.scheduler.HandleEventCheck(f.scheduler.HandleEventLock(f.scheduler.schedule)))
+	err = endpoint(context.Background(), f.event)
+	require.True(t, errno.NeedMQRetry(err), "the only periodic tick must remain with the broker while manual admission owns the run lock")
+	require.Zero(t, f.result.calls)
+	require.Nil(t, published)
+	manualHolding = false
+	require.NoError(t, endpoint(context.Background(), f.event))
+	require.NotNil(t, published, "the same redelivered event must generate its next tick")
+	after, err := json.Marshal(f.event)
+	require.NoError(t, err)
+	require.Equal(t, before, after)
+	next, err := json.Marshal(published)
+	require.NoError(t, err)
+	require.Equal(t, before, next, "preserve Ext, Session and scheduling identity")
+}

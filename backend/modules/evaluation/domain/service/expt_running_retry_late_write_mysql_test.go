@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -152,6 +153,119 @@ func lateWriteLocker(t *testing.T, ctrl *gomock.Controller) ManualRetryLockerFac
 		}).AnyTimes()
 		mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
 		return mutex
+	}
+}
+
+func newLegacyContinuationFixture(t *testing.T, version int64) *lateWriteFixture {
+	t.Helper()
+	if os.Getenv("EXPT_RETRY_MYSQL_DSN") != "" {
+		f := newLateWriteFixture(t, "")
+		if version != 0 {
+			version = f.version
+		}
+		require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("id=?", f.base+500).Update("item_version_id", version).Error)
+		return f
+	}
+	provider := db.NewTestDB(t, &model.ExptItemResult{}, &model.ExptItemResultRunLog{}, &model.ExptRunLog{}, &model.ExptTurnResult{}, &model.ExptTurnResultRunLog{}, &model.ExptTurnEvaluatorResultRef{}, &model.ExptStats{})
+	f := &lateWriteFixture{t: t, provider: provider, conn: provider.NewSession(context.Background(), db.WithMaster()), space: 1, expt: 2, run: 3, item: 11, version: 31}
+	for _, row := range []any{
+		&model.ExptRunLog{ID: 3, SpaceID: 1, ExptID: 2, ExptRunID: 3, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(entity.EvaluationModeSubmit))},
+		&model.ExptItemResult{ID: 100, SpaceID: 1, ExptID: 2, ExptRunID: 3, ItemID: 11, ItemVersionID: 31, Status: int32(entity.ItemRunState_Processing)},
+		&model.ExptItemResultRunLog{ID: 200, SpaceID: 1, ExptID: 2, ExptRunID: 3, ItemID: 11, ItemVersionID: 31, Status: int32(entity.ItemRunState_Processing), RetryTimes: 1, ResultState: gptr.Of(int32(entity.ExptItemResultStateDefault))},
+		&model.ExptStats{ID: 300, SpaceID: 1, ExptID: 2, ProcessingCnt: 1},
+		&model.ExptTurnResult{ID: 400, SpaceID: 1, ExptID: 2, ExptRunID: 3, ItemID: 11, ItemVersionID: 31, TurnID: 0, Status: int32(entity.TurnRunState_Processing), TargetResultID: 41},
+		&model.ExptTurnResultRunLog{ID: 500, SpaceID: 1, ExptID: 2, ExptRunID: 3, ItemID: 11, ItemVersionID: version, TurnID: 0, Status: int32(entity.TurnRunState_Processing), TargetResultID: 41},
+	} {
+		require.NoError(t, f.conn.Create(row).Error)
+	}
+	f.port = experimentrepo.NewExptItemResultRepo(experimentmysql.NewExptItemResultDAO(provider)).(repo.IExptCurrentResultRepo)
+	return f
+}
+
+func TestCurrentRequestLegacyAsyncContinuation(t *testing.T) {
+	for _, kind := range []string{"target", "evaluator"} {
+		for _, version := range []int64{0, 31} {
+			t.Run(fmt.Sprintf("%s_version_%d", kind, version), func(t *testing.T) {
+				f := newLegacyContinuationFixture(t, version)
+				svc := &ExptItemEventEvalServiceImpl{exptItemResultRepo: f.itemRepo(), itemLocker: lateWriteLocker(t, gomock.NewController(t))}
+				event := &entity.ExptItemEvalEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, EvalSetItemID: f.item, ExptRunMode: entity.EvaluationModeSubmit, RetryTimes: 2, AsyncReportTrigger: kind == "target", AsyncEvaluatorReportTrigger: kind == "evaluator"}
+				called := false
+				err := svc.HandleEventLock(svc.HandleCurrentSource(func(ctx context.Context, got *entity.ExptItemEvalEvent) error {
+					called = true
+					require.Nil(t, got.ResumeSource, "do not invent original invocation identity from latest records")
+					execution := executionSource(ctx)
+					require.True(t, execution.SourceValidated)
+					require.Equal(t, f.version, execution.Source.Turns[0].ItemVersionID)
+					source := execution.Source
+					for turnID, turn := range source.Turns {
+						result := *turn
+						result.Status, result.TargetResultID = entity.TurnRunState_Success, f.base+71
+						applied, err := f.port.StoreCurrentTurnRunResult(ctx, source, &result)
+						require.NoError(t, err)
+						require.True(t, applied)
+						source.Turns[turnID] = &result
+					}
+					applied, err := f.port.CompleteCurrentItemRun(ctx, source, &entity.ExptCurrentItemRunWrite{Status: entity.ItemRunState_Success, RetryTimes: int32(got.RetryTimes)})
+					require.True(t, applied)
+					return err
+				}))(context.Background(), event)
+				require.NoError(t, err)
+				require.True(t, called)
+				var turn model.ExptTurnResultRunLog
+				require.NoError(t, f.conn.Where("id=?", f.base+500).Take(&turn).Error)
+				require.Equal(t, int32(entity.TurnRunState_Success), turn.Status)
+				require.Equal(t, f.base+71, turn.TargetResultID)
+				var item model.ExptItemResultRunLog
+				require.NoError(t, f.conn.Where("id=?", f.base+200).Take(&item).Error)
+				require.Equal(t, int32(entity.ItemRunState_Success), item.Status)
+				require.Equal(t, int32(entity.ExptItemResultStateLogged), *item.ResultState)
+				require.Equal(t, int32(2), item.RetryTimes)
+			})
+		}
+	}
+}
+
+func TestCurrentRequestLegacyAsyncIsolation(t *testing.T) {
+	for _, kind := range []string{"old_empty_on_manual", "manual_missing_identity", "explicit_old_record", "explicit_old_run", "explicit_old_request", "old_run"} {
+		t.Run(kind, func(t *testing.T) {
+			f := newLegacyContinuationFixture(t, 31)
+			svc := &ExptItemEventEvalServiceImpl{exptItemResultRepo: f.itemRepo(), exptTurnResultRepo: f.turnRepo(), itemLocker: lateWriteLocker(t, gomock.NewController(t))}
+			event := &entity.ExptItemEvalEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, EvalSetItemID: f.item, ExptRunMode: entity.EvaluationModeSubmit, AsyncReportTrigger: true}
+			switch kind {
+			case "old_empty_on_manual", "manual_missing_identity", "explicit_old_request":
+				f.token("rq2")
+				event.ExptRunMode = entity.EvaluationModeFailRetry
+				if kind == "manual_missing_identity" {
+					event.RequestID = "rq2"
+				} else if kind == "explicit_old_request" {
+					event.RequestID = "rq1"
+					event.ResumeSource = &entity.ExptResumeSource{Kind: "target", RecordID: f.base + 41, InvokeID: strconv.FormatInt(f.base+41, 10), TurnID: 0}
+				}
+			case "explicit_old_record":
+				event.ResumeSource = &entity.ExptResumeSource{Kind: "target", RecordID: f.base + 42, InvokeID: strconv.FormatInt(f.base+42, 10), TurnID: 0}
+			case "explicit_old_run":
+				event.ResumeSource = &entity.ExptResumeSource{Kind: "target", RecordID: f.base + 41, InvokeID: strconv.FormatInt(f.base+41, 10), TurnID: 0}
+				event.ExptRunID++
+			case "old_run":
+				event.ExptRunID++
+			}
+			called := false
+			err := svc.HandleEventLock(svc.HandleCurrentSource(func(context.Context, *entity.ExptItemEvalEvent) error { called = true; return nil }))(context.Background(), event)
+			if kind == "manual_missing_identity" {
+				require.True(t, errno.NeedMQRetry(err))
+			} else {
+				require.NoError(t, err)
+			}
+			require.False(t, called)
+			var turn model.ExptTurnResultRunLog
+			require.NoError(t, f.conn.Where("id=?", f.base+500).Take(&turn).Error)
+			require.Equal(t, f.base+41, turn.TargetResultID)
+			require.Equal(t, int32(entity.TurnRunState_Processing), turn.Status)
+			var item model.ExptItemResultRunLog
+			require.NoError(t, f.conn.Where("id=?", f.base+200).Take(&item).Error)
+			require.Equal(t, int32(1), item.RetryTimes)
+			require.Equal(t, int32(entity.ExptItemResultStateDefault), *item.ResultState)
+		})
 	}
 }
 

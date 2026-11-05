@@ -186,7 +186,7 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 			scope := "space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?"
 			args := []any{c.SpaceID, c.ExptID, c.RunID, c.ItemID, c.ItemVersionID}
 			if !r.NoCompleteItemTurn {
-				if err := tx.Model(&model.ExptTurnResultRunLog{}).Where(scope, args...).Updates(map[string]any{"status": int32(entity.TurnRunState_Terminal), "err_msg": errBytes}).Error; err != nil {
+				if err := tx.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id IN ?", c.SpaceID, c.ExptID, c.RunID, c.ItemID, currentTurnRunLogVersions(c)).Updates(map[string]any{"status": int32(entity.TurnRunState_Terminal), "err_msg": errBytes}).Error; err != nil {
 					return err
 				}
 				if err := tx.Model(&model.ExptTurnResult{}).Where(scope, args...).Updates(map[string]any{"status": int32(entity.TurnRunState_Terminal)}).Error; err != nil {

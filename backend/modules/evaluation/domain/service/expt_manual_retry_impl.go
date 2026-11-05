@@ -228,7 +228,7 @@ func (m *ExptMangerImpl) prepareManualRetryTurns(ctx context.Context, expt *enti
 		if item.CurrentItemLog != nil && log == nil {
 			return fmt.Errorf("frozen current retry turn log missing")
 		}
-		if log != nil && log.ItemVersionID != item.ItemVersionID {
+		if log != nil && !entity.MatchesExptTurnRunLogVersion(log.ItemVersionID, item.ItemVersionID, item.PreviousRequestID) {
 			return fmt.Errorf("retry turn log version mismatch")
 		}
 		prepared := &entity.PreparedRetryTurn{SourceTurn: turn, CurrentRunLog: log, SourceRefs: refsByTurn[turn.ID]}

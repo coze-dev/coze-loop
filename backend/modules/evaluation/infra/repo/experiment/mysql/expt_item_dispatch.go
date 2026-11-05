@@ -359,7 +359,7 @@ func transitionDispatchItem(tx *gorm.DB, s *lockedDispatchItem, next entity.Item
 		if exists {
 			matchedLogs++
 		}
-		if turn.ItemVersionID != s.item.ItemVersionID || turn.TurnID < 0 || exists && log.ItemVersionID != turn.ItemVersionID {
+		if turn.ItemVersionID != s.item.ItemVersionID || turn.TurnID < 0 || exists && !entity.MatchesExptTurnRunLogVersion(log.ItemVersionID, turn.ItemVersionID, s.request) {
 			return fmt.Errorf("dispatch turn binding mismatch")
 		}
 		if s.manual != nil && !exists {

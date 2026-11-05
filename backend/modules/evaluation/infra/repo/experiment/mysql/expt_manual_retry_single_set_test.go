@@ -264,6 +264,100 @@ func prepareSingleSetFixture(t *testing.T, f *manualRetryFixture, enforce, zeroV
 	}
 }
 
+func TestLegacyCompatManualAdmission(t *testing.T) {
+	for _, enforce := range []bool{false, true} {
+		for _, mode := range []entity.ExptRunMode{entity.EvaluationModeFailRetry, entity.EvaluationModeRetryItems} {
+			t.Run(fmt.Sprintf("enforce=%t/mode=%d", enforce, mode), func(t *testing.T) {
+				f := newManualRetryFixture(t)
+				prepareSingleSetFixture(t, f, enforce, false)
+				require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=11", f.space).Update("item_version_id", 0).Error)
+				port := &singleSetRetryPort{IExptManualRetryRepo: f.port}
+				manager := singleSetRetryManager(t, f, port, enforce)
+				request := &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, Mode: mode}
+				if mode == entity.EvaluationModeRetryItems {
+					request.ItemIDs = []int64{11}
+				}
+				receipt, err := manager.RetryInCurrentRun(context.Background(), request)
+				require.NoError(t, err)
+				require.Equal(t, int32(1), receipt.AcceptedCount)
+				require.NotEmpty(t, port.prepared.RequestID)
+				prepared := port.prepared.Items[0]
+				require.Empty(t, prepared.PreviousRequestID)
+				for _, turn := range prepared.Turns {
+					require.Zero(t, turn.CurrentRunLog.ItemVersionID, "preparation and transaction compare the original physical source")
+				}
+				var logs []model.ExptTurnResultRunLog
+				require.NoError(t, f.conn.Where("space_id=? AND item_id=11", f.space).Find(&logs).Error)
+				require.Len(t, logs, 2)
+				for _, log := range logs {
+					require.Equal(t, f.base+111, log.ItemVersionID, "upgrade zero before exposing the new manual identity")
+				}
+				reader := mysql.NewExptItemResultDAO(f.provider).(repo.IExptCurrentResultRepo)
+				source, err := reader.GetCurrentItemRunSource(context.Background(), f.space, f.expt, f.run, 11)
+				require.NoError(t, err)
+				require.Equal(t, port.prepared.RequestID, source.Current.RequestID)
+				dispatch := mysql.NewExptItemDispatchDAO(f.provider)
+				claimed, err := dispatch.ClaimQuotaReserved(context.Background(), f.space, f.expt, f.run, []int64{11}, map[int64]string{11: source.Current.RequestID})
+				require.NoError(t, err)
+				require.Len(t, claimed, 1)
+				started, err := dispatch.StartReservedItem(context.Background(), f.space, f.expt, f.run, 11, source.Current.RequestID)
+				require.NoError(t, err)
+				require.True(t, started.Started)
+			})
+		}
+	}
+}
+
+func TestLegacyCompatManualAdmissionRejectsBadSource(t *testing.T) {
+	for _, damage := range []string{"nonzero_conflict", "manual_zero", "ref_preflight", "ref_commit"} {
+		t.Run(damage, func(t *testing.T) {
+			f := newManualRetryFixture(t)
+			prepareSingleSetFixture(t, f, false, false)
+			require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=11", f.space).Update("item_version_id", 0).Error)
+			port := &singleSetRetryPort{IExptManualRetryRepo: f.port}
+			before := f.snapshot()
+			if damage == "nonzero_conflict" {
+				require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=11", f.space).Update("item_version_id", f.base+112).Error)
+				before = f.snapshot()
+			} else if damage == "manual_zero" {
+				var item model.ExptItemResult
+				require.NoError(t, f.conn.Where("space_id=? AND item_id=11", f.space).Take(&item).Error)
+				ext, err := entity.MergeManualRetryContext(gptr.Indirect(item.Ext), &entity.ManualRetryContext{RunID: f.run, RequestID: "old-manual", Mode: entity.EvaluationModeFailRetry})
+				require.NoError(t, err)
+				require.NoError(t, f.conn.Model(&item).Update("ext", ext).Error)
+				before = f.snapshot()
+			} else {
+				drift := func() {
+					require.NoError(t, f.conn.Model(&model.ExptTurnEvaluatorResultRef{}).Where("space_id=?", f.space).Update("alias", "foreign").Error)
+					before = f.snapshot()
+				}
+				if damage == "ref_preflight" {
+					port.beforePreflight = drift
+				} else {
+					port.beforeCommit = drift
+				}
+			}
+			manager := singleSetRetryManager(t, f, port, false)
+			receipt, err := manager.RetryInCurrentRun(context.Background(), &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, Mode: entity.EvaluationModeRetryItems, ItemIDs: []int64{11}})
+			if damage == "nonzero_conflict" || damage == "manual_zero" {
+				require.Error(t, err)
+				require.Nil(t, receipt)
+			} else {
+				require.NoError(t, err)
+				require.Zero(t, receipt.AcceptedCount)
+				require.Equal(t, "source_changed", receipt.RejectedItems[0].Reason)
+				// A rejected receipt is appended, while all item/turn/ref sources remain unchanged.
+				delete(before, "expt_run_log")
+			}
+			after := f.snapshot()
+			if err == nil {
+				delete(after, "expt_run_log")
+			}
+			require.Equal(t, before, after)
+		})
+	}
+}
+
 func TestManualRetryMySQLSingleSetManagerSameRun(t *testing.T) {
 	for _, enforce := range []bool{false, true} {
 		for _, mode := range []entity.ExptRunMode{entity.EvaluationModeFailRetry, entity.EvaluationModeRetryItems} {

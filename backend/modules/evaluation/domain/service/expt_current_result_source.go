@@ -43,8 +43,12 @@ func (e *ExptItemEventEvalServiceImpl) validateResumeSource(ctx context.Context,
 	source := event.ResumeSource
 	if source == nil {
 		if event.AsyncReportTrigger || event.AsyncEvaluatorReportTrigger {
-			// A legacy event has no invoke ID. Only an original AsyncCtx keyed by an
-			// explicit identity can recover it; the latest turn record is not identity.
+			// An empty current request is derived from the absence of persisted
+			// manual_retry metadata. Preserve callbacks from ordinary legacy runs,
+			// but never infer a manual invocation identity from the latest records.
+			if event.RequestID == "" && current.Matches(event.ExptRunID, "") {
+				return true, nil
+			}
 			return false, errno.NewMQRetryErr("legacy async event lacks original recoverable invocation identity")
 		}
 		return true, nil

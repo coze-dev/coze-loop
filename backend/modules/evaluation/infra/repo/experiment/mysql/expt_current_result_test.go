@@ -126,6 +126,142 @@ func (f *currentResultFixture) result(source *entity.ExptCurrentItemRunSource) *
 	return &r
 }
 
+// Reuse native MySQL fixtures when configured; otherwise run compatibility
+// regressions on the existing MySQL protocol test server without an external DSN.
+func newLegacyCurrentResultFixture(t *testing.T, token string) *currentResultFixture {
+	t.Helper()
+	if os.Getenv("EXPT_RETRY_MYSQL_DSN") != "" {
+		f := newCurrentResultFixture(t, token)
+		require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("id=?", f.base+500).Update("item_version_id", int64(0)).Error)
+		return f
+	}
+	provider := db.NewTestDB(t, &model.ExptItemResult{}, &model.ExptItemResultRunLog{}, &model.ExptRunLog{}, &model.ExptTurnResult{}, &model.ExptTurnResultRunLog{}, &model.ExptTurnEvaluatorResultRef{}, &model.ExptStats{})
+	conn := provider.NewSession(context.Background(), db.WithMaster())
+	f := &currentResultFixture{t: t, provider: provider, conn: conn, space: 1, expt: 2, run: 3, item: 11, version: 31}
+	for _, row := range []any{
+		&model.ExptRunLog{ID: 3, SpaceID: 1, ExptID: 2, ExptRunID: 3, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(entity.EvaluationModeSubmit))},
+		&model.ExptItemResult{ID: 100, SpaceID: 1, ExptID: 2, ExptRunID: 3, ItemID: 11, ItemVersionID: 31, Status: int32(entity.ItemRunState_Processing)},
+		&model.ExptItemResultRunLog{ID: 200, SpaceID: 1, ExptID: 2, ExptRunID: 3, ItemID: 11, ItemVersionID: 31, Status: int32(entity.ItemRunState_Processing), RetryTimes: 1, ResultState: gptr.Of(int32(entity.ExptItemResultStateDefault))},
+		&model.ExptStats{ID: 300, SpaceID: 1, ExptID: 2, ProcessingCnt: 1},
+		&model.ExptTurnResult{ID: 400, SpaceID: 1, ExptID: 2, ExptRunID: 3, ItemID: 11, ItemVersionID: 31, TurnID: 0, Status: int32(entity.TurnRunState_Processing), TargetResultID: 41},
+		&model.ExptTurnResultRunLog{ID: 500, SpaceID: 1, ExptID: 2, ExptRunID: 3, ItemID: 11, ItemVersionID: 0, TurnID: 0, Status: int32(entity.TurnRunState_Processing), TargetResultID: 41},
+		&model.ExptTurnResult{ID: 401, SpaceID: 1, ExptID: 2, ExptRunID: 3, ItemID: 11, ItemVersionID: 31, TurnID: 1, Status: int32(entity.TurnRunState_Processing)},
+		&model.ExptTurnResultRunLog{ID: 501, SpaceID: 1, ExptID: 2, ExptRunID: 3, ItemID: 11, ItemVersionID: 31, TurnID: 1, Status: int32(entity.TurnRunState_Processing)},
+	} {
+		require.NoError(t, conn.Create(row).Error)
+	}
+	f.token(token)
+	f.port = NewExptItemResultDAO(provider).(repo.IExptCurrentResultRepo)
+	return f
+}
+
+func TestCurrentResultLegacyZeroTurnVersion(t *testing.T) {
+	for _, operation := range []string{"store", "yield", "fail", "terminal", "budget"} {
+		t.Run(operation, func(t *testing.T) {
+			f := newLegacyCurrentResultFixture(t, "")
+			source := f.source()
+			require.Empty(t, source.Current.RequestID)
+			require.Equal(t, f.version, source.Turns[0].ItemVersionID)
+			for _, turn := range source.Turns {
+				require.Equal(t, f.version, turn.ItemVersionID)
+			}
+			var persisted model.ExptTurnResultRunLog
+			require.NoError(t, f.conn.Where("id=?", f.base+500).Take(&persisted).Error)
+			require.Zero(t, persisted.ItemVersionID, "reading must not repair stored legacy data")
+			write := &entity.ExptCurrentItemRunWrite{RetryTimes: 2}
+			wantTurn := entity.TurnRunState_Processing
+			switch operation {
+			case "store":
+				result := f.result(source)
+				applied, err := f.port.StoreCurrentTurnRunResult(context.Background(), source, result)
+				require.NoError(t, err)
+				require.True(t, applied)
+				source.Turns[0] = result
+				require.NoError(t, f.conn.Where("id=?", f.base+500).Take(&persisted).Error)
+				require.Equal(t, result.TargetResultID, persisted.TargetResultID)
+				require.Equal(t, int32(entity.TurnRunState_Success), persisted.Status)
+				write.Status = entity.ItemRunState_Success
+				wantTurn = entity.TurnRunState_Success
+			case "yield":
+				write.Yield = true
+				wantTurn = entity.TurnRunState_Queueing
+			case "fail":
+				write.Status, write.FailPendingTurns = entity.ItemRunState_Fail, true
+				write.ErrMsg = []byte("legacy failure")
+				wantTurn = entity.TurnRunState_Fail
+			case "terminal":
+				write.Status = entity.ItemRunState_Terminal
+				wantTurn = entity.TurnRunState_Terminal
+			case "budget":
+				write.RetryOnly = true
+			}
+			applied, err := f.port.CompleteCurrentItemRun(context.Background(), source, write)
+			require.NoError(t, err)
+			require.True(t, applied)
+			require.NoError(t, f.conn.Where("id=?", f.base+500).Take(&persisted).Error)
+			require.Equal(t, int32(wantTurn), persisted.Status)
+			var item model.ExptItemResultRunLog
+			require.NoError(t, f.conn.Where("id=?", f.base+200).Take(&item).Error)
+			require.Equal(t, int32(2), item.RetryTimes)
+			if !write.RetryOnly {
+				wantItem := write.Status
+				if write.Yield {
+					wantItem = entity.ItemRunState_Queueing
+				}
+				require.Equal(t, int32(wantItem), item.Status)
+			}
+		})
+	}
+}
+
+func TestCurrentResultLegacyZeroTurnVersionRejectsForeignSource(t *testing.T) {
+	for _, kind := range []string{"nonzero_conflict", "manual_zero", "canonical_version", "canonical_run", "foreign_run", "foreign_turn"} {
+		t.Run(kind, func(t *testing.T) {
+			f := newLegacyCurrentResultFixture(t, "")
+			switch kind {
+			case "nonzero_conflict":
+				require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("id=?", f.base+500).Update("item_version_id", f.version+1).Error)
+			case "manual_zero":
+				f.token("rq1")
+			case "canonical_version":
+				require.NoError(t, f.conn.Model(&model.ExptTurnResult{}).Where("id=?", f.base+400).Update("item_version_id", f.version+1).Error)
+			case "canonical_run":
+				require.NoError(t, f.conn.Model(&model.ExptTurnResult{}).Where("id=?", f.base+400).Update("expt_run_id", f.run+1).Error)
+			case "foreign_run":
+				require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("id=?", f.base+500).Update("expt_run_id", f.run+1).Error)
+				// This row is excluded from the current source rather than normalized.
+				source := f.source()
+				require.NotContains(t, source.Turns, int64(0))
+				return
+			case "foreign_turn":
+				require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("id=?", f.base+500).Update("turn_id", int64(99)).Error)
+			}
+			_, err := f.port.GetCurrentItemRunSource(context.Background(), f.space, f.expt, f.run, f.item)
+			require.Error(t, err)
+			var persisted model.ExptTurnResultRunLog
+			require.NoError(t, f.conn.Where("id=?", f.base+500).Take(&persisted).Error)
+			require.Equal(t, int32(entity.TurnRunState_Processing), persisted.Status)
+		})
+	}
+}
+
+func TestCurrentResultLegacyZeroTurnVersionManualReplacement(t *testing.T) {
+	f := newLegacyCurrentResultFixture(t, "")
+	source := f.source()
+	f.token("rq2")
+	require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("id=?", f.base+500).Updates(map[string]any{"item_version_id": f.version, "target_result_id": f.base + 42}).Error)
+	applied, err := f.port.StoreCurrentTurnRunResult(context.Background(), source, f.result(source))
+	require.NoError(t, err)
+	require.False(t, applied)
+	applied, err = f.port.CompleteCurrentItemRun(context.Background(), source, &entity.ExptCurrentItemRunWrite{Status: entity.ItemRunState_Fail, FailPendingTurns: true})
+	require.NoError(t, err)
+	require.False(t, applied)
+	var persisted model.ExptTurnResultRunLog
+	require.NoError(t, f.conn.Where("id=?", f.base+500).Take(&persisted).Error)
+	require.Equal(t, f.base+42, persisted.TargetResultID)
+	require.Equal(t, int32(entity.TurnRunState_Processing), persisted.Status)
+}
+
 func TestCurrentResultFailRetryReadsSuccessfulHistoryWithNewRunLogs(t *testing.T) {
 	provider := db.NewTestDB(t, &model.ExptItemResult{}, &model.ExptItemResultRunLog{}, &model.ExptRunLog{}, &model.ExptTurnResult{}, &model.ExptTurnResultRunLog{}, &model.ExptTurnEvaluatorResultRef{})
 	conn := provider.NewSession(context.Background(), db.WithMaster())
@@ -155,6 +291,37 @@ func TestCurrentResultFailRetryReadsSuccessfulHistoryWithNewRunLogs(t *testing.T
 	require.Len(t, source.Turns, 2)
 	for _, log := range source.Turns {
 		require.Equal(t, runID, log.ExptRunID)
+	}
+}
+
+func TestLegacyCompatFailRetryHistory(t *testing.T) {
+	f := newCurrentResultFixture(t, "")
+	require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("id=?", f.run).Update("mode", int32(entity.EvaluationModeFailRetry)).Error)
+	require.NoError(t, f.conn.Model(&model.ExptTurnResult{}).Where("id=?", f.base+400).Updates(map[string]any{"expt_run_id": f.run - 1, "status": int32(entity.TurnRunState_Success)}).Error)
+	require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("id=?", f.base+500).Update("item_version_id", 0).Error)
+	source := f.source()
+	require.Equal(t, f.run-1, source.CanonicalTurns[0].ExptRunID)
+	require.Equal(t, f.run, source.Turns[0].ExptRunID)
+	require.Equal(t, f.version, source.Turns[0].ItemVersionID)
+	publication, err := NewExptResultPublishDAO(f.provider).GetItemResultPublishSource(context.Background(), f.space, f.expt, f.run, f.item)
+	require.NoError(t, err)
+	require.Equal(t, f.version, publication.Source.Turns[0].ItemVersionID)
+	for _, damage := range []string{"nonzero_conflict", "manual_zero", "illegal_cross_run"} {
+		t.Run(damage, func(t *testing.T) {
+			f.token("")
+			require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("id=?", f.base+500).Update("item_version_id", 0).Error)
+			require.NoError(t, f.conn.Model(&model.ExptTurnResult{}).Where("id=?", f.base+400).Update("status", int32(entity.TurnRunState_Success)).Error)
+			switch damage {
+			case "nonzero_conflict":
+				require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("id=?", f.base+500).Update("item_version_id", f.version+1).Error)
+			case "manual_zero":
+				f.token("rq1")
+			case "illegal_cross_run":
+				require.NoError(t, f.conn.Model(&model.ExptTurnResult{}).Where("id=?", f.base+400).Update("status", int32(entity.TurnRunState_Fail)).Error)
+			}
+			_, err := f.port.GetCurrentItemRunSource(context.Background(), f.space, f.expt, f.run, f.item)
+			require.Error(t, err)
+		})
 	}
 }
 

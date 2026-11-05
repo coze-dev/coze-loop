@@ -89,6 +89,61 @@ func TestDispatchMySQLStartAtomic(t *testing.T) {
 	require.Equal(t, before["expt_turn_evaluator_result_ref"], f.snapshot()["expt_turn_evaluator_result_ref"])
 }
 
+func TestLegacyCompatDispatchRequeueAndStart(t *testing.T) {
+	f := newCurrentResultFixture(t, "")
+	require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("id=?", f.base+500).Update("item_version_id", 0).Error)
+	dao := NewExptItemDispatchDAO(f.provider)
+	requeued, err := dao.RequeueProcessingItem(context.Background(), f.space, f.expt, f.run, f.item, "")
+	require.NoError(t, err)
+	require.True(t, requeued)
+	var turn model.ExptTurnResultRunLog
+	require.NoError(t, f.conn.Where("id=?", f.base+500).Take(&turn).Error)
+	require.Zero(t, turn.ItemVersionID)
+	require.Equal(t, int32(entity.TurnRunState_Queueing), turn.Status)
+	claimed, err := dao.ClaimQuotaReserved(context.Background(), f.space, f.expt, f.run, []int64{f.item}, map[int64]string{f.item: ""})
+	require.NoError(t, err)
+	require.Len(t, claimed, 1)
+	started, err := dao.StartReservedItem(context.Background(), f.space, f.expt, f.run, f.item, "")
+	require.NoError(t, err)
+	require.True(t, started.Started)
+	require.NoError(t, f.conn.Where("id=?", f.base+500).Take(&turn).Error)
+	require.Zero(t, turn.ItemVersionID, "dispatch does not change invocation versions")
+	require.Equal(t, int32(entity.TurnRunState_Processing), turn.Status)
+	var item model.ExptItemResultRunLog
+	require.NoError(t, f.conn.Where("space_id=? AND item_id=?", f.space, f.item).Take(&item).Error)
+	require.Equal(t, int32(entity.ItemRunState_Processing), item.Status)
+	require.Equal(t, int32(entity.QuotaReservationStateNone), item.QuotaReservationState)
+	for _, damage := range []string{"nonzero_conflict", "manual_zero"} {
+		t.Run(damage, func(t *testing.T) {
+			f.token("")
+			version, request := f.version+1, ""
+			if damage == "manual_zero" {
+				version, request = 0, "rq1"
+				f.token(request)
+			}
+			require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("id=?", f.base+500).Update("item_version_id", version).Error)
+			before := f.snapshot()
+			requeued, err := dao.RequeueProcessingItem(context.Background(), f.space, f.expt, f.run, f.item, request)
+			require.Error(t, err)
+			require.False(t, requeued)
+			require.Equal(t, before, f.snapshot())
+			for _, table := range []string{"expt_item_result", "expt_item_result_run_log"} {
+				require.NoError(t, f.conn.Table(table).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", int32(entity.ItemRunState_Queueing)).Error)
+			}
+			require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("quota_reservation_state", 1).Error)
+			before = f.snapshot()
+			started, err := dao.StartReservedItem(context.Background(), f.space, f.expt, f.run, f.item, request)
+			require.Error(t, err)
+			require.False(t, started.Started)
+			require.Equal(t, before, f.snapshot())
+			for _, table := range []string{"expt_item_result", "expt_item_result_run_log"} {
+				require.NoError(t, f.conn.Table(table).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", int32(entity.ItemRunState_Processing)).Error)
+			}
+			require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("quota_reservation_state", 0).Error)
+		})
+	}
+}
+
 func TestDispatchMySQLCanonicalTerminalAbsorbing(t *testing.T) {
 	f := newManualRetryFixture(t)
 	require.NoError(t, f.conn.Exec("UPDATE expt_item_result SET status=3 WHERE space_id=? AND expt_id=? AND item_id=13", f.space, f.expt).Error)

@@ -390,7 +390,7 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 		}
 		var logDO *entity.ExptTurnResultRunLog
 		if currentLog != nil {
-			if currentLog.ItemVersionID != item.prepared.ItemVersionID {
+			if !entity.MatchesExptTurnRunLogVersion(currentLog.ItemVersionID, item.prepared.ItemVersionID, item.prepared.PreviousRequestID) {
 				return "source_changed", nil
 			}
 			if err := validateManualRetryTurnExt(currentLog.Ext); err != nil {
@@ -464,7 +464,7 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 			if err != nil {
 				return "", err
 			}
-			if source.ItemVersionID != item.prepared.ItemVersionID {
+			if !entity.MatchesExptTurnRunLogVersion(source.ItemVersionID, item.prepared.ItemVersionID, item.prepared.PreviousRequestID) {
 				return "source_changed", nil
 			}
 			if err := validateManualRetryTurnExt(source.Ext); err != nil {
@@ -498,7 +498,9 @@ func (d *ExptManualRetryDAOImpl) writeManualRetryItem(ctx context.Context, r *en
 	for _, turn := range item.turns {
 		p := turn.prepared
 		canonicalFields := map[string]any{"expt_run_id": r.RunID}
-		logFields := map[string]any{"expt_run_id": r.RunID}
+		// Source comparison above retains the original zero version. Materialize
+		// the canonical version atomically with the new manual request identity.
+		logFields := map[string]any{"expt_run_id": r.RunID, "item_version_id": item.prepared.ItemVersionID}
 		if !p.PreserveSuccess {
 			canonicalFields["status"] = int32(entity.TurnRunState_Queueing)
 			canonicalFields["target_result_id"] = p.TargetResultID

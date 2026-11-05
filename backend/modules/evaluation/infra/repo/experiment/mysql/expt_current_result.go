@@ -137,13 +137,18 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 	for index := range logs {
 		log := &logs[index]
 		turn, ok := byTurn[log.TurnID]
-		if !ok || log.ItemVersionID != turn.ItemVersionID || log.TurnID < 0 || log.Status < int32(entity.TurnRunState_Queueing) || log.Status > int32(entity.TurnRunState_Terminal) {
+		// PreEval used to omit the version on ordinary run logs. The canonical
+		// turn and item already prove the version, including validated FailRetry
+		// success history retained in its original run above;
+		// manual frozen sources and nonzero conflicts must still match exactly.
+		if !ok || !entity.MatchesExptTurnRunLogVersion(log.ItemVersionID, turn.ItemVersionID, request) || log.TurnID < 0 || log.Status < int32(entity.TurnRunState_Queueing) || log.Status > int32(entity.TurnRunState_Terminal) {
 			return nil, fmt.Errorf("damaged current turn source")
 		}
 		converted, err := convert.NewExptTurnResultRunLogConvertor().PO2DO(log)
 		if err != nil {
 			return nil, err
 		}
+		converted.ItemVersionID = turn.ItemVersionID
 		if err := validateCurrentEvaluatorRefs(converted.EvaluatorResultIds); err != nil {
 			return nil, err
 		}
@@ -223,6 +228,17 @@ func currentSourceMatches(expected, actual *entity.ExptCurrentItemRunSource) boo
 	return true
 }
 
+// Call only after loadCurrentRunSource has locked and validated the source.
+// Ordinary legacy turns have a normalized in-memory version but can still have
+// zero in storage. Manual requests keep an exact persisted version predicate.
+func currentTurnRunLogVersions(current entity.ExptItemCurrentRequest) []int64 {
+	versions := []int64{current.ItemVersionID}
+	if current.RequestID == "" && current.ItemVersionID != 0 {
+		versions = append(versions, 0)
+	}
+	return versions
+}
+
 func (dao *exptItemResultDAOImpl) StoreCurrentTurnRunResult(ctx context.Context, source *entity.ExptCurrentItemRunSource, result *entity.ExptTurnResultRunLog) (bool, error) {
 	if source == nil || result == nil {
 		return false, fmt.Errorf("execution source or turn result missing")
@@ -251,7 +267,7 @@ func (dao *exptItemResultDAOImpl) StoreCurrentTurnRunResult(ctx context.Context,
 			return nil
 		}
 		fields := map[string]any{"status": po.Status, "trace_id": po.TraceID, "log_id": po.LogID, "target_result_id": po.TargetResultID, "evaluator_result_ids": gptr.Indirect(po.EvaluatorResultIds), "err_msg": gptr.Indirect(po.ErrMsg), "ext": po.Ext}
-		written := tx.Model(&model.ExptTurnResultRunLog{}).Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?", old.ID, source.Current.SpaceID, source.Current.ExptID, source.Current.RunID, source.Current.ItemID, source.Current.ItemVersionID).Updates(fields)
+		written := tx.Model(&model.ExptTurnResultRunLog{}).Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id IN ?", old.ID, source.Current.SpaceID, source.Current.ExptID, source.Current.RunID, source.Current.ItemID, currentTurnRunLogVersions(actual.Current)).Updates(fields)
 		if written.Error != nil {
 			return written.Error
 		}
@@ -368,7 +384,7 @@ func (dao *exptItemResultDAOImpl) CompleteCurrentItemRun(ctx context.Context, so
 				if !write.Yield {
 					turnFields["err_msg"] = write.TurnError(turnState)
 				}
-				if err := tx.Model(&model.ExptTurnResultRunLog{}).Where(scope, args...).Where("status NOT IN ?", []int32{int32(entity.TurnRunState_Success), int32(entity.TurnRunState_Terminal)}).Updates(turnFields).Error; err != nil {
+				if err := tx.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id IN ?", c.SpaceID, c.ExptID, c.RunID, c.ItemID, currentTurnRunLogVersions(c)).Where("status NOT IN ?", []int32{int32(entity.TurnRunState_Success), int32(entity.TurnRunState_Terminal)}).Updates(turnFields).Error; err != nil {
 					return err
 				}
 			}

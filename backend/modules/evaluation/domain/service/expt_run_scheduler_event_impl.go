@@ -261,8 +261,8 @@ func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEnd
 		logs.CtxInfo(ctx, "ExptSchedulerConsumer.HandleEventLock locked expt eval event: %v, key: %v", json.Jsonify(event), key)
 
 		if !locked {
-			logs.CtxWarn(ctx, "ExptSchedulerConsumer.HandleEventLock found locked expt eval event: %v. Abort event, err: %v", json.Jsonify(event), err)
-			return nil
+			logs.CtxWarn(ctx, "ExptSchedulerConsumer.HandleEventLock found locked expt eval event: %v. Retain event for broker retry", json.Jsonify(event))
+			return errno.NewMQRetryErr("experiment run execution lock busy")
 		}
 
 		defer func() {

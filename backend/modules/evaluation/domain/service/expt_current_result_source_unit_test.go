@@ -263,11 +263,12 @@ func TestValidateResumeSourceUnit(t *testing.T) {
 	current := &entity.ExptItemCurrentRequest{ItemVersionID: 7}
 	validSource := &entity.ExptResumeSource{RecordID: 61, TurnID: 0, InvokeID: "61", Kind: "evaluator"}
 
-	t.Run("nil_source_async_rejected", func(t *testing.T) {
+	t.Run("nil_source_async_manual_rejected", func(t *testing.T) {
 		d := newCurrentUnitDeps(t)
 		event := currentUnitEvent()
 		event.AsyncReportTrigger = true
-		_, err := d.eventService().validateResumeSource(context.Background(), event, current)
+		manualCurrent := currentUnitSource().Current
+		_, err := d.eventService().validateResumeSource(context.Background(), event, &manualCurrent)
 		require.True(t, errno.NeedMQRetry(err))
 	})
 	t.Run("nil_source_plain_allowed", func(t *testing.T) {

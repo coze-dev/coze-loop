@@ -14,6 +14,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 )
 
@@ -94,6 +95,34 @@ func TestManualRetryMySQLAbsentCurrentRun(t *testing.T) {
 		require.Nil(t, chunk.ManualRetryReceipt)
 	}
 	t.Log("REAL_MYSQL_ABSENT_LOGS_VERIFIED all frozen turns/version R1 unchanged R2 total+1 repeated business IDs once")
+}
+
+func TestLegacyCompatManualAbsentSource(t *testing.T) {
+	f := newManualRetryFixture(t)
+	require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=11", f.space).Update("item_version_id", 0).Error)
+	var original []model.ExptTurnResultRunLog
+	require.NoError(t, f.conn.Where("space_id=? AND item_id=11", f.space).Order("id").Find(&original).Error)
+	request := f.request(entity.EvaluationModeRetryItems)
+	newRun := f.base + 999
+	require.NoError(t, f.conn.Model(&model.Experiment{}).Where("id=?", f.expt).Update("latest_run_id", newRun).Error)
+	require.NoError(t, f.conn.Create(&model.ExptRunLog{ID: newRun, SpaceID: f.space, ExptID: f.expt, ExptRunID: newRun, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(entity.EvaluationModeSubmit)), ItemIds: gptr.Of([]byte(`[]`))}).Error)
+	request.RunID = newRun
+	request.Items[0].CurrentItemLog = nil
+	for _, turn := range request.Items[0].Turns {
+		turn.CurrentRunLog = nil
+	}
+	accepted, err := f.port.RequeueTerminalItems(context.Background(), request)
+	require.NoError(t, err)
+	require.Equal(t, int32(1), accepted.AcceptedCount)
+	var old []model.ExptTurnResultRunLog
+	require.NoError(t, f.conn.Where("space_id=? AND expt_run_id=? AND item_id=11", f.space, f.run).Order("id").Find(&old).Error)
+	require.Equal(t, original, old, "historical source logs remain unchanged")
+	source, err := NewExptItemResultDAO(f.provider).(repo.IExptCurrentResultRepo).GetCurrentItemRunSource(context.Background(), f.space, f.expt, newRun, 11)
+	require.NoError(t, err)
+	require.Equal(t, request.RequestID, source.Current.RequestID)
+	for _, log := range source.Turns {
+		require.Equal(t, f.base+111, log.ItemVersionID)
+	}
 }
 
 func TestManualRetryMySQLAbsentInsertRollback(t *testing.T) {
