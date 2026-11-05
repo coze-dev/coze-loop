@@ -129,7 +129,6 @@ func TestProcessingTerminationDuringSynchronousTurns(t *testing.T) {
 	require.Empty(t, notices.events)
 	require.Equal(t, entity.ItemRunState_Terminal, f.source().Current.Status)
 	require.Equal(t, entity.ExptItemResultStateResulted, f.source().Current.ResultState)
-
 }
 
 // A lock failure remains an error; only false,nil on a Processing source is
