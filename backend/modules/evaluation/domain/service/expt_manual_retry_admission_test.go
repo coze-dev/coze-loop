@@ -447,10 +447,14 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 			if kind == "wake_error" {
 				waker.err = errors.New("wake unavailable")
 			}
-			if enforce && kind != "preflight_capacity" && kind != "preflight_source_changed" {
+			if enforce && kind != "preflight_capacity" && kind != "preflight_source_changed" && kind != "db_error" && kind != "lost_during_preflight" {
+				attempts := 1
+				if kind == "release_error" {
+					attempts = retryTerminalReservationReleaseAttempts
+				}
 				guard.EXPECT().ReleaseTerminalReservation(gomock.Any(), "test-scope", oldRun, int64(11), oldToken).DoAndReturn(func(context.Context, string, int64, int64, string) (component.TerminalReservationReleaseResult, error) {
-					require.Equal(t, "preflight", port.calls[len(port.calls)-1])
-					port.calls = append(port.calls, "release")
+					// 释放只能发生在改排事务提交之后：提交回滚时账本不能被提前退还。
+					require.Equal(t, "commit", port.calls[len(port.calls)-1], "reservation released before requeue commit")
 					switch kind {
 					case "absent":
 						return component.TerminalReservationAbsent, nil
@@ -463,9 +467,12 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 						return component.TerminalReservationReleased, nil
 					}
 					return component.TerminalReservationReleased, nil
-				})
+				}).Times(attempts)
 			}
-			failures := kind == "lost_item_lock" || kind == "lock_state_changed" || kind == "release_error" || kind == "preflight_capacity" || kind == "db_error" || kind == "lost_during_preflight" || kind == "lost_after_release"
+			if enforce && (kind == "db_error" || kind == "lost_during_preflight") {
+				guard.EXPECT().ReleaseTerminalReservation(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			}
+			failures := kind == "lost_item_lock" || kind == "lock_state_changed" || kind == "preflight_capacity" || kind == "db_error" || kind == "lost_during_preflight"
 			publisher.EXPECT().PublishExptScheduleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			callerCtx, callerCancel := context.WithCancel(context.Background())
 			defer callerCancel()
@@ -483,11 +490,12 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 			_, parseErr := uuid.Parse(port.operationID)
 			require.NoError(t, parseErr)
 			expected := int32(1)
-			if kind == "item_busy" || kind == "mismatch" || kind == "preflight_source_changed" {
+			if kind == "item_busy" || kind == "preflight_source_changed" {
 				expected = 0
 			}
 			require.Equal(t, expected, got.AcceptedCount)
 			require.Positive(t, got.SnapshotAtMS)
+			// 释放不再写 port.calls，最后一条业务调用必须是改排事务。
 			require.Equal(t, "commit", port.calls[len(port.calls)-1])
 			if kind == "historical_receipt" {
 				require.Len(t, port.chunks, 1)
