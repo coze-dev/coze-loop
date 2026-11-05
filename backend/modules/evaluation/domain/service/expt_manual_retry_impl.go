@@ -212,7 +212,7 @@ func (m *ExptMangerImpl) prepareManualRetryTurns(ctx context.Context, expt *enti
 		// FailRetry 保留的历史成功 turn 仍属于旧 run，这是既有语义；
 		// 与 expt_current_result.go / expt_item_dispatch.go 的读侧规则保持一致。
 		if turn.ExptRunID != item.PreviousRunID &&
-			!(mode == entity.EvaluationModeFailRetry && entity.TurnRunState(turn.Status) == entity.TurnRunState_Success) {
+			(mode != entity.EvaluationModeFailRetry || entity.TurnRunState(turn.Status) != entity.TurnRunState_Success) {
 			return fmt.Errorf("invalid frozen retry turn")
 		}
 		ids = append(ids, turn.ID)

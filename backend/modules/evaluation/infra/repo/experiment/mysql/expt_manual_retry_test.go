@@ -435,7 +435,7 @@ func TestManualRetryMySQLFailRetryAllowsHistoricalSuccessTurn(t *testing.T) {
 	f := newManualRetryFixture(t)
 	historicalRunID := f.run - 1
 	updated := f.conn.Model(&model.ExptTurnResult{}).
-		Where("space_id=? AND expt_id=? AND item_id=? AND turn_id=? AND status=?", f.space, f.expt, 11, 1, int32(entity.TurnRunState_Success)).
+		Where("space_id=? AND expt_id=? AND item_id=? AND turn_id=? AND status=?", f.space, f.expt, 11, 22, int32(entity.TurnRunState_Success)).
 		Update("expt_run_id", historicalRunID)
 	require.NoError(t, updated.Error)
 	require.Equal(t, int64(1), updated.RowsAffected)
@@ -446,7 +446,7 @@ func TestManualRetryMySQLFailRetryAllowsHistoricalSuccessTurn(t *testing.T) {
 	require.Empty(t, receipt.RejectedItems)
 
 	var turn model.ExptTurnResult
-	require.NoError(t, f.conn.Where("space_id=? AND expt_id=? AND item_id=? AND turn_id=?", f.space, f.expt, 11, 1).Take(&turn).Error)
+	require.NoError(t, f.conn.Where("space_id=? AND expt_id=? AND item_id=? AND turn_id=?", f.space, f.expt, 11, 22).Take(&turn).Error)
 	require.Equal(t, int32(entity.TurnRunState_Success), turn.Status)
 	require.Equal(t, f.run, turn.ExptRunID)
 }
