@@ -24,6 +24,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
@@ -731,7 +732,7 @@ func (e *ExptSubmitExec) ScanEvalItems(ctx context.Context, event *entity.ExptSc
 
 func (e *ExptSubmitExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 {
-		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService, e.resultSvc)
 		pending, err := base.hasPendingAfterRescan(ctx, event)
 		if err != nil {
 			return false, err
@@ -1020,7 +1021,7 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 			return err
 		}
 
-		if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, plan.itemIDs, map[string]any{
+		if err := updateNewRunItemResults(ctx, e.manager, e.exptItemResultRepo, event, plan.itemIDs, map[string]any{
 			"err_msg":     nil,
 			"status":      int32(entity.ItemRunState_Queueing),
 			"expt_run_id": event.ExptRunID,
@@ -1131,7 +1132,7 @@ func (e *ExptFailRetryExec) ScanEvalItems(ctx context.Context, event *entity.Exp
 
 func (e *ExptFailRetryExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 {
-		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService, e.resultSvc)
 		pending, err := base.hasPendingAfterRescan(ctx, event)
 		if err != nil {
 			return false, err
@@ -1353,6 +1354,7 @@ func (e *ExptAppendExec) PublishResult(ctx context.Context, turnEvaluatorRefs []
 }
 
 type exptBaseExec struct {
+	resultSvc              ExptResultService
 	Manager                IExptManager
 	idem                   idem.IdempotentService
 	configer               component.IConfiger
@@ -1368,8 +1370,9 @@ func newExptBaseExec(
 	exptItemResultRepo repo.IExptItemResultRepo,
 	publisher events.ExptEventPublisher,
 	evaluatorRecordService EvaluatorRecordService,
+	resultSvc ...ExptResultService,
 ) *exptBaseExec {
-	return &exptBaseExec{
+	base := &exptBaseExec{
 		Manager:                manager,
 		idem:                   idem,
 		configer:               configer,
@@ -1377,25 +1380,59 @@ func newExptBaseExec(
 		evaluatorRecordService: evaluatorRecordService,
 		publisher:              publisher,
 	}
+	if len(resultSvc) > 0 {
+		base.resultSvc = resultSvc[0]
+	}
+	return base
 }
 
 func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (toSubmit, incomplete, complete []*entity.ExptEvalItem, err error) {
-	incomplete, complete, err = e.scanIncompleteAndComplete(ctx, event, expt)
+	rows, err := e.exptItemResultRepo.ScanCurrentRequests(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.Ext[entity.RetryYieldExtKey] == "true")
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, errno.WrapMQRetryErr(err)
 	}
-
-	if submitCnt := e.getItemConcurNum(ctx, expt) - len(incomplete); submitCnt > 0 {
-		toSubmit, err = e.scanToSubmit(ctx, event, expt, int64(submitCnt))
-		if err != nil {
-			return nil, nil, nil, err
+	candidates := make([]*entity.ExptEvalItem, 0)
+	toSubmit = make([]*entity.ExptEvalItem, 0)
+	incomplete = make([]*entity.ExptEvalItem, 0)
+	complete = make([]*entity.ExptEvalItem, 0)
+	for _, source := range rows {
+		if source == nil {
+			return nil, nil, nil, errno.NewMQRetryErr("nil current item source")
+		}
+		item := &entity.ExptEvalItem{ExptID: event.ExptID, EvalSetVersionID: expt.EvalSet.EvaluationSetVersion.ID, ItemID: source.ItemID, Publication: source.Publication, PublicationObserved: source.PublicationObserved, Source: source.Source, State: source.Status, RequestID: source.RequestID, Mode: source.Mode, RetryTimes: source.RetryTimes, UpdatedAt: source.UpdatedAt, ObservationUnstable: source.ObservationUnstable}
+		if source.ObservationUnstable {
+			// Preserve an active item's concurrency slot, but do not let a
+			// terminal row's transient mismatch keep the run incomplete forever.
+			if source.Status == entity.ItemRunState_Processing || source.QuotaReservationState.IsQuotaReserved() {
+				incomplete = append(incomplete, item)
+			}
+			continue
+		}
+		if source.Status == entity.ItemRunState_Processing || source.QuotaReservationState.IsQuotaReserved() {
+			incomplete = append(incomplete, item)
+		}
+		if source.ResultState == entity.ExptItemResultStateLogged {
+			complete = append(complete, item)
+		}
+		if source.Status == entity.ItemRunState_Queueing && !source.QuotaReservationState.IsQuotaReserved() {
+			candidates = append(candidates, item)
 		}
 	}
-
+	limit := e.getItemConcurNum(ctx, expt) - len(incomplete)
+	if limit > 0 {
+		if limit > len(candidates) {
+			limit = len(candidates)
+		}
+		toSubmit = append(toSubmit, candidates[:limit]...)
+	}
 	return toSubmit, incomplete, complete, nil
 }
 
 func (e *exptBaseExec) scanIncompleteAndComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (incomplete, complete []*entity.ExptEvalItem, err error) {
+	if _, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); ok {
+		_, incomplete, complete, err = e.ScanEvalItems(ctx, event, expt)
+		return incomplete, complete, err
+	}
 	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{
 		RawFilter: true,
 		RawCond:   clause.Expr{SQL: "status IN (?) OR result_state = ?", Vars: []interface{}{[]int32{int32(entity.ItemRunState_Processing)}, int32(entity.ExptItemResultStateLogged)}},
@@ -1481,6 +1518,49 @@ func (e *exptBaseExec) exptEnd(ctx context.Context, event *entity.ExptScheduleEv
 		return nil
 	}
 
+	if event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun && expt.ExptType != entity.ExptType_Online {
+		if calibration, ok := e.resultSvc.(ExptManualRetryFilterService); ok {
+			ready, err := reconcileManualRetryFilterBeforeFinish(ctx, calibration, event.SpaceID, event.ExptID, event.ExptRunID)
+			if err != nil {
+				return errno.WrapMQRetryErr(err)
+			}
+			if !ready {
+				return errno.NewMQRetryErr("manual retry filter calibration pending")
+			}
+		} else if _, current := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); current {
+			return errno.NewMQRetryErr("manual retry filter calibration service missing")
+		}
+	}
+
+	if event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun && expt.ExptType != entity.ExptType_Online {
+		if finish, ok := e.Manager.(IExptNaturalRunFinisher); ok {
+			result, err := finish.FinishCurrentRunWithHeldTickLock(ctx, event)
+			if err != nil {
+				return errno.WrapMQRetryErr(err)
+			}
+			if result == nil {
+				return errno.NewMQRetryErr("finish returned no disposition")
+			}
+			switch result.Disposition {
+			case entity.ExptRunFinishPending:
+				return errno.NewMQRetryErr("current run finish pending")
+			case entity.ExptRunFinishNonCurrent:
+				return nil
+			case entity.ExptRunFinishFinished, entity.ExptRunFinishAlreadyFinished:
+				duration := time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second * 2
+				if err := e.idem.Set(ctx, idemKey, duration); err != nil {
+					logs.CtxWarn(ctx, "finish end idem set failed: %v", err)
+				}
+				return nil
+			default:
+				return errno.NewMQRetryErr("invalid finish disposition")
+			}
+		}
+		if _, current := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); current {
+			return errno.NewMQRetryErr("current run finisher missing")
+		}
+	}
+
 	completeCID := fmt.Sprintf("exptexec:onend:%d", event.ExptRunID)
 	if err := e.Manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
 		return err
@@ -1515,6 +1595,18 @@ func (e *exptBaseExec) hasPendingAfterRescan(ctx context.Context, event *entity.
 		logs.CtxInfo(ctx, "[ExptEval] rescan before end found pending item, keep ticking, expt_id: %v, expt_run_id: %v, item_id: %v, status: %v",
 			event.ExptID, event.ExptRunID, rls[0].ItemID, rls[0].Status)
 		return true, nil
+	}
+	// Legacy test doubles do not implement the production current-result port.
+	// Production also rescans Logged so publication can retry before calibration.
+	if _, current := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); current {
+		logged := entity.ExptItemResultStateLogged
+		logs, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{ResultState: &logged}, 0, 1, event.SpaceID)
+		if err != nil {
+			return false, err
+		}
+		if len(logs) > 0 {
+			return true, nil
+		}
 	}
 	return false, nil
 }
@@ -1577,10 +1669,14 @@ func makeEndIdemKey(event *entity.ExptScheduleEvent) string {
 }
 
 type retryItemResetDeps struct {
+	manager                  IExptManager
 	evaluationSetItemService EvaluationSetItemService
 	exptItemResultRepo       repo.IExptItemResultRepo
 	exptTurnResultRepo       repo.IExptTurnResultRepo
+	exptStatsRepo            repo.IExptStatsRepo
+	exptRepo                 repo.IExperimentRepo
 	idgenerator              idgen.IIDGenerator
+	resultSvc                ExptResultService
 }
 
 func itemVersionIDPtr(versionID int64) *int64 {
@@ -1680,80 +1776,160 @@ func fetchEvaluationSetItemsByRefs(ctx context.Context, deps retryItemResetDeps,
 	return items, itemVersionByItemID, nil
 }
 
-func resetRetryRunLogsForItems(ctx context.Context, deps retryItemResetDeps, event *entity.ExptScheduleEvent, items []*entity.EvaluationSetItem, itemVersionByItemID map[int64]int64) ([]int64, error) {
-	if len(items) == 0 {
-		return nil, nil
-	}
-
+// legacyResetRetryItemsForNewRun keeps third-party repos without the atomic
+// extension compatible; the production manager and repo always use the path below.
+func legacyResetRetryItemsForNewRun(ctx context.Context, deps retryItemResetDeps, event *entity.ExptScheduleEvent, expt *entity.Experiment, unique map[int64]*entity.EvaluationSetItem, itemVersionByItemID map[int64]int64) error {
+	itemIDs := maps.ToSlice(unique, func(id int64, _ *entity.EvaluationSetItem) int64 { return id })
+	sort.Slice(itemIDs, func(i, j int) bool { return itemIDs[i] < itemIDs[j] })
 	turnCnt := 0
-	for _, item := range items {
+	for _, item := range unique {
 		turnCnt += len(item.Turns)
 	}
-
-	ids, err := deps.idgenerator.GenMultiIDs(ctx, len(items)+turnCnt)
+	itemResults, err := deps.exptItemResultRepo.MGetItemResults(ctx, event.ExptID, itemIDs, event.SpaceID)
 	if err != nil {
-		return nil, err
+		return err
+	}
+	ids, err := deps.idgenerator.GenMultiIDs(ctx, len(unique)+turnCnt)
+	if err != nil {
+		return err
+	}
+	resultByItemID := make(map[int64]*entity.ExptItemResult, len(itemResults))
+	for _, result := range itemResults {
+		if result != nil {
+			resultByItemID[result.ItemID] = result
+		}
 	}
 
-	idIdx := 0
-	itemIDs := make([]int64, 0, len(items))
-	itemIDSet := make(map[int64]bool, len(items))
+	itemRunLogs := make([]*entity.ExptItemResultRunLog, 0, len(itemIDs))
 	itemTurnIDs := make([]*entity.ItemTurnID, 0, turnCnt)
-	itemRunLogs := make([]*entity.ExptItemResultRunLog, 0, len(items))
-
-	for _, item := range items {
-		if item == nil {
-			continue
-		}
-		if !itemIDSet[item.ItemID] {
-			itemIDs = append(itemIDs, item.ItemID)
-			itemIDSet[item.ItemID] = true
-		}
+	for i, itemID := range itemIDs {
+		item := unique[itemID]
 		itemVersionID := gptr.Indirect(item.ItemVersionID)
 		if itemVersionID == 0 {
-			itemVersionID = itemVersionByItemID[item.ItemID]
+			itemVersionID = itemVersionByItemID[itemID]
+		}
+		if itemVersionID == 0 && resultByItemID[itemID] != nil {
+			itemVersionID = resultByItemID[itemID].ItemVersionID
 		}
 		itemRunLogs = append(itemRunLogs, &entity.ExptItemResultRunLog{
-			ID:            ids[idIdx],
-			SpaceID:       event.SpaceID,
-			ExptID:        event.ExptID,
-			ExptRunID:     event.ExptRunID,
-			ItemID:        item.ItemID,
-			ItemVersionID: itemVersionID,
-			Status:        int32(entity.ItemRunState_Queueing),
+			ID: ids[i], SpaceID: event.SpaceID, ExptID: event.ExptID, ExptRunID: event.ExptRunID,
+			ItemID: itemID, ItemVersionID: itemVersionID, Status: int32(entity.ItemRunState_Queueing),
 		})
-		idIdx++
-
 		for _, turn := range item.Turns {
-			itemTurnIDs = append(itemTurnIDs, &entity.ItemTurnID{ItemID: item.ItemID, TurnID: turn.ID})
+			itemTurnIDs = append(itemTurnIDs, &entity.ItemTurnID{ItemID: itemID, TurnID: turn.ID})
 		}
 	}
-
-	if len(itemIDs) == 0 {
-		return nil, nil
+	if err := startRetryMutation(ctx, deps.exptRepo, event, expt); err != nil {
+		return err
 	}
 	if err := deps.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, itemIDs, map[string]any{
-		"err_msg":     nil,
-		"status":      int32(entity.ItemRunState_Queueing),
-		"expt_run_id": event.ExptRunID,
+		"err_msg": nil, "status": int32(entity.ItemRunState_Queueing), "expt_run_id": event.ExptRunID,
 	}); err != nil {
-		return nil, err
+		return err
 	}
 	if err := deps.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
-		"err_msg":          nil,
-		"status":           int32(entity.TurnRunState_Queueing),
-		"target_result_id": int64(0),
-		"expt_run_id":      event.ExptRunID,
+		"err_msg": nil, "status": int32(entity.TurnRunState_Queueing), "target_result_id": int64(0), "expt_run_id": event.ExptRunID,
 	}); err != nil {
-		return nil, err
+		return err
 	}
 	if err := clearExptTurnRunLogResultRefsOnItems(ctx, deps.exptTurnResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, itemIDs); err != nil {
-		return nil, err
+		return err
 	}
 	if err := deps.exptItemResultRepo.BatchCreateNXRunLogs(ctx, itemRunLogs); err != nil {
-		return nil, err
+		return err
 	}
-	return itemIDs, nil
+
+	delta := make(map[entity.ItemRunState]int)
+	for _, result := range resultByItemID {
+		switch result.Status {
+		case entity.ItemRunState_Processing, entity.ItemRunState_Success, entity.ItemRunState_Fail, entity.ItemRunState_Terminal:
+			delta[result.Status]--
+			delta[entity.ItemRunState_Queueing]++
+		}
+	}
+	if len(delta) > 0 {
+		if err := deps.exptStatsRepo.ArithOperateCount(ctx, event.ExptID, event.SpaceID, &entity.StatsCntArithOp{OpStatusCnt: delta}); err != nil {
+			return err
+		}
+	}
+	if deps.resultSvc != nil {
+		if err := deps.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, itemIDs); err != nil {
+			logs.CtxError(ctx, "legacyResetRetryItemsForNewRun UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
+		}
+	}
+	return nil
+}
+
+func resetRetryItemsForNewRun(ctx context.Context, deps retryItemResetDeps, event *entity.ExptScheduleEvent, expt *entity.Experiment, items []*entity.EvaluationSetItem, itemVersionByItemID map[int64]int64) error {
+	unique := make(map[int64]*entity.EvaluationSetItem, len(items))
+	for _, item := range items {
+		if item != nil {
+			unique[item.ItemID] = item
+		}
+	}
+	if len(unique) == 0 {
+		return nil
+	}
+	guard, hasGuard := deps.manager.(IExptNewRunItemLocker)
+	resetter, hasResetter := deps.exptItemResultRepo.(repo.IExptRetryItemResetRepo)
+	if !hasGuard || !hasResetter {
+		if _, production := deps.manager.(*ExptMangerImpl); production {
+			return errno.NewMQRetryErr("retry item reset transaction provider missing")
+		}
+		return legacyResetRetryItemsForNewRun(ctx, deps, event, expt, unique, itemVersionByItemID)
+	}
+
+	type resetRequest struct {
+		runLog  *entity.ExptItemResultRunLog
+		turnIDs []int64
+	}
+	itemIDs := maps.ToSlice(unique, func(id int64, _ *entity.EvaluationSetItem) int64 { return id })
+	sort.Slice(itemIDs, func(i, j int) bool { return itemIDs[i] < itemIDs[j] })
+	turnCnt := 0
+	for _, item := range unique {
+		turnCnt += len(item.Turns)
+	}
+	ids, err := deps.idgenerator.GenMultiIDs(ctx, len(unique)+turnCnt)
+	if err != nil {
+		return err
+	}
+	requests := make(map[int64]resetRequest, len(unique))
+	for i, itemID := range itemIDs {
+		item := unique[itemID]
+		itemVersionID := gptr.Indirect(item.ItemVersionID)
+		if itemVersionID == 0 {
+			itemVersionID = itemVersionByItemID[itemID]
+		}
+		request := resetRequest{runLog: &entity.ExptItemResultRunLog{
+			ID: ids[i], SpaceID: event.SpaceID, ExptID: event.ExptID, ExptRunID: event.ExptRunID,
+			ItemID: itemID, ItemVersionID: itemVersionID, Status: int32(entity.ItemRunState_Queueing),
+		}}
+		for _, turn := range item.Turns {
+			request.turnIDs = append(request.turnIDs, turn.ID)
+		}
+		requests[itemID] = request
+	}
+
+	resetItemIDs := make([]int64, 0, len(itemIDs))
+	resetErr := guard.WithNewRunItemLocks(ctx, event.SpaceID, event.ExptID, event.ExptRunID, itemIDs, func(itemCtx context.Context, itemID int64) error {
+		request := requests[itemID]
+		applied, err := resetter.ResetItemForRetry(itemCtx, event.SpaceID, event.ExptID, event.ExptRunID, request.runLog, request.turnIDs)
+		if applied {
+			resetItemIDs = append(resetItemIDs, itemID)
+		}
+		return err
+	})
+
+	// All item locks have been released; refresh every committed reset even when
+	// a later item failed, so its old terminal filter cannot survive initialization.
+	if deps.resultSvc != nil && len(resetItemIDs) > 0 {
+		filterCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+		defer cancel()
+		if err := deps.resultSvc.UpsertExptTurnResultFilter(filterCtx, event.SpaceID, event.ExptID, resetItemIDs); err != nil {
+			logs.CtxError(ctx, "resetRetryItemsForNewRun UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
+		}
+	}
+	return resetErr
 }
 
 func NewExptRetryAllExec(
@@ -1817,6 +1993,33 @@ func (e *ExptRetryAllExec) Mode() entity.ExptRunMode {
 	return entity.EvaluationModeRetryAll
 }
 
+func (e *ExptRetryAllExec) retryResetDeps() retryItemResetDeps {
+	return retryItemResetDeps{
+		manager: e.manager, evaluationSetItemService: e.evaluationSetItemService,
+		exptItemResultRepo: e.exptItemResultRepo, exptTurnResultRepo: e.exptTurnResultRepo,
+		exptStatsRepo: e.exptStatsRepo, exptRepo: e.exptRepo, idgenerator: e.idgenerator, resultSvc: e.resultSvc,
+	}
+}
+
+func startRetryMutation(ctx context.Context, exptRepo repo.IExperimentRepo, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
+	if !entity.IsExptFinished(expt.Status) {
+		return nil
+	}
+	if err := exptRepo.Update(ctx, &entity.Experiment{Status: entity.ExptStatus_Processing, ID: event.ExptID, SpaceID: event.SpaceID}); err != nil {
+		return err
+	}
+	expt.Status = entity.ExptStatus_Processing
+	return nil
+}
+
+func finishRetryMutation(ctx context.Context, exptRepo repo.IExperimentRepo, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
+	if marker, ok := exptRepo.(repo.IExptRetryRunStatusRepo); ok {
+		_, err := marker.MarkRetryProcessing(ctx, event.SpaceID, event.ExptID, event.ExptRunID)
+		return err
+	}
+	return exptRepo.Update(ctx, &entity.Experiment{Status: entity.ExptStatus_Processing, ID: event.ExptID, SpaceID: event.SpaceID})
+}
+
 func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
 	idemKey := makeStartIdemKey(event)
 	exist, err := e.idem.Exist(ctx, idemKey)
@@ -1826,6 +2029,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 	if exist {
 		return nil
 	}
+
 	if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
 		return e.exptStartMultiSet(ctx, event, expt, idemKey)
 	}
@@ -1865,80 +2069,8 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		itemCnt += len(items)
 		pageToken = nextPageToken
 		total = gptr.Indirect(t)
-
-		turnCnt := 0
-		for _, item := range items {
-			turnCnt += len(item.Turns)
-		}
-
-		ids, err := e.idgenerator.GenMultiIDs(ctx, len(items)+turnCnt)
-		if err != nil {
+		if err := resetRetryItemsForNewRun(ctx, e.retryResetDeps(), event, expt, items, nil); err != nil {
 			return err
-		}
-
-		idIdx := 0
-		itemIDs := gslice.ToMap(items, func(t *entity.EvaluationSetItem) (int64, bool) { return t.ItemID, true })
-		itemTurnIDs := make([]*entity.ItemTurnID, 0, len(items))
-		// 平移 item_version_id: List 返回的 item 自带版本 (版本评测集真值, 无版本评测集为 0)。
-		// 新 run_log 必须带上, 否则 BuildExptRecordEvalCtx 兜底读到 0, 下游按 nil 版本查询报 601100201
-		// (item_version_id or item_version is required)。
-		itemVersionByItemID := make(map[int64]int64, len(items))
-		for _, item := range items {
-			itemVersionByItemID[item.ItemID] = gptr.Indirect(item.ItemVersionID)
-			for _, turn := range item.Turns {
-				itemIDs[item.ItemID] = true
-				itemTurnIDs = append(itemTurnIDs, &entity.ItemTurnID{
-					ItemID: item.ItemID,
-					TurnID: turn.ID,
-				})
-			}
-		}
-
-		itemRunLogs := make([]*entity.ExptItemResultRunLog, 0, len(itemIDs))
-		for itemID := range itemIDs {
-			itemRunLogs = append(itemRunLogs, &entity.ExptItemResultRunLog{
-				ID:            ids[idIdx],
-				SpaceID:       event.SpaceID,
-				ExptID:        event.ExptID,
-				ExptRunID:     event.ExptRunID,
-				ItemID:        itemID,
-				ItemVersionID: itemVersionByItemID[itemID],
-				Status:        int32(entity.ItemRunState_Queueing),
-			})
-			idIdx++
-		}
-
-		if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k }), map[string]any{
-			"err_msg":     nil,
-			"status":      int32(entity.ItemRunState_Queueing),
-			"expt_run_id": event.ExptRunID,
-		}); err != nil {
-			return err
-		}
-
-		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
-			"err_msg":          nil,
-			"status":           int32(entity.TurnRunState_Queueing),
-			"target_result_id": int64(0),
-			"expt_run_id":      event.ExptRunID,
-		}); err != nil {
-			return err
-		}
-
-		if err := clearExptTurnRunLogResultRefsOnItems(ctx, e.exptTurnResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k })); err != nil {
-			return err
-		}
-
-		if err := e.exptItemResultRepo.BatchCreateNXRunLogs(ctx, itemRunLogs); err != nil {
-			return err
-		}
-
-		// reset 后主动刷 CK expt_turn_result_filter,避免加速器读到重试前的旧终态
-		if e.resultSvc != nil {
-			pageItemIDs := maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k })
-			if ferr := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, pageItemIDs); ferr != nil {
-				logs.CtxError(ctx, "ExptRetryAllExec.ExptStart UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, ferr)
-			}
 		}
 
 		if (total > 0 && itemCnt >= int(total)) || len(items) == 0 || pageToken == nil || *pageToken == "" {
@@ -1948,31 +2080,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		time.Sleep(time.Millisecond * 30)
 	}
 
-	got, err := e.exptStatsRepo.Get(ctx, event.ExptID, event.SpaceID)
-	if err != nil {
-		return err
-	}
-
-	pendingCnt := got.PendingItemCnt + got.FailItemCnt + got.TerminatedItemCnt + got.ProcessingItemCnt + got.SuccessItemCnt
-	got.PendingItemCnt = pendingCnt
-	got.FailItemCnt = 0
-	got.TerminatedItemCnt = 0
-	got.ProcessingItemCnt = 0
-	got.SuccessItemCnt = 0
-
-	if err := e.exptStatsRepo.Save(ctx, got); err != nil {
-		return err
-	}
-
-	logs.CtxInfo(ctx, "ExptRetryAllExec.ExptStart reset pending_cnt: %v, expt_id: %v", pendingCnt, event.ExptID)
-
-	exptDo := &entity.Experiment{
-		Status:  entity.ExptStatus_Processing,
-		ID:      event.ExptID,
-		SpaceID: event.SpaceID,
-	}
-
-	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
+	if err := finishRetryMutation(ctx, e.exptRepo, event, expt); err != nil {
 		return err
 	}
 
@@ -2011,7 +2119,7 @@ func (e *ExptRetryAllExec) ScanEvalItems(ctx context.Context, event *entity.Expt
 
 func (e *ExptRetryAllExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 {
-		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService, e.resultSvc)
 		pending, err := base.hasPendingAfterRescan(ctx, event)
 		if err != nil {
 			return false, err
@@ -2087,13 +2195,7 @@ func (e *ExptRetryAllExec) exptStartMultiSet(ctx context.Context, event *entity.
 		return errorx.New("exptItemRefRepo is nil, cannot retry all multiset expt, expt_id=%d", event.ExptID)
 	}
 
-	deps := retryItemResetDeps{
-		evaluationSetItemService: e.evaluationSetItemService,
-		exptItemResultRepo:       e.exptItemResultRepo,
-		exptTurnResultRepo:       e.exptTurnResultRepo,
-		idgenerator:              e.idgenerator,
-	}
-
+	deps := e.retryResetDeps()
 	var cursor int64
 	const limit int64 = 100
 	for loop := 0; loop < 10000; loop++ {
@@ -2111,16 +2213,8 @@ func (e *ExptRetryAllExec) exptStartMultiSet(ctx context.Context, event *entity.
 		if err != nil {
 			return err
 		}
-		resetItemIDs, err := resetRetryRunLogsForItems(ctx, deps, event, items, itemVersionByItemID)
-		if err != nil {
+		if err := resetRetryItemsForNewRun(ctx, deps, event, expt, items, itemVersionByItemID); err != nil {
 			return err
-		}
-
-		// reset 后主动刷 CK expt_turn_result_filter,避免加速器读到重试前的旧终态
-		if e.resultSvc != nil && len(resetItemIDs) > 0 {
-			if ferr := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, resetItemIDs); ferr != nil {
-				logs.CtxError(ctx, "ExptRetryAllExec.exptStartMultiSet UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, ferr)
-			}
 		}
 
 		if nextCursor == 0 {
@@ -2130,21 +2224,7 @@ func (e *ExptRetryAllExec) exptStartMultiSet(ctx context.Context, event *entity.
 		time.Sleep(time.Millisecond * 30)
 	}
 
-	got, err := e.exptStatsRepo.Get(ctx, event.ExptID, event.SpaceID)
-	if err != nil {
-		return err
-	}
-	pendingCnt := got.PendingItemCnt + got.FailItemCnt + got.TerminatedItemCnt + got.ProcessingItemCnt + got.SuccessItemCnt
-	got.PendingItemCnt = pendingCnt
-	got.FailItemCnt = 0
-	got.TerminatedItemCnt = 0
-	got.ProcessingItemCnt = 0
-	got.SuccessItemCnt = 0
-	if err := e.exptStatsRepo.Save(ctx, got); err != nil {
-		return err
-	}
-
-	if err := e.exptRepo.Update(ctx, &entity.Experiment{Status: entity.ExptStatus_Processing, ID: event.ExptID, SpaceID: event.SpaceID}); err != nil {
+	if err := finishRetryMutation(ctx, e.exptRepo, event, expt); err != nil {
 		return err
 	}
 	if e.templateManager != nil {
@@ -2194,6 +2274,14 @@ func (e *ExptRetryItemsExec) Mode() entity.ExptRunMode {
 	return entity.EvaluationModeRetryItems
 }
 
+func (e *ExptRetryItemsExec) retryResetDeps() retryItemResetDeps {
+	return retryItemResetDeps{
+		manager: e.manager, evaluationSetItemService: e.evaluationSetItemService,
+		exptItemResultRepo: e.exptItemResultRepo, exptTurnResultRepo: e.exptTurnResultRepo,
+		exptStatsRepo: e.exptStatsRepo, exptRepo: e.exptRepo, idgenerator: e.idgenerator, resultSvc: e.resultSvc,
+	}
+}
+
 func (e *ExptRetryItemsExec) ExptStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
 	idemKey := makeStartIdemKey(event)
 	exist, err := e.idem.Exist(ctx, idemKey)
@@ -2208,11 +2296,7 @@ func (e *ExptRetryItemsExec) ExptStart(ctx context.Context, event *entity.ExptSc
 		return err
 	}
 
-	if err := e.exptRepo.Update(ctx, &entity.Experiment{
-		Status:  entity.ExptStatus_Processing,
-		ID:      event.ExptID,
-		SpaceID: event.SpaceID,
-	}); err != nil {
+	if err := finishRetryMutation(ctx, e.exptRepo, event, expt); err != nil {
 		return err
 	}
 
@@ -2245,12 +2329,8 @@ func (e *ExptRetryItemsExec) ExptStart(ctx context.Context, event *entity.ExptSc
 }
 
 func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, itemIDs []int64) error {
-	got, err := e.exptStatsRepo.Get(ctx, event.ExptID, event.SpaceID)
-	if err != nil {
-		return err
-	}
 	if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
-		return e.resetEvalItemsMultiSet(ctx, event, expt, itemIDs, got)
+		return e.resetEvalItemsMultiSet(ctx, event, expt, itemIDs)
 	}
 
 	var (
@@ -2258,7 +2338,7 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 		evalSetVersionID = expt.EvalSet.EvaluationSetVersion.ID
 		pageSize         = int32(100)
 	)
-
+	deps := e.retryResetDeps()
 	for _, chunk := range gslice.Chunk(itemIDs, int(pageSize)) {
 		logs.CtxInfo(ctx, "ExptRetryItemsExec.resetEvalItems scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, item_ids: %v",
 			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, chunk)
@@ -2273,122 +2353,16 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 		if err != nil {
 			return err
 		}
-
-		turnCnt := 0
-		for _, item := range items {
-			turnCnt += len(item.Turns)
-		}
-
-		ids, err := e.idgenerator.GenMultiIDs(ctx, len(items)+turnCnt)
-		if err != nil {
+		if err := resetRetryItemsForNewRun(ctx, deps, event, expt, items, nil); err != nil {
 			return err
 		}
-
-		idIdx := 0
-		itemIDMap := gslice.ToMap(items, func(t *entity.EvaluationSetItem) (int64, bool) { return t.ItemID, true })
-		itemTurnIDs := make([]*entity.ItemTurnID, 0, len(items))
-		for _, item := range items {
-			for _, turn := range item.Turns {
-				itemIDMap[item.ItemID] = true
-				itemTurnIDs = append(itemTurnIDs, &entity.ItemTurnID{
-					ItemID: item.ItemID,
-					TurnID: turn.ID,
-				})
-			}
-		}
-
-		irs, err := e.exptItemResultRepo.MGetItemResults(ctx, event.ExptID, chunk, event.SpaceID)
-		if err != nil {
-			return err
-		}
-
-		// 平移 item_version_id: 新 run_log 必须带上首次执行时冻结的 item 版本, 否则
-		// BuildExptRecordEvalCtx 兜底读到 0, 构造 ItemVersionQueries[*].ItemVersionID=nil,
-		// 下游 BatchGetDatasetItemsByVersion 校验拒绝 (biz err 601100201: item_version_id
-		// or item_version is required)。真值来源: expt_item_result.ItemVersionID。
-		itemVersionByItemID := make(map[int64]int64, len(irs))
-		for _, ir := range irs {
-			if ir == nil {
-				continue
-			}
-			itemVersionByItemID[ir.ItemID] = ir.ItemVersionID
-			switch ir.Status {
-			case entity.ItemRunState_Processing:
-				got.ProcessingItemCnt--
-				got.PendingItemCnt++
-			case entity.ItemRunState_Success:
-				got.SuccessItemCnt--
-				got.PendingItemCnt++
-			case entity.ItemRunState_Fail:
-				got.FailItemCnt--
-				got.PendingItemCnt++
-			case entity.ItemRunState_Terminal:
-				got.TerminatedItemCnt--
-				got.PendingItemCnt++
-			default:
-			}
-		}
-
-		itemRunLogs := make([]*entity.ExptItemResultRunLog, 0, len(itemIDMap))
-		for itemID := range itemIDMap {
-			itemRunLogs = append(itemRunLogs, &entity.ExptItemResultRunLog{
-				ID:            ids[idIdx],
-				SpaceID:       event.SpaceID,
-				ExptID:        event.ExptID,
-				ExptRunID:     event.ExptRunID,
-				ItemID:        itemID,
-				ItemVersionID: itemVersionByItemID[itemID],
-				Status:        int32(entity.ItemRunState_Queueing),
-			})
-			idIdx++
-		}
-
-		if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, maps.ToSlice(itemIDMap, func(k int64, v bool) int64 { return k }), map[string]any{
-			"err_msg":     nil,
-			"status":      int32(entity.ItemRunState_Queueing),
-			"expt_run_id": event.ExptRunID,
-		}); err != nil {
-			return err
-		}
-
-		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
-			"err_msg":          nil,
-			"status":           int32(entity.TurnRunState_Queueing),
-			"target_result_id": int64(0),
-			"expt_run_id":      event.ExptRunID,
-		}); err != nil {
-			return err
-		}
-
-		if err := clearExptTurnRunLogResultRefsOnItems(ctx, e.exptTurnResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, maps.ToSlice(itemIDMap, func(k int64, v bool) int64 { return k })); err != nil {
-			return err
-		}
-
-		if err := e.exptItemResultRepo.BatchCreateNXRunLogs(ctx, itemRunLogs); err != nil {
-			return err
-		}
-
-		// reset 后主动刷 CK expt_turn_result_filter,避免加速器读到重试前的旧终态
-		if e.resultSvc != nil {
-			pageItemIDs := maps.ToSlice(itemIDMap, func(k int64, v bool) int64 { return k })
-			if ferr := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, pageItemIDs); ferr != nil {
-				logs.CtxError(ctx, "ExptRetryItemsExec.resetEvalItems UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, ferr)
-			}
-		}
-
 		time.Sleep(time.Millisecond * 30)
 	}
-
-	if err := e.exptStatsRepo.Save(ctx, got); err != nil {
-		return err
-	}
-
-	logs.CtxInfo(ctx, "ExptRetryItemsExec.resetEvalItems reset stat: %v, expt_id: %v", json.Jsonify(got), event.ExptID)
 	time.Sleep(time.Second * 3)
 	return nil
 }
 
-func (e *ExptRetryItemsExec) resetEvalItemsMultiSet(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, itemIDs []int64, got *entity.ExptStats) error {
+func (e *ExptRetryItemsExec) resetEvalItemsMultiSet(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, itemIDs []int64) error {
 	if len(itemIDs) == 0 {
 		return nil
 	}
@@ -2396,12 +2370,7 @@ func (e *ExptRetryItemsExec) resetEvalItemsMultiSet(ctx context.Context, event *
 		return errorx.New("exptItemRefRepo is nil, cannot retry multiset items, expt_id=%d", event.ExptID)
 	}
 
-	deps := retryItemResetDeps{
-		evaluationSetItemService: e.evaluationSetItemService,
-		exptItemResultRepo:       e.exptItemResultRepo,
-		exptTurnResultRepo:       e.exptTurnResultRepo,
-		idgenerator:              e.idgenerator,
-	}
+	deps := e.retryResetDeps()
 	const pageSize = int32(100)
 	for _, chunk := range gslice.Chunk(itemIDs, int(pageSize)) {
 		refs, err := e.exptItemRefRepo.MGetByExptIDAndItemIDs(ctx, event.SpaceID, event.ExptID, chunk)
@@ -2418,46 +2387,11 @@ func (e *ExptRetryItemsExec) resetEvalItemsMultiSet(ctx context.Context, event *
 		if err != nil {
 			return err
 		}
-
-		irs, err := e.exptItemResultRepo.MGetItemResults(ctx, event.ExptID, chunk, event.SpaceID)
-		if err != nil {
+		if err := resetRetryItemsForNewRun(ctx, deps, event, expt, items, itemVersionByItemID); err != nil {
 			return err
-		}
-		for _, ir := range irs {
-			switch ir.Status {
-			case entity.ItemRunState_Processing:
-				got.ProcessingItemCnt--
-				got.PendingItemCnt++
-			case entity.ItemRunState_Success:
-				got.SuccessItemCnt--
-				got.PendingItemCnt++
-			case entity.ItemRunState_Fail:
-				got.FailItemCnt--
-				got.PendingItemCnt++
-			case entity.ItemRunState_Terminal:
-				got.TerminatedItemCnt--
-				got.PendingItemCnt++
-			default:
-			}
-		}
-
-		if _, err := resetRetryRunLogsForItems(ctx, deps, event, items, itemVersionByItemID); err != nil {
-			return err
-		}
-
-		// reset 后主动刷 CK expt_turn_result_filter,避免加速器读到重试前的旧终态
-		if e.resultSvc != nil && len(chunk) > 0 {
-			if ferr := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, chunk); ferr != nil {
-				logs.CtxError(ctx, "ExptRetryItemsExec.resetEvalItemsMultiSet UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, ferr)
-			}
 		}
 		time.Sleep(time.Millisecond * 30)
 	}
-
-	if err := e.exptStatsRepo.Save(ctx, got); err != nil {
-		return err
-	}
-	logs.CtxInfo(ctx, "ExptRetryItemsExec.resetEvalItemsMultiSet reset stat: %v, expt_id: %v", json.Jsonify(got), event.ExptID)
 	time.Sleep(time.Second * 3)
 	return nil
 }
@@ -2492,7 +2426,7 @@ func (e *ExptRetryItemsExec) ExptEnd(ctx context.Context, event *entity.ExptSche
 		}
 	}
 
-	base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+	base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService, e.resultSvc)
 	pending, err := base.hasPendingAfterRescan(ctx, event)
 	if err != nil {
 		return false, err
@@ -2524,8 +2458,39 @@ func (e *ExptRetryItemsExec) ScheduleStart(ctx context.Context, event *entity.Ex
 		}
 	}
 	event.ExecEvalSetItemIDs = all
+	if len(absence) == 0 {
+		return nil
+	}
+	if len(absence) > 0 {
+		items, err := e.exptItemResultRepo.BatchGet(contexts.WithCtxWriteDB(ctx), event.SpaceID, event.ExptID, absence)
+		if err != nil {
+			return err
+		}
+		materialized := make(map[int64]bool)
+		for _, item := range items {
+			if item == nil {
+				return fmt.Errorf("manual retry item missing")
+			}
+			retry, err := entity.ParseManualRetryContext(item.Ext)
+			if err != nil {
+				return err
+			}
+			if retry != nil && retry.RunID == event.ExptRunID && item.ExptRunID == event.ExptRunID && item.SpaceID == event.SpaceID && item.ExptID == event.ExptID {
+				materialized[item.ItemID] = true
+			}
+		}
+		remaining := make([]int64, 0, len(absence))
+		for _, id := range absence {
+			if !materialized[id] {
+				remaining = append(remaining, id)
+			}
+		}
+		if len(remaining) == 0 {
+			return nil
+		}
+		absence = remaining
+	}
 	logs.CtxInfo(ctx, "ExptRetryItemsExec.ScheduleStart found absent item_id: %v, expt_id: %v", absence, event.ExptID)
-
 	return e.resetEvalItems(ctx, event, expt, absence)
 }
 

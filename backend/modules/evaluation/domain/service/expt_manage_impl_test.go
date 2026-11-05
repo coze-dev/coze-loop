@@ -53,13 +53,15 @@ func newTestExptManager(ctrl *gomock.Controller) *ExptMangerImpl {
 	// 让位降权灰度开关: 运行发起处(Run/RetryItems/Invoke)会读一次写入 ext, 默认关闭。
 	configer.EXPECT().GetRetryYieldEnabled(gomock.Any(), gomock.Any()).Return(false).AnyTimes()
 
+	items := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	stubOriginalQuotaObservations(items)
 	return &ExptMangerImpl{
 		exptResultService:           svcMocks.NewMockExptResultService(ctrl),
 		exptAggrResultService:       svcMocks.NewMockExptAggrResultService(ctrl),
 		exptRepo:                    repoMocks.NewMockIExperimentRepo(ctrl),
 		runLogRepo:                  repoMocks.NewMockIExptRunLogRepo(ctrl),
 		statsRepo:                   repoMocks.NewMockIExptStatsRepo(ctrl),
-		itemResultRepo:              repoMocks.NewMockIExptItemResultRepo(ctrl),
+		itemResultRepo:              items,
 		turnResultRepo:              repoMocks.NewMockIExptTurnResultRepo(ctrl),
 		configer:                    configer,
 		quotaRepo:                   repoMocks.NewMockQuotaRepo(ctrl),
@@ -1791,6 +1793,7 @@ func TestNewExptManager(t *testing.T) {
 		component.NewNoopCentralSchedulerScopeProvider(),
 		component.NewNoopCentralAdmissionPolicy(),
 		component.NewNoopCentralReservationGuard(),
+		nil, nil, component.NewNoopCurrentRunSchedulerWaker(), nil,
 	)
 
 	impl, ok := mgr.(*ExptMangerImpl)

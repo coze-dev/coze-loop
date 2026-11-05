@@ -5,6 +5,7 @@ package application
 
 import (
 	"context"
+	standardjson "encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -1079,4 +1080,42 @@ func TestBuildItemStandardEvalOutput_FornaxSandboxLogURL(t *testing.T) {
 	t.Run("item 为 nil 时不 panic", func(t *testing.T) {
 		assert.Empty(t, sandboxLogURLFromItem(nil, 20))
 	})
+}
+
+func TestExperimentApplication_StandardOutputIgnoresRemovedSourceProtocol(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	results := servicemocks.NewMockExptResultService(ctrl)
+	manager := servicemocks.NewMockIExptManager(ctrl)
+	target := servicemocks.NewMockIEvalTargetService(ctrl)
+	app := &experimentApplication{auth: auth, resultSvc: results, manager: manager, evalTargetService: target}
+	target.EXPECT().GetEvalTarget(gomock.Any(), int64(200)).Return(&entity.EvalTarget{ID: 200, SpaceID: 1, SourceTargetID: "src-200"}, nil).Times(2)
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+	manager.EXPECT().GetDetail(gomock.Any(), int64(2), int64(1), gomock.Any()).Return(makeStandardEvalOutputExpt(2, 1), nil).Times(2)
+	results.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {
+		require.Equal(t, int64(1), param.SpaceID)
+		require.Equal(t, []int64{2}, param.ExptIDs)
+		require.Equal(t, []int64{4}, param.ItemIDs)
+		require.False(t, param.UseAccelerator)
+		require.True(t, param.FullTrajectory)
+		require.True(t, gptr.Indirect(param.LoadEvaluatorFullContent))
+		require.True(t, gptr.Indirect(param.LoadEvalTargetFullContent))
+		return makeStandardEvalOutputReportResult(2, 3, 4, 5, 0), nil
+	}).Times(2)
+	var original, extra exptpb.MGetExperimentStandardEvalOutputsRequest
+	require.NoError(t, json.Unmarshal([]byte(`{"workspace_id":1,"expt_id":2,"item_ids":[4]}`), &original))
+	require.NoError(t, json.Unmarshal([]byte(`{"workspace_id":1,"expt_id":2,"item_ids":[4],"expected_expt_run_id":99,"expected_request_id":"wrong-request","expected_source_turn_records":[{"turn_id":"0","target_record_id":"99"}],"source_only":true}`), &extra))
+	require.Equal(t, original, extra, "removed source fields cannot select a different standard result path")
+	expected, err := app.MGetExperimentStandardEvalOutputs(context.Background(), &original)
+	require.NoError(t, err)
+	actual, err := app.MGetExperimentStandardEvalOutputs(context.Background(), &extra)
+	require.NoError(t, err)
+	require.Equal(t, expected, actual)
+	require.Len(t, actual.Items, 1)
+	body, err := json.Marshal(actual.Items[0])
+	require.NoError(t, err)
+	var payload map[string]standardjson.RawMessage
+	require.NoError(t, json.Unmarshal(body, &payload))
+	require.NotContains(t, payload, "request_id")
+	require.NotContains(t, payload, "source_turn_records")
 }

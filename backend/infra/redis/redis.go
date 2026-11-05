@@ -42,6 +42,10 @@ func (p *provider) Exists(ctx context.Context, keys ...string) *redis.IntCmd {
 	return p.cli.Exists(ctx, keys...)
 }
 
+func (p *provider) TTL(ctx context.Context, key string) *redis.DurationCmd {
+	return p.cli.TTL(ctx, key)
+}
+
 func (p *provider) Decr(ctx context.Context, key string) *redis.IntCmd {
 	return p.cli.Decr(ctx, key)
 }

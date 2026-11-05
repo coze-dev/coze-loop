@@ -11,6 +11,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 func NewExptRunLogRepo(exptRunLogDAO mysql.IExptRunLogDAO) repo.IExptRunLogRepo {
@@ -23,12 +24,33 @@ type ExptRunLogImpl struct {
 	exptRunLogDAO mysql.IExptRunLogDAO
 }
 
+func (e *ExptRunLogImpl) AppendRunItemIDs(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDs []int64) error {
+	return e.exptRunLogDAO.AppendRunItemIDs(ctx, exptID, exptRunID, spaceID, itemIDs)
+}
+
+func (e *ExptRunLogImpl) UpdateRunStats(ctx context.Context, exptID, exptRunID, spaceID int64, run *entity.ExptRunLog, stats *entity.ExptStats) error {
+	fields := map[string]any{
+		"status": run.Status, "pending_cnt": run.PendingCnt, "processing_cnt": run.ProcessingCnt,
+		"success_cnt": run.SuccessCnt, "fail_cnt": run.FailCnt, "terminated_cnt": run.TerminatedCnt,
+		"credit_cost": run.CreditCost, "token_cost": run.TokenCost, "updated_at": time.Now(),
+	}
+	return e.exptRunLogDAO.UpdateRunStats(ctx, exptID, exptRunID, spaceID, fields, convert.NewExptStatsConverter().DO2PO(stats))
+}
+
 func (e *ExptRunLogImpl) Get(ctx context.Context, exptID, exptRunID int64) (*entity.ExptRunLog, error) {
 	po, err := e.exptRunLogDAO.Get(ctx, exptID, exptRunID)
 	if err != nil {
 		return nil, err
 	}
 	return convert.NewExptRunLogConvertor().PO2DO(po)
+}
+
+func (e *ExptRunLogImpl) MarkProcessingIfPending(ctx context.Context, exptID, runID, spaceID int64) (bool, error) {
+	marker, ok := e.exptRunLogDAO.(mysql.IExptRunActivationDAO)
+	if !ok {
+		return false, errorx.New("run activation DAO missing")
+	}
+	return marker.MarkProcessingIfPending(ctx, exptID, runID, spaceID)
 }
 
 func (e *ExptRunLogImpl) Create(ctx context.Context, exptRunLog *entity.ExptRunLog) error {

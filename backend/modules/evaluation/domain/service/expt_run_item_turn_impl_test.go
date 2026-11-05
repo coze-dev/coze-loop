@@ -2157,14 +2157,6 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_Async(t *testing.T) {
 				evalAsyncRepo:     mockEvalAsyncRepo,
 			}
 
-			if preRegister {
-				service.evalAsyncRepo = &preparingAsyncRepoTest{MockIEvalAsyncRepo: mockEvalAsyncRepo, prepare: func(_ context.Context, key string, actx *entity.EvalAsyncCtx) (bool, error) {
-					require.Equal(t, "9999", key)
-					require.Equal(t, int64(777), actx.Event.ExptRunID)
-					require.Equal(t, "callee-service", actx.Callee)
-					return true, nil
-				}}
-			}
 			spaceID := int64(42)
 			targetID := int64(101)
 			targetVersionID := int64(202)
@@ -2226,6 +2218,16 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_Async(t *testing.T) {
 				Ext: map[string]string{"ext-key": "ext-val"},
 			}
 
+			if preRegister {
+				service.evalAsyncRepo = &preparingAsyncRepoTest{MockIEvalAsyncRepo: mockEvalAsyncRepo, prepare: func(_ context.Context, key string, actx *entity.EvalAsyncCtx) (bool, error) {
+					require.Equal(t, "9999", key)
+					require.Equal(t, int64(777), actx.Event.ExptRunID)
+					require.Equal(t, "callee-service", actx.Callee)
+					assertIndependentTargetAsyncContext(t, etec.Event, actx)
+					return true, nil
+				}}
+			}
+
 			mockMetric.EXPECT().EmitTurnExecTargetResult(spaceID, false)
 
 			mockEvalTargetService.EXPECT().AsyncExecuteTarget(gomock.Any(), spaceID, targetID, targetVersionID, gomock.Any(), gomock.Any()).DoAndReturn(
@@ -2259,6 +2261,7 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_Async(t *testing.T) {
 						if assert.NotNil(t, actx) {
 							assert.Equal(t, "callee-service", actx.Callee)
 							assert.Equal(t, etec.Event, actx.Event)
+							assertIndependentTargetAsyncContext(t, etec.Event, actx)
 						}
 						return nil
 					},
@@ -5195,7 +5198,8 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluatorWithAlias_CustomRPC(t *
 			assert.Equal(t, entity.EvaluatorRecordSourceTypeBuiltin, req.SourceType)
 			assert.Same(t, runConf, req.EvaluatorRunConf)
 			require.NotNil(t, req.AsyncCtx)
-			assert.Same(t, etec.Event, req.AsyncCtx.Event)
+			assert.Equal(t, etec.Event, req.AsyncCtx.Event)
+			assert.NotSame(t, etec.Event, req.AsyncCtx.Event)
 			assert.False(t, req.AsyncCtx.ResumeReady)
 			return &entity.EvaluatorRecord{ID: 7, EvaluatorVersionID: 101, Alias: "judge_a", Status: entity.EvaluatorRunStatusAsyncInvoking}, nil
 		},
@@ -5344,7 +5348,8 @@ func TestDefaultExptTurnEvaluationImpl_AsyncTargetCallbackRunsMixedEvaluators(t 
 			require.True(t, isAgent || isCustomRPC, "async evaluator %d must be Agent or CustomRPC", req.EvaluatorVersionID)
 			require.Equal(t, "ppe_trae_work_async_evaluator", gptr.Indirect(req.EvaluatorRunConf.Env))
 			require.NotNil(t, req.AsyncCtx)
-			require.Same(t, event, req.AsyncCtx.Event)
+			require.Equal(t, event, req.AsyncCtx.Event)
+			require.NotSame(t, event, req.AsyncCtx.Event)
 			require.False(t, req.AsyncCtx.ResumeReady)
 			return &entity.EvaluatorRecord{ID: 1000 + req.EvaluatorVersionID, EvaluatorVersionID: req.EvaluatorVersionID, Status: entity.EvaluatorRunStatusAsyncInvoking}, nil
 		},

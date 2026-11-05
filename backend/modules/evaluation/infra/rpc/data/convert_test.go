@@ -15,6 +15,123 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
+func TestConvert2EvaluationSetItemReadTurns(t *testing.T) {
+	ctx := context.Background()
+	singular := []*dataset.FieldData{{
+		Key: gptr.Of("case"), Name: gptr.Of("case"),
+		ContentType: gptr.Of(dataset.ContentType_Text), Format: gptr.Of(dataset.FieldDisplayFormat_PlainText),
+		Content: gptr.Of("legacy"),
+	}}
+	repeated := []*dataset.ItemData{
+		{ID: gptr.Of(int64(1)), Data: []*dataset.FieldData{{
+			Key: gptr.Of("case"), Name: gptr.Of("case"),
+			ContentType: gptr.Of(dataset.ContentType_Text), Format: gptr.Of(dataset.FieldDisplayFormat_PlainText),
+			Content: gptr.Of("S"), TraceID: gptr.Of("trace-1"),
+		}}},
+		{ID: gptr.Of(int64(2)), Data: []*dataset.FieldData{{
+			Key: gptr.Of("case"), Name: gptr.Of("case"),
+			ContentType: gptr.Of(dataset.ContentType_Text), Format: gptr.Of(dataset.FieldDisplayFormat_PlainText),
+			Content: gptr.Of("A"), TraceID: gptr.Of("trace-2"),
+		}}},
+	}
+	wantRepeated := []*entity.Turn{
+		{
+			ID: 1, ItemID: 7590130073438429442, EvalSetID: 7590130228007518722,
+			FieldDataList: []*entity.FieldData{{
+				Key: "case", Name: "case", TraceID: "trace-1",
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentTypeText),
+					Format:      gptr.Of(entity.PlainText), Text: gptr.Of("S"),
+				},
+			}},
+		},
+		{
+			ID: 2, ItemID: 7590130073438429442, EvalSetID: 7590130228007518722,
+			FieldDataList: []*entity.FieldData{{
+				Key: "case", Name: "case", TraceID: "trace-2",
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentTypeText),
+					Format:      gptr.Of(entity.PlainText), Text: gptr.Of("A"),
+				},
+			}},
+		},
+	}
+	wantSingular := []*entity.Turn{{
+		ID: 0, ItemID: 7590130073438429442, EvalSetID: 7590130228007518722,
+		FieldDataList: []*entity.FieldData{{
+			Key: "case", Name: "case",
+			Content: &entity.Content{
+				ContentType: gptr.Of(entity.ContentTypeText),
+				Format:      gptr.Of(entity.PlainText), Text: gptr.Of("legacy"),
+			},
+		}},
+	}}
+	tests := []struct {
+		name     string
+		data     []*dataset.FieldData
+		repeated []*dataset.ItemData
+		want     []*entity.Turn
+	}{
+		{name: "repeated_data_only", repeated: repeated, want: wantRepeated},
+		{name: "repeated_data_takes_precedence", data: singular, repeated: repeated, want: wantRepeated},
+		{name: "nil_turn_is_skipped", repeated: []*dataset.ItemData{repeated[0], nil, repeated[1]}, want: wantRepeated},
+		{name: "all_nil_turns_do_not_fall_back", data: singular, repeated: []*dataset.ItemData{nil}, want: []*entity.Turn{}},
+		{
+			name: "empty_turn_keeps_original_id", repeated: []*dataset.ItemData{{ID: gptr.Of(int64(7))}},
+			want: []*entity.Turn{{ID: 7, ItemID: 7590130073438429442, EvalSetID: 7590130228007518722, FieldDataList: []*entity.FieldData{}}},
+		},
+		{
+			name: "nil_field_is_preserved", repeated: []*dataset.ItemData{{ID: gptr.Of(int64(9)), Data: []*dataset.FieldData{nil}}},
+			want: []*entity.Turn{{ID: 9, ItemID: 7590130073438429442, EvalSetID: 7590130228007518722, FieldDataList: []*entity.FieldData{nil}}},
+		},
+		{name: "single_turn_id_zero_is_unchanged", data: singular, want: wantSingular},
+		{name: "empty_repeated_data_falls_back", data: singular, repeated: []*dataset.ItemData{}, want: wantSingular},
+		{name: "no_data_returns_nil"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			item := &dataset.DatasetItem{
+				ID: gptr.Of(int64(9001)), AppID: gptr.Of(int32(566307)),
+				SpaceID: gptr.Of(int64(7372107779483369483)), DatasetID: gptr.Of(int64(7590130228007518722)),
+				SchemaID: gptr.Of(int64(9002)), ItemID: gptr.Of(int64(7590130073438429442)),
+				ItemKey: gptr.Of("mt-A"), Data: tt.data, RepeatedData: tt.repeated,
+				CreatedBy: gptr.Of("creator"), UpdatedBy: gptr.Of("updater"),
+				CreatedAt: gptr.Of(int64(1792718993000)), UpdatedAt: gptr.Of(int64(1792718994000)),
+			}
+			got := convert2EvaluationSetItem(ctx, item)
+			if got == nil {
+				t.Fatal("item conversion returned nil")
+			}
+			if len(got.Turns) != len(tt.want) {
+				t.Fatalf("turn count: want %d, got %d", len(tt.want), len(got.Turns))
+			}
+			assert.Equal(t, &entity.EvaluationSetItem{
+				ID: 9001, AppID: 566307, SpaceID: 7372107779483369483,
+				EvaluationSetID: 7590130228007518722, SchemaID: 9002,
+				ItemID: 7590130073438429442, ItemKey: "mt-A", Turns: tt.want,
+				BaseInfo: &entity.BaseInfo{
+					CreatedBy: &entity.UserInfo{UserID: gptr.Of("creator")},
+					UpdatedBy: &entity.UserInfo{UserID: gptr.Of("updater")},
+					CreatedAt: gptr.Of(int64(1792718993000)), UpdatedAt: gptr.Of(int64(1792718994000)),
+				},
+			}, got)
+		})
+	}
+	t.Run("nil_item_and_batch_entry_remain_nil", func(t *testing.T) {
+		assert.Nil(t, convert2EvaluationSetItem(ctx, nil))
+		assert.Nil(t, convert2EvaluationSetItems(ctx, nil))
+		got := convert2EvaluationSetItems(ctx, []*dataset.DatasetItem{nil, {
+			ItemID:    gptr.Of(int64(7590130073438429442)),
+			DatasetID: gptr.Of(int64(7590130228007518722)), RepeatedData: repeated,
+		}})
+		if len(got) != 2 || got[1] == nil {
+			t.Fatal("batch conversion did not preserve both entries")
+		}
+		assert.Nil(t, got[0])
+		assert.Equal(t, wantRepeated, got[1].Turns)
+	})
+}
+
 func TestConvert2EvaluationSetFieldData(t *testing.T) {
 	ctx := context.Background()
 

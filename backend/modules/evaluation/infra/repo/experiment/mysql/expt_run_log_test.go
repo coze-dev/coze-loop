@@ -66,3 +66,24 @@ func TestExptRunLogDAO_Update_OnlyMatchingLiveRun(t *testing.T) {
 		require.Equal(t, want, *got[i].Status, "run log id=%d", got[i].ID)
 	}
 }
+
+// Get 在 exptID 未知（<=0）时必须只按 run id 查：destroy 链路用 Get(0, runID) 反查 expt 作为 sandbox taskID，
+// 若这里要求 expt_id 相等，查询恒空会让 taskID 变空串、双沙箱的 -orch 销毁请求被丢弃（沙箱泄漏）。
+func TestExptRunLogDAO_Get_ByRunIDOnlyWhenExptUnknown(t *testing.T) {
+	sqlDB, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlDB.Close() })
+
+	provider, err := db.NewDB(mysql.New(mysql.Config{Conn: sqlDB, SkipInitializeWithVersion: true}),
+		&gorm.Config{SkipDefaultTransaction: true})
+	require.NoError(t, err)
+
+	mock.ExpectQuery("SELECT \\* FROM `expt_run_log` WHERE id = \\? AND `expt_run_log`.`deleted_at` IS NULL").
+		WithArgs(int64(456), 1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "expt_id", "expt_run_id"}).AddRow(456, 123, 456))
+
+	got, err := NewExptRunLogDAO(provider).Get(context.Background(), 0, 456)
+	require.NoError(t, err)
+	require.Equal(t, int64(123), got.ExptID)
+	require.NoError(t, mock.ExpectationsWereMet())
+}

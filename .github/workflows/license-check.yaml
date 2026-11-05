@@ -19,11 +19,14 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.23
+          # Newer than both backend/go.mod and license-eye's own requirement, so
+          # no toolchain has to be downloaded at run time.
+          go-version: '1.25.3'
+          cache-dependency-path: backend/go.sum
 
       - name: Install license-eye
         run: |
-          go install github.com/apache/skywalking-eyes/cmd/license-eye@main
+          go install github.com/apache/skywalking-eyes/cmd/license-eye@v0.9.0
 
       - name: Checkout
         uses: actions/checkout@v4

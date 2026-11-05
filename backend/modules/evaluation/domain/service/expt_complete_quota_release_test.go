@@ -17,6 +17,7 @@ import (
 	metricsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 )
@@ -49,7 +50,27 @@ func stubIncompleteItems(t *testing.T, ctrl *gomock.Controller, itemIDs ...int64
 	repo.EXPECT().
 		ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(logs, int64(len(logs)), nil).AnyTimes()
+	stubOriginalQuotaObservations(repo)
 	return repo
+}
+
+// Original non-manual fixtures observe empty request IDs explicitly.
+func stubOriginalQuotaObservations(items *repoMocks.MockIExptItemResultRepo) {
+	items.EXPECT().ScanIncompleteDispatchObservations(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, space, expt, run int64) ([]*repo.ExptDispatchObservation, error) {
+		logs, _, err := items.ScanItemRunLogs(ctx, expt, run, &entity.ExptItemRunLogFilter{Status: []entity.ItemRunState{entity.ItemRunState_Queueing, entity.ItemRunState_Processing}}, 0, 0, space)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]*repo.ExptDispatchObservation, 0, len(logs))
+		seen := map[int64]bool{}
+		for _, log := range logs {
+			if log != nil && !seen[log.ItemID] {
+				seen[log.ItemID] = true
+				out = append(out, &repo.ExptDispatchObservation{ItemID: log.ItemID, Status: log.Status})
+			}
+		}
+		return out, nil
+	}).AnyTimes()
 }
 
 func enforceExpt() *entity.Experiment {
@@ -139,6 +160,7 @@ func TestReleaseCentralQuota_ScanFailDoesNotGuessItems(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	stubOriginalQuotaObservations(repo)
 	repo.EXPECT().
 		ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, int64(0), assert.AnError).AnyTimes()
@@ -283,6 +305,7 @@ func TestReleaseCentralQuotaForIncompleteItems_NoopOnEmptyInputs(t *testing.T) {
 		repo.EXPECT().
 			ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return([]*entity.ExptItemResultRunLog{nil, {ItemID: 11}, nil}, int64(3), nil).AnyTimes()
+		stubOriginalQuotaObservations(repo)
 
 		guard := &fakeGuard{}
 		svc := &ExptMangerImpl{centralGuard: guard, itemResultRepo: repo}
