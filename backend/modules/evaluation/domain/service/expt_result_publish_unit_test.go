@@ -695,7 +695,7 @@ func TestUpsertExptTurnResultFilterUnit(t *testing.T) {
 		items := repomocks.NewMockIExptItemResultRepo(ctrl)
 		locker := lockmocks.NewMockILocker(ctrl)
 		ctx, cancel := context.WithCancel(context.Background())
-		locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ string, _ any, _ any) (bool, context.Context, func(), error) {
+		locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ string, _, _ any) (bool, context.Context, func(), error) {
 			cancel()
 			return true, ctx, func() {}, nil
 		})

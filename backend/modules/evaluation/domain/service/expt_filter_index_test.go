@@ -69,13 +69,16 @@ func (r *filterIndexTestRepo) SnapshotPlan(context.Context, []int64) (*entity.Ex
 	r.snapshots++
 	return r.plan.Clone(), r.err
 }
+
 func (r *filterIndexTestRepo) SaveIndex(context.Context, []*entity.ExptTurnResultFilterEntity, *entity.ExptFilterPlan, entity.ExptFilterOperation) error {
 	return r.err
 }
+
 func (r *filterIndexTestRepo) ReadIndex(_ context.Context, target entity.ExptFilterTarget, _ entity.ExptFilterReadQuery) ([]*entity.ExptFilterRow, error) {
 	r.reads = append(r.reads, target)
 	return r.rows[target], r.err
 }
+
 func (r *filterIndexTestRepo) ScanIndexKeys(context.Context, entity.ExptFilterTarget, *entity.ExptFilterTargetCursor, int) ([]entity.ExptFilterStoredKey, *entity.ExptFilterTargetCursor, error) {
 	return nil, nil, r.err
 }

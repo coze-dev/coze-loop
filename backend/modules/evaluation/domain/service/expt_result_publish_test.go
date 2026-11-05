@@ -456,7 +456,7 @@ func TestResultPublishLockCancellationNoWrites(t *testing.T) {
 				cancel()
 				ctx = child
 			} else {
-				locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, _ string, _ time.Duration, _ time.Duration) (bool, context.Context, func(), error) {
+				locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, _ string, _, _ time.Duration) (bool, context.Context, func(), error) {
 					if kind == "busy" {
 						return false, ctx, func() {}, nil
 					}

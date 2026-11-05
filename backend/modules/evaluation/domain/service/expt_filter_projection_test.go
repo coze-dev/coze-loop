@@ -63,6 +63,7 @@ func (r projectionTurnRepo) ListTurnResultByItemIDs(ctx context.Context, space, 
 	}
 	return r.f.turns[start:end], int64(len(r.f.turns)), nil
 }
+
 func (r projectionTurnRepo) BatchGetTurnEvaluatorResultRef(ctx context.Context, space int64, ids []int64) ([]*entity.ExptTurnEvaluatorResultRef, error) {
 	return r.f.evaluatorRefs, r.f.read(ctx, "evaluator_refs")
 }
@@ -102,9 +103,11 @@ type projectionAnnotateRepo struct {
 func (r projectionAnnotateRepo) GetExptTurnResultTagRefs(ctx context.Context, expt, space int64) ([]*entity.ExptTurnResultTagRef, error) {
 	return r.f.tags, r.f.read(ctx, "tag_refs")
 }
+
 func (r projectionAnnotateRepo) GetExptTurnAnnotateRecordRefsByTurnResultIDs(ctx context.Context, space int64, ids []int64) ([]*entity.ExptTurnAnnotateRecordRef, error) {
 	return r.f.annotationRefs, r.f.read(ctx, "annotation_refs")
 }
+
 func (r projectionAnnotateRepo) GetAnnotateRecordsByIDs(ctx context.Context, space int64, ids []int64) ([]*entity.AnnotateRecord, error) {
 	return r.f.annotations, r.f.read(ctx, "annotations")
 }
@@ -129,6 +132,7 @@ func (r projectionEvaluatorService) BatchGetEvaluatorRecord(ctx context.Context,
 	require.False(r.f.t, full, "index must use stored preview")
 	return r.f.evaluators, r.f.read(ctx, "evaluators")
 }
+
 func (f *projectionFixture) read(ctx context.Context, stage string) error {
 	require.True(f.t, contexts.CtxWriteDB(ctx), "projection must read primary: "+stage)
 	if stage == f.fail {
@@ -136,9 +140,11 @@ func (f *projectionFixture) read(ctx context.Context, stage string) error {
 	}
 	return nil
 }
+
 func (f *projectionFixture) service() ExptResultServiceImpl {
 	return ExptResultServiceImpl{ExperimentRepo: projectionExperimentRepo{f: f}, ExptTurnResultRepo: projectionTurnRepo{f: f}, ExptItemResultRepo: projectionItemRepo{f: f}, exptItemRefRepo: projectionRefRepo{f: f}, exptTurnResultFilterRepo: projectionFilterRepo{f: f}, ExptAnnotateRepo: projectionAnnotateRepo{f: f}, evalTargetService: projectionTargetService{f: f}, evaluatorRecordService: projectionEvaluatorService{f: f}, scoreCalculator: NewEvaluatorScoreCalculator(nil, nil)}
 }
+
 func newProjectionFixture(t *testing.T) *projectionFixture {
 	date := time.Date(2025, 2, 3, 23, 30, 0, 0, time.FixedZone("test", 8*3600))
 	empty := ""
@@ -146,7 +152,8 @@ func newProjectionFixture(t *testing.T) *projectionFixture {
 	zero := 0.0
 	one := 1.0
 	latency := int64(1501)
-	return &projectionFixture{t: t,
+	return &projectionFixture{
+		t:              t,
 		expt:           &entity.Experiment{ID: 2, SpaceID: 1, StartAt: &date, ExptType: entity.ExptType_Offline, EvalSetID: 20, EvalSetVersionID: 21, TargetSpaceID: 9, EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig, EvalConf: &entity.EvaluationConfiguration{EvalSetConfigs: []*entity.EvalSetConfig{{EvalSetID: 20, EvalSetVersionID: 21, SourceSpaceID: 8}, {EvalSetID: 30, EvalSetVersionID: 31, SourceSpaceID: 8}}}},
 		turns:          []*entity.ExptTurnResult{{ID: 10, SpaceID: 1, ExptID: 2, ItemID: 3, TurnID: 0, ExptRunID: 4, TargetResultID: 50}},
 		items:          []*entity.ExptItemResult{{ID: 11, SpaceID: 1, ExptID: 2, ItemID: 3, ItemIdx: 0, Status: entity.ItemRunState_Success}},
@@ -160,6 +167,7 @@ func newProjectionFixture(t *testing.T) *projectionFixture {
 		annotations:    []*entity.AnnotateRecord{{ID: 90, SpaceID: 1, ExperimentID: 2, TagKeyID: 80, AnnotateData: &entity.AnnotateData{TagContentType: entity.TagContentTypeContinuousNumber, Score: &zero}}, {ID: 91, SpaceID: 1, ExperimentID: 2, TagKeyID: 81, AnnotateData: &entity.AnnotateData{TagContentType: entity.TagContentTypeFreeText, TextValue: &empty}}, {ID: 92, SpaceID: 1, ExperimentID: 2, TagKeyID: 82, TagValueID: 83, AnnotateData: &entity.AnnotateData{TagContentType: entity.TagContentTypeBoolean}}},
 	}
 }
+
 func TestBuildExptFilterProjectionKeepsCompleteInstancesAndPresentZero(t *testing.T) {
 	f := newProjectionFixture(t)
 	s := f.service()
@@ -183,6 +191,7 @@ func TestBuildExptFilterProjectionKeepsCompleteInstancesAndPresentZero(t *testin
 	require.Equal(t, "preview", r.EvalTargetData["custom"])
 	require.Equal(t, 1.0, r.EvaluatorScore["key12"])
 }
+
 func TestBuildExptFilterProjectionRejectsIncompleteSources(t *testing.T) {
 	cases := map[string]func(*projectionFixture){
 		"missing experiment": func(f *projectionFixture) { f.expt = nil }, "missing start date": func(f *projectionFixture) { f.expt.StartAt = nil }, "missing item": func(f *projectionFixture) { f.items = nil }, "wrong item ownership": func(f *projectionFixture) { f.items[0].SpaceID = 99 },
@@ -201,6 +210,7 @@ func TestBuildExptFilterProjectionRejectsIncompleteSources(t *testing.T) {
 		})
 	}
 }
+
 func TestBuildExptFilterProjectionReturnsReadFailure(t *testing.T) {
 	for _, stage := range []string{"experiment", "turns", "items", "item_refs", "mappings", "evaluator_refs", "evaluators", "targets", "tag_refs", "annotation_refs", "annotations"} {
 		t.Run(stage, func(t *testing.T) {
@@ -213,6 +223,7 @@ func TestBuildExptFilterProjectionReturnsReadFailure(t *testing.T) {
 		})
 	}
 }
+
 func TestBuildExptFilterProjectionDistinguishesAbsentFromEmptyAndUnboundTags(t *testing.T) {
 	f := newProjectionFixture(t)
 	f.targets[0].EvalTargetOutputData.OutputFields = nil
@@ -234,6 +245,7 @@ func TestBuildExptFilterProjectionDistinguishesAbsentFromEmptyAndUnboundTags(t *
 	*f.turns[0].WeightedScore = 8
 	require.Equal(t, 0.0, *r.EvaluatorWeightedScore)
 }
+
 func TestBuildExptFilterProjectionInputAndEmptyBoundaries(t *testing.T) {
 	s := ExptResultServiceImpl{}
 	for _, ids := range [][]int64{nil, {0}, make([]int64, 101)} {
@@ -251,6 +263,7 @@ func TestBuildExptFilterProjectionInputAndEmptyBoundaries(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, rows)
 }
+
 func TestBuildExptFilterProjectionReadsAllTurnsWithoutMutatingSource(t *testing.T) {
 	f := newProjectionFixture(t)
 	f.targets = nil
@@ -285,6 +298,7 @@ func TestBuildExptFilterProjectionRetainsValidReusedAndSharedRecords(t *testing.
 	_, err = s.BuildExptFilterProjection(context.Background(), 1, 2, []int64{3})
 	require.Error(t, err)
 }
+
 func TestBuildExptFilterProjectionDoesNotInventInlineMappings(t *testing.T) {
 	f := newProjectionFixture(t)
 	score := 0.9
@@ -296,6 +310,7 @@ func TestBuildExptFilterProjectionDoesNotInventInlineMappings(t *testing.T) {
 	require.Equal(t, map[string]float64{"key11": 0, "key12": 1}, rows[0].EvaluatorScore)
 	require.Equal(t, 0.5, *rows[0].EvaluatorWeightedScore)
 }
+
 func TestBuildExptFilterProjectionCorrectionAndTargetVersion(t *testing.T) {
 	t.Run("explanation-only correction retains missing score", func(t *testing.T) {
 		f := newProjectionFixture(t)
@@ -325,6 +340,7 @@ type projectionHookConfig struct {
 func (c projectionHookConfig) GetExptTurnScoreHookConf(context.Context, int64, int64, []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool) {
 	return &entity.ExptTurnScoreHookConf{URL: "unused"}, c.hit
 }
+
 func TestBuildExptFilterProjectionNeverRunsExternalScoreHook(t *testing.T) {
 	f := newProjectionFixture(t)
 	s := f.service()
@@ -343,6 +359,7 @@ func TestBuildExptFilterProjectionNeverRunsExternalScoreHook(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, rows[0].EvaluatorWeightedScore)
 }
+
 func TestBuildExptFilterProjectionUsesInstanceWeights(t *testing.T) {
 	f := newProjectionFixture(t)
 	three, one := 3.0, 1.0
@@ -354,6 +371,7 @@ func TestBuildExptFilterProjectionUsesInstanceWeights(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0.25, *rows[0].EvaluatorWeightedScore)
 }
+
 func TestBuildExptFilterProjectionOnlineAndLegacyDatasetVersions(t *testing.T) {
 	t.Run("online always draft", func(t *testing.T) {
 		f := newProjectionFixture(t)
