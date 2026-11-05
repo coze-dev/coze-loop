@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	looplogs "github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 // currentSourceInconsistentError marks a deterministic inconsistency in one
@@ -472,7 +473,13 @@ func (dao *exptItemResultDAOImpl) CompleteCurrentItemRun(ctx context.Context, so
 				if from == "" || to == "" {
 					return fmt.Errorf("invalid completion stats source")
 				}
-				if err := tx.Model(&model.ExptStats{}).Where("id=? AND space_id=? AND expt_id=?", stats.ID, c.SpaceID, c.ExptID).Updates(map[string]any{from: gorm.Expr(from + "-1"), to: gorm.Expr(to + "+1")}).Error; err != nil {
+				// 旧链路计数可能漂移（见 b0b19095）：条目状态与 expt_stats 不再一一对应时，
+				// 这里的 -1 会把计数写成负数并外播到 progress/webhook。状态 CAS 仍是防双跑闸门，
+				// 计数只 clamp + 告警，最终由 CompleteExpt 的全量重算兜底。
+				if prior == entity.ItemRunState_Queueing && stats.PendingCnt <= 0 || prior == entity.ItemRunState_Processing && stats.ProcessingCnt <= 0 {
+					looplogs.CtxWarn(ctx, "legacy completion stats drift: space_id=%d expt_id=%d item_id=%d prior=%d pending_cnt=%d processing_cnt=%d", c.SpaceID, c.ExptID, c.ItemID, prior, stats.PendingCnt, stats.ProcessingCnt)
+				}
+				if err := tx.Model(&model.ExptStats{}).Where("id=? AND space_id=? AND expt_id=?", stats.ID, c.SpaceID, c.ExptID).Updates(map[string]any{from: gorm.Expr(fmt.Sprintf("GREATEST(%s - 1, 0)", from)), to: gorm.Expr(fmt.Sprintf("GREATEST(%s + 1, 0)", to))}).Error; err != nil {
 					return err
 				}
 			}
