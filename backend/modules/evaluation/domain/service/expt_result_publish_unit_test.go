@@ -381,8 +381,11 @@ func TestPublishPreparedItemResultUnit(t *testing.T) {
 	t.Run("lock_busy", func(t *testing.T) {
 		d := newPublishUnitDeps(t)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
-		_, err := d.svc.PublishPreparedItemResult(context.Background(), &entity.ExptItemResultPublication{Source: publishUnitSource()}, nil)
-		require.True(t, errno.NeedMQRetry(err))
+		applied, err := d.svc.PublishPreparedItemResult(context.Background(), &entity.ExptItemResultPublication{Source: publishUnitSource()}, nil)
+		// Busy means "not this tick", matching submitCurrentItem. Callers treat
+		// applied=false as a skip and rescan the still-Logged item next tick.
+		require.NoError(t, err)
+		require.False(t, applied)
 	})
 	t.Run("source_check_error", func(t *testing.T) {
 		d := newPublishUnitDeps(t)
@@ -509,6 +512,17 @@ func TestRecordCurrentItemResultsUnit(t *testing.T) {
 		item := readyItem()
 		svc.EXPECT().PrepareItemResultPublication(gomock.Any(), item.Publication, expt).Return(&entity.ExptItemResultPublication{Source: item.Publication}, nil)
 		svc.EXPECT().PublishPreparedItemResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+		require.NoError(t, scheduler.recordCurrentItemResults(context.Background(), event(), []*entity.ExptEvalItem{item}, mode, expt, svc))
+	})
+	t.Run("busy_defers_to_next_tick", func(t *testing.T) {
+		_, mode, scheduler := newDeps(t)
+		svc := svcmocks.NewMockExptResultPublicationService(gomock.NewController(t))
+		item := readyItem()
+		publication := &entity.ExptItemResultPublication{Source: item.Publication}
+		svc.EXPECT().PrepareItemResultPublication(gomock.Any(), item.Publication, expt).Return(publication, nil)
+		// applied=false is the scheduler's "not this tick" signal: the item stays
+		// Logged and the next scan retries it, without MQ-retrying the whole tick.
+		svc.EXPECT().PublishPreparedItemResult(gomock.Any(), publication, gomock.Any()).Return(false, nil)
 		require.NoError(t, scheduler.recordCurrentItemResults(context.Background(), event(), []*entity.ExptEvalItem{item}, mode, expt, svc))
 	})
 	t.Run("applied_publish_result_error_is_logged", func(t *testing.T) {

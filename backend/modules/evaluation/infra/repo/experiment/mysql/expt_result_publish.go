@@ -66,7 +66,7 @@ func readItemResultPublishSourceWithLocks(tx *gorm.DB, space, expt, run, item in
 	}
 	if err == nil {
 		if ref.ItemVersionID != canonical.ItemVersionID {
-			return nil, fmt.Errorf("publication frozen item version mismatch")
+			return nil, inconsistentCurrentSource("publication frozen item version mismatch")
 		}
 		result.ItemRef = convert.NewExptItemRefConvertor().PO2DO(&ref)
 		result.ItemConfigJSON = append([]byte(nil), gptr.Indirect(ref.ItemConfig)...)
@@ -76,7 +76,7 @@ func readItemResultPublishSourceWithLocks(tx *gorm.DB, space, expt, run, item in
 				return nil, err
 			}
 			if string(result.ItemConfigJSON) == "null" {
-				return nil, fmt.Errorf("publication frozen item configuration null")
+				return nil, inconsistentCurrentSource("publication frozen item configuration null")
 			}
 			result.ItemRef.ItemConfig = &config
 		}

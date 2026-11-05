@@ -134,9 +134,15 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 				row.PublicationObserved = true
 				publication, err := readItemResultPublishSourceWithLocks(tx, spaceID, exptID, runID, row.ItemID, false)
 				if err != nil {
-					return err
-				}
-				if publication != nil && publication.Source.Current.RequestID == row.RequestID && publication.ItemLog.Status == int32(row.Status) && publication.ItemLog.ResultState == int32(row.ResultState) && publication.ItemLog.RetryTimes == row.RetryTimes && publication.ItemLog.UpdatedAt != nil && row.UpdatedAt != nil && publication.ItemLog.UpdatedAt.Equal(*row.UpdatedAt) {
+					if !isCurrentSourceInconsistent(err) {
+						return err
+					}
+					// A deterministic per-item snapshot inconsistency must not
+					// turn the whole run scan into MQ retry. Defer this item's
+					// publication to a later stable tick and keep observing it.
+					looplogs.CtxWarn(ctx, "current source inconsistent, defer item publication: space_id=%d expt_id=%d run_id=%d item_id=%d err=%v", spaceID, exptID, runID, row.ItemID, err)
+					row.Publication = nil
+				} else if publication != nil && publication.Source.Current.RequestID == row.RequestID && publication.ItemLog.Status == int32(row.Status) && publication.ItemLog.ResultState == int32(row.ResultState) && publication.ItemLog.RetryTimes == row.RetryTimes && publication.ItemLog.UpdatedAt != nil && row.UpdatedAt != nil && publication.ItemLog.UpdatedAt.Equal(*row.UpdatedAt) {
 					row.Publication = publication
 				}
 			}
@@ -147,7 +153,16 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 			}
 			source, err := readItemRunSource(tx, spaceID, exptID, runID, row.ItemID, false, false)
 			if err != nil {
-				return err
+				if !isCurrentSourceInconsistent(err) {
+					return err
+				}
+				// Keep the occupied item visible (incomplete/slot-preserving) but
+				// isolate it from dispatch/zombie recovery until the next stable
+				// scan. DB/network errors above still fail the whole scan.
+				looplogs.CtxWarn(ctx, "current source inconsistent, isolate item this scan: space_id=%d expt_id=%d run_id=%d item_id=%d err=%v", spaceID, exptID, runID, row.ItemID, err)
+				row.ObservationUnstable = true
+				row.Source = nil
+				continue
 			}
 			if source == nil || !source.Current.Matches(runID, row.RequestID) || source.Current.ItemVersionID != row.ItemVersionID || source.Current.Status != row.Status || source.Current.RetryTimes != row.RetryTimes || source.Current.UpdatedAt == nil || row.UpdatedAt == nil || !source.Current.UpdatedAt.Equal(*row.UpdatedAt) {
 				continue

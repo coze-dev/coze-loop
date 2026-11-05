@@ -404,3 +404,120 @@ func TestCurrentResultMySQLRawPreparedMissingTurns(t *testing.T) {
 		})
 	}
 }
+
+// FailRetry may hold the old run's non-successful canonical turn while the new
+// run already owns the turn run log. That is a normal retry transition, not a
+// damaged source, and must not block the whole run scan.
+func TestCurrentResultFailRetryRetriedOldCanonicalTurn(t *testing.T) {
+	provider := db.NewTestDB(t, &model.ExptItemResult{}, &model.ExptItemResultRunLog{}, &model.ExptRunLog{}, &model.ExptTurnResult{}, &model.ExptTurnResultRunLog{}, &model.ExptTurnEvaluatorResultRef{})
+	conn := provider.NewSession(context.Background(), db.WithMaster())
+	const spaceID, exptID, oldRunID, runID, itemID, versionID = int64(1), int64(2), int64(3), int64(4), int64(5), int64(6)
+	require.NoError(t, conn.Create(&model.ExptRunLog{ID: 10, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(entity.EvaluationModeFailRetry))}).Error)
+	require.NoError(t, conn.Create(&model.ExptItemResult{ID: 11, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, Status: int32(entity.ItemRunState_Processing)}).Error)
+	require.NoError(t, conn.Create(&model.ExptItemResultRunLog{ID: 12, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, Status: int32(entity.ItemRunState_Processing), ResultState: gptr.Of(int32(entity.ExptItemResultStateDefault))}).Error)
+	require.NoError(t, conn.Create(&model.ExptTurnResult{ID: 21, SpaceID: spaceID, ExptID: exptID, ExptRunID: oldRunID, ItemID: itemID, ItemVersionID: versionID, TurnID: 31, Status: int32(entity.TurnRunState_Fail)}).Error)
+	require.NoError(t, conn.Create(&model.ExptTurnResultRunLog{ID: 41, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, TurnID: 31, Status: int32(entity.TurnRunState_Processing)}).Error)
+
+	source, err := loadCurrentRunSource(conn, spaceID, exptID, runID, itemID)
+	require.NoError(t, err)
+	require.NotNil(t, source)
+	require.Len(t, source.CanonicalTurns, 1)
+	require.Equal(t, oldRunID, source.CanonicalTurns[0].ExptRunID)
+	require.Len(t, source.Turns, 1)
+	require.Equal(t, int32(entity.TurnRunState_Processing), int32(source.Turns[31].Status))
+}
+
+// Legacy canonical turns may carry item_version_id=0. A non-zero mismatch stays
+// fail-closed; zero is the only historical value that may disagree.
+func TestCurrentResultLegacyZeroVersionSource(t *testing.T) {
+	provider := db.NewTestDB(t, &model.ExptItemResult{}, &model.ExptItemResultRunLog{}, &model.ExptRunLog{}, &model.ExptTurnResult{}, &model.ExptTurnResultRunLog{}, &model.ExptTurnEvaluatorResultRef{})
+	conn := provider.NewSession(context.Background(), db.WithMaster())
+	const spaceID, exptID, oldRunID, runID, itemID, versionID = int64(1), int64(2), int64(3), int64(4), int64(5), int64(6)
+	require.NoError(t, conn.Create(&model.ExptRunLog{ID: 10, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(entity.EvaluationModeFailRetry))}).Error)
+	require.NoError(t, conn.Create(&model.ExptItemResult{ID: 11, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, Status: int32(entity.ItemRunState_Processing)}).Error)
+	require.NoError(t, conn.Create(&model.ExptItemResultRunLog{ID: 12, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, Status: int32(entity.ItemRunState_Processing), ResultState: gptr.Of(int32(entity.ExptItemResultStateDefault))}).Error)
+	require.NoError(t, conn.Create(&model.ExptTurnResult{ID: 21, SpaceID: spaceID, ExptID: exptID, ExptRunID: oldRunID, ItemID: itemID, ItemVersionID: 0, TurnID: 31, Status: int32(entity.TurnRunState_Success)}).Error)
+	require.NoError(t, conn.Create(&model.ExptTurnResultRunLog{ID: 41, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, TurnID: 31, Status: int32(entity.TurnRunState_Processing)}).Error)
+
+	source, err := loadCurrentRunSource(conn, spaceID, exptID, runID, itemID)
+	require.NoError(t, err)
+	require.NotNil(t, source)
+	require.Len(t, source.CanonicalTurns, 1)
+	require.Zero(t, source.CanonicalTurns[0].ItemVersionID)
+}
+
+func TestCurrentResultRejectsNonZeroVersionMismatch(t *testing.T) {
+	provider := db.NewTestDB(t, &model.ExptItemResult{}, &model.ExptItemResultRunLog{}, &model.ExptRunLog{}, &model.ExptTurnResult{}, &model.ExptTurnResultRunLog{}, &model.ExptTurnEvaluatorResultRef{})
+	conn := provider.NewSession(context.Background(), db.WithMaster())
+	const spaceID, exptID, oldRunID, runID, itemID, versionID = int64(1), int64(2), int64(3), int64(4), int64(5), int64(6)
+	require.NoError(t, conn.Create(&model.ExptRunLog{ID: 10, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(entity.EvaluationModeFailRetry))}).Error)
+	require.NoError(t, conn.Create(&model.ExptItemResult{ID: 11, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, Status: int32(entity.ItemRunState_Processing)}).Error)
+	require.NoError(t, conn.Create(&model.ExptItemResultRunLog{ID: 12, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, Status: int32(entity.ItemRunState_Processing), ResultState: gptr.Of(int32(entity.ExptItemResultStateDefault))}).Error)
+	require.NoError(t, conn.Create(&model.ExptTurnResult{ID: 21, SpaceID: spaceID, ExptID: exptID, ExptRunID: oldRunID, ItemID: itemID, ItemVersionID: versionID + 1, TurnID: 31, Status: int32(entity.TurnRunState_Success)}).Error)
+	require.NoError(t, conn.Create(&model.ExptTurnResultRunLog{ID: 41, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, TurnID: 31, Status: int32(entity.TurnRunState_Processing)}).Error)
+
+	source, err := loadCurrentRunSource(conn, spaceID, exptID, runID, itemID)
+	require.Error(t, err)
+	require.Nil(t, source)
+	require.True(t, isCurrentSourceInconsistent(err))
+}
+
+func TestCurrentResultRejectsUnknownTurnLog(t *testing.T) {
+	provider := db.NewTestDB(t, &model.ExptItemResult{}, &model.ExptItemResultRunLog{}, &model.ExptRunLog{}, &model.ExptTurnResult{}, &model.ExptTurnResultRunLog{}, &model.ExptTurnEvaluatorResultRef{})
+	conn := provider.NewSession(context.Background(), db.WithMaster())
+	const spaceID, exptID, runID, itemID, versionID = int64(1), int64(2), int64(3), int64(5), int64(6)
+	require.NoError(t, conn.Create(&model.ExptRunLog{ID: 10, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(entity.EvaluationModeSubmit))}).Error)
+	require.NoError(t, conn.Create(&model.ExptItemResult{ID: 11, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, Status: int32(entity.ItemRunState_Processing)}).Error)
+	require.NoError(t, conn.Create(&model.ExptItemResultRunLog{ID: 12, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, Status: int32(entity.ItemRunState_Processing), ResultState: gptr.Of(int32(entity.ExptItemResultStateDefault))}).Error)
+	require.NoError(t, conn.Create(&model.ExptTurnResult{ID: 21, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, TurnID: 31, Status: int32(entity.TurnRunState_Processing)}).Error)
+	require.NoError(t, conn.Create(&model.ExptTurnResultRunLog{ID: 41, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, TurnID: 32, Status: int32(entity.TurnRunState_Processing)}).Error)
+
+	source, err := loadCurrentRunSource(conn, spaceID, exptID, runID, itemID)
+	require.Error(t, err)
+	require.Nil(t, source)
+	require.True(t, isCurrentSourceInconsistent(err), "foreign/unknown turn must stay fail-closed but isolated by scan")
+}
+
+// One inconsistent item must be isolated with a warning; a healthy sibling item
+// must still be returned so the scheduler can continue dispatching it.
+func TestCurrentRequestScanIsolatesInconsistentItem(t *testing.T) {
+	provider := db.NewTestDB(t,
+		&model.Experiment{}, &model.ExptRunLog{}, &model.ExptItemResult{}, &model.ExptItemResultRunLog{},
+		&model.ExptTurnResult{}, &model.ExptTurnResultRunLog{}, &model.ExptTurnEvaluatorResultRef{}, &model.ExptItemRef{}, &model.ExptStats{})
+	conn := provider.NewSession(context.Background(), db.WithMaster())
+	const spaceID, exptID, runID, versionID = int64(1), int64(2), int64(3), int64(6)
+	require.NoError(t, conn.Create(&model.Experiment{ID: exptID, SpaceID: spaceID, LatestRunID: runID, Status: int32(entity.ExptStatus_Processing), ExptType: int32(entity.ExptType_Offline)}).Error)
+	require.NoError(t, conn.Create(&model.ExptRunLog{ID: 10, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(entity.EvaluationModeSubmit))}).Error)
+	const healthyItem, brokenItem = int64(21), int64(22)
+	for index, itemID := range []int64{healthyItem, brokenItem} {
+		require.NoError(t, conn.Create(&model.ExptItemResult{ID: int64(100 + index), SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, Status: int32(entity.ItemRunState_Processing)}).Error)
+		require.NoError(t, conn.Create(&model.ExptItemResultRunLog{ID: int64(200 + index), SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, Status: int32(entity.ItemRunState_Processing), ResultState: gptr.Of(int32(entity.ExptItemResultStateDefault))}).Error)
+	}
+	require.NoError(t, conn.Create(&model.ExptTurnResult{ID: 300, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: healthyItem, ItemVersionID: versionID, TurnID: 31, Status: int32(entity.TurnRunState_Processing)}).Error)
+	require.NoError(t, conn.Create(&model.ExptTurnResultRunLog{ID: 400, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: healthyItem, ItemVersionID: versionID, TurnID: 31, Status: int32(entity.TurnRunState_Processing)}).Error)
+	// The broken item has a current-run turn log but no canonical turn.
+	require.NoError(t, conn.Create(&model.ExptTurnResultRunLog{ID: 401, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: brokenItem, ItemVersionID: versionID, TurnID: 31, Status: int32(entity.TurnRunState_Processing)}).Error)
+
+	rows, err := NewExptItemResultDAO(provider).ScanCurrentRequests(context.Background(), spaceID, exptID, runID, false)
+	require.NoError(t, err, "a single inconsistent item must not turn the whole scan into MQ retry")
+	require.Len(t, rows, 2)
+	byItem := map[int64]*entity.ExptItemCurrentRequest{}
+	for _, row := range rows {
+		byItem[row.ItemID] = row
+	}
+	require.NotNil(t, byItem[healthyItem].Source)
+	require.False(t, byItem[healthyItem].ObservationUnstable)
+	require.Nil(t, byItem[brokenItem].Source)
+	require.True(t, byItem[brokenItem].ObservationUnstable)
+	require.Equal(t, entity.ItemRunState_Processing, byItem[brokenItem].Status)
+}
+
+func TestCurrentResultStorageErrorIsNotConsistencyIsolated(t *testing.T) {
+	provider := db.NewTestDB(t, &model.ExptItemResult{})
+	conn := provider.NewSession(context.Background(), db.WithMaster())
+	require.NoError(t, conn.Create(&model.ExptItemResult{ID: 11, SpaceID: 1, ExptID: 2, ExptRunID: 3, ItemID: 5, ItemVersionID: 6, Status: int32(entity.ItemRunState_Processing)}).Error)
+
+	_, err := loadCurrentRunSource(conn, 1, 2, 3, 5)
+	require.Error(t, err)
+	require.False(t, isCurrentSourceInconsistent(err), "DB errors must keep propagating")
+}
