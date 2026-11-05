@@ -35,9 +35,23 @@ func (*localRecoveryTickMode) ScheduleStart(context.Context, *entity.ExptSchedul
 }
 
 func TestSchedulerLocalRecoveryPublishesAndDispatchesPastBlockedItem(t *testing.T) {
-	for _, blocked := range []string{"busy", "damaged_processing", "damaged_logged"} {
-		t.Run(blocked, func(t *testing.T) {
-			f := newLateWriteFixture(t, "rq1")
+	cases := []struct {
+		name, blocked, request string
+		sole                   bool
+	}{
+		{"legacy_busy", "busy", "", false},
+		{"legacy_processing_damage", "damaged_processing", "", false},
+		{"legacy_logged_damage", "damaged_logged", "", false},
+		{"manual_busy", "busy", "rq1", false},
+		{"manual_processing_damage", "damaged_processing", "rq1", false},
+		{"manual_logged_damage", "damaged_logged", "rq1", false},
+		{"sole_legacy_logged_busy", "busy", "", true},
+		{"sole_legacy_logged_damage", "damaged_logged", "", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			blocked := tc.blocked
+			f := newLateWriteFixture(t, tc.request)
 			ctx := context.Background()
 			ctrl := gomock.NewController(t)
 			factory, server := finishRealLockerFactory(t)
@@ -59,6 +73,13 @@ func TestSchedulerLocalRecoveryPublishesAndDispatchesPastBlockedItem(t *testing.
 			if blocked != "busy" {
 				require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=? AND turn_id=0", f.space, f.item).Update("item_version_id", f.version+1).Error)
 			}
+			if tc.sole {
+				for _, table := range []any{&model.ExptItemResult{}, &model.ExptItemResultRunLog{}} {
+					require.NoError(t, f.conn.Model(table).Where("space_id=? AND item_id<>?", f.space, f.item).Update("status", int32(entity.ItemRunState_Success)).Error)
+				}
+				require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id<>?", f.space, f.item).Update("result_state", int32(entity.ExptItemResultStateResulted)).Error)
+				require.NoError(t, f.conn.Model(&model.ExptStats{}).Where("space_id=?", f.space).Updates(map[string]any{"pending_cnt": 0, "processing_cnt": 1, "success_cnt": 2}).Error)
+			}
 			var originalLog model.ExptItemResultRunLog
 			require.NoError(t, f.conn.Where("space_id=? AND item_id=?", f.space, f.item).Take(&originalLog).Error)
 			expt := &entity.Experiment{ID: f.expt, SpaceID: f.space, LatestRunID: f.run, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline, EvalConf: &entity.EvaluationConfiguration{}, EvalSet: &entity.EvaluationSet{EvaluationSetVersion: &entity.EvaluationSetVersion{ID: f.base + 70}}}
@@ -69,17 +90,19 @@ func TestSchedulerLocalRecoveryPublishesAndDispatchesPastBlockedItem(t *testing.
 			config.EXPECT().GetExptExecConf(gomock.Any(), f.space).Return(&entity.ExptExecConf{DaemonIntervalSecond: 1, ExptItemEvalConf: &entity.ExptItemEvalConf{ConcurNum: 3, MaxItemConcurNum: 3}}).AnyTimes()
 			publisher := eventmocks.NewMockExptEventPublisher(ctrl)
 			var delivered []*entity.ExptItemEvalEvent
-			publisher.EXPECT().BatchPublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, events []*entity.ExptItemEvalEvent, _ *time.Duration) error {
-				for _, event := range events {
-					// Keep the actual event fields across the production JSON contract.
-					raw, err := json.Marshal(event)
-					require.NoError(t, err)
-					var decoded entity.ExptItemEvalEvent
-					require.NoError(t, json.Unmarshal(raw, &decoded))
-					delivered = append(delivered, &decoded)
-				}
-				return nil
-			})
+			if !tc.sole {
+				publisher.EXPECT().BatchPublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, events []*entity.ExptItemEvalEvent, _ *time.Duration) error {
+					for _, event := range events {
+						// Keep the actual event fields across the production JSON contract.
+						raw, err := json.Marshal(event)
+						require.NoError(t, err)
+						var decoded entity.ExptItemEvalEvent
+						require.NoError(t, json.Unmarshal(raw, &decoded))
+						delivered = append(delivered, &decoded)
+					}
+					return nil
+				})
+			}
 			publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			ticks := 0
 			publisher.EXPECT().PublishExptScheduleEvent(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, event *entity.ExptScheduleEvent, _ *time.Duration) error {
@@ -95,9 +118,13 @@ func TestSchedulerLocalRecoveryPublishesAndDispatchesPastBlockedItem(t *testing.
 			event := &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, ExptType: entity.ExptType_Offline, ExptRunMode: entity.EvaluationModeSubmit}
 			require.NoError(t, scheduler.schedule(ctx, event))
 			require.Equal(t, 1, ticks, "blocked item must retain the normal tick driver")
-			require.Len(t, delivered, 1)
-			require.Equal(t, f.item+2, delivered[0].EvalSetItemID)
-			require.Empty(t, delivered[0].RequestID)
+			if tc.sole {
+				require.Empty(t, delivered)
+			} else {
+				require.Len(t, delivered, 1)
+				require.Equal(t, f.item+2, delivered[0].EvalSetItemID)
+				require.Empty(t, delivered[0].RequestID)
+			}
 			var after model.ExptItemResultRunLog
 			require.NoError(t, f.conn.Where("space_id=? AND item_id=?", f.space, f.item).Take(&after).Error)
 			require.Equal(t, originalLog, after, "busy/damaged original request remains untouched")

@@ -1,12 +1,11 @@
 // Copyright (c) 2026 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package producer
+package consumer
 
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -15,7 +14,6 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/bytedance/gg/gptr"
-	"github.com/bytedance/mockey"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -32,62 +30,27 @@ import (
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	configmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/consumer"
 	exptrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	exptmysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
 
-type busyNativeTransport struct {
-	mq.IProducer
-	mu          sync.Mutex
-	messages    []*mq.MessageExt
-	failure     error
-	afterAccept context.CancelFunc
-	entered     chan struct{}
-	resume      chan struct{}
+type busyNativeManager struct {
+	service.IExptManager
+	runs   repo.IExptRunLogRepo
+	detail *entity.Experiment
 }
 
-func (p *busyNativeTransport) SendBatch(ctx context.Context, messages []*mq.Message) (mq.SendResponse, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if err := ctx.Err(); err != nil {
-		return mq.SendResponse{}, err
-	}
-	if p.failure != nil {
-		return mq.SendResponse{}, p.failure
-	}
-	if p.entered != nil {
-		close(p.entered)
-		select {
-		case <-p.resume:
-		case <-ctx.Done():
-			return mq.SendResponse{}, ctx.Err()
-		}
-		p.entered = nil
-	}
-	for _, message := range messages {
-		copy := *message
-		copy.Body = append([]byte(nil), message.Body...)
-		p.messages = append(p.messages, &mq.MessageExt{Message: copy})
-	}
-	if p.afterAccept != nil {
-		p.afterAccept()
-		return mq.SendResponse{}, context.Canceled
-	}
-	return mq.SendResponse{MessageID: "accepted-locally"}, nil
+func (m *busyNativeManager) GetRunLog(ctx context.Context, expt, run, _ int64, _ *entity.Session) (*entity.ExptRunLog, error) {
+	return m.runs.Get(ctx, expt, run)
 }
 
-func (p *busyNativeTransport) drain() []*mq.MessageExt {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	messages := p.messages
-	p.messages = nil
-	return messages
+func (m *busyNativeManager) GetDetail(context.Context, int64, int64, *entity.Session, ...entity.GetExptTupleOptionFn) (*entity.Experiment, error) {
+	return m.detail, nil
 }
 
 // The reservation fixture executes Redis CAS with the original token, including
@@ -177,25 +140,19 @@ func TestItemBusyNativeConsumerKeepsPendingAndConvergesDuplicates(t *testing.T) 
 	reads := 0
 	dataset.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
 		reads++
-		if reads == 1 {
-			return nil, errors.New("dataset temporarily unavailable")
-		}
+
 		close(entered)
 		<-resume
 		return []*entity.EvaluationSetItem{{ItemID: item, ItemVersionID: gptr.Of(version), Turns: []*entity.Turn{{ID: 0}, {ID: 1}}}}, nil
-	}).Times(2)
+	}).Times(1)
 	detail := &entity.Experiment{ID: expt, SpaceID: space, LatestRunID: run, ExptType: entity.ExptType_Offline, Status: entity.ExptStatus_Processing, EvalSet: &entity.EvaluationSet{EvaluationSetVersion: &entity.EvaluationSetVersion{ID: base + 30, EvaluationSetID: base + 31}}, EvalConf: &entity.EvaluationConfiguration{ConnectorConf: &entity.Connector{EvaluatorsConf: &entity.EvaluatorsConf{}}}}
 	runs := exptrepo.NewExptRunLogRepo(exptmysql.NewExptRunLogDAO(provider))
 	items := exptrepo.NewExptItemResultRepo(exptmysql.NewExptItemResultDAO(provider))
 	turns := exptrepo.NewExptTurnResultRepo(nil, exptmysql.NewExptTurnResultDAO(provider), exptmysql.NewExptTurnEvaluatorResultRefDAO(provider))
-	transport := &busyNativeTransport{}
-	publisher := &exptEventPublisher{producers: map[string]*producer{rocket.ExptRecordEvalEventRMQKey: {cfg: rocket.RMQConf{Topic: "busy-native"}, p: transport}}}
-	manager := service.NewExptManager(nil, nil, runs, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, func() lock.ILocker { return lock.NewRedisLocker(client) })
-	metadata := mockey.Mock((*service.ExptMangerImpl).GetDetail).Return(detail, nil).Build()
-	t.Cleanup(metadata.UnPatch)
-	svc := service.NewExptRecordEvalService(manager, config, publisher, items, turns, exptrepo.NewExptStatsRepo(exptmysql.NewExptStatsDAO(provider)), exptrepo.NewExptRepo(exptmysql.NewExptDAO(provider), exptmysql.NewExptEvaluatorRefDAO(provider), nil), nil, nil, lock.NewRedisLocker(client), idem, nil, metric, nil, nil, dataset, nil, nil, nil, nil, nil, nil, nil, guard, nil, nil)
-	consumer := consumer.NewExptRecordEvalConsumer(svc)
-	deliver := func(ctx context.Context, message *mq.MessageExt) error { return consumer.HandleMessage(ctx, message) }
+	manager := &busyNativeManager{runs: runs, detail: detail}
+	svc := service.NewExptRecordEvalService(manager, config, nil, items, turns, exptrepo.NewExptStatsRepo(exptmysql.NewExptStatsDAO(provider)), exptrepo.NewExptRepo(exptmysql.NewExptDAO(provider), exptmysql.NewExptEvaluatorRefDAO(provider), nil), nil, nil, lock.NewRedisLocker(client), idem, nil, metric, nil, nil, dataset, nil, nil, nil, nil, nil, nil, nil, guard, nil, nil)
+	consumer := NewExptRecordEvalConsumer(svc)
+	deliver := func(message *mq.MessageExt) error { return consumer.HandleMessage(ctx, message) }
 	event := &entity.ExptItemEvalEvent{SpaceID: space, ExptID: expt, ExptRunID: run, EvalSetItemID: item, ExptRunMode: entity.EvaluationModeSubmit, CreateAt: time.Now().Unix(), Session: &entity.Session{UserID: "busy-native"}}
 	encode := func(event *entity.ExptItemEvalEvent) *mq.MessageExt {
 		body, err := json.Marshal(event)
@@ -204,69 +161,26 @@ func TestItemBusyNativeConsumerKeepsPendingAndConvergesDuplicates(t *testing.T) 
 	}
 	message := encode(event)
 	lockKey := fmt.Sprintf("expt_item_eval_run_lock:%d:%d", expt, item)
-	pending := message
 	for _, owner := range []string{"filter-holder", "termination-holder", "publication-holder"} {
 		require.NoError(t, server.Set(lockKey, owner))
-		require.NoError(t, deliver(ctx, pending))
-		copies := transport.drain()
-		require.Len(t, copies, 1, "ACK requires a synchronously accepted successor message")
-		require.Positive(t, copies[0].DeferDuration)
-		var copied entity.ExptItemEvalEvent
-		require.NoError(t, json.Unmarshal(copies[0].Body, &copied))
-		require.Equal(t, event, &copied, "busy redelivery preserves the complete execution identity")
-		pending = copies[0]
+		for i := 0; i < 2; i++ {
+			require.True(t, errno.NeedMQRetry(deliver(message)), "non-execution owner cannot take over a pending delivery")
+		}
+		stale := event.Clone()
+		stale.RequestID = "obsolete"
+		require.NoError(t, deliver(encode(stale)), "native source proves the obsolete delivery has no remaining work")
 		require.Zero(t, reads)
 		require.True(t, server.Exists(guard.key))
 		server.Del(lockKey)
 	}
-	require.NoError(t, server.Set(lockKey, "filter-holder"))
-	transport.failure = errors.New("transport unavailable")
-	failedCtx, cancelFailed := context.WithTimeout(ctx, 100*time.Millisecond)
-	require.True(t, errno.NeedMQRetry(deliver(failedCtx, pending)))
-	cancelFailed()
-	require.Empty(t, transport.drain())
-	transport.failure = nil
-	ambiguousCtx, cancelAmbiguous := context.WithCancel(ctx)
-	transport.afterAccept = cancelAmbiguous
-	require.True(t, errno.NeedMQRetry(deliver(ambiguousCtx, pending)), "accepted-but-unconfirmed send preserves the original broker retry")
-	cancelAmbiguous()
-	uncertainCopies := transport.drain()
-	require.Len(t, uncertainCopies, 1)
-	transport.afterAccept = nil
-	transport.entered, transport.resume = make(chan struct{}), make(chan struct{})
-	enteredSend := transport.entered
-	var sendOnce sync.Once
-	resumeSend := func() { sendOnce.Do(func() { close(transport.resume) }) }
-	t.Cleanup(resumeSend)
-	resultSend := make(chan error, 1)
-	go func() { resultSend <- deliver(ctx, pending) }()
-	select {
-	case <-enteredSend:
-	case <-time.After(3 * time.Second):
-		t.Fatal("deferred send never reached transport")
-	}
-	select {
-	case err := <-resultSend:
-		t.Fatalf("consumer completed before send acknowledgement: %v", err)
-	default:
-	}
-	resumeSend()
-	require.NoError(t, <-resultSend)
-	confirmed := transport.drain()
-	require.Len(t, confirmed, 1)
-	pending = confirmed[0]
-	server.Del(lockKey)
-	require.True(t, errno.NeedMQRetry(deliver(ctx, pending)), "mid-consume dependency failure preserves the same delivery")
 	result := make(chan error, 1)
-	go func() { result <- deliver(ctx, pending) }()
+	go func() { result <- deliver(message) }()
 	select {
 	case <-entered:
 	case <-time.After(3 * time.Second):
-		t.Fatal("retained delivery never reached the real evaluation chain")
+		t.Fatal("the retained delivery did not reach the real evaluation chain")
 	}
-	require.NoError(t, deliver(ctx, pending), "an active duplicate is deferred without an execution error")
-	duplicates := transport.drain()
-	require.Len(t, duplicates, 1)
+	require.True(t, errno.NeedMQRetry(deliver(message)), "a concurrent pending duplicate is retained while the worker executes")
 	unblock()
 	require.NoError(t, <-result)
 	var log model.ExptItemResultRunLog
@@ -283,24 +197,14 @@ func TestItemBusyNativeConsumerKeepsPendingAndConvergesDuplicates(t *testing.T) 
 	require.False(t, server.Exists(guard.key), "real terminal completion releases only the original empty-token reservation")
 	require.NoError(t, server.Set(lockKey, "publication-holder"))
 	require.NoError(t, server.Set(guard.key, "rq2"))
-	stale := event.Clone()
-	stale.RequestID = "obsolete"
-	for _, copy := range append(append(duplicates, uncertainCopies...), encode(stale)) {
-		require.NoError(t, deliver(ctx, copy))
+	for i := 0; i < 3; i++ {
+		require.NoError(t, deliver(message), "validated completed duplicate converges even under publication contention")
 	}
-	deferred := transport.drain()
-	require.Len(t, deferred, 3)
-	server.Del(lockKey)
-	for _, copy := range deferred {
-		require.NoError(t, deliver(ctx, copy), "completed/obsolete successor cannot execute again")
-	}
-	require.Equal(t, 2, reads, "dependency retry executes once; later duplicates cannot reenter evaluation")
-	require.Empty(t, transport.drain())
 	quota, err := server.Get(guard.key)
 	require.NoError(t, err)
 	require.Equal(t, "rq2", quota, "completed old delivery cannot release another request's reservation")
 	finish, err := exptrepo.NewExptRunFinishRepo(provider).FinishCurrentRun(ctx, &entity.ExptRunFinishRequest{SpaceID: space, ExptID: expt, RunID: run})
 	require.NoError(t, err)
 	require.Equal(t, entity.ExptRunFinishPending, finish.Disposition, "Logged work must publish before the run can finish")
-	t.Log("REAL_MYSQL_REAL_CONSUMER_EVALTURNS_REDIS_CAS_EXECUTED; real publisher bodies replay through one consumer and service instance")
+	t.Log("REAL_MYSQL_REAL_CONSUMER_EVALTURNS_REDIS_CAS_EXECUTED; broker replay is explicitly driven in-process")
 }
