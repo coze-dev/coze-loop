@@ -388,6 +388,69 @@ func TestManualRetryMySQLSameRun(t *testing.T) {
 	require.Equal(t, req.RequestID, retry.RequestID)
 }
 
+func TestManualRetrySQLiteFailRetryAllowsHistoricalSuccessTurn(t *testing.T) {
+	provider := db.NewTestDB(t, &model.ExptItemRef{}, &model.ExptTurnResult{}, &model.ExptTurnResultRunLog{}, &model.ExptTurnEvaluatorResultRef{})
+	conn := provider.NewSession(context.Background(), db.WithMaster())
+	const spaceID, exptID, previousRunID, runID, itemID, versionID = int64(1), int64(2), int64(3), int64(4), int64(5), int64(6)
+	ref := &model.ExptItemRef{ID: 10, SpaceID: spaceID, ExptID: exptID, ItemID: itemID, ItemVersionID: versionID}
+	turn := &model.ExptTurnResult{ID: 20, SpaceID: spaceID, ExptID: exptID, ExptRunID: previousRunID, ItemID: itemID, ItemVersionID: versionID, TurnID: 30, Status: int32(entity.TurnRunState_Success), TargetResultID: 40}
+	log := &model.ExptTurnResultRunLog{ID: 50, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID, ItemVersionID: versionID, TurnID: 30, Status: int32(entity.TurnRunState_Success), TargetResultID: 40}
+	for _, row := range []any{ref, turn, log} {
+		require.NoError(t, conn.Create(row).Error)
+	}
+	require.NoError(t, conn.Take(ref, ref.ID).Error)
+	require.NoError(t, conn.Take(turn, turn.ID).Error)
+	require.NoError(t, conn.Take(log, log.ID).Error)
+	logDO, err := convert.NewExptTurnResultRunLogConvertor().PO2DO(log)
+	require.NoError(t, err)
+	prepared := &entity.PreparedRetryItem{
+		PreviousRunID: previousRunID,
+		ItemVersionID: versionID,
+		FrozenItemRef: convert.NewExptItemRefConvertor().PO2DO(ref),
+		Turns: []*entity.PreparedRetryTurn{{
+			SourceTurn:      convert.NewExptTurnResultConvertor().PO2DO(turn, nil),
+			CurrentRunLog:   logDO,
+			PreserveSuccess: true,
+			TargetResultID:  40,
+		}},
+	}
+	locked := &lockedManualRetryItem{
+		prepared: prepared,
+		item:     &model.ExptItemResult{SpaceID: spaceID, ExptID: exptID, ItemID: itemID},
+		log:      &model.ExptItemResultRunLog{},
+	}
+	reason, err := (&ExptManualRetryDAOImpl{provider: provider}).lockManualRetryTurns(
+		context.Background(),
+		&entity.RequeueTerminalItemsRequest{SpaceID: spaceID, ExptID: exptID, RunID: runID, Mode: entity.EvaluationModeFailRetry},
+		locked,
+		&model.Experiment{},
+		nil,
+	)
+	require.NoError(t, err)
+	require.Empty(t, reason)
+	require.Len(t, locked.turns, 1)
+}
+
+func TestManualRetryMySQLFailRetryAllowsHistoricalSuccessTurn(t *testing.T) {
+	f := newManualRetryFixture(t)
+	historicalRunID := f.run - 1
+	updated := f.conn.Model(&model.ExptTurnResult{}).
+		Where("space_id=? AND expt_id=? AND item_id=? AND turn_id=? AND status=?", f.space, f.expt, 11, 1, int32(entity.TurnRunState_Success)).
+		Update("expt_run_id", historicalRunID)
+	require.NoError(t, updated.Error)
+	require.Equal(t, int64(1), updated.RowsAffected)
+
+	receipt, err := f.port.RequeueTerminalItems(context.Background(), f.request(entity.EvaluationModeFailRetry))
+	require.NoError(t, err)
+	require.Equal(t, int32(1), receipt.AcceptedCount)
+	require.Empty(t, receipt.RejectedItems)
+
+	var turn model.ExptTurnResult
+	require.NoError(t, f.conn.Where("space_id=? AND expt_id=? AND item_id=? AND turn_id=?", f.space, f.expt, 11, 1).Take(&turn).Error)
+	require.Equal(t, int32(entity.TurnRunState_Success), turn.Status)
+	require.Equal(t, f.run, turn.ExptRunID)
+}
+
 func TestManualRetryMySQLWriteRollback(t *testing.T) {
 	for _, table := range []string{"expt_item_result", "expt_item_result_run_log", "expt_turn_result", "expt_turn_result_run_log", "expt_turn_evaluator_result_ref", "expt_stats", "expt_run_log"} {
 		t.Run(table, func(t *testing.T) {

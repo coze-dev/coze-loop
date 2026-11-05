@@ -42,11 +42,8 @@ func executionSource(ctx context.Context) *currentItemExecution {
 func (e *ExptItemEventEvalServiceImpl) validateResumeSource(ctx context.Context, event *entity.ExptItemEvalEvent, current *entity.ExptItemCurrentRequest) (bool, error) {
 	source := event.ResumeSource
 	if source == nil {
-		if event.AsyncReportTrigger || event.AsyncEvaluatorReportTrigger {
-			// A legacy event has no invoke ID. Only an original AsyncCtx keyed by an
-			// explicit identity can recover it; the latest turn record is not identity.
-			return false, errno.NewMQRetryErr("legacy async event lacks original recoverable invocation identity")
-		}
+		// 旧异步事件没有 ResumeSource：按老路径继续执行，不能判成可重试错误，
+		// 否则历史回调会被无限重投、把消费失败率打爆。
 		return true, nil
 	}
 	if source.RecordID <= 0 || source.TurnID < 0 || source.InvokeID != strconv.FormatInt(source.RecordID, 10) || source.Kind != "target" && source.Kind != "evaluator" {
@@ -82,7 +79,11 @@ func (e *ExptItemEventEvalServiceImpl) validateResumeSource(ctx context.Context,
 	if turn == nil {
 		return false, errno.NewMQRetryErr("original source turn missing")
 	}
-	if turn.SpaceID != event.SpaceID || turn.ExptID != event.ExptID || turn.ExptRunID != event.ExptRunID || turn.ItemID != event.EvalSetItemID || turn.ItemVersionID != current.ItemVersionID {
+	if turn.SpaceID != event.SpaceID || turn.ExptID != event.ExptID || turn.ExptRunID != event.ExptRunID || turn.ItemID != event.EvalSetItemID {
+		return false, errno.NewMQRetryErr("foreign or incomplete source turn")
+	}
+	// 旧 run log 的 item_version_id 是 0：老数据跳过版本比较，非 0 仍必须一致。
+	if turn.ItemVersionID != 0 && turn.ItemVersionID != current.ItemVersionID {
 		return false, errno.NewMQRetryErr("foreign or incomplete source turn")
 	}
 	if turn.Status < entity.TurnRunState_Queueing || turn.Status > entity.TurnRunState_Terminal {

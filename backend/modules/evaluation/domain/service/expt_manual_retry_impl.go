@@ -206,7 +206,13 @@ func (m *ExptMangerImpl) prepareManualRetryTurns(ctx context.Context, expt *enti
 	}
 	ids := make([]int64, 0, len(turns))
 	for _, turn := range turns {
-		if turn == nil || turn.SpaceID != expt.SpaceID || turn.ExptID != expt.ID || turn.ItemID != item.SourceItem.ItemID || turn.ExptRunID != item.PreviousRunID || turn.ItemVersionID != item.ItemVersionID {
+		if turn == nil || turn.SpaceID != expt.SpaceID || turn.ExptID != expt.ID || turn.ItemID != item.SourceItem.ItemID || turn.ItemVersionID != item.ItemVersionID {
+			return fmt.Errorf("invalid frozen retry turn")
+		}
+		// FailRetry 保留的历史成功 turn 仍属于旧 run，这是既有语义；
+		// 与 expt_current_result.go / expt_item_dispatch.go 的读侧规则保持一致。
+		if turn.ExptRunID != item.PreviousRunID &&
+			!(mode == entity.EvaluationModeFailRetry && entity.TurnRunState(turn.Status) == entity.TurnRunState_Success) {
 			return fmt.Errorf("invalid frozen retry turn")
 		}
 		ids = append(ids, turn.ID)
