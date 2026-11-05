@@ -422,6 +422,9 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 	// 只有一个实验，且没有指定baseline
 	if len(exptIDs) == 1 && baselineExptID == nil {
 		baseExptID = exptIDs[0]
+		queryParam := *param
+		queryParam.BaseExptID = &baseExptID
+		param = &queryParam
 	}
 
 	allExptIDs := make([]int64, 0, len(exptIDs)+1)

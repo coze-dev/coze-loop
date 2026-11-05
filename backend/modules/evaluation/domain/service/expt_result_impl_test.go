@@ -1098,7 +1098,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 					EvalSetID:        1,
 					ExptType:         entity.ExptType_Offline,
 				}, nil).AnyTimes()
-				mockExptTurnResultRepo.EXPECT().ListTurnResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{{ID: 1, ItemID: 1}}, int64(1), nil)
+				mockExptTurnResultRepo.EXPECT().ListTurnResult(gomock.Any(), int64(100), int64(1), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{{ID: 1, ItemID: 1}}, int64(1), nil)
 				mockMetric.EXPECT().EmitGetExptResult(gomock.Any(), gomock.Any()).AnyTimes()
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
 				mockExptStatsRepo.EXPECT().MGet(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptStats{}, nil).AnyTimes()
@@ -1361,7 +1361,6 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				SpaceID:        100,
 				ExptIDs:        []int64{1},
 				UseAccelerator: true,
-				BaseExptID:     ptr.Of(int64(1)),
 				FilterAccelerators: map[int64]*entity.ExptTurnResultFilterAccelerator{
 					1: {
 						ExptID:  1,
