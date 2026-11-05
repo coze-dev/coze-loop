@@ -5,7 +5,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math"
 	"strconv"
@@ -126,7 +125,7 @@ func (e ExptResultServiceImpl) BuildExptFilterProjection(ctx context.Context, sp
 		return nil, err
 	}
 	result := make([]*entity.ExptTurnResultFilterEntity, 0, len(turns))
-	bytes := 0
+	var bytes int64
 	for _, tr := range turns {
 		item := itemByID[tr.ItemID]
 		if item == nil {
@@ -188,11 +187,11 @@ func (e ExptResultServiceImpl) BuildExptFilterProjection(ctx context.Context, sp
 		if err != nil {
 			return nil, err
 		}
-		encoded, encodeErr := json.Marshal(row)
+		encodedSize, encodeErr := entity.ExptFilterProjectionJSONSize(row)
 		if encodeErr != nil {
 			return nil, projectionError(spaceID, exptID, tr.ItemID, tr.TurnID, "serialization", encodeErr)
 		}
-		bytes += len(encoded)
+		bytes += encodedSize
 		if bytes > projectionMaxBytes {
 			return nil, projectionError(spaceID, exptID, tr.ItemID, tr.TurnID, "oversize_item", fmt.Errorf("projection exceeds 64 MiB"))
 		}
