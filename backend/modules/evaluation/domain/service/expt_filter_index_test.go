@@ -79,7 +79,7 @@ func (r *filterIndexTestRepo) ReadIndex(_ context.Context, target entity.ExptFil
 	return r.rows[target], r.err
 }
 
-func (r *filterIndexTestRepo) ScanIndexKeys(context.Context, entity.ExptFilterTarget, *entity.ExptFilterTargetCursor, int) ([]entity.ExptFilterStoredKey, *entity.ExptFilterTargetCursor, error) {
+func (r *filterIndexTestRepo) ScanIndexKeys(context.Context, entity.ExptFilterTarget, entity.ExptFilterIndexScanQuery) ([]entity.ExptFilterStoredKey, *entity.ExptFilterTargetCursor, error) {
 	return nil, nil, r.err
 }
 

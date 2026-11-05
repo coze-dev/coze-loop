@@ -73,6 +73,15 @@ type ExptFilterTargetCursor struct {
 	TurnID      string
 }
 
+// Non-empty ID lists intersect and must be applied before target rows are read or decoded.
+// Keep these filters unchanged across cursor pages; empty lists leave the scan unrestricted.
+type ExptFilterIndexScanQuery struct {
+	SpaceIDs []int64
+	ExptIDs  []int64
+	Cursor   *ExptFilterTargetCursor
+	Limit    int
+}
+
 type ExptFilterScanBounds struct {
 	MaxExptID int64 `json:"max_expt_id"`
 }

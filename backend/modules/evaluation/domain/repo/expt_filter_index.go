@@ -14,7 +14,7 @@ type IExptFilterIndexRepo interface {
 	SnapshotPlan(context.Context, []int64) (*entity.ExptFilterPlan, error)
 	SaveIndex(context.Context, []*entity.ExptTurnResultFilterEntity, *entity.ExptFilterPlan, entity.ExptFilterOperation) error
 	ReadIndex(context.Context, entity.ExptFilterTarget, entity.ExptFilterReadQuery) ([]*entity.ExptFilterRow, error)
-	ScanIndexKeys(context.Context, entity.ExptFilterTarget, *entity.ExptFilterTargetCursor, int) ([]entity.ExptFilterStoredKey, *entity.ExptFilterTargetCursor, error)
+	ScanIndexKeys(context.Context, entity.ExptFilterTarget, entity.ExptFilterIndexScanQuery) ([]entity.ExptFilterStoredKey, *entity.ExptFilterTargetCursor, error)
 }
 
 // IExptFilterSourceScanner reads current non-deleted sources from the primary.
