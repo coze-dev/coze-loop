@@ -102,6 +102,20 @@ func MergeManualRetryContext(raw []byte, retry *ManualRetryContext) ([]byte, err
 	return encoded, err
 }
 
+// HasManualRetryContext 返回 ext 是否携带 manual retry 请求上下文。
+//
+// 它是「新 manual retry 语义」的作用域标记：只有用户显式发起的同 run 重试才带这个键
+// （RequeueTerminalItems 合并进 expt_item_result.ext，下一次换 run 时由
+// newRunItemResultFields 清除）。执行侧据此决定是否下发多轮 HistoryMessages，
+// 普通 submit / fail-retry 不受影响。
+func HasManualRetryContext(ext map[string]string) bool {
+	if len(ext) == 0 {
+		return false
+	}
+	_, exists := ext[ManualRetryExtKey]
+	return exists
+}
+
 func WithoutManualRetryExt(ext map[string]string) map[string]string {
 	result := maps.Clone(ext)
 	delete(result, ManualRetryExtKey)
