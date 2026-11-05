@@ -109,33 +109,46 @@ type lifecycleLockValueReader interface {
 
 const (
 	// LegacyLifecycleMigrationGrace is the minimum holder age before a
-	// pre-upgrade random holder may be migrated.
+	// pre-upgrade lifecycle holder may be migrated.
 	LegacyLifecycleMigrationGrace = 5 * time.Minute
+	// legacyStaticLifecycleHolder is the fixed value written by the pre-upgrade
+	// shared evaluation locker (application.NewLock) for lifecycle keys. It is
+	// kept here rather than infra/lock on purpose: it is a legacy evaluation
+	// business vocabulary, not part of the generic lock API.
+	legacyStaticLifecycleHolder = "evaluation"
 )
 
-// legacyLifecycleHolderAcquiredAt derives the acquisition time of a pre-upgrade
-// lifecycle holder. "<hostname>-<xid>" holders embed an immutable creation
-// timestamp. The fixed "evaluation" holder carries no timestamp; the legacy
-// writer set it once with the zombie interval as TTL and never renewed it, so
-// its elapsed time is configuredTTL - remainingTTL. Missing configuration or a
-// remaining TTL that the configuration cannot cover leaves the age unproven.
-func (e *ExptMangerImpl) legacyLifecycleHolderAcquiredAt(ctx context.Context, spaceID int64, holder string, remaining time.Duration) (time.Time, bool) {
-	if sep := strings.LastIndex(holder, "-"); sep > 0 && sep+1 < len(holder) {
-		if id, err := xid.FromString(holder[sep+1:]); err == nil {
-			return id.Time(), true
-		}
-	}
-	if holder != lock.LegacyStaticLifecycleHolder {
+// legacyLifecycleHolderAcquiredAt derives the acquisition time from a
+// pre-upgrade "<hostname>-<xid>" holder. XID embeds an immutable creation
+// timestamp, so age is independent of any configuration change between
+// acquisition and migration.
+func legacyLifecycleHolderAcquiredAt(holder string) (time.Time, bool) {
+	sep := strings.LastIndex(holder, "-")
+	if sep <= 0 || sep+1 >= len(holder) {
 		return time.Time{}, false
 	}
-	if e.configer == nil {
+	id, err := xid.FromString(holder[sep+1:])
+	if err != nil {
 		return time.Time{}, false
 	}
-	configured := time.Duration(e.configer.GetExptExecConf(ctx, spaceID).GetZombieIntervalSecond()) * time.Second
-	if configured <= 0 || remaining <= 0 || remaining > configured {
-		return time.Time{}, false
+	return id.Time(), true
+}
+
+// staticLifecycleHolderMigrationEligible decides whether the fixed "evaluation"
+// holder may be taken over. The legacy LogRun wrote it once, before its run
+// reached a terminal state, and never renewed or reassigned it; the run's
+// immutable terminal EndAt is therefore the only provable age evidence.
+// A missing, future-dated or too recent EndAt never proves the grace period, so
+// the lock is kept. The remaining TTL is deliberately NOT consulted: if the
+// zombie interval was raised after the write (e.g. 1h -> 36h), TTL arithmetic
+// would overestimate the holder age and take over a lock written seconds ago.
+func staticLifecycleHolderMigrationEligible(current *entity.Experiment, now time.Time) bool {
+	if current == nil || current.EndAt == nil {
+		return false
 	}
-	return time.Now().Add(-(configured - remaining)), true
+	// EndAt in the future (clock skew or corrupt row) yields a negative age and
+	// stays conservative.
+	return now.Sub(*current.EndAt) >= LegacyLifecycleMigrationGrace
 }
 
 // releasePreviousLifecycleHolder migrates a pre-upgrade random holder only when
@@ -162,23 +175,25 @@ func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, loc
 		return nil
 	}
 	// 无过期时间的锁永远等不到自然过期，迁移前先暴露出来。
-	remaining, hasTTL, err := reader.GetLifecycleLockTTL(ctx, key)
-	if err != nil {
+	if _, hasTTL, err := reader.GetLifecycleLockTTL(ctx, key); err != nil {
 		return err
-	}
-	if !hasTTL {
+	} else if !hasTTL {
 		logs.CtxWarn(ctx, "[ExptLifecycle] legacy holder has no expiry or TTL is unavailable; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
 		return nil
 	}
-	acquiredAt, ok := e.legacyLifecycleHolderAcquiredAt(ctx, event.SpaceID, holder, remaining)
-	if !ok {
-		// 不认识的老 holder 格式，或 TTL/配置无法证明获取时间：宁可等自然过期也不删。
-		logs.CtxWarn(ctx, "[ExptLifecycle] legacy holder age unverifiable; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
-		return nil
-	}
-	// holder 内的 XID 时间戳或静态 holder 的 TTL 推导都是写入时刻的证据。
-	if age := time.Since(acquiredAt); age < LegacyLifecycleMigrationGrace {
-		return nil
+	isStatic := holder == legacyStaticLifecycleHolder
+	var acquiredAt time.Time
+	if !isStatic {
+		var provable bool
+		acquiredAt, provable = legacyLifecycleHolderAcquiredAt(holder)
+		if !provable {
+			// 不认识的老 holder 格式：无法证明获取时间，宁可等自然过期也不删。
+			logs.CtxWarn(ctx, "[ExptLifecycle] legacy holder age unverifiable; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
+			return nil
+		}
+		if time.Since(acquiredAt) < LegacyLifecycleMigrationGrace {
+			return nil
+		}
 	}
 	if e.exptRepo == nil {
 		return errno.NewMQRetryErr("legacy lifecycle ownership repository missing")
@@ -188,6 +203,10 @@ func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, loc
 		return err
 	}
 	if current == nil || current.LatestRunID != event.ExptRunID || !entity.IsExptFinished(current.Status) {
+		return nil
+	}
+	if isStatic && !staticLifecycleHolderMigrationEligible(current, time.Now()) {
+		logs.CtxWarn(ctx, "[ExptLifecycle] static legacy holder terminal time unproven; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
 		return nil
 	}
 	released, err = locker.UnlockWithValue(ctx, key, holder)

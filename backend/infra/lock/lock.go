@@ -24,12 +24,6 @@ import (
 // implementation, distinguishing them from pre-upgrade random LockBackoff holders.
 const LifecycleCleanupHolderPrefix = "run-cleanup-"
 
-// LegacyStaticLifecycleHolder is the fixed holder written by the pre-upgrade
-// shared evaluation locker (application.NewLock) for lifecycle keys. Unlike
-// random holders it embeds no timestamp and its lease is never renewed, so its
-// age can only be bounded from the remaining TTL against the configured lease.
-const LegacyStaticLifecycleHolder = "evaluation"
-
 //go:generate mockgen -destination=mocks/lock.go -package=mocks . ILocker
 type ILocker interface {
 	WithHolder(holder string) ILocker
