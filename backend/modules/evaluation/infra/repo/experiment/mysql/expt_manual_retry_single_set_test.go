@@ -316,17 +316,18 @@ func TestLegacyCompatManualAdmissionRejectsBadSource(t *testing.T) {
 			require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=11", f.space).Update("item_version_id", 0).Error)
 			port := &singleSetRetryPort{IExptManualRetryRepo: f.port}
 			before := f.snapshot()
-			if damage == "nonzero_conflict" {
+			switch damage {
+			case "nonzero_conflict":
 				require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("space_id=? AND item_id=11", f.space).Update("item_version_id", f.base+112).Error)
 				before = f.snapshot()
-			} else if damage == "manual_zero" {
+			case "manual_zero":
 				var item model.ExptItemResult
 				require.NoError(t, f.conn.Where("space_id=? AND item_id=11", f.space).Take(&item).Error)
 				ext, err := entity.MergeManualRetryContext(gptr.Indirect(item.Ext), &entity.ManualRetryContext{RunID: f.run, RequestID: "old-manual", Mode: entity.EvaluationModeFailRetry})
 				require.NoError(t, err)
 				require.NoError(t, f.conn.Model(&item).Update("ext", ext).Error)
 				before = f.snapshot()
-			} else {
+			default:
 				drift := func() {
 					require.NoError(t, f.conn.Model(&model.ExptTurnEvaluatorResultRef{}).Where("space_id=?", f.space).Update("alias", "foreign").Error)
 					before = f.snapshot()

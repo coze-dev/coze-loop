@@ -235,9 +235,10 @@ func TestCurrentRequestLegacyAsyncIsolation(t *testing.T) {
 			case "old_empty_on_manual", "manual_missing_identity", "explicit_old_request":
 				f.token("rq2")
 				event.ExptRunMode = entity.EvaluationModeFailRetry
-				if kind == "manual_missing_identity" {
+				switch kind {
+				case "manual_missing_identity":
 					event.RequestID = "rq2"
-				} else if kind == "explicit_old_request" {
+				case "explicit_old_request":
 					event.RequestID = "rq1"
 					event.ResumeSource = &entity.ExptResumeSource{Kind: "target", RecordID: f.base + 41, InvokeID: strconv.FormatInt(f.base+41, 10), TurnID: 0}
 				}
