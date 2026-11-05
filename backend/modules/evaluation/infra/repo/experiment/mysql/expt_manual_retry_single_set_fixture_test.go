@@ -23,6 +23,11 @@ func NewManualRetryFixtureForTest(t *testing.T) (db.Provider, *gorm.DB, repo.IEx
 	return f.provider, f.conn, f.port, f.space, f.expt, f.run, f.base, f.snapshot
 }
 
+func NewPreviousRunRetryFixtureForTest(t *testing.T, mode entity.ExptRunMode) (db.Provider, *gorm.DB, repo.IExptManualRetryRepo, int64, int64, int64, int64, func() map[string]string) {
+	f, _ := previousRunRetryFixture(t, mode)
+	return f.provider, f.conn, f.port, f.space, f.expt, f.run, f.base, f.snapshot
+}
+
 func TestManualRetryLockedSingleSetSource(t *testing.T) {
 	for _, kind := range []string{"unchanged", "source_type", "set_id", "set_version", "set_space", "target_id", "target_version", "target_space", "target_type", "draft_zero", "draft_set_id", "item_log_version"} {
 		t.Run(kind, func(t *testing.T) {

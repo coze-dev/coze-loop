@@ -182,6 +182,92 @@ func newLegacyContinuationFixture(t *testing.T, version int64) *lateWriteFixture
 	return f
 }
 
+// Keep completion and whole-run termination SQL real. The debt port delegates
+// to the termination DAO without the manager's remote cleanup orchestration.
+type legacyDebtSQLTerminator struct {
+	IExptManager
+	f     *lateWriteFixture
+	calls int
+}
+
+func (m *legacyDebtSQLTerminator) TerminateCurrentRun(ctx context.Context, expt, run, space int64, _ *entity.Session, expected *entity.ExptCurrentItemRunSource, options ...entity.CompleteExptOptionFn) (bool, error) {
+	m.calls++
+	opt := &entity.CompleteExptOption{Status: entity.ExptStatus_Terminated}
+	for _, option := range options {
+		option(opt)
+	}
+	var sources []*entity.ExptCurrentItemRunSource
+	for _, item := range []int64{m.f.item, m.f.item + 1} {
+		source, err := m.f.port.GetCurrentItemRunSource(ctx, space, expt, run, item)
+		if err != nil {
+			return false, err
+		}
+		sources = append(sources, source)
+	}
+	result, err := experimentmysql.NewExptRunFinishDAO(m.f.provider).(repo.IExptRunTerminationRepo).TerminateCurrentRun(ctx, &entity.ExptRunTerminationRequest{SpaceID: space, ExptID: expt, RunID: run, ExpectedSource: expected, Items: sources, Finalize: true, Status: opt.Status, StatusMessage: opt.StatusMessage})
+	return result != nil && result.Applied, err
+}
+
+func TestLegacyAsyncDebtAfterCompletedFailure(t *testing.T) {
+	t.Setenv("EXPT_RETRY_MYSQL_DSN", "")
+	for _, kind := range []string{"target", "evaluator"} {
+		t.Run(kind, func(t *testing.T) {
+			f := newLegacyContinuationFixture(t, 31)
+			require.NoError(t, f.conn.AutoMigrate(&model.Experiment{}, &model.ExptEvaluatorRef{}))
+			for _, row := range []any{
+				&model.Experiment{ID: f.expt, SpaceID: f.space, LatestRunID: f.run, Status: int32(entity.ExptStatus_Processing), ExptType: int32(entity.ExptType_Offline)},
+				&model.ExptItemResult{ID: 101, SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, ItemID: f.item + 1, ItemVersionID: 32, Status: int32(entity.ItemRunState_Queueing)},
+				&model.ExptItemResultRunLog{ID: 201, SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, ItemID: f.item + 1, ItemVersionID: 32, Status: int32(entity.ItemRunState_Queueing), ResultState: gptr.Of(int32(entity.ExptItemResultStateDefault))},
+				&model.ExptTurnResult{ID: 401, SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, ItemID: f.item + 1, ItemVersionID: 32, TurnID: 0, Status: int32(entity.TurnRunState_Queueing)},
+				&model.ExptTurnResultRunLog{ID: 501, SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, ItemID: f.item + 1, ItemVersionID: 32, TurnID: 0, Status: int32(entity.TurnRunState_Queueing)},
+			} {
+				require.NoError(t, f.conn.Create(row).Error)
+			}
+			require.NoError(t, f.conn.Model(&model.ExptStats{}).Where("id=300").Update("pending_cnt", 1).Error)
+			ctrl := gomock.NewController(t)
+			config := componentmocks.NewMockIConfiger(ctrl)
+			debtErr := errors.New("evaluation credit exhausted")
+			config.EXPECT().GetErrRetryConf(gomock.Any(), f.space, debtErr).Return(&entity.RetryConf{IsInDebt: true, RetryTimes: 0}).AnyTimes()
+			terminator := &legacyDebtSQLTerminator{f: f}
+			svc := &ExptItemEventEvalServiceImpl{exptItemResultRepo: f.itemRepo(), experimentRepo: f.experimentRepo(), configer: config, manager: terminator, itemLocker: lateWriteLocker(t, ctrl)}
+			executor := &ExptItemEvalCtxExecutor{ItemResultRepo: f.itemRepo(), Configer: config}
+			event := &entity.ExptItemEvalEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, EvalSetItemID: f.item, ExptRunMode: entity.EvaluationModeSubmit, AsyncReportTrigger: kind == "target", AsyncEvaluatorReportTrigger: kind == "evaluator"}
+			completed := false
+			endpoint := svc.HandleEventErr(svc.HandleEventLock(svc.HandleCurrentSource(func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+				err := executor.CompleteItemRun(ctx, &entity.ExptItemEvalCtx{Event: event}, debtErr)
+				require.Same(t, debtErr, err)
+				require.True(t, executionSource(ctx).Completed)
+				var log model.ExptItemResultRunLog
+				require.NoError(t, f.conn.Where("id=200").Take(&log).Error)
+				require.Equal(t, int32(entity.ItemRunState_Fail), log.Status)
+				require.Equal(t, int32(entity.ExptItemResultStateLogged), gptr.Indirect(log.ResultState))
+				var run model.ExptRunLog
+				require.NoError(t, f.conn.Where("id=?", f.run).Take(&run).Error)
+				require.Equal(t, int64(entity.ExptStatus_Processing), gptr.Indirect(run.Status))
+				reentered := false
+				require.NoError(t, svc.HandleCurrentSource(func(context.Context, *entity.ExptItemEvalEvent) error { reentered = true; return nil })(ctx, event.Clone()))
+				require.False(t, reentered, "terminal item redelivery must be rejected even while the run is active")
+				completed = true
+				return err
+			})))
+			err := endpoint(context.Background(), event)
+			require.True(t, completed)
+			require.NoError(t, err, "a completed legacy failure must reach debt termination")
+			require.Equal(t, 1, terminator.calls)
+			var expt model.Experiment
+			require.NoError(t, f.conn.Where("id=?", f.expt).Take(&expt).Error)
+			require.Equal(t, int32(entity.ExptStatus_Terminated), expt.Status)
+			require.NotNil(t, expt.EndAt)
+			var run model.ExptRunLog
+			require.NoError(t, f.conn.Where("id=?", f.run).Take(&run).Error)
+			require.Equal(t, int64(entity.ExptStatus_Terminated), gptr.Indirect(run.Status))
+			var queued model.ExptItemResultRunLog
+			require.NoError(t, f.conn.Where("id=201").Take(&queued).Error)
+			require.Equal(t, int32(entity.ItemRunState_Terminal), queued.Status)
+		})
+	}
+}
+
 func TestCurrentRequestLegacyAsyncContinuation(t *testing.T) {
 	for _, kind := range []string{"target", "evaluator"} {
 		for _, version := range []int64{0, 31} {

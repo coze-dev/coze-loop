@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
@@ -133,4 +134,84 @@ func TestManualRetryPrepareManualSelection(t *testing.T) {
 	require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 12, Reason: "processing"}, {ItemID: 13, Reason: "queueing"}}, got.RejectedItems)
 	require.Zero(t, got.Items[0].Turns[0].TargetResultID)
 	require.False(t, got.Items[0].Turns[0].PreserveSuccess)
+}
+
+func TestManualRetryPreparePreviousRunPublication(t *testing.T) {
+	for _, mode := range []entity.ExptRunMode{entity.EvaluationModeFailRetry, entity.EvaluationModeRetryItems} {
+		for _, state := range []string{"resulted", "logged", "default", "missing", "wrong_version", "wrong_run", "query_error"} {
+			t.Run(fmt.Sprintf("mode=%d/%s", mode, state), func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				items := repomocks.NewMockIExptItemResultRepo(ctrl)
+				turns := repomocks.NewMockIExptTurnResultRepo(ctrl)
+				refs := repomocks.NewMockIExptItemRefRepo(ctrl)
+				manager := &ExptMangerImpl{itemResultRepo: items, turnResultRepo: turns, itemRefRepo: refs}
+				item := &entity.ExptItemResult{ID: 101, SpaceID: 9, ExptID: 7, ExptRunID: 8, ItemID: 11, ItemVersionID: 91, Status: entity.ItemRunState_Fail}
+				var selected []int64
+				if mode == entity.EvaluationModeRetryItems {
+					selected = []int64{11}
+					items.EXPECT().BatchGet(gomock.Any(), int64(9), int64(7), selected).Return([]*entity.ExptItemResult{item}, nil)
+				} else {
+					items.EXPECT().ScanItemResults(gomock.Any(), int64(7), int64(0), int64(500), []int32{int32(entity.ItemRunState_Fail)}, int64(9)).Return([]*entity.ExptItemResult{item}, int64(0), nil)
+				}
+				fault := errors.New("previous item log unavailable")
+				previousReads := 0
+				items.EXPECT().MGetItemRunLog(gomock.Any(), int64(7), gomock.Any(), []int64{11}, int64(9)).DoAndReturn(func(_ context.Context, _, run int64, _ []int64, _ int64) ([]*entity.ExptItemResultRunLog, error) {
+					if run == 9 {
+						return nil, nil
+					}
+					require.Equal(t, int64(8), run)
+					previousReads++
+					if state == "query_error" {
+						return nil, fault
+					}
+					if state == "missing" {
+						return nil, nil
+					}
+					log := &entity.ExptItemResultRunLog{ID: 201, SpaceID: 9, ExptID: 7, ExptRunID: 8, ItemID: 11, ItemVersionID: 91, Status: int32(entity.ItemRunState_Fail), ResultState: int32(entity.ExptItemResultStateResulted)}
+					switch state {
+					case "logged":
+						log.ResultState = int32(entity.ExptItemResultStateLogged)
+					case "default":
+						log.ResultState = int32(entity.ExptItemResultStateDefault)
+					case "wrong_version":
+						log.ItemVersionID++
+					case "wrong_run":
+						log.ExptRunID++
+					}
+					return []*entity.ExptItemResultRunLog{log}, nil
+				}).AnyTimes()
+				refs.EXPECT().GetByExptIDAndItemID(gomock.Any(), int64(9), int64(7), int64(11)).Return(&entity.ExptItemRef{SpaceID: 9, ExptID: 7, ItemID: 11, ItemVersionID: 91}, nil).AnyTimes()
+				turns.EXPECT().GetItemTurnResults(gomock.Any(), int64(7), int64(11), int64(9)).Return([]*entity.ExptTurnResult{{ID: 301, SpaceID: 9, ExptID: 7, ExptRunID: 8, ItemID: 11, ItemVersionID: 91, TurnID: 21, Status: int32(entity.TurnRunState_Fail)}}, nil).AnyTimes()
+				turns.EXPECT().GetItemTurnRunLogs(gomock.Any(), int64(7), gomock.Any(), int64(11), int64(9)).DoAndReturn(func(_ context.Context, _, run, _, _ int64) ([]*entity.ExptTurnResultRunLog, error) {
+					if run == 9 {
+						return nil, nil
+					}
+					return []*entity.ExptTurnResultRunLog{{ID: 401, SpaceID: 9, ExptID: 7, ExptRunID: 8, ItemID: 11, TurnID: 21, Status: entity.TurnRunState_Fail}}, nil
+				}).AnyTimes()
+				turns.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(9), []int64{301}).Return(nil, nil).AnyTimes()
+				plan, err := manager.prepareTerminalCandidatesAndReusableRefs(context.Background(), &entity.Experiment{ID: 7, SpaceID: 9, ExptType: entity.ExptType_Offline, EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig}, 9, mode, selected, nil)
+				if state == "query_error" {
+					require.ErrorIs(t, err, fault)
+					require.Nil(t, plan)
+					return
+				}
+				if state == "wrong_version" || state == "wrong_run" {
+					require.Error(t, err)
+					require.Nil(t, plan)
+					return
+				}
+				if state == "resulted" {
+					require.NoError(t, err)
+					require.Len(t, plan.Items, 1)
+					require.Nil(t, plan.Items[0].CurrentItemLog, "previous log must not replace the missing current log")
+					require.Equal(t, int64(8), plan.Items[0].PreviousRunID)
+				} else {
+					require.NoError(t, err)
+					require.Empty(t, plan.Items)
+					require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 11, Reason: "result_not_ready"}}, plan.RejectedItems)
+				}
+				require.Equal(t, 1, previousReads)
+			})
+		}
+	}
 }

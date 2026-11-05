@@ -529,6 +529,37 @@ func TestValidateResumeSourceUnit(t *testing.T) {
 	})
 }
 
+func TestLegacyAsyncResumeIdentityAfterCompletion(t *testing.T) {
+	for _, kind := range []string{"target", "evaluator"} {
+		for _, sourceCase := range []string{"ordinary_completed", "nil_current", "run_changed", "current_manual", "event_manual", "both_manual"} {
+			t.Run(kind+"/"+sourceCase, func(t *testing.T) {
+				event := &entity.ExptItemEvalEvent{ExptRunID: 2, AsyncReportTrigger: kind == "target", AsyncEvaluatorReportTrigger: kind == "evaluator"}
+				current := &entity.ExptItemCurrentRequest{RunID: 2, Status: entity.ItemRunState_Fail, ResultState: entity.ExptItemResultStateLogged}
+				switch sourceCase {
+				case "nil_current":
+					current = nil
+				case "run_changed":
+					current.RunID = 3
+				case "current_manual":
+					current.RequestID = "manual"
+				case "event_manual":
+					event.RequestID = "manual"
+				case "both_manual":
+					current.RequestID, event.RequestID = "manual", "manual"
+				}
+				valid, err := (&ExptItemEventEvalServiceImpl{}).validateResumeSource(context.Background(), event, current)
+				if sourceCase == "ordinary_completed" {
+					require.NoError(t, err)
+					require.True(t, valid)
+				} else {
+					require.False(t, valid)
+					require.True(t, errno.NeedMQRetry(err))
+				}
+			})
+		}
+	}
+}
+
 func TestWithCurrentScannedItemUnit(t *testing.T) {
 	event := &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2}
 	now := time.Now()

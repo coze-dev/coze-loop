@@ -133,6 +133,32 @@ func (m *ExptMangerImpl) prepareTerminalCandidatesAndReusableRefs(ctx context.Co
 			}
 		} else if item.ExptRunID == runID {
 			return nil, fmt.Errorf("current retry item log missing")
+		} else {
+			// Missing current logs only change the insertion path. The previous
+			// run must still prove its terminal result was published.
+			previousLogs, err := m.itemResultRepo.MGetItemRunLog(ctx, expt.ID, prepared.PreviousRunID, []int64{item.ItemID}, expt.SpaceID)
+			if err != nil {
+				return nil, err
+			}
+			if len(previousLogs) > 1 {
+				return nil, fmt.Errorf("duplicate previous item log")
+			}
+			if len(previousLogs) == 0 || previousLogs[0] == nil {
+				plan.RejectedItems = append(plan.RejectedItems, &entity.ManualRetryRejectedItem{ItemID: item.ItemID, Reason: "result_not_ready"})
+				continue
+			}
+			previous := previousLogs[0]
+			if previous.SpaceID != expt.SpaceID || previous.ExptID != expt.ID || previous.ExptRunID != prepared.PreviousRunID || previous.ItemID != item.ItemID || previous.ItemVersionID != item.ItemVersionID {
+				return nil, fmt.Errorf("invalid previous retry item log")
+			}
+			reason = manualRetryTerminalReason(entity.ItemRunState(previous.Status))
+			if reason == "" && previous.ResultState != int32(entity.ExptItemResultStateResulted) {
+				reason = "result_not_ready"
+			}
+			if reason != "" {
+				plan.RejectedItems = append(plan.RejectedItems, &entity.ManualRetryRejectedItem{ItemID: item.ItemID, Reason: reason})
+				continue
+			}
 		}
 		switch expt.EvalSetSourceType {
 		case 0, entity.ExptEvalSetSourceType_SingleSet:

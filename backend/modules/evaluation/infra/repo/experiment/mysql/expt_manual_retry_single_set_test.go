@@ -124,6 +124,9 @@ func (s *singleSetItemStorage) MGetItemRunLog(ctx context.Context, expt, run int
 	var result []*entity.ExptItemResultRunLog
 	for _, id := range ids {
 		row, err := mysql.NewExptItemResultDAO(s.f.provider).GetItemRunLog(ctx, expt, run, id, space)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -157,6 +160,18 @@ func (s *singleSetTurnStorage) GetItemTurnRunLogs(ctx context.Context, expt, run
 		result = append(result, log)
 	}
 	return result, err
+}
+
+func (s *singleSetTurnStorage) MGetItemTurnRunLogs(ctx context.Context, expt, run int64, items []int64, space int64) ([]*entity.ExptTurnResultRunLog, error) {
+	var result []*entity.ExptTurnResultRunLog
+	for _, item := range items {
+		logs, err := s.GetItemTurnRunLogs(ctx, expt, run, item, space)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, logs...)
+	}
+	return result, nil
 }
 
 func (s *singleSetTurnStorage) BatchGetTurnEvaluatorResultRef(ctx context.Context, space int64, ids []int64) ([]*entity.ExptTurnEvaluatorResultRef, error) {
@@ -216,7 +231,7 @@ func (p *singleSetRetryPort) RequeueTerminalItems(ctx context.Context, req *enti
 	return p.IExptManualRetryRepo.RequeueTerminalItems(ctx, req)
 }
 
-func singleSetRetryManager(t *testing.T, f *manualRetryFixture, port repo.IExptManualRetryRepo, enforce bool) service.IExptManager {
+func singleSetRetryManager(t *testing.T, f *manualRetryFixture, port repo.IExptManualRetryRepo, enforce bool, onRelease ...func()) service.IExptManager {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	config := componentmocks.NewMockIConfiger(ctrl)
@@ -229,7 +244,12 @@ func singleSetRetryManager(t *testing.T, f *manualRetryFixture, port repo.IExptM
 	guard := componentmocks.NewMockICentralReservationGuard(ctrl)
 	waker := singleSetRetryWaker{}
 	if enforce {
-		guard.EXPECT().ReleaseTerminalReservation(gomock.Any(), "single-set-test", f.run, int64(11), "").Return(component.TerminalReservationAbsent, nil).MaxTimes(1)
+		guard.EXPECT().ReleaseTerminalReservation(gomock.Any(), "single-set-test", f.run, int64(11), "").DoAndReturn(func(context.Context, string, int64, int64, string) (component.TerminalReservationReleaseResult, error) {
+			for _, observe := range onRelease {
+				observe()
+			}
+			return component.TerminalReservationAbsent, nil
+		}).MaxTimes(1)
 	}
 	s := &singleSetRetryStorage{f: f}
 	return service.NewExptManager(
@@ -260,6 +280,51 @@ func prepareSingleSetFixture(t *testing.T, f *manualRetryFixture, enforce, zeroV
 	if zeroVersion {
 		for _, table := range []string{"expt_item_result", "expt_item_result_run_log", "expt_turn_result", "expt_turn_result_run_log", "eval_target_record", "evaluator_record"} {
 			require.NoError(t, f.conn.Table(table).Where("space_id=? AND item_id=?", f.space, 11).Update("item_version_id", 0).Error)
+		}
+	}
+}
+
+func TestManualRetryPreviousRunManagerPublishedGate(t *testing.T) {
+	for _, mode := range []entity.ExptRunMode{entity.EvaluationModeFailRetry, entity.EvaluationModeRetryItems} {
+		for _, boundary := range []string{"prepare", "preflight"} {
+			for _, state := range []entity.ExptItemResultState{entity.ExptItemResultStateLogged, entity.ExptItemResultStateDefault, entity.ExptItemResultStateResulted} {
+				t.Run(fmt.Sprintf("mode=%d/%s/state=%d", mode, boundary, state), func(t *testing.T) {
+					provider, conn, rawPort, space, expt, run, base, snapshot := mysql.NewPreviousRunRetryFixtureForTest(t, mode)
+					f := &manualRetryFixture{provider: provider, conn: conn, port: rawPort, space: space, expt: expt, run: run, base: base, snapshot: snapshot}
+					prepareSingleSetFixture(t, f, true, false)
+					port := &singleSetRetryPort{IExptManualRetryRepo: rawPort}
+					var before map[string]string
+					changePublication := func() {
+						require.NoError(t, conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND expt_run_id=? AND item_id=11", space, run).Update("result_state", int32(state)).Error)
+						before = snapshot()
+					}
+					if boundary == "prepare" {
+						changePublication()
+					} else {
+						port.beforePreflight = changePublication
+					}
+					releases := 0
+					manager := singleSetRetryManager(t, f, port, true, func() { releases++ })
+					request := &entity.RetryInCurrentRunRequest{SpaceID: space, ExptID: expt, ExpectedRunID: base + 999, Mode: mode}
+					if mode == entity.EvaluationModeRetryItems {
+						request.ItemIDs = []int64{11}
+					}
+					receipt, err := manager.RetryInCurrentRun(context.Background(), request)
+					require.NoError(t, err)
+					if state == entity.ExptItemResultStateResulted {
+						require.Equal(t, int32(1), receipt.AcceptedCount)
+						require.Equal(t, 1, releases)
+						source, err := mysql.NewExptItemResultDAO(provider).(repo.IExptCurrentResultRepo).GetCurrentItemRunSource(context.Background(), space, expt, base+999, 11)
+						require.NoError(t, err)
+						require.NotEmpty(t, source.Current.RequestID)
+					} else {
+						require.Zero(t, receipt.AcceptedCount)
+						require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 11, Reason: "result_not_ready"}}, receipt.RejectedItems)
+						require.Zero(t, releases, "preflight must reject unpublished old logs before releasing the old reservation")
+						require.Equal(t, before, snapshot())
+					}
+				})
+			}
 		}
 	}
 }

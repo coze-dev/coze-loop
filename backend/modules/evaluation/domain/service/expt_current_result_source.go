@@ -46,7 +46,9 @@ func (e *ExptItemEventEvalServiceImpl) validateResumeSource(ctx context.Context,
 			// An empty current request is derived from the absence of persisted
 			// manual_retry metadata. Preserve callbacks from ordinary legacy runs,
 			// but never infer a manual invocation identity from the latest records.
-			if event.RequestID == "" && current.Matches(event.ExptRunID, "") {
+			// Error handling revalidates identity after this execution writes
+			// Fail/Logged; lifecycle admission remains at HandleCurrentSource.
+			if current != nil && current.RunID == event.ExptRunID && event.RequestID == "" && current.RequestID == "" {
 				return true, nil
 			}
 			return false, errno.NewMQRetryErr("legacy async event lacks original recoverable invocation identity")

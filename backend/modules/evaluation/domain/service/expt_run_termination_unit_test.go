@@ -1469,6 +1469,7 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 func TestPrepareTerminalCandidatesUnit(t *testing.T) {
 	newDateDeps := func(t *testing.T) (*termUnitDeps, *repomocks.MockIExptTurnResultRepo, *repomocks.MockIExptItemRefRepo) {
 		d := newTermUnitDeps(t)
+		d.items.EXPECT().MGetItemRunLog(gomock.Any(), int64(1), int64(1), []int64{9}, int64(3)).Return([]*entity.ExptItemResultRunLog{{ID: 11, SpaceID: 3, ExptID: 1, ExptRunID: 1, ItemID: 9, ItemVersionID: 7, Status: int32(entity.ItemRunState_Success), ResultState: int32(entity.ExptItemResultStateResulted)}}, nil).AnyTimes()
 		return d, repomocks.NewMockIExptTurnResultRepo(d.ctrl), repomocks.NewMockIExptItemRefRepo(d.ctrl)
 	}
 	expt := func() *entity.Experiment { return manualRetryUnitExperiment() }

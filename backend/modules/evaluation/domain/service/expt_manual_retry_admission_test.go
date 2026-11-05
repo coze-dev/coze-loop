@@ -373,6 +373,7 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 			source := &entity.ExptItemResult{ID: 101, SpaceID: 9, ExptID: 7, ExptRunID: oldRun, ItemID: 11, ItemVersionID: 91, Status: entity.ItemRunState_Fail, Ext: ext}
 			items.EXPECT().BatchGet(gomock.Any(), int64(9), int64(7), []int64{11}).Return([]*entity.ExptItemResult{source}, nil)
 			items.EXPECT().MGetItemRunLog(gomock.Any(), int64(7), int64(8), []int64{11}, int64(9)).Return(nil, nil)
+			items.EXPECT().MGetItemRunLog(gomock.Any(), int64(7), oldRun, []int64{11}, int64(9)).Return([]*entity.ExptItemResultRunLog{{ID: 201, SpaceID: 9, ExptID: 7, ExptRunID: oldRun, ItemID: 11, ItemVersionID: 91, Status: int32(entity.ItemRunState_Fail), ResultState: int32(entity.ExptItemResultStateResulted)}}, nil)
 			refs.EXPECT().GetByExptIDAndItemID(gomock.Any(), int64(9), int64(7), int64(11)).Return(&entity.ExptItemRef{SpaceID: 9, ExptID: 7, ItemID: 11, ItemVersionID: 91}, nil)
 			turns.EXPECT().GetItemTurnResults(gomock.Any(), int64(7), int64(11), int64(9)).Return([]*entity.ExptTurnResult{{ID: 301, SpaceID: 9, ExptID: 7, ExptRunID: 6, ItemID: 11, ItemVersionID: 91, TurnID: 21, Status: 2}}, nil)
 			turns.EXPECT().GetItemTurnRunLogs(gomock.Any(), int64(7), int64(8), int64(11), int64(9)).Return(nil, nil)

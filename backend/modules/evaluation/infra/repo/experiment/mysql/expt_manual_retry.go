@@ -322,6 +322,24 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryItem(ctx context.Context, r *ent
 		if p.CurrentItemLog != nil || current.ExptRunID == r.RunID {
 			return nil, "source_changed", nil
 		}
+		// Recheck publication before both reservation release (preflight) and
+		// commit, using the same transaction/master/row-lock options.
+		previous, err := NewExptItemResultDAO(d.provider).GetItemRunLog(ctx, r.ExptID, p.PreviousRunID, current.ItemID, r.SpaceID, opts...)
+		if errors.Is(err, gorm.ErrRecordNotFound) || previous == nil && err == nil {
+			return nil, "result_not_ready", nil
+		}
+		if err != nil {
+			return nil, "", err
+		}
+		if previous.SpaceID != r.SpaceID || previous.ExptID != r.ExptID || previous.ExptRunID != p.PreviousRunID || previous.ItemID != current.ItemID || previous.ItemVersionID != p.ItemVersionID {
+			return nil, "source_changed", nil
+		}
+		if reason := retryTerminalReason(entity.ItemRunState(previous.Status)); reason != "" {
+			return nil, reason, nil
+		}
+		if gptr.Indirect(previous.ResultState) != int32(entity.ExptItemResultStateResulted) {
+			return nil, "result_not_ready", nil
+		}
 	} else {
 		if reason := retryTerminalReason(entity.ItemRunState(log.Status)); reason != "" {
 			return nil, reason, nil
