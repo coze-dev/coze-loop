@@ -2095,7 +2095,13 @@ func (e *EvalOpenAPIApplication) ListExperimentsOApi(ctx context.Context, req *o
 
 	outExpts := make([]*experiment.Experiment, 0, len(resp.GetExperiments()))
 	for _, ex := range resp.GetExperiments() {
-		outExpts = append(outExpts, experiment_convertor.DomainExperimentDTO2OpenAPI(ex))
+		out := experiment_convertor.DomainExperimentDTO2OpenAPI(ex)
+		if out != nil {
+			// runner_envs values are credentials. Collection endpoints never return
+			// this field; only submit/detail may expose its masked shape.
+			out.RunnerEnvs = nil
+		}
+		outExpts = append(outExpts, out)
 	}
 
 	var total *int64
@@ -2159,7 +2165,13 @@ func (e *EvalOpenAPIApplication) GetExperimentIDsByGroupOApi(ctx context.Context
 	// 跨两套 Experiment 模型（domain / domain_openapi）枚举编号刻意不同，只能过既有转换函数，禁止手写字段赋值。
 	outExpts := make([]*experiment.Experiment, 0, len(resp.GetExperiments()))
 	for _, ex := range resp.GetExperiments() {
-		outExpts = append(outExpts, experiment_convertor.DomainExperimentDTO2OpenAPI(ex))
+		out := experiment_convertor.DomainExperimentDTO2OpenAPI(ex)
+		if out != nil {
+			// runner_envs values are credentials. Collection endpoints never return
+			// this field; only submit/detail may expose its masked shape.
+			out.RunnerEnvs = nil
+		}
+		outExpts = append(outExpts, out)
 	}
 
 	var total *int64

@@ -1345,6 +1345,14 @@ func (e *experimentApplication) GetExperimentIDsByGroup(ctx context.Context, req
 			return nil, err
 		}
 		exptDTOs = experiment.ToExptDTOs(expts)
+		for _, exptDTO := range exptDTOs {
+			if exptDTO != nil {
+				// This is a collection response. runner_envs may contain plaintext in
+				// open-source deployments or ciphertext in commercial deployments;
+				// neither belongs in a collection payload.
+				exptDTO.RunnerEnvs = nil
+			}
+		}
 	}
 
 	return &expt.GetExperimentIDsByGroupResponse{
