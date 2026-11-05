@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -16,6 +17,18 @@ import (
 type projectionSourceTargetRepo struct {
 	repo.IEvalTargetRepo
 	f *projectionFixture
+}
+
+func TestProjectionFreezesBusinessDateInDeploymentTimezone(t *testing.T) {
+	midnight := time.Date(2025, 1, 2, 0, 30, 0, 0, time.Local)
+	_, offset := midnight.Zone()
+	f := newProjectionFixture(t)
+	start := midnight.In(time.FixedZone("source-zone", offset-2*60*60))
+	f.expt.StartAt = &start
+	rows, err := f.service().BuildExptFilterProjection(context.Background(), 1, 2, []int64{3})
+	require.NoError(t, err)
+	require.Equal(t, "2025-01-02", rows[0].CreatedDate.Format("2006-01-02"))
+	require.Equal(t, "2025-01-01", f.expt.StartAt.Format("2006-01-02"), "source experiment must remain unchanged")
 }
 
 func TestProjectionReadsPersistedCrossSpaceItemReference(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -79,7 +80,7 @@ func (e ExptResultServiceImpl) BuildExptFilterProjection(ctx context.Context, sp
 	if len(turns) == 0 {
 		return nil, nil
 	}
-	if expt.StartAt == nil || expt.StartAt.IsZero() || expt.StartAt.Format("2006-01-02") < "1970-01-01" || expt.StartAt.Format("2006-01-02") > "2149-06-06" {
+	if expt.StartAt == nil || expt.StartAt.IsZero() || expt.StartAt.In(time.Local).Format("2006-01-02") < "1970-01-01" || expt.StartAt.In(time.Local).Format("2006-01-02") > "2149-06-06" {
 		return nil, projectionError(spaceID, exptID, 0, 0, "created_date", fmt.Errorf("valid business start date required"))
 	}
 	if expt.ExptType != entity.ExptType_Offline && expt.ExptType != entity.ExptType_Online {
@@ -131,7 +132,7 @@ func (e ExptResultServiceImpl) BuildExptFilterProjection(ctx context.Context, sp
 		if item == nil {
 			return nil, projectionError(spaceID, exptID, tr.ItemID, tr.TurnID, "items", fmt.Errorf("referenced item missing"))
 		}
-		row := &entity.ExptTurnResultFilterEntity{SpaceID: spaceID, ExptID: exptID, ItemID: tr.ItemID, TurnID: tr.TurnID, ItemVersionID: tr.ItemVersionID, ItemIdx: item.ItemIdx, Status: item.Status, CreatedDate: *expt.StartAt, EvalSetID: expt.EvalSetID, EvalSetVersionID: expt.EvalSetVersionID, EvalTargetData: map[string]string{}, EvaluatorScore: map[string]float64{}, AnnotationFloat: map[string]float64{}, AnnotationBool: map[string]bool{}, AnnotationString: map[string]string{}, EvalTargetMetrics: map[string]int64{}}
+		row := &entity.ExptTurnResultFilterEntity{SpaceID: spaceID, ExptID: exptID, ItemID: tr.ItemID, TurnID: tr.TurnID, ItemVersionID: tr.ItemVersionID, ItemIdx: item.ItemIdx, Status: item.Status, CreatedDate: expt.StartAt.In(time.Local), EvalSetID: expt.EvalSetID, EvalSetVersionID: expt.EvalSetVersionID, EvalTargetData: map[string]string{}, EvaluatorScore: map[string]float64{}, AnnotationFloat: map[string]float64{}, AnnotationBool: map[string]bool{}, AnnotationString: map[string]string{}, EvalTargetMetrics: map[string]int64{}}
 		if ref := refs[tr.ItemID]; ref != nil {
 			row.EvalSetID = ref.EvalSetID
 			row.EvalSetVersionID = ref.EvalSetVersionID
