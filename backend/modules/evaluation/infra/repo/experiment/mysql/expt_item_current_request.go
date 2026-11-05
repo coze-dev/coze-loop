@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	looplogs "github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 type currentRequestRow struct {
@@ -341,7 +342,7 @@ func (dao *exptItemResultDAOImpl) MarkProcessingIfCurrent(ctx context.Context, s
 			return err
 		}
 		if stats.PendingCnt <= 0 {
-			return fmt.Errorf("queueing stats underflow")
+			looplogs.CtxWarn(ctx, "queueing stats drift: space_id=%d expt_id=%d item_id=%d pending_cnt=%d", spaceID, exptID, itemID, stats.PendingCnt)
 		}
 		for _, row := range []struct {
 			value any
@@ -365,7 +366,7 @@ func (dao *exptItemResultDAOImpl) MarkProcessingIfCurrent(ctx context.Context, s
 				return err
 			}
 		}
-		if err := tx.Model(&model.ExptStats{}).Where("id=?", stats.ID).Updates(map[string]any{"pending_cnt": gorm.Expr("pending_cnt - 1"), "processing_cnt": gorm.Expr("processing_cnt + 1")}).Error; err != nil {
+		if err := tx.Model(&model.ExptStats{}).Where("id=?", stats.ID).Updates(map[string]any{"pending_cnt": gorm.Expr("GREATEST(pending_cnt - 1, 0)"), "processing_cnt": gorm.Expr("GREATEST(processing_cnt + 1, 0)")}).Error; err != nil {
 			return err
 		}
 		changed = true

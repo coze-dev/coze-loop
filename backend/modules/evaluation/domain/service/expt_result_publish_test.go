@@ -426,7 +426,11 @@ func TestResultPublishLockCancellationNoWrites(t *testing.T) {
 			before := f.snapshot()
 			sent := false
 			applied, err := svc.PublishPreparedItemResult(ctx, p, func(context.Context, *entity.ExptItemResultPublishSource) error { sent = true; return nil })
-			require.True(t, errno.NeedMQRetry(err))
+			if kind == "busy" {
+				require.NoError(t, err, "publication contention leaves durable work for the next scan")
+			} else {
+				require.True(t, errno.NeedMQRetry(err))
+			}
 			require.False(t, applied)
 			require.False(t, sent)
 			require.Equal(t, before, f.snapshot())

@@ -113,12 +113,26 @@ func TestScanTransitionMySQLIdentityAndCorruption(t *testing.T) {
 			}
 			before := f.snapshot()
 			rows, err := dao.ScanCurrentRequests(ctx, f.space, f.expt, f.run, false)
-			if bad {
+			if kind == "missing_run" {
 				require.Error(t, err)
 				require.Nil(t, rows)
 			} else {
 				require.NoError(t, err)
-				if kind != "old_token" {
+				if bad {
+					current, readErr := dao.GetCurrentRequest(ctx, f.space, f.expt, f.run, item)
+					require.Error(t, readErr)
+					require.Nil(t, current)
+					found := false
+					for _, row := range rows {
+						if row.ItemID == item {
+							found = true
+							require.True(t, row.ObservationUnstable)
+							require.Nil(t, row.Source)
+							require.Nil(t, row.Publication)
+						}
+					}
+					require.True(t, found, "a damaged item remains pending without blocking the whole scan")
+				} else if kind != "old_token" {
 					for _, row := range rows {
 						require.NotEqual(t, item, row.ItemID)
 					}

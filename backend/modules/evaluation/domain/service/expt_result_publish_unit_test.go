@@ -381,8 +381,14 @@ func TestPublishPreparedItemResultUnit(t *testing.T) {
 	t.Run("lock_busy", func(t *testing.T) {
 		d := newPublishUnitDeps(t)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
-		_, err := d.svc.PublishPreparedItemResult(context.Background(), &entity.ExptItemResultPublication{Source: publishUnitSource()}, nil)
-		require.True(t, errno.NeedMQRetry(err))
+		sent := false
+		applied, err := d.svc.PublishPreparedItemResult(context.Background(), &entity.ExptItemResultPublication{Source: publishUnitSource()}, func(context.Context, *entity.ExptItemResultPublishSource) error {
+			sent = true
+			return nil
+		})
+		require.NoError(t, err)
+		require.False(t, applied)
+		require.False(t, sent)
 	})
 	t.Run("source_check_error", func(t *testing.T) {
 		d := newPublishUnitDeps(t)
