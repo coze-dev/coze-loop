@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	looplogs "github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 //go:generate mockgen -destination=mocks/expt_item_dispatch.go -package=mocks . IExptItemDispatchDAO
@@ -396,7 +397,8 @@ func transitionDispatchItem(tx *gorm.DB, s *lockedDispatchItem, next entity.Item
 	}
 	old := entity.ItemRunState(s.item.Status)
 	if old != next && (old == entity.ItemRunState_Queueing && stats.PendingCnt <= 0 || old == entity.ItemRunState_Processing && stats.ProcessingCnt <= 0) {
-		return fmt.Errorf("dispatch stats underflow")
+		// 旧链路计数可能漂移；canonical/log 状态 CAS 继续保证不会双跑。
+		looplogs.CtxWarn(tx.Statement.Context, "legacy dispatch stats drift: space_id=%d expt_id=%d item_id=%d old_status=%d pending_cnt=%d processing_cnt=%d", s.item.SpaceID, s.item.ExptID, s.item.ItemID, old, stats.PendingCnt, stats.ProcessingCnt)
 	}
 	// UpdateColumns skips GORM timestamp hooks; explicit original timestamps
 	// also prevent MySQL ON UPDATE from restarting the zombie clock on requeue.
@@ -444,7 +446,7 @@ func transitionDispatchItem(tx *gorm.DB, s *lockedDispatchItem, next entity.Item
 		if next == entity.ItemRunState_Queueing {
 			delta = 1
 		}
-		result := tx.Model(&model.ExptStats{}).Where("id=?", stats.ID).Updates(map[string]any{"pending_cnt": gorm.Expr("pending_cnt + ?", delta), "processing_cnt": gorm.Expr("processing_cnt - ?", delta)})
+		result := tx.Model(&model.ExptStats{}).Where("id=?", stats.ID).Updates(map[string]any{"pending_cnt": gorm.Expr("GREATEST(pending_cnt + ?, 0)", delta), "processing_cnt": gorm.Expr("GREATEST(processing_cnt - ?, 0)", delta)})
 		if result.Error != nil {
 			return result.Error
 		}
