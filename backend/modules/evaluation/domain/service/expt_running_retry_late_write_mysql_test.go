@@ -24,6 +24,7 @@ import (
 	experimentmysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	drivermysql "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"gorm.io/driver/mysql"
@@ -32,6 +33,22 @@ import (
 )
 
 var lateWriteFixtureSeq atomic.Int64
+
+// InnoDB 1213 rolls back the standalone fixture INSERT, so only that error is safe to retry here.
+func retryLateWriteFixtureInsert(write func() error) error {
+	var err error
+	for attempt := 0; attempt < 4; attempt++ {
+		err = write()
+		var mysqlErr *drivermysql.MySQLError
+		if !errors.As(err, &mysqlErr) || mysqlErr.Number != 1213 {
+			return err
+		}
+		if attempt < 3 {
+			time.Sleep(time.Duration(1<<attempt) * 10 * time.Millisecond)
+		}
+	}
+	return err
+}
 
 type lateWriteFixture struct {
 	t                                     *testing.T
@@ -87,7 +104,9 @@ func newLateWriteFixture(t *testing.T, token string) *lateWriteFixture {
 		require.NoError(t, conn.Create(&model.ExptTurnResult{ID: base + 400 + int64(index), SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, ItemID: f.item, ItemVersionID: f.version, TurnID: turn, Status: int32(entity.TurnRunState_Processing), TargetResultID: base + 41, WeightedScore: gptr.Of(0.0)}).Error)
 		require.NoError(t, conn.Create(&model.ExptTurnResultRunLog{ID: base + 500 + int64(index), SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, ItemID: f.item, ItemVersionID: f.version, TurnID: turn, Status: int32(entity.TurnRunState_Processing), TargetResultID: base + 41, EvaluatorResultIds: &refs, Ext: []byte(`{"other":"keep"}`)}).Error)
 	}
-	require.NoError(t, conn.Create(&model.ExptTurnEvaluatorResultRef{ID: base + 600, SpaceID: f.space, ExptID: f.expt, ExptTurnResultID: base + 400, EvaluatorVersionID: base + 51, Alias_: "alias", EvaluatorResultID: base + 61}).Error)
+	require.NoError(t, retryLateWriteFixtureInsert(func() error {
+		return conn.Create(&model.ExptTurnEvaluatorResultRef{ID: base + 600, SpaceID: f.space, ExptID: f.expt, ExptTurnResultID: base + 400, EvaluatorVersionID: base + 51, Alias_: "alias", EvaluatorResultID: base + 61}).Error
+	}))
 	require.NoError(t, conn.Exec("INSERT INTO eval_target_record (id,space_id,target_id,target_version_id,experiment_run_id,item_id,item_version_id,turn_id,log_id,trace_id,status) VALUES (?,?,?,?,?,?,?,?,?,?,?)", base+41, f.space, base+42, base+43, f.run, f.item, f.version, 0, "target", "trace", 1).Error)
 	require.NoError(t, conn.Exec("INSERT INTO evaluator_record (id,space_id,evaluator_version_id,experiment_id,experiment_run_id,item_id,item_version_id,turn_id,trace_id,status,target_record_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)", base+61, f.space, base+51, f.expt, f.run, f.item, f.version, 0, "trace", 1, 0).Error)
 	port, ok := any(experimentrepo.NewExptItemResultRepo(experimentmysql.NewExptItemResultDAO(provider))).(repo.IExptCurrentResultRepo)
@@ -146,7 +165,7 @@ func lateWriteLocker(t *testing.T, ctrl *gomock.Controller) ManualRetryLockerFac
 	t.Helper()
 	return func() lock.ILocker {
 		mutex := lockmocks.NewMockILocker(ctrl)
-		mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), 5*time.Second, gomock.Any()).DoAndReturn(func(ctx context.Context, _ string, _ time.Duration, _ time.Duration) (bool, context.Context, func(), error) {
+		mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), 5*time.Second, gomock.Any()).DoAndReturn(func(ctx context.Context, _ string, _, _ time.Duration) (bool, context.Context, func(), error) {
 			child, cancel := context.WithCancel(ctx)
 			return true, child, cancel, nil
 		}).AnyTimes()

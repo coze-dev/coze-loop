@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"gorm.io/driver/clickhouse"
@@ -20,11 +21,13 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	experimentck "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck"
 	experimentmysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	mysqlmodel "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	mysqlmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
 
 // Exercise both consumer branches with the real execution mutex and result
@@ -33,13 +36,16 @@ func TestRunningRetryFilterConsumer_HeldLockRefresh(t *testing.T) {
 	for _, reservation := range []bool{true, false} {
 		for _, saveFails := range []bool{false, true} {
 			t.Run(fmt.Sprintf("reserved_%t_save_error_%t", reservation, saveFails), func(t *testing.T) {
-				testRunningRetryFilterConsumer(t, reservation, saveFails)
+				testRunningRetryFilterConsumer(t, reservation, saveFails, true)
 			})
 		}
+		t.Run(fmt.Sprintf("reserved_%t_missing_publisher", reservation), func(t *testing.T) {
+			testRunningRetryFilterConsumer(t, reservation, true, false)
+		})
 	}
 }
 
-func testRunningRetryFilterConsumer(t *testing.T, reservation, saveFails bool) {
+func testRunningRetryFilterConsumer(t *testing.T, reservation, saveFails, publisherAvailable bool) {
 	t.Helper()
 	f := newFilterSyncFixture(t)
 	ctx := context.Background()
@@ -136,6 +142,19 @@ func testRunningRetryFilterConsumer(t *testing.T, reservation, saveFails bool) {
 		exptStatsRepo:      experimentrepo.NewExptStatsRepo(experimentmysql.NewExptStatsDAO(f.provider)),
 		resultSvc:          f.svc,
 	}
+	if publisherAvailable {
+		publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+		consumer.publisher = publisher
+		if saveFails {
+			gomock.InOrder(
+				publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), &entity.ExptTurnResultFilterEvent{ExperimentID: f.expt, SpaceID: f.space, ItemID: []int64{f.item}, FilterType: gptr.Of(entity.UpsertExptTurnResultFilterTypeAuto)}, nil).DoAndReturn(func(context.Context, *entity.ExptTurnResultFilterEvent, *time.Duration) error {
+					require.True(t, f.server.Exists(f.key()), "AUTO repair must retain the held item lock")
+					return nil
+				}),
+				publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), &entity.ExptTurnResultFilterEvent{ExperimentID: f.expt, SpaceID: f.space, ItemID: []int64{f.item}, RetryTimes: gptr.Of(int32(0)), FilterType: gptr.Of(entity.UpsertExptTurnResultFilterTypeCheck)}, gptr.Of(10*time.Second)).Return(nil),
+			)
+		}
+	}
 	nextCalls := 0
 	handler := consumer.HandleEventLock(consumer.HandleCentralReservation(func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
 		nextCalls++
@@ -145,14 +164,21 @@ func testRunningRetryFilterConsumer(t *testing.T, reservation, saveFails bool) {
 	active.Store(true)
 	err = handler(admittedEnforceCtx(event), event)
 	active.Store(false)
-	require.NoError(t, err, "consumer display refresh errors remain best effort")
+	if saveFails && !publisherAvailable {
+		require.Error(t, err)
+		require.True(t, errno.NeedMQRetry(err), "unpublished index repair must remain retryable")
+		require.Contains(t, err.Error(), "consumer CK insert unavailable")
+		require.Contains(t, err.Error(), "filter publisher unavailable")
+	} else {
+		require.NoError(t, err, "successful AUTO publication recovers the direct index refresh failure")
+	}
 	require.Equal(t, int32(1), saves.Load(), "consumer must attempt the actual OSS CK INSERT while holding its item lock")
 	require.GreaterOrEqual(t, payloadReads.Load(), int32(3), "canonical turn, ref and evaluator payload must be reread inside consumer lock")
 	require.NoError(t, sqlMock.ExpectationsWereMet())
-	if reservation {
+	if reservation && !(saveFails && !publisherAvailable) {
 		require.Equal(t, 1, nextCalls)
 	} else {
-		require.Zero(t, nextCalls, "absent reservation repairs the projection without executing")
+		require.Zero(t, nextCalls, "absent reservation or failed repair publication must not execute the item")
 	}
 	items, err := f.itemRepo().BatchGet(ctx, f.space, f.expt, []int64{f.item})
 	require.NoError(t, err)
