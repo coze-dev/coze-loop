@@ -79,10 +79,13 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 	// same-run 准入不再读取开关；显式 expected_run_id 时必须直接进入当前 run。
 	lwt.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), expt).Return(false).AnyTimes()
 	auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	// 4 次加锁：首次受理时 run exec lock + 被受理 item 的 eval lock；
+	// 之后两次重复请求（含开关门禁删除后新增的第三次调用）各自再取一次 run exec lock，
+	// 因此重复请求的拒绝原因只可能是队列/run 状态，而不是 disabled。
 	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), 5*time.Second, 5*time.Minute).DoAndReturn(func(ctx context.Context, _ string, _ time.Duration, _ time.Duration) (bool, context.Context, func(), error) {
 		c, cancel := context.WithCancel(ctx)
 		return true, c, cancel, nil
-	}).Times(3)
+	}).Times(4)
 	publisher.EXPECT().PublishExptScheduleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 	manager := service.NewExptManager(nil,
 		exptrepo.NewExptRepo(exptmysql.NewExptDAO(provider), exptmysql.NewExptEvaluatorRefDAO(provider), generator),

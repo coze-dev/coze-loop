@@ -60,6 +60,9 @@ func newPendingRunFixture(t *testing.T, initMode entity.ExptRunMode) *pendingRun
 	t.Cleanup(func() { _ = raw.Close() })
 	idem := idemrepo.NewIdempotentService(idemredis.NewIdemDAO(client))
 	config := confmocks.NewMockIConfiger(ctrl)
+	// running_retry_enabled 门禁已下线，但 LogRun 仍会读取执行配置里的 zombie interval，
+	// 这里只桩掉这次读取，不再提供任何开关语义。
+	config.EXPECT().GetExptExecConf(gomock.Any(), f.space).Return(&entity.ExptExecConf{}).AnyTimes()
 	ids := idmocks.NewMockIIDGenerator(ctrl)
 	ids.EXPECT().GenID(gomock.Any()).Return(f.run, nil).AnyTimes()
 	var seq atomic.Int64
