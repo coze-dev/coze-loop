@@ -15,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	looplogs "github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -260,7 +261,11 @@ func (r *ExptResultPublishDAOImpl) CommitItemResult(ctx context.Context, publica
 			if from == "" || to == "" {
 				return fmt.Errorf("publication stats source invalid")
 			}
-			if err := tx.Model(&model.ExptStats{}).Where("id=? AND space_id=? AND expt_id=?", stats.ID, c.SpaceID, c.ExptID).Updates(map[string]any{from: gorm.Expr(from + "-1"), to: gorm.Expr(to + "+1")}).Error; err != nil {
+			if fromCnt := publicationStatsCount(&stats, from); fromCnt <= 0 {
+				// legacy 迁移可能已漂移；canonical 状态 CAS 仍保证不会双跑。
+				looplogs.CtxWarn(ctx, "legacy publication stats drift: space_id=%d expt_id=%d item_id=%d from=%s to=%s %s=%d", c.SpaceID, c.ExptID, c.ItemID, from, to, from, fromCnt)
+			}
+			if err := tx.Model(&model.ExptStats{}).Where("id=? AND space_id=? AND expt_id=?", stats.ID, c.SpaceID, c.ExptID).Updates(map[string]any{from: gorm.Expr("GREATEST(" + from + " - 1, 0)"), to: gorm.Expr(to + " + 1")}).Error; err != nil {
 				return err
 			}
 		}
@@ -268,6 +273,23 @@ func (r *ExptResultPublishDAOImpl) CommitItemResult(ctx context.Context, publica
 		return ctx.Err()
 	}, db.WithMaster())
 	return applied && err == nil, err
+}
+
+func publicationStatsCount(stats *model.ExptStats, column string) int32 {
+	switch column {
+	case "pending_cnt":
+		return stats.PendingCnt
+	case "processing_cnt":
+		return stats.ProcessingCnt
+	case "success_cnt":
+		return stats.SuccessCnt
+	case "fail_cnt":
+		return stats.FailCnt
+	case "terminated_cnt":
+		return stats.TerminatedCnt
+	default:
+		return 0
+	}
 }
 
 func publicationRefKey(turn, version int64, alias, key string) string {
