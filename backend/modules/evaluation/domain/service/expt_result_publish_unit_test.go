@@ -390,6 +390,25 @@ func TestPublishPreparedItemResultUnit(t *testing.T) {
 		require.False(t, applied)
 		require.False(t, sent)
 	})
+	t.Run("cancelled_while_waiting_for_busy_lock", func(t *testing.T) {
+		d := newPublishUnitDeps(t)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		cleaned := false
+		d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:1:9", 5*time.Second, time.Minute).
+			DoAndReturn(func(context.Context, string, time.Duration, time.Duration) (bool, context.Context, func(), error) {
+				cancel()
+				return false, ctx, func() { cleaned = true }, nil
+			})
+		applied, err := d.svc.PublishPreparedItemResult(ctx, &entity.ExptItemResultPublication{Source: publishUnitSource()}, func(context.Context, *entity.ExptItemResultPublishSource) error {
+			t.Fatal("cancelled publication must not send item-complete")
+			return nil
+		})
+		require.True(t, errno.NeedMQRetry(err))
+		require.ErrorIs(t, err, context.Canceled)
+		require.False(t, applied)
+		require.True(t, cleaned)
+	})
 	t.Run("source_check_error", func(t *testing.T) {
 		d := newPublishUnitDeps(t)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
@@ -1115,4 +1134,80 @@ func TestRecordCurrentItemResultsRemainingBranches(t *testing.T) {
 		})
 		require.True(t, errno.NeedMQRetry(scheduler.recordCurrentItemResults(ctx, event(), []*entity.ExptEvalItem{item}, mode, expt, svc)))
 	})
+}
+
+func TestRecordCurrentItemResultsDefersDamagedItem(t *testing.T) {
+	for _, stage := range []string{"source_read", "preparation", "publication"} {
+		t.Run(stage, func(t *testing.T) {
+			d := newPublishUnitDeps(t)
+			mode := entitymocks.NewMockExptSchedulerMode(d.ctrl)
+			results := svcmocks.NewMockExptResultService(d.ctrl)
+			scheduler := &ExptSchedulerImpl{ResultSvc: results}
+			event := &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2}
+			damaged := publishUnitSource()
+			item := &entity.ExptEvalItem{ItemID: 9, RequestID: "req", State: entity.ItemRunState_Success, Source: damaged.Source, Publication: damaged}
+			failure := &entity.ExptItemSourceError{Cause: errors.New("damaged current turn source")}
+			switch stage {
+			case "source_read":
+				item.Publication = nil
+				d.repo.EXPECT().GetItemResultPublishSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).Return(nil, failure)
+			case "preparation":
+				damaged.Source.CanonicalTurns = nil
+			case "publication":
+				d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:1:9", 5*time.Second, time.Minute).Return(true, context.Background(), func() {}, nil)
+				d.locker.EXPECT().Unlock("expt_item_eval_run_lock:1:9").Return(true, nil)
+				d.repo.EXPECT().IsItemResultPublishSourceCurrent(gomock.Any(), damaged).Return(false, failure)
+			}
+			originalCurrent, originalLog := damaged.Source.Current, *damaged.ItemLog
+			healthy := publishUnitSource()
+			healthy.Source.Current.ItemID = 10
+			healthy.Item.ItemID, healthy.ItemLog.ItemID = 10, 10
+			for _, turn := range healthy.Source.CanonicalTurns {
+				turn.ItemID = 10
+			}
+			for _, log := range healthy.Source.Turns {
+				log.ItemID = 10
+			}
+			healthyItem := &entity.ExptEvalItem{ItemID: 10, RequestID: "req", State: entity.ItemRunState_Success, Source: healthy.Source, Publication: healthy}
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:1:10", 5*time.Second, time.Minute).Return(true, context.Background(), func() {}, nil)
+			d.locker.EXPECT().Unlock("expt_item_eval_run_lock:1:10").Return(true, nil)
+			d.repo.EXPECT().IsItemResultPublishSourceCurrent(gomock.Any(), healthy).Return(true, nil)
+			d.repo.EXPECT().CommitItemResult(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, publication *entity.ExptItemResultPublication) (bool, error) {
+				require.Same(t, healthy, publication.Source)
+				return true, nil
+			})
+			mode.EXPECT().PublishResult(gomock.Any(), gomock.Any(), event).Return(nil)
+			results.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), int64(3), int64(1), []int64{10}).Return(nil)
+
+			require.NoError(t, scheduler.recordCurrentItemResults(context.Background(), event, []*entity.ExptEvalItem{item, healthyItem}, mode, publishUnitExperiment(), d.svc))
+			require.True(t, item.ObservationUnstable)
+			require.Nil(t, item.Source)
+			require.Nil(t, item.Publication)
+			require.Equal(t, entity.ItemRunState_Success, item.State)
+			require.Equal(t, originalCurrent, damaged.Source.Current)
+			require.Equal(t, originalLog, *damaged.ItemLog, "damaged work must remain Logged for a later scan")
+			require.False(t, healthyItem.ObservationUnstable)
+			require.Same(t, healthy, healthyItem.Publication)
+		})
+	}
+}
+
+func TestRecordCurrentItemResultsPreservesCancellationDuringDamagedRead(t *testing.T) {
+	d := newPublishUnitDeps(t)
+	scheduler := &ExptSchedulerImpl{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	failure := &entity.ExptItemSourceError{Cause: errors.New("damaged current turn source")}
+	d.repo.EXPECT().GetItemResultPublishSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).
+		DoAndReturn(func(context.Context, int64, int64, int64, int64) (*entity.ExptItemResultPublishSource, error) {
+			cancel()
+			return nil, failure
+		})
+	item := &entity.ExptEvalItem{ItemID: 9, RequestID: "req", State: entity.ItemRunState_Success, Source: currentUnitSource()}
+	originalSource := item.Source
+	err := scheduler.recordCurrentItemResults(ctx, &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2}, []*entity.ExptEvalItem{item}, entitymocks.NewMockExptSchedulerMode(d.ctrl), publishUnitExperiment(), d.svc)
+	require.True(t, errno.NeedMQRetry(err))
+	require.ErrorIs(t, err, failure)
+	require.False(t, item.ObservationUnstable)
+	require.Same(t, originalSource, item.Source)
 }
