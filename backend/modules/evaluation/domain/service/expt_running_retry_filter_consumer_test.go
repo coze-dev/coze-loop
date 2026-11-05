@@ -175,7 +175,7 @@ func testRunningRetryFilterConsumer(t *testing.T, reservation, saveFails, publis
 	require.Equal(t, int32(1), saves.Load(), "consumer must attempt the actual OSS CK INSERT while holding its item lock")
 	require.GreaterOrEqual(t, payloadReads.Load(), int32(3), "canonical turn, ref and evaluator payload must be reread inside consumer lock")
 	require.NoError(t, sqlMock.ExpectationsWereMet())
-	if reservation && !(saveFails && !publisherAvailable) {
+	if reservation && (!saveFails || publisherAvailable) {
 		require.Equal(t, 1, nextCalls)
 	} else {
 		require.Zero(t, nextCalls, "absent reservation or failed repair publication must not execute the item")
