@@ -13,6 +13,7 @@ import (
 	lockmocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
 	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -20,15 +21,39 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestCurrentRequestLockBusyBrokerRetry(t *testing.T) {
+func TestCurrentRequestLockBusyKeepsLegacyAck(t *testing.T) {
+	for _, requestID := range []string{"", "rq1"} {
+		t.Run("request_"+requestID, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mutex := lockmocks.NewMockILocker(ctrl)
+			mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
+			publisher := eventmocks.NewMockExptEventPublisher(ctrl) // must not be called
+			svc := &ExptItemEventEvalServiceImpl{mutex: mutex, publisher: publisher}
+			called := false
+			err := svc.HandleEventLock(func(context.Context, *entity.ExptItemEvalEvent) error { called = true; return nil })(context.Background(), &entity.ExptItemEvalEvent{RequestID: requestID, ExptID: 1, EvalSetItemID: 2})
+			require.NoError(t, err, "legacy contract ACKs a duplicate delivery that lost the item lock")
+			require.False(t, called, "a delivery that loses the lock must not execute twice")
+		})
+	}
+}
+
+func TestCurrentRequestLockBusyFullChainAcksWithoutPublish(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mutex := lockmocks.NewMockILocker(ctrl)
-	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
-	svc := &ExptItemEventEvalServiceImpl{mutex: mutex}
-	called := false
-	err := svc.HandleEventLock(func(context.Context, *entity.ExptItemEvalEvent) error { called = true; return nil })(context.Background(), &entity.ExptItemEvalEvent{ExptID: 1, EvalSetItemID: 2})
-	require.True(t, errno.NeedMQRetry(err), "busy lock must reach broker, never ACK")
-	require.False(t, called)
+	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil).Times(2)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl) // no defer/retry/re-publish expected
+	repo := &currentUnitRepo{MockIExptItemResultRepo: repomocks.NewMockIExptItemResultRepo(ctrl), MockIExptCurrentResultRepo: repomocks.NewMockIExptCurrentResultRepo(ctrl)}
+	svc := &ExptItemEventEvalServiceImpl{mutex: mutex, publisher: publisher, exptItemResultRepo: repo}
+	executed := false
+	handler := RecordEvalChain(svc.HandleEventErr, svc.HandleEventLock)(func(context.Context, *entity.ExptItemEvalEvent) error {
+		executed = true
+		return nil
+	})
+	for _, requestID := range []string{"", "rq1"} {
+		err := handler(context.Background(), &entity.ExptItemEvalEvent{RequestID: requestID, SpaceID: 3, ExptID: 1, ExptRunID: 2, EvalSetItemID: 9, ExptRunMode: entity.EvaluationModeFailRetry})
+		require.NoError(t, err)
+	}
+	require.False(t, executed)
 }
 
 func TestCurrentRequestBrokerRetryBypassesBudget(t *testing.T) {

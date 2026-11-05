@@ -234,6 +234,8 @@ func (e *ExptItemEventEvalServiceImpl) handleCurrentEventErr(ctx context.Context
 		return errno.NewMQRetryErr("error item execution lock busy")
 	}
 	var debt bool
+	var retryEvent *entity.ExptItemEvalEvent
+	var retryInterval time.Duration
 	err = func() error {
 		defer cancel()
 		defer func() {
@@ -320,13 +322,22 @@ func (e *ExptItemEventEvalServiceImpl) handleCurrentEventErr(ctx context.Context
 			event.AsyncReportTrigger = false
 			event.AsyncEvaluatorReportTrigger = false
 			event.ResumeSource = nil
-			return e.publisher.PublishExptRecordEvalEvent(lockCtx, event, gptr.Of(conf.GetRetryInterval()), nil)
+			// Publish after this lock is released. Publishing while holding the item
+			// key made the retry message race its own holder: the consumer could see
+			// "busy", ACK the legacy way, and the retry would be lost (the row is
+			// already Fail and no scheduler tick redispatch it).
+			retryEvent = event
+			retryInterval = conf.GetRetryInterval()
+			return nil
 		}
 		e.releaseCentralQuotaOutsideGate(lockCtx, event, evalErr, "item unretriable pre-exec failure")
 		return nil
 	}()
 	if err != nil {
 		return err
+	}
+	if retryEvent != nil {
+		return e.publisher.PublishExptRecordEvalEvent(ctx, retryEvent, gptr.Of(retryInterval), nil)
 	}
 	if debt {
 		if terminate, ok := e.manager.(IExptCurrentRunTerminator); ok {

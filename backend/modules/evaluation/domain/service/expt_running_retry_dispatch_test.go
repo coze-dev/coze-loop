@@ -5,7 +5,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -28,11 +27,16 @@ func TestCurrentRequestProducerMQBeforeCAS(t *testing.T) {
 	event := &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2, ExptRunMode: entity.EvaluationModeSubmit, ItemRetryTimes: 5, Ext: map[string]string{entity.RetryYieldExtKey: "true", "frozen": "keep"}, Session: &entity.Session{UserID: "original", AppID: 4}}
 	source := &entity.ExptItemCurrentRequest{RunID: 2, ItemID: 11, RequestID: "rq1", Mode: entity.EvaluationModeFailRetry, Status: entity.ItemRunState_Queueing, RetryTimes: 3}
 	published := false
-	mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:1:11", gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-	mutex.EXPECT().Unlock("expt_item_eval_run_lock:1:11").Return(true, nil)
+	held := true
+	mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:1:11", gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, string, time.Duration, time.Duration) (bool, context.Context, func(), error) {
+		held = true
+		return true, context.Background(), func() { held = false }, nil
+	}).Times(2)
+	mutex.EXPECT().Unlock("expt_item_eval_run_lock:1:11").DoAndReturn(func(string) (bool, error) { held = false; return true, nil }).Times(2)
 	items.EXPECT().GetCurrentRequest(gomock.Any(), int64(3), int64(1), int64(2), int64(11)).Return(source, nil)
 	config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{IntervalSecond: 2}})
 	publisher.EXPECT().BatchPublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, got []*entity.ExptItemEvalEvent, interval *time.Duration) error {
+		require.False(t, held, "dispatch must publish after releasing the item lock")
 		require.Len(t, got, 1)
 		require.Equal(t, "rq1", got[0].RequestID)
 		require.Equal(t, entity.EvaluationModeFailRetry, got[0].ExptRunMode)
@@ -93,10 +97,18 @@ func TestCurrentRequestProducerInterleavings(t *testing.T) {
 			}
 			src := &entity.ExptItemCurrentRequest{RunID: 2, ItemID: 11, Status: entity.ItemRunState_Queueing, Mode: mode, RequestID: request, RetryTimes: 3}
 			event := &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2, ExptRunMode: entity.EvaluationModeSubmit, ItemRetryTimes: 5}
-			mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(kind != "busy", context.Background(), func() {}, nil)
+			lockCount := 2
+			if kind == "busy" {
+				lockCount = 1
+			}
+			switch kind {
+			case "publish_error", "publish_unknown", "changed_token":
+				lockCount = 1 // publish fails before the projection holder, or no publish at all
+			}
+			mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(kind != "busy", context.Background(), func() {}, nil).Times(lockCount)
 			wantErr := false
 			if kind != "busy" {
-				mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).Times(lockCount)
 				if kind == "changed_token" {
 					src.RequestID = "new"
 				}
@@ -147,13 +159,8 @@ func TestCurrentRequestProducerSameBatchModes(t *testing.T) {
 	pub := eventmocks.NewMockExptEventPublisher(ctrl)
 	config := componentmocks.NewMockIConfiger(ctrl)
 	sources := []*entity.ExptItemCurrentRequest{{RunID: 2, ItemID: 10, Status: entity.ItemRunState_Queueing, Mode: entity.EvaluationModeSubmit, RetryTimes: 0}, {RunID: 2, ItemID: 11, Status: entity.ItemRunState_Queueing, Mode: entity.EvaluationModeFailRetry, RequestID: "rq1", RetryTimes: 3}, {RunID: 2, ItemID: 12, Status: entity.ItemRunState_Queueing, Mode: entity.EvaluationModeRetryItems, RequestID: "rq2", RetryTimes: 1}}
-	locks := make([]lock.ILocker, 0, 3)
 	candidates := make([]*entity.ExptEvalItem, 0, 3)
 	for _, source := range sources {
-		mutex := lockmocks.NewMockILocker(ctrl)
-		locks = append(locks, mutex)
-		mutex.EXPECT().LockWithRenew(gomock.Any(), fmt.Sprintf("expt_item_eval_run_lock:1:%d", source.ItemID), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil)
 		candidates = append(candidates, &entity.ExptEvalItem{ItemID: source.ItemID, RequestID: source.RequestID, State: source.Status})
 		items.EXPECT().GetCurrentRequest(gomock.Any(), int64(3), int64(1), int64(2), source.ItemID).Return(source, nil)
 		items.EXPECT().MarkProcessingIfCurrent(gomock.Any(), int64(3), int64(1), int64(2), source.ItemID, source.RequestID).Return(true, nil)
@@ -164,12 +171,19 @@ func TestCurrentRequestProducerSameBatchModes(t *testing.T) {
 		got = append(got, events...)
 		return nil
 	}).Times(3)
-	n := 0
-	svc := &ExptSchedulerImpl{ExptItemResultRepo: items, Publisher: pub, Configer: config, itemLocker: func() lock.ILocker { mutex := locks[n]; n++; return mutex }}
+	// Two fresh holders per item: the dispatch lease and the projection lease.
+	locks := 0
+	svc := &ExptSchedulerImpl{ExptItemResultRepo: items, Publisher: pub, Configer: config, itemLocker: func() lock.ILocker {
+		locks++
+		mutex := lockmocks.NewMockILocker(ctrl)
+		mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
+		mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+		return mutex
+	}}
 	event := &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2, ExptRunMode: entity.EvaluationModeSubmit, ItemRetryTimes: 5, Session: &entity.Session{UserID: "frozen"}}
 	require.NoError(t, svc.handleToSubmits(context.Background(), event, candidates))
 	require.Len(t, got, 3)
-	require.Equal(t, 3, n)
+	require.Equal(t, 6, locks, "each item needs an independent dispatch and projection holder")
 	for i, source := range sources {
 		require.Equal(t, source.Mode, got[i].ExptRunMode)
 		require.Equal(t, source.RequestID, got[i].RequestID)

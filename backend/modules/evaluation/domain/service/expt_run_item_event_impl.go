@@ -920,7 +920,16 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventLock(next RecordEvalEndPoint) 
 			return errno.WrapMQRetryErr(err)
 		}
 		if !locked {
-			return errno.NewMQRetryErr("item execution lock busy")
+			// Legacy contract (bbab72c4^): a duplicate delivery that loses the item
+			// mutex is ACKed with a Warn. The holder is either another execution of
+			// this same item (the event is redundant) or a non-execution holder that
+			// only runs after the source left Queueing (publication/filter/termination)
+			// or holds the item while terminating the run. Producers publish item
+			// events only after releasing this key (see submitCurrentItem and
+			// handleCurrentEventErr), so an unstarted dispatch can never be dropped
+			// here: keeping the old ACK avoids broker retry storms without losing work.
+			logs.CtxWarn(ctx, "ExptRecordEvalConsumer.HandleEventLock found locked item eval event: %v. Abort event", json.Jsonify(event))
+			return nil
 		}
 		defer func() {
 			cancel()

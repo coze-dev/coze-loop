@@ -773,7 +773,9 @@ func TestHandleCurrentEventErrUnit(t *testing.T) {
 	})
 	t.Run("retry_publish", func(t *testing.T) {
 		d := newCurrentUnitDeps(t)
-		lockOK(d)
+		held := true
+		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() { held = false }, nil)
+		d.locker.EXPECT().Unlock(gomock.Any()).DoAndReturn(func(string) (bool, error) { held = false; return true, nil })
 		sameSource(d)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3}, nil)
 		d.config.EXPECT().GetErrRetryConf(gomock.Any(), int64(3), gomock.Any()).Return(&entity.RetryConf{RetryTimes: 1, RetryIntervalSecond: 1})
@@ -782,7 +784,10 @@ func TestHandleCurrentEventErrUnit(t *testing.T) {
 			require.Equal(t, int32(1), write.RetryTimes)
 			return true, nil
 		})
-		d.publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		d.publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, *entity.ExptItemEvalEvent, *time.Duration, func(*entity.ExptItemEvalEvent)) error {
+			require.False(t, held, "retry must be published after the item lock is released")
+			return nil
+		})
 		require.NoError(t, d.eventService().handleCurrentEventErr(context.Background(), currentUnitEvent(), errors.New("eval"), d.items.MockIExptCurrentResultRepo, newExec()))
 	})
 	t.Run("retry_yield", func(t *testing.T) {
