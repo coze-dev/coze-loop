@@ -3818,9 +3818,15 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	if err != nil {
 		return nil, err
 	}
-	if outcome == entity.ReportEvaluatorResultConflict {
-		return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
-	}
+	// A Conflict is not a dead end: the record may already be terminal because an
+	// earlier Applied attempt succeeded but failed to publish its resume event (or
+	// the provider timed out after the publish). The provider then retries with a
+	// different terminal status and lands here. Returning success immediately would
+	// strand the item in Processing until the zombie timeout, so fall through to the
+	// same resume path. It re-derives the source from the stored record (identity
+	// checks unchanged), never re-applies a result and never re-dispatches the
+	// provider callback; a duplicate resume event is dropped by the item source
+	// guard and reuses existing turn refs instead of re-running target/evaluator.
 	var resumeErr error
 	if actx.Event != nil {
 		// Refresh readiness alone; source and notification settings stay frozen.
@@ -3853,7 +3859,8 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	}
 
 	// An Applied result only occurs once; deliver its best-effort notification
-	// before returning a recovery error that the provider may retry as Duplicate.
+	// before returning a recovery error that the provider may retry as Duplicate
+	// or Conflict.
 	if outcome == entity.ReportEvaluatorResultApplied && actx.CallbackURL != "" {
 		payload := &openapi.EvaluatorCallbackPayloadOApi{
 			InvokeID:           gptr.Of(req.GetInvokeID()),
