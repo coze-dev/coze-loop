@@ -4,6 +4,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -348,11 +350,49 @@ func (e *ExptSchedulerImpl) recordCurrentItemResults(ctx context.Context, event 
 	if err := ctx.Err(); err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
-	if err := e.ResultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, appliedItems); err != nil {
-		logs.CtxError(ctx, "UpsertExptTurnResultFilter after commit: %v", err)
+	refreshErr := e.ResultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, appliedItems)
+	return completeFilterRefresh(ctx, e.Publisher, event.SpaceID, event.ExptID, appliedItems, refreshErr)
+}
+
+func publishFilterAuto(ctx context.Context, publisher events.ExptEventPublisher, spaceID, exptID int64, itemIDs []int64) error {
+	var err error
+	if publisher == nil {
+		err = fmt.Errorf("filter publisher unavailable")
+	} else {
+		err = publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{SpaceID: spaceID, ExperimentID: exptID, ItemID: append([]int64(nil), itemIDs...), FilterType: gptr.Of(entity.UpsertExptTurnResultFilterTypeAuto)}, nil)
 	}
-	if e.Publisher == nil {
-		return nil
+	if err != nil {
+		return errno.WrapMQRetryErr(fmt.Errorf("index AUTO space_id=%d expt_id=%d item_ids=%v: %w", spaceID, exptID, itemIDs, err))
 	}
-	return e.Publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{ExperimentID: event.ExptID, SpaceID: event.SpaceID, ItemID: appliedItems, RetryTimes: gptr.Of(int32(0)), FilterType: gptr.Of(entity.UpsertExptTurnResultFilterTypeCheck)}, gptr.Of(10*time.Second))
+	return nil
+}
+
+func (e ExptResultServiceImpl) ScheduleExptFilterCheck(ctx context.Context, spaceID, exptID int64, itemIDs []int64, retryTimes int32) error {
+	if e.publisher == nil {
+		return errno.NewMQRetryErr("filter CHECK publisher unavailable")
+	}
+	if err := e.publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{SpaceID: spaceID, ExperimentID: exptID, ItemID: append([]int64(nil), itemIDs...), RetryTimes: gptr.Of(retryTimes), FilterType: gptr.Of(entity.UpsertExptTurnResultFilterTypeCheck)}, gptr.Of(10*time.Second)); err != nil {
+		return errno.WrapMQRetryErr(fmt.Errorf("index CHECK space_id=%d expt_id=%d item_ids=%v retry=%d: %w", spaceID, exptID, itemIDs, retryTimes, err))
+	}
+	return nil
+}
+
+// A committed business result needs an index repair, never another evaluation.
+func completeFilterRefresh(ctx context.Context, publisher events.ExptEventPublisher, spaceID, exptID int64, itemIDs []int64, refreshErr error) error {
+	var repairErr error
+	if refreshErr != nil {
+		logs.CtxError(ctx, "index refresh failed space_id=%d expt_id=%d item_ids=%v: %v", spaceID, exptID, itemIDs, refreshErr)
+		if err := publishFilterAuto(ctx, publisher, spaceID, exptID, itemIDs); err != nil {
+			repairErr = errors.Join(refreshErr, err)
+		}
+	}
+	if publisher != nil {
+		if err := publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{SpaceID: spaceID, ExperimentID: exptID, ItemID: append([]int64(nil), itemIDs...), RetryTimes: gptr.Of(int32(0)), FilterType: gptr.Of(entity.UpsertExptTurnResultFilterTypeCheck)}, gptr.Of(10*time.Second)); err != nil {
+			repairErr = errors.Join(repairErr, err)
+		}
+	}
+	if repairErr != nil {
+		return errno.WrapMQRetryErr(fmt.Errorf("index repair pending space_id=%d expt_id=%d item_ids=%v: %w", spaceID, exptID, itemIDs, repairErr))
+	}
+	return nil
 }

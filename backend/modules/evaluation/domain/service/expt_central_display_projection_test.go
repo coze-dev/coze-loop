@@ -8,11 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	eventMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
@@ -57,6 +60,11 @@ func TestCentralReservationCommittedFilter(t *testing.T) {
 				dispatch.EXPECT().StartReservedItem(gomock.Any(), int64(3), int64(1), int64(2), int64(4), "rq1").Return(repo.StartReservedItemResult{CurrentRequest: true, Started: started}, nil)
 				dispatch.EXPECT().MGetDispatchObservations(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 				result := svcMocks.NewMockExptResultService(ctrl)
+				publisher := eventMocks.NewMockExptEventPublisher(ctrl)
+				if started && fail {
+					publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), &entity.ExptTurnResultFilterEvent{SpaceID: 3, ExperimentID: 1, ItemID: []int64{4}, FilterType: gptr.Of(entity.UpsertExptTurnResultFilterTypeAuto)}, nil).Return(nil)
+					publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), &entity.ExptTurnResultFilterEvent{SpaceID: 3, ExperimentID: 1, ItemID: []int64{4}, FilterType: gptr.Of(entity.UpsertExptTurnResultFilterTypeCheck), RetryTimes: gptr.Of(int32(0))}, gptr.Of(10*time.Second)).Return(nil)
+				}
 				if started {
 					var err error
 					if fail {
@@ -65,7 +73,7 @@ func TestCentralReservationCommittedFilter(t *testing.T) {
 					result.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), int64(3), int64(1), []int64{4}).Return(err)
 				}
 				svc := &ExptItemEventEvalServiceImpl{
-					centralGuard: &fakeGuard{confirmResult: true}, dispatchRepo: dispatch, resultSvc: result,
+					centralGuard: &fakeGuard{confirmResult: true}, dispatchRepo: dispatch, resultSvc: result, publisher: publisher,
 					exptItemResultRepo: repoMocks.NewMockIExptItemResultRepo(ctrl), exptStatsRepo: repoMocks.NewMockIExptStatsRepo(ctrl), exptTurnResultRepo: repoMocks.NewMockIExptTurnResultRepo(ctrl),
 				}
 				svc.exptItemResultRepo.(*repoMocks.MockIExptItemResultRepo).EXPECT().GetCurrentRequest(gomock.Any(), int64(3), int64(1), int64(2), int64(4)).Return(&entity.ExptItemCurrentRequest{RunID: 2, ItemID: 4, RequestID: "rq1", Status: entity.ItemRunState_Processing}, nil)

@@ -524,7 +524,7 @@ func TestRecordCurrentItemResultsUnit(t *testing.T) {
 		svc.EXPECT().PublishPreparedItemResult(gomock.Any(), publication, gomock.Any()).Return(true, nil)
 		mode.EXPECT().PublishResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("publish"))
 		results.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), int64(3), int64(1), []int64{9}).Return(errors.New("upsert"))
-		publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 		require.NoError(t, scheduler.recordCurrentItemResults(context.Background(), event(), []*entity.ExptEvalItem{item}, mode, expt, svc))
 	})
 	t.Run("applied_publisher_error", func(t *testing.T) {
@@ -648,15 +648,15 @@ func TestFilterCandidateItemsUnit(t *testing.T) {
 	got, err := svc.filterCandidateItems(context.Background(), 3, 1, []int64{9, 9, 4})
 	require.NoError(t, err)
 	require.Equal(t, []int64{4, 9}, got)
-
-	items.EXPECT().ListItemResultsByExptID(gomock.Any(), int64(1), int64(3), gomock.Any(), false).Return(nil, int64(0), errors.New("list"))
 	_, err = svc.filterCandidateItems(context.Background(), 3, 1, nil)
 	require.Error(t, err)
-
-	items.EXPECT().ListItemResultsByExptID(gomock.Any(), int64(1), int64(3), gomock.Any(), false).Return([]*entity.ExptItemResult{{ItemID: 9}, nil, {ItemID: 4}}, int64(0), nil)
-	got, err = svc.filterCandidateItems(context.Background(), 3, 1, nil)
+	items.EXPECT().ListItemResultsByExptID(gomock.Any(), int64(1), int64(3), entity.NewPage(1, 100), false).Return([]*entity.ExptItemResult{{ItemID: 9}, {ItemID: 4}}, int64(2), nil)
+	var received []int64
+	err = svc.forEachFilterItemPage(context.Background(), 3, 1, nil, func(ids []int64) error { received = append(received, ids...); return nil })
 	require.NoError(t, err)
-	require.Equal(t, []int64{4, 9}, got)
+	require.Equal(t, []int64{4, 9}, received)
+	items.EXPECT().ListItemResultsByExptID(gomock.Any(), int64(1), int64(3), entity.NewPage(1, 100), false).Return(nil, int64(0), errors.New("list"))
+	require.Error(t, svc.forEachFilterItemPage(context.Background(), 3, 1, nil, func([]int64) error { return nil }))
 }
 
 func TestUpsertExptTurnResultFilterUnit(t *testing.T) {

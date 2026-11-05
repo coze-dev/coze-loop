@@ -5,6 +5,7 @@ package consumer
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bytedance/sonic"
 
@@ -34,11 +35,28 @@ func (c *ExptTurnResultFilterConsumer) HandleMessage(ctx context.Context, ext *m
 		}
 	}()
 
+	if ext == nil {
+		return fmt.Errorf("filter event is nil")
+	}
 	event := &entity.ExptTurnResultFilterEvent{}
 	body := ext.Body
 	if err := sonic.Unmarshal(body, event); err != nil {
-		logs.CtxError(ctx, "ExptTurnResultFilterEvent json unmarshal fail, raw: %v, err: %s", string(body), err)
-		return nil
+		return fmt.Errorf("decode filter event: %w", err)
+	}
+	if event.SpaceID <= 0 || event.ExperimentID <= 0 || event.RetryTimes != nil && *event.RetryTimes < 0 {
+		return fmt.Errorf("invalid filter event scope or retry count")
+	}
+	for _, itemID := range event.ItemID {
+		if itemID <= 0 {
+			return fmt.Errorf("invalid filter event item_id: %d", itemID)
+		}
+	}
+	if event.FilterType != nil {
+		switch *event.FilterType {
+		case entity.UpsertExptTurnResultFilterTypeAuto, entity.UpsertExptTurnResultFilterTypeCheck, entity.UpsertExptTurnResultFilterTypeManual:
+		default:
+			return fmt.Errorf("unknown filter event type: %q", *event.FilterType)
+		}
 	}
 
 	logs.CtxInfo(ctx, "ExptTurnResultFilterConsumer consume message, event: %v, msg_id: %v", string(body), ext.MsgID)
@@ -58,6 +76,9 @@ func (c *ExptTurnResultFilterConsumer) HandleMessage(ctx context.Context, ext *m
 	resp, err := c.exptManager.UpsertExptTurnResultFilter(ctx, upsertExptTurnResultFilterRequest)
 	if err != nil {
 		return err
+	}
+	if resp == nil {
+		return fmt.Errorf("filter application returned nil response")
 	}
 	if resp.BaseResp != nil && resp.BaseResp.StatusCode != 0 {
 		return errorx.NewByCode(resp.BaseResp.StatusCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))

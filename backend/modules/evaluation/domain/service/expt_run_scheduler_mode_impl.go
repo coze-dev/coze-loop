@@ -235,7 +235,9 @@ func (e *ExptTrialRunExec) Mode() entity.ExptRunMode {
 func (e *ExptSubmitExec) finishExptStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, itemCnt int, idemKey string) error {
 	err := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, nil)
 	if err != nil {
-		logs.CtxError(ctx, "finishExptStart UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
+		if repairErr := completeFilterRefresh(ctx, e.publisher, event.SpaceID, event.ExptID, nil, err); repairErr != nil {
+			return repairErr
+		}
 	}
 
 	if err := e.exptStatsRepo.UpdateByExptID(ctx, event.ExptID, event.SpaceID,
@@ -635,7 +637,9 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 	}
 	err = e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, nil)
 	if err != nil {
-		logs.CtxError(ctx, "ExptSubmitExec.ExptStart UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
+		if repairErr := completeFilterRefresh(ctx, e.publisher, event.SpaceID, event.ExptID, nil, err); repairErr != nil {
+			return repairErr
+		}
 	}
 	logs.CtxInfo(ctx, "ExptSubmitExec ExptStart UpsertExptTurnResultFilter done, expt_id: %v, err: %v", event.ExptID, err)
 	if err := e.exptStatsRepo.UpdateByExptID(ctx, event.ExptID, event.SpaceID,
@@ -1062,7 +1066,9 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 		// reset 后主动刷 CK expt_turn_result_filter,避免加速器读到重试前的旧终态 (Fail/Terminal)
 		if e.resultSvc != nil {
 			if ferr := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, plan.itemIDs); ferr != nil {
-				logs.CtxError(ctx, "ExptFailRetryExec.ExptStart UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, ferr)
+				if err := completeFilterRefresh(ctx, e.publisher, event.SpaceID, event.ExptID, plan.itemIDs, ferr); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -1677,6 +1683,7 @@ type retryItemResetDeps struct {
 	exptRepo                 repo.IExperimentRepo
 	idgenerator              idgen.IIDGenerator
 	resultSvc                ExptResultService
+	publisher                events.ExptEventPublisher
 }
 
 func itemVersionIDPtr(versionID int64) *int64 {
@@ -1854,7 +1861,7 @@ func legacyResetRetryItemsForNewRun(ctx context.Context, deps retryItemResetDeps
 	}
 	if deps.resultSvc != nil {
 		if err := deps.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, itemIDs); err != nil {
-			logs.CtxError(ctx, "legacyResetRetryItemsForNewRun UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
+			return completeFilterRefresh(ctx, deps.publisher, event.SpaceID, event.ExptID, itemIDs, err)
 		}
 	}
 	return nil
@@ -1926,7 +1933,9 @@ func resetRetryItemsForNewRun(ctx context.Context, deps retryItemResetDeps, even
 		filterCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
 		defer cancel()
 		if err := deps.resultSvc.UpsertExptTurnResultFilter(filterCtx, event.SpaceID, event.ExptID, resetItemIDs); err != nil {
-			logs.CtxError(ctx, "resetRetryItemsForNewRun UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
+			if repairErr := completeFilterRefresh(filterCtx, deps.publisher, event.SpaceID, event.ExptID, resetItemIDs, err); repairErr != nil {
+				return errno.WrapMQRetryErr(errors.Join(resetErr, repairErr))
+			}
 		}
 	}
 	return resetErr
@@ -1997,7 +2006,7 @@ func (e *ExptRetryAllExec) retryResetDeps() retryItemResetDeps {
 	return retryItemResetDeps{
 		manager: e.manager, evaluationSetItemService: e.evaluationSetItemService,
 		exptItemResultRepo: e.exptItemResultRepo, exptTurnResultRepo: e.exptTurnResultRepo,
-		exptStatsRepo: e.exptStatsRepo, exptRepo: e.exptRepo, idgenerator: e.idgenerator, resultSvc: e.resultSvc,
+		exptStatsRepo: e.exptStatsRepo, exptRepo: e.exptRepo, idgenerator: e.idgenerator, resultSvc: e.resultSvc, publisher: e.publisher,
 	}
 }
 
@@ -2278,7 +2287,7 @@ func (e *ExptRetryItemsExec) retryResetDeps() retryItemResetDeps {
 	return retryItemResetDeps{
 		manager: e.manager, evaluationSetItemService: e.evaluationSetItemService,
 		exptItemResultRepo: e.exptItemResultRepo, exptTurnResultRepo: e.exptTurnResultRepo,
-		exptStatsRepo: e.exptStatsRepo, exptRepo: e.exptRepo, idgenerator: e.idgenerator, resultSvc: e.resultSvc,
+		exptStatsRepo: e.exptStatsRepo, exptRepo: e.exptRepo, idgenerator: e.idgenerator, resultSvc: e.resultSvc, publisher: e.publisher,
 	}
 }
 
@@ -2621,6 +2630,10 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 			}
 			// 批量写入 expt_item_result + expt_turn_result
 			if err := e.createItemTurnResults(ctx, eirs, allTurns, event.Session); err != nil {
+				return err
+			}
+			itemIDs := gslice.Map(eirs, func(item *entity.ExptItemResult) int64 { return item.ItemID })
+			if err := publishFilterAuto(ctx, e.publisher, event.SpaceID, event.ExptID, itemIDs); err != nil {
 				return err
 			}
 			totalItemCnt += len(items)

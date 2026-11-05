@@ -320,8 +320,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 		if !ok {
 			// reservation 不存在：迟到消息、账本已重建、或已被释放。本条消息一律不执行，
 			// 但**必须先修正 run log 投影**，否则 item 会停在 Processing 占着并发槽位。
-			e.requeueOrphanedItemOnReservationAbsent(ctx, event)
-			return nil
+			return e.requeueOrphanedItemOnReservationAbsent(ctx, event)
 		}
 
 		// The DAO commits canonical/turn/log/stats together. Only a current
@@ -336,7 +335,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			}
 			if started.Started && e.resultSvc != nil {
 				if err := refreshFilterWithHeldItemLock(ctx, e.resultSvc, event.SpaceID, event.ExptID, event.EvalSetItemID); err != nil {
-					logs.CtxWarn(ctx, "[CentralReservation] refresh committed Processing filter failed, expt_id: %v, item_id: %v: %v", event.ExptID, event.EvalSetItemID, err)
+					if repairErr := completeFilterRefresh(ctx, e.publisher, event.SpaceID, event.ExptID, []int64{event.EvalSetItemID}, err); repairErr != nil {
+						return repairErr
+					}
 				}
 			}
 		}
@@ -395,13 +396,12 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 //   - Processing    —— 孤儿态，退回 Queueing 让它重新被授予（连带回滚 stats 的 Processing 计数）
 //   - Queueing      —— 还没兑现执行；reserved 的交给 ResetQuotaReserved 清回 none，none 的本就在队列里
 //
-// 全程只告警不返回错误：这条消息注定不执行，返回 error 只会让 MQ 无休止重投
-// （reservation 不会因为重投而回来）。修正失败最坏退化成原来的行为 —— 等僵尸阈值。
-func (e *ExptItemEventEvalServiceImpl) requeueOrphanedItemOnReservationAbsent(ctx context.Context, event *entity.ExptItemEvalEvent) {
+// 业务修正失败沿既有日志兜底；已提交修正的索引通知失败单独返回可重试错误。
+func (e *ExptItemEventEvalServiceImpl) requeueOrphanedItemOnReservationAbsent(ctx context.Context, event *entity.ExptItemEvalEvent) error {
 	if e.dispatchRepo == nil {
 		logs.CtxWarn(ctx, "[CentralReservation] reservation absent, discard event; dispatch repo absent, cannot repair projection, expt_id: %v, expt_run_id: %v, item_id: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID)
-		return
+		return nil
 	}
 
 	obs, err := e.dispatchRepo.MGetDispatchObservations(ctx, event.SpaceID, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID})
@@ -409,7 +409,7 @@ func (e *ExptItemEventEvalServiceImpl) requeueOrphanedItemOnReservationAbsent(ct
 		// 读不到投影就无法判断该不该退回，宁可不动 —— 盲目退回可能让已终态的 item 重跑。
 		logs.CtxWarn(ctx, "[CentralReservation] reservation absent, discard event; load projection failed, projection left as-is, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
-		return
+		return nil
 	}
 
 	state := entity.ItemRunState(obs[0].Status)
@@ -417,7 +417,7 @@ func (e *ExptItemEventEvalServiceImpl) requeueOrphanedItemOnReservationAbsent(ct
 		// 唯一的预期路径：item 已终态，额度早已正常释放，这就是一条迟到消息。
 		logs.CtxInfo(ctx, "[CentralReservation] reservation absent on terminal item, discard event (late delivery), expt_run_id: %v, item_id: %v, state: %v",
 			event.ExptRunID, event.EvalSetItemID, state)
-		return
+		return nil
 	}
 
 	if state == entity.ItemRunState_Processing {
@@ -425,18 +425,17 @@ func (e *ExptItemEventEvalServiceImpl) requeueOrphanedItemOnReservationAbsent(ct
 		if rerr != nil {
 			logs.CtxError(ctx, "[CentralReservation] requeue orphaned processing item failed, item will occupy a concurrency slot until zombie timeout, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 				event.ExptID, event.ExptRunID, event.EvalSetItemID, rerr)
-			return
+			return nil
 		}
 		logs.CtxWarn(ctx, "[CentralReservation] orphaned item (Processing without reservation) requeued to Queueing, expt_id: %v, expt_run_id: %v, item_id: %v, requeued: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, requeued)
 
 		if requeued && e.resultSvc != nil {
 			if uerr := refreshFilterWithHeldItemLock(ctx, e.resultSvc, event.SpaceID, event.ExptID, event.EvalSetItemID); uerr != nil {
-				logs.CtxWarn(ctx, "[CentralReservation] rollback turn result filter failed (display only), expt_id: %v, item_id: %v: %v",
-					event.ExptID, event.EvalSetItemID, uerr)
+				return completeFilterRefresh(ctx, e.publisher, event.SpaceID, event.ExptID, []int64{event.EvalSetItemID}, uerr)
 			}
 		}
-		return
+		return nil
 	}
 
 	// 剩下只有 Queueing：reserved 的清回 none 让它重新可授予；none 的本就在候选里，无需动作。
@@ -445,15 +444,16 @@ func (e *ExptItemEventEvalServiceImpl) requeueOrphanedItemOnReservationAbsent(ct
 		if rerr != nil {
 			logs.CtxError(ctx, "[CentralReservation] reset stale reserved projection failed, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 				event.ExptID, event.ExptRunID, event.EvalSetItemID, rerr)
-			return
+			return nil
 		}
 		logs.CtxWarn(ctx, "[CentralReservation] stale Queueing/reserved projection reset to none, expt_id: %v, expt_run_id: %v, item_id: %v, reset: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, len(reset))
-		return
+		return nil
 	}
 
 	logs.CtxWarn(ctx, "[CentralReservation] reservation absent while item still Queueing/none, nothing to repair, expt_id: %v, expt_run_id: %v, item_id: %v",
 		event.ExptID, event.ExptRunID, event.EvalSetItemID)
+	return nil
 }
 
 // releaseQuotaIfItemTerminal 在 item 确已进入终态时释放其额度预占。

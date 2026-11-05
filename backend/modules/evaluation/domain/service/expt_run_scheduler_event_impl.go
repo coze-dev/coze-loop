@@ -30,7 +30,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	gslice "github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -649,22 +648,9 @@ func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *en
 	if len(completeItems) == 0 {
 		return nil
 	}
-	err := e.ResultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, gslice.Map(completeItems, func(item *entity.ExptEvalItem) int64 {
-		return item.ItemID
-	}))
-	if err != nil {
-		logs.CtxError(ctx, "UpsertExptTurnResultFilter fail, err: %v", err)
-	}
-	err = e.Publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
-		ExperimentID: event.ExptID,
-		SpaceID:      event.SpaceID,
-		ItemID: gslice.Map(completeItems, func(item *entity.ExptEvalItem) int64 {
-			return item.ItemID
-		}),
-		RetryTimes: ptr.Of(int32(0)),
-		FilterType: ptr.Of(entity.UpsertExptTurnResultFilterTypeCheck),
-	}, ptr.Of(10*time.Second))
-	if err != nil {
+	itemIDs := gslice.Map(completeItems, func(item *entity.ExptEvalItem) int64 { return item.ItemID })
+	refreshErr := e.ResultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, itemIDs)
+	if err := completeFilterRefresh(ctx, e.Publisher, event.SpaceID, event.ExptID, itemIDs, refreshErr); err != nil {
 		return err
 	}
 
@@ -845,7 +831,7 @@ func (e *ExptSchedulerImpl) submitCurrentItem(ctx context.Context, event *entity
 		}
 		if e.ResultSvc != nil {
 			if err := refreshFilterWithHeldItemLock(lockCtx, e.ResultSvc, event.SpaceID, event.ExptID, source.ItemID); err != nil {
-				logs.CtxWarn(ctx, "refresh dispatched item projection: %v", err)
+				return completeFilterRefresh(lockCtx, e.Publisher, event.SpaceID, event.ExptID, []int64{source.ItemID}, err)
 			}
 		}
 	}

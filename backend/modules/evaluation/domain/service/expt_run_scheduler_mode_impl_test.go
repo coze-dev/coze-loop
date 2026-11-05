@@ -5685,6 +5685,7 @@ func TestSchedulerModeFactory_NewSchedulerMode_RetryAll(t *testing.T) {
 
 func TestFinishExptStart_ErrorPaths(t *testing.T) {
 	type fields struct {
+		publisher       *eventmocks.MockExptEventPublisher
 		exptStatsRepo   *mock_repo.MockIExptStatsRepo
 		exptRepo        *mock_repo.MockIExperimentRepo
 		idem            *idemmocks.MockIdempotentService
@@ -5713,6 +5714,7 @@ func TestFinishExptStart_ErrorPaths(t *testing.T) {
 			expt: &entity.Experiment{ID: 1, SpaceID: 3},
 			prepareMock: func(f *fields) {
 				f.resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), int64(3), int64(1), gomock.Any()).Return(errors.New("upsert filter err"))
+				f.publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 				f.exptStatsRepo.EXPECT().UpdateByExptID(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(nil)
 				f.exptRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 				f.exptRepo.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{}, nil)
@@ -5790,6 +5792,7 @@ func TestFinishExptStart_ErrorPaths(t *testing.T) {
 			defer ctrl.Finish()
 
 			f := &fields{
+				publisher:       eventmocks.NewMockExptEventPublisher(ctrl),
 				exptStatsRepo:   mock_repo.NewMockIExptStatsRepo(ctrl),
 				exptRepo:        mock_repo.NewMockIExperimentRepo(ctrl),
 				idem:            idemmocks.NewMockIdempotentService(ctrl),
@@ -5801,6 +5804,7 @@ func TestFinishExptStart_ErrorPaths(t *testing.T) {
 			tt.prepareMock(f)
 
 			exec := &ExptSubmitExec{
+				publisher:       f.publisher,
 				exptStatsRepo:   f.exptStatsRepo,
 				exptRepo:        f.exptRepo,
 				idem:            f.idem,
@@ -6077,6 +6081,7 @@ func TestExptTrialRunExec_ExptStart_OriginalPath(t *testing.T) {
 				f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), 1).Return([]int64{201}, nil)
 				f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil)
 				f.resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upsert err"))
+				f.publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 				f.exptStatsRepo.EXPECT().UpdateByExptID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				f.exptRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 				f.exptRepo.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{}, nil)

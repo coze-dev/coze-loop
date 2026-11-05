@@ -6,10 +6,17 @@ package service
 import (
 	"context"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 )
 
 // ExptFilterProjectionBuilder rebuilds complete items without changing source data.
 type ExptFilterProjectionBuilder interface {
 	BuildExptFilterProjection(context.Context, int64, int64, []int64) ([]*entity.ExptTurnResultFilterEntity, error)
+}
+
+// NewExptFilterProjectionBuilder does not initialize execution services or publishers.
+func NewExptFilterProjectionBuilder(experiments repo.IExperimentRepo, items repo.IExptItemResultRepo, turns repo.IExptTurnResultRepo, annotations repo.IExptAnnotateRepo, index repo.IExptTurnResultFilterRepo, refs repo.IExptItemRefRepo, targets repo.IEvalTargetRepo, evaluators repo.IEvaluatorRecordRepo, configer component.IConfiger) ExptFilterProjectionBuilder {
+	return &ExptResultServiceImpl{ExperimentRepo: experiments, ExptItemResultRepo: items, ExptTurnResultRepo: turns, ExptAnnotateRepo: annotations, exptTurnResultFilterRepo: index, exptItemRefRepo: refs, evalTargetRepo: targets, filterEvaluatorRepo: evaluators, scoreCalculator: NewEvaluatorScoreCalculator(configer, nil)}
 }

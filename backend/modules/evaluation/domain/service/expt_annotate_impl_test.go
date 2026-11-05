@@ -6,9 +6,12 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"gorm.io/gorm"
 
@@ -18,6 +21,7 @@ import (
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
@@ -74,6 +78,7 @@ func TestExptAnnotateServiceImpl_CreateExptTurnResultTagRefs(t *testing.T) {
 					Return(nil).Times(1)
 
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().InsertExptTurnResultFilterKeyMappings(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				svc.exptPublisher.(*eventsMocks.MockExptEventPublisher).EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), &entity.ExptTurnResultFilterEvent{SpaceID: 1, ExperimentID: 1, FilterType: ptr.Of(entity.UpsertExptTurnResultFilterTypeAuto)}, nil).Return(nil)
 			},
 			wantErr: false,
 		},
@@ -441,6 +446,7 @@ func TestExptAnnotateServiceImpl_DeleteExptTurnResultTagRef(t *testing.T) {
 			svc.txDB.(*dbMocks.MockProvider).EXPECT().
 				Transaction(ctx, gomock.Any()).
 				Return(nil).Times(1)
+			svc.exptPublisher.(*eventsMocks.MockExptEventPublisher).EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), &entity.ExptTurnResultFilterEvent{SpaceID: 1, ExperimentID: 1, FilterType: ptr.Of(entity.UpsertExptTurnResultFilterTypeAuto)}, nil).Return(nil)
 		},
 		wantErr: false,
 	}, {
@@ -564,4 +570,49 @@ func TestExptAnnotateServiceImpl_NewExptAnnotateService(t *testing.T) {
 
 	// 验证服务实例不为nil且所有依赖已正确注入
 	assert.NotNil(t, svc)
+}
+
+func TestAnnotationCommittedRefreshFailureQueuesAuto(t *testing.T) {
+	for _, update := range []bool{false, true} {
+		for _, notifyFails := range []bool{false, true} {
+			t.Run(fmt.Sprintf("update=%t/notify_failure=%t", update, notifyFails), func(t *testing.T) {
+				svc := newTestExptAnnotateService(gomock.NewController(t))
+				record := &entity.AnnotateRecord{ID: 4, SpaceID: 1, ExperimentID: 2, TagKeyID: 5}
+				tag := &entity.ExptTurnResultTagRef{TotalCnt: 2, CompleteCnt: 1}
+				if update {
+					svc.repo.(*repoMocks.MockIExptAnnotateRepo).EXPECT().UpdateAnnotateRecord(gomock.Any(), record).Return(nil).Times(1)
+				} else {
+					svc.exptTurnResultRepo.(*repoMocks.MockIExptTurnResultRepo).EXPECT().Get(gomock.Any(), int64(1), int64(2), int64(3), int64(0)).Return(&entity.ExptTurnResult{ID: 6}, nil)
+					svc.txDB.(*dbMocks.MockProvider).EXPECT().Transaction(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fn func(*gorm.DB) error, _ ...db.Option) error { return fn(nil) })
+					svc.repo.(*repoMocks.MockIExptAnnotateRepo).EXPECT().SaveAnnotateRecord(gomock.Any(), int64(6), record, gomock.Any()).Return(nil).Times(1)
+					svc.repo.(*repoMocks.MockIExptAnnotateRepo).EXPECT().UpdateCompleteCount(gomock.Any(), int64(2), int64(1), int64(5), gomock.Any()).Return(nil)
+				}
+				svc.repo.(*repoMocks.MockIExptAnnotateRepo).EXPECT().GetTagRefByTagKeyID(gomock.Any(), int64(2), int64(1), int64(5)).Return(tag, nil)
+				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().UpsertExptTurnResultFilter(gomock.Any(), int64(1), int64(2), []int64{3}).Return(errors.New("index down"))
+				var seen []entity.UpsertExptTurnResultFilterType
+				svc.exptPublisher.(*eventsMocks.MockExptEventPublisher).EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, event *entity.ExptTurnResultFilterEvent, _ *time.Duration) error {
+					require.Equal(t, []int64{3}, event.ItemID)
+					seen = append(seen, *event.FilterType)
+					if notifyFails {
+						return errors.New("queue down")
+					}
+					return nil
+				}).AnyTimes()
+				var err error
+				if update {
+					err = svc.UpdateAnnotateRecord(context.Background(), 3, 0, record)
+				} else {
+					err = svc.SaveAnnotateRecord(context.Background(), 2, 3, 0, record)
+				}
+				require.Equal(t, []entity.UpsertExptTurnResultFilterType{entity.UpsertExptTurnResultFilterTypeAuto, entity.UpsertExptTurnResultFilterTypeCheck}, seen)
+				if notifyFails {
+					require.Error(t, err)
+					require.True(t, errno.NeedMQRetry(err))
+					require.Contains(t, err.Error(), "index down")
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		}
+	}
 }

@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"reflect"
@@ -78,24 +79,30 @@ func sortedFilterItems(ids []int64) []int64 {
 }
 
 func (e ExptResultServiceImpl) filterCandidateItems(ctx context.Context, spaceID, exptID int64, ids []int64) ([]int64, error) {
-	if len(ids) > 0 {
-		return sortedFilterItems(ids), nil
-	}
-	// Only IDs escape this enumeration. Payloads are read again under each lock.
-	items, _, err := e.ExptItemResultRepo.ListItemResultsByExptID(contexts.WithCtxWriteDB(ctx), exptID, spaceID, entity.Page{}, false)
-	if err != nil {
-		return nil, err
-	}
-	for _, item := range items {
-		if item != nil {
-			ids = append(ids, item.ItemID)
-		}
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("empty filter candidates require bounded enumeration")
 	}
 	return sortedFilterItems(ids), nil
 }
 
 func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, spaceID, exptID int64, ids []int64) error {
-	if spaceID == 0 || exptID == 0 {
+	if err := ctx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if spaceID <= 0 || exptID <= 0 {
+		return fmt.Errorf("invalid filter scope")
+	}
+	var planErr error
+	ctx, planErr = e.freezeFilterPlan(ctx, []int64{exptID})
+	if planErr != nil {
+		return planErr
+	}
+	if len(ids) == 0 || len(ids) > 100 {
+		return e.forEachFilterItemPage(ctx, spaceID, exptID, ids, func(page []int64) error {
+			return e.UpsertExptTurnResultFilter(ctx, spaceID, exptID, page)
+		})
+	}
+	if spaceID <= 0 || exptID <= 0 {
 		return fmt.Errorf("UpsertExptTurnResultFilter: invalid space_id or expt_id")
 	}
 	if err := ctx.Err(); err != nil {
@@ -134,9 +141,25 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 	if err := ctx.Err(); err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
+	if spaceID <= 0 || exptID <= 0 || retry < 0 {
+		return fmt.Errorf("invalid filter scope or retry")
+	}
+	var planErr error
+	ctx, planErr = e.freezeFilterPlan(ctx, []int64{exptID})
+	if planErr != nil {
+		return planErr
+	}
+	if len(ids) == 0 || len(ids) > 100 {
+		return e.forEachFilterItemPage(ctx, spaceID, exptID, ids, func(page []int64) error { return e.CompareExptTurnResultFilters(ctx, spaceID, exptID, page, retry) })
+	}
+	if err := ctx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
 	if e.resultPublishLocker == nil {
 		if _, current := e.ExptItemResultRepo.(repo.IExptCurrentResultRepo); !current {
-			return e.compareExptTurnResultFiltersLegacy(ctx, spaceID, exptID, ids, retry)
+			if _, v2 := e.exptTurnResultFilterRepo.(repo.IExptFilterIndexRepo); !v2 {
+				return e.compareExptTurnResultFiltersLegacy(ctx, spaceID, exptID, ids, retry)
+			}
 		}
 	}
 	ids, err := e.filterCandidateItems(ctx, spaceID, exptID, ids)
@@ -221,7 +244,7 @@ func (e ExptResultServiceImpl) ReconcileManualRetryFilterBeforeFinish(ctx contex
 			if err := ctx.Err(); err != nil {
 				return err
 			}
-			if err := e.exptTurnResultFilterRepo.Save(ctx, filters); err != nil {
+			if err := e.saveCurrentFilterIndex(ctx, filters); err != nil {
 				return err
 			}
 			return ctx.Err()
@@ -241,6 +264,9 @@ func (e ExptResultServiceImpl) materializedFilterMatchesLocked(ctx context.Conte
 }
 
 func (e ExptResultServiceImpl) compareMaterializedFilterLocked(ctx context.Context, space, expt, item int64, expected []*entity.ExptTurnResultFilterEntity) (bool, error) {
+	if index, ok := e.exptTurnResultFilterRepo.(repo.IExptFilterIndexRepo); ok {
+		return e.compareFilterIndex(ctx, index, space, expt, item, expected)
+	}
 	if len(expected) == 0 {
 		return false, nil
 	}
@@ -274,6 +300,9 @@ func (e ExptResultServiceImpl) compareMaterializedFilterLocked(ctx context.Conte
 }
 
 func (e ExptResultServiceImpl) buildCurrentItemFilterLocked(ctx context.Context, space, expt, item int64) ([]*entity.ExptTurnResultFilterEntity, error) {
+	if _, ok := e.exptTurnResultFilterRepo.(repo.IExptFilterIndexRepo); ok {
+		return e.BuildExptFilterProjection(contexts.WithCtxWriteDB(ctx), space, expt, []int64{item})
+	}
 	return e.buildExptTurnResultFiltersLocked(contexts.WithCtxWriteDB(ctx), space, expt, []int64{item})
 }
 
@@ -332,6 +361,33 @@ func (e ExptResultServiceImpl) compareCurrentItemFilterLocked(ctx context.Contex
 	}
 	if len(expected) == 0 || expected[0].CreatedDate.IsZero() {
 		return nil
+	}
+	if index, ok := e.exptTurnResultFilterRepo.(repo.IExptFilterIndexRepo); ok {
+		match, err := e.compareFilterIndex(ctx, index, space, expt, item, expected)
+		if err != nil {
+			if errors.Is(err, ErrExptFilterFutureTimestamp) {
+				logs.CtxError(ctx, "filter future timestamp remains pending, space=%d expt=%d item=%d: %v", space, expt, item, err)
+				if e.Metric != nil {
+					e.Metric.EmitExptTurnResultFilterCheck(space, false, false, true, false)
+				}
+				return nil
+			}
+			return err
+		}
+		if match {
+			return nil
+		}
+		if retry >= 3 {
+			logs.CtxError(ctx, "filter reconciliation exhausted, space=%d expt=%d item=%d retry=%d", space, expt, item, retry)
+			if e.Metric != nil {
+				e.Metric.EmitExptTurnResultFilterCheck(space, false, false, true, false)
+			}
+			return nil
+		}
+		if e.publisher == nil {
+			return errno.NewMQRetryErr("filter AUTO publisher missing")
+		}
+		return e.publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{ExperimentID: expt, SpaceID: space, ItemID: []int64{item}, RetryTimes: gptr.Of(retry + 1), FilterType: gptr.Of(entity.UpsertExptTurnResultFilterTypeAuto)}, nil)
 	}
 	actual, _, err := e.readMaterializedItemFilterLocked(ctx, space, expt, item, expected[0].CreatedDate)
 	if err != nil {

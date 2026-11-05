@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"sync"
 	"time"
@@ -19,7 +20,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -134,23 +134,10 @@ func (s *EvaluatorRecordServiceImpl) CorrectEvaluatorRecord(ctx context.Context,
 		}
 	}
 
-	if err = s.exptPublisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
-		ExperimentID: evaluatorRecordDO.ExperimentID,
-		SpaceID:      evaluatorRecordDO.SpaceID,
-		ItemID:       []int64{evaluatorRecordDO.ItemID},
-	}, nil); err != nil {
-		logs.CtxError(ctx, "Failed to send ExptTurnResultFilterEvent, err: %v", err)
-	}
-
-	err = s.exptPublisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
-		ExperimentID: evaluatorRecordDO.ExperimentID,
-		SpaceID:      evaluatorRecordDO.SpaceID,
-		ItemID:       []int64{evaluatorRecordDO.ItemID},
-		RetryTimes:   ptr.Of(int32(0)),
-		FilterType:   ptr.Of(entity.UpsertExptTurnResultFilterTypeCheck),
-	}, ptr.Of(10*time.Second))
-	if err != nil {
-		return err
+	autoErr := publishFilterAuto(ctx, s.exptPublisher, evaluatorRecordDO.SpaceID, evaluatorRecordDO.ExperimentID, []int64{evaluatorRecordDO.ItemID})
+	checkErr := completeFilterRefresh(ctx, s.exptPublisher, evaluatorRecordDO.SpaceID, evaluatorRecordDO.ExperimentID, []int64{evaluatorRecordDO.ItemID}, nil)
+	if err := errors.Join(autoErr, checkErr); err != nil {
+		return errno.WrapMQRetryErr(err)
 	}
 
 	return nil

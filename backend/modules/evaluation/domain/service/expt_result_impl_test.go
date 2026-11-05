@@ -3160,7 +3160,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 				}}, nil).AnyTimes()
 
 				// 模拟获取所有item的调用
-				mockExptItemResultRepo.EXPECT().ListItemResultsByExptID(gomock.Any(), int64(3), int64(100), entity.Page{}, false).Return([]*entity.ExptItemResult{
+				mockExptItemResultRepo.EXPECT().ListItemResultsByExptID(gomock.Any(), int64(3), int64(100), entity.NewPage(1, 100), false).Return([]*entity.ExptItemResult{
 					{
 						ID:     1,
 						ExptID: 3,
