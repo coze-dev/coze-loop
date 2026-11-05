@@ -24,12 +24,10 @@ import (
 // 1 分钟到期会 cancel opCtx，失败项一多整批重试就会回滚。
 const manualRetryLockMaxHold = 5 * time.Minute
 
-// retryTerminalReservationReleaseAttempts 改排提交后释放旧预占的最大尝试次数。
-// 提交已经落库，释放失败不能回滚改排，只能有界重试并留下可告警的证据。
-const retryTerminalReservationReleaseAttempts = 3
-
-// retryTerminalReservationReleaseBackoff 两次释放之间的基础退避，按尝试次数线性增长。
-const retryTerminalReservationReleaseBackoff = 50 * time.Millisecond
+// retryTerminalReservationReleaseBudget 改排提交后释放旧预占的整批预算。
+// 提交已经落库，释放失败不能回滚改排，只能尽力完成并留下可告警的证据；预算与仓内
+// 终态释放的 8s 一致，避免账本故障时把同步请求拖过 5 分钟 run 锁租约。
+const retryTerminalReservationReleaseBudget = 8 * time.Second
 
 // releaseRetriedTerminalReservations 在改排事务提交之后释放上一轮终态 item 的预占。
 //
@@ -41,39 +39,30 @@ const retryTerminalReservationReleaseBackoff = 50 * time.Millisecond
 // 为什么提交后仍然要释放：改排把 item 推回 Queueing，下一次派发会以**新** token 重新预占；
 // 上一轮的 token 若不释放就会与新预占叠加，把账本 used 抬高（少放行）。
 //
-// 提交后的释放失败无法回滚已提交的改排，因此有界重试后只告警、不向调用方报错：
-//   - 释放用 WithoutCancel：租约到期/调用方取消不能把「已提交的改排」拖成未释放的旧预占；
+// 提交后的释放失败无法回滚已提交的改排，因此只尽力释放、不向调用方报错：
+//   - 用 WithoutCancel：租约到期/调用方取消不能把「已提交的改排」拖成未释放的旧预占；
 //   - 永远只带上一轮的 token，绝不触碰新一次执行的 token，否则新执行会失去额度保护；
-//   - 残余偏差方向是账本多算（少放行），而不是少算（超发）；与仓内终态释放的
-//     best-effort（releaseQuotaIfItemTerminal / releaseCentralQuotaForItems 只告警）一致。
+//   - 残余偏差方向是账本多算（少放行），而不是少算（超发）。
+//
+// 这里刻意不加重试：没有持久化 release intent 时，重试只能降低偶发失败概率，不能提供
+// 恢复；反而会让账本故障时的同步耗时按 item 数放大。跨 run 旧预占不在调度器每拍
+// reap/对账的扫描范围内，真正的恢复手段是账本侧对账或运维全量重建。
 func (m *ExptMangerImpl) releaseRetriedTerminalReservations(ctx context.Context, expt *entity.Experiment, items []*entity.PreparedRetryItem, requestID string) {
-	// 改排已经提交，释放是必须完成的补偿：调用方取消或租约到期都不能让它半途而废。
-	releaseBase := context.WithoutCancel(ctx)
-	for _, item := range items {
+	releaseCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), retryTerminalReservationReleaseBudget)
+	defer cancel()
+	for index, item := range items {
 		if item == nil || item.SourceItem == nil {
 			continue
 		}
-		var released component.TerminalReservationReleaseResult
-		var err error
-		for attempt := 0; attempt < retryTerminalReservationReleaseAttempts; attempt++ {
-			releaseCtx, cancel := context.WithTimeout(releaseBase, 8*time.Second)
-			released, err = m.centralGuard.ReleaseTerminalReservation(releaseCtx, expt.SchedulerScope, item.PreviousRunID, item.SourceItem.ItemID, item.PreviousRequestID)
-			if err == nil {
-				err = releaseCtx.Err()
-			}
-			cancel()
-			if err == nil {
-				break
-			}
-			if attempt+1 < retryTerminalReservationReleaseAttempts {
-				if waitErr := sleepCtx(releaseBase, retryTerminalReservationReleaseBackoff*time.Duration(attempt+1)); waitErr != nil {
-					break
-				}
-			}
+		if err := releaseCtx.Err(); err != nil {
+			logs.CtxError(ctx, "manual retry reservation release budget exhausted, expt_id=%d, item_id=%d, previous_run_id=%d, previous_request_id=%s, retry_request_id=%s, remaining_items=%d, err=%v",
+				expt.ID, item.SourceItem.ItemID, item.PreviousRunID, item.PreviousRequestID, requestID, len(items)-index, err)
+			return
 		}
+		released, err := m.centralGuard.ReleaseTerminalReservation(releaseCtx, expt.SchedulerScope, item.PreviousRunID, item.SourceItem.ItemID, item.PreviousRequestID)
 		if err != nil {
-			logs.CtxError(ctx, "manual retry reservation release failed after %d attempts, expt_id=%d, run_id=%d, item_id=%d, previous_run_id=%d, previous_request_id=%s, retry_request_id=%s, err=%v",
-				retryTerminalReservationReleaseAttempts, expt.ID, expt.LatestRunID, item.SourceItem.ItemID, item.PreviousRunID, item.PreviousRequestID, requestID, err)
+			logs.CtxError(ctx, "manual retry reservation release failed, expt_id=%d, run_id=%d, item_id=%d, previous_run_id=%d, previous_request_id=%s, retry_request_id=%s, err=%v",
+				expt.ID, expt.LatestRunID, item.SourceItem.ItemID, item.PreviousRunID, item.PreviousRequestID, requestID, err)
 			continue
 		}
 		switch released {
@@ -88,18 +77,6 @@ func (m *ExptMangerImpl) releaseRetriedTerminalReservations(ctx context.Context,
 			logs.CtxWarn(ctx, "manual retry reservation release returned unknown result %d, expt_id=%d, item_id=%d, previous_request_id=%s",
 				released, expt.ID, item.SourceItem.ItemID, item.PreviousRequestID)
 		}
-	}
-}
-
-// sleepCtx 让重试退避可被取消打断；返回 ctx 错误时调用方停止重试。
-func sleepCtx(ctx context.Context, d time.Duration) error {
-	timer := time.NewTimer(d)
-	defer timer.Stop()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-timer.C:
-		return nil
 	}
 }
 
@@ -570,11 +547,14 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 		// 提交失败时账本没有任何副作用：旧预占仍归上一轮所有，同一请求重试可在提交成功后释放恰好一次。
 		return nil, err
 	}
+	// 改排已经提交：先归还 run/item 锁，再做与 DB 状态无关的账本补偿。
+	// 释放只带上一轮的 token，不会影响新一次执行的预占；把它留在锁内会让账本故障时的
+	// 同步耗时直接吃掉 manualRetryLockMaxHold。
+	cancel()
+	stop()
 	if enforce {
 		m.releaseRetriedTerminalReservations(opCtx, expt, commit.Items, commit.RequestID)
 	}
-	cancel()
-	stop()
 	if err := m.wakeCurrentRetryRun(ctx, expt, run); err != nil {
 		logs.CtxWarn(ctx, "wake current retry run failed, expt_id=%d, run_id=%d, err=%v", expt.ID, run.ExptRunID, err)
 	}

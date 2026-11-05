@@ -448,10 +448,6 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 				waker.err = errors.New("wake unavailable")
 			}
 			if enforce && kind != "preflight_capacity" && kind != "preflight_source_changed" && kind != "db_error" && kind != "lost_during_preflight" {
-				attempts := 1
-				if kind == "release_error" {
-					attempts = retryTerminalReservationReleaseAttempts
-				}
 				guard.EXPECT().ReleaseTerminalReservation(gomock.Any(), "test-scope", oldRun, int64(11), oldToken).DoAndReturn(func(context.Context, string, int64, int64, string) (component.TerminalReservationReleaseResult, error) {
 					// 释放只能发生在改排事务提交之后：提交回滚时账本不能被提前退还。
 					require.Equal(t, "commit", port.calls[len(port.calls)-1], "reservation released before requeue commit")
@@ -467,7 +463,7 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 						return component.TerminalReservationReleased, nil
 					}
 					return component.TerminalReservationReleased, nil
-				}).Times(attempts)
+				}).Times(1)
 			}
 			if enforce && (kind == "db_error" || kind == "lost_during_preflight") {
 				guard.EXPECT().ReleaseTerminalReservation(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
