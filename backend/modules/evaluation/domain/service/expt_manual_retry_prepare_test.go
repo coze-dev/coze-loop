@@ -134,3 +134,25 @@ func TestManualRetryPrepareManualSelection(t *testing.T) {
 	require.Zero(t, got.Items[0].Turns[0].TargetResultID)
 	require.False(t, got.Items[0].Turns[0].PreserveSuccess)
 }
+
+// FailRetry 保留的历史成功 turn 属于旧 run，不能再被准备阶段判成 invalid frozen retry turn。
+func TestManualRetryPrepareAllowsHistoricalSuccessTurn(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	items := repomocks.NewMockIExptItemResultRepo(ctrl)
+	turns := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	refs := repomocks.NewMockIExptItemRefRepo(ctrl)
+	manager := &ExptMangerImpl{itemResultRepo: items, turnResultRepo: turns, itemRefRepo: refs}
+	preparer := any(manager).(terminalRetryPreparer)
+
+	items.EXPECT().ScanItemResults(gomock.Any(), int64(7), int64(0), int64(500), []int32{3}, int64(9)).Return([]*entity.ExptItemResult{{ID: 101, SpaceID: 9, ExptID: 7, ExptRunID: 8, ItemID: 11, ItemVersionID: 91, Status: entity.ItemRunState_Fail}}, int64(0), nil)
+	items.EXPECT().MGetItemRunLog(gomock.Any(), int64(7), int64(8), []int64{11}, int64(9)).Return([]*entity.ExptItemResultRunLog{{ID: 201, SpaceID: 9, ExptID: 7, ExptRunID: 8, ItemID: 11, ItemVersionID: 91, Status: 3, ResultState: 1}}, nil)
+	refs.EXPECT().GetByExptIDAndItemID(gomock.Any(), int64(9), int64(7), int64(11)).Return(&entity.ExptItemRef{ID: 501, SpaceID: 9, ExptID: 7, ItemID: 11, ItemVersionID: 91, ItemConfig: &entity.ExptItemConfig{TargetSourceSpaceID: 19}}, nil)
+	turns.EXPECT().GetItemTurnResults(gomock.Any(), int64(7), int64(11), int64(9)).Return([]*entity.ExptTurnResult{{ID: 301, SpaceID: 9, ExptID: 7, ExptRunID: 7, ItemID: 11, ItemVersionID: 91, TurnID: 21, Status: int32(entity.TurnRunState_Success), TargetResultID: 31, WeightedScore: gptr.Of(0.8)}}, nil)
+	turns.EXPECT().GetItemTurnRunLogs(gomock.Any(), int64(7), int64(8), int64(11), int64(9)).Return([]*entity.ExptTurnResultRunLog{{ID: 401, SpaceID: 9, ExptID: 7, ExptRunID: 8, ItemID: 11, ItemVersionID: 91, TurnID: 21, TargetResultID: 31, EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{51: 61}}}}, nil)
+	turns.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(9), []int64{301}).Return([]*entity.ExptTurnEvaluatorResultRef{{ID: 701, SpaceID: 9, ExptID: 7, ExptTurnResultID: 301, EvaluatorVersionID: 51, EvaluatorResultID: 61}}, nil)
+
+	got, err := preparer.prepareTerminalCandidatesAndReusableRefs(context.Background(), &entity.Experiment{ID: 7, SpaceID: 9, TargetVersionID: 41, EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig, ExptType: entity.ExptType_Offline}, 8, entity.EvaluationModeFailRetry, nil, nil)
+	require.NoError(t, err, "历史成功 turn 不应被判成 invalid frozen retry turn")
+	require.NotNil(t, got)
+	require.True(t, got.Items[0].Turns[0].PreserveSuccess)
+}

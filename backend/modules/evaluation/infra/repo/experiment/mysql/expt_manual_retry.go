@@ -374,7 +374,12 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 	sort.Slice(turns, func(i, j int) bool { return turns[i].ID < turns[j].ID })
 	for _, turn := range turns {
 		p := expected[turn.TurnID]
-		if p == nil || turn.ExptRunID != item.prepared.PreviousRunID || turn.ItemVersionID != item.prepared.ItemVersionID || !reflect.DeepEqual(convert.NewExptTurnResultConvertor().PO2DO(turn, p.SourceTurn.EvaluatorResults), p.SourceTurn) {
+		if p == nil || turn.ItemVersionID != item.prepared.ItemVersionID || !reflect.DeepEqual(convert.NewExptTurnResultConvertor().PO2DO(turn, p.SourceTurn.EvaluatorResults), p.SourceTurn) {
+			return "source_changed", nil
+		}
+		// FailRetry 保留的历史成功 turn 属于旧 run，与准备阶段读侧规则一致。
+		if turn.ExptRunID != item.prepared.PreviousRunID &&
+			!(r.Mode == entity.EvaluationModeFailRetry && entity.TurnRunState(turn.Status) == entity.TurnRunState_Success) {
 			return "source_changed", nil
 		}
 		var log model.ExptTurnResultRunLog
