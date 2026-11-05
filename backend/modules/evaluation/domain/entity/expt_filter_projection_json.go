@@ -74,10 +74,12 @@ func projectionJSONMapSize[V any](values map[string]V, valueSize func(V) (int64,
 	}
 	return size, nil
 }
+
 func projectionJSONScalarSize[V any](value V) (int64, error) {
 	data, err := json.Marshal(value)
 	return int64(len(data)), err
 }
+
 func projectionJSONStringSize(value string) (int64, error) {
 	size := int64(2)
 	for i := 0; i < len(value); {

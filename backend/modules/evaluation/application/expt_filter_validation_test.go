@@ -50,7 +50,8 @@ type filterCheckService struct {
 func (s *filterCheckService) UpsertExptTurnResultFilter(context.Context, int64, int64, []int64) error {
 	return s.refreshErr
 }
-func (s *filterCheckService) ScheduleExptFilterCheck(_ context.Context, _ int64, _ int64, _ []int64, round int32) error {
+
+func (s *filterCheckService) ScheduleExptFilterCheck(_ context.Context, _, _ int64, _ []int64, round int32) error {
 	s.round = round
 	s.checks++
 	return nil

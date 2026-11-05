@@ -47,6 +47,7 @@ func TestExptFilterProjectionJSONSizeMatchesEncodingJSON(t *testing.T) {
 		}
 	}
 }
+
 func TestExptFilterProjectionJSONSizeRejectsUnencodableScalars(t *testing.T) {
 	if _, err := ExptFilterProjectionJSONSize(nil); err == nil {
 		t.Fatal("nil projection accepted")
@@ -60,6 +61,7 @@ func TestExptFilterProjectionJSONSizeRejectsUnencodableScalars(t *testing.T) {
 		}
 	}
 }
+
 func TestExptFilterProjectionJSONSizeDoesNotAllocateLargeEncodedValues(t *testing.T) {
 	row := &ExptTurnResultFilterEntity{EvalTargetData: map[string]string{"actual_output": strings.Repeat("<", 4<<20)}}
 	benchmark := testing.Benchmark(func(b *testing.B) {
