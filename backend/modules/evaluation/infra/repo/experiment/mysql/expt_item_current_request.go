@@ -64,6 +64,10 @@ func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, space
 		if !validCurrentItemStatus(status) || !validCurrentItemStatus(entity.ItemRunState(row.CanonicalStatus)) || row.RetryTimes < 0 {
 			return nil, fmt.Errorf("invalid current item state")
 		}
+		// The scan row keeps the historical strict check: real legacy rows were
+		// written zero in every table, so an ambiguous one-sided version is not a
+		// schedulable observation and fails the whole scan instead of being
+		// silently dispatched. Direct source reads apply the zero matrix.
 		if row.ItemVersionID != row.CanonicalItemVersionID {
 			return nil, fmt.Errorf("canonical/run-log item version mismatch")
 		}

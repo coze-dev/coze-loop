@@ -514,6 +514,26 @@ func TestRecordCurrentItemResultsUnit(t *testing.T) {
 		svc.EXPECT().PublishPreparedItemResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
 		require.NoError(t, scheduler.recordCurrentItemResults(context.Background(), event(), []*entity.ExptEvalItem{item}, mode, expt, svc))
 	})
+	t.Run("observed_nil_recovers_next_tick", func(t *testing.T) {
+		d, mode, scheduler := newDeps(t)
+		svc := svcmocks.NewMockExptResultPublicationService(d.ctrl)
+		results := svcmocks.NewMockExptResultService(d.ctrl)
+		scheduler.ResultSvc = results
+		// Tick 1: the scan observed a Logged item but could not freeze its
+		// publication source. The item is skipped, not failed, and not marked
+		// applied; the still-Logged row is rescanned next tick.
+		observed := &entity.ExptEvalItem{ItemID: 9, RequestID: "req", State: entity.ItemRunState_Success, PublicationObserved: true}
+		require.NoError(t, scheduler.recordCurrentItemResults(context.Background(), event(), []*entity.ExptEvalItem{observed}, mode, expt, svc))
+		// Tick 2: the snapshot stabilized, so the scan now returns the frozen
+		// publication and it is executed normally.
+		item := readyItem()
+		publication := &entity.ExptItemResultPublication{Source: item.Publication}
+		svc.EXPECT().PrepareItemResultPublication(gomock.Any(), item.Publication, expt).Return(publication, nil)
+		svc.EXPECT().PublishPreparedItemResult(gomock.Any(), publication, gomock.Any()).Return(true, nil)
+		mode.EXPECT().PublishResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		results.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), int64(3), int64(1), []int64{9}).Return(nil)
+		require.NoError(t, scheduler.recordCurrentItemResults(context.Background(), event(), []*entity.ExptEvalItem{item}, mode, expt, svc))
+	})
 	t.Run("busy_defers_to_next_tick", func(t *testing.T) {
 		_, mode, scheduler := newDeps(t)
 		svc := svcmocks.NewMockExptResultPublicationService(gomock.NewController(t))

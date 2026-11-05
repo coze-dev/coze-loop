@@ -19,9 +19,15 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 )
 
-// currentSourceInconsistentError marks a deterministic inconsistency in the
-// frozen current-result snapshot. Scans isolate just that item; execution and
+// currentSourceInconsistentError marks a deterministic inconsistency in one
+// item's frozen snapshot (its item row, canonical turns, turn run logs or
+// frozen publication references). Scans isolate just that item; execution and
 // publication still fail closed on the same error.
+//
+// Run lifecycle/configuration observations (missing or invalid run status,
+// invalid run mode) and execution-state observations (unknown run log status,
+// invalid item result state) deliberately stay untyped: they describe the run
+// or the caller, not one item's snapshot, and must keep failing the whole scan.
 type currentSourceInconsistentError struct{ message string }
 
 func (e *currentSourceInconsistentError) Error() string { return e.message }
@@ -33,6 +39,20 @@ func inconsistentCurrentSource(format string, args ...any) error {
 func isCurrentSourceInconsistent(err error) bool {
 	var target *currentSourceInconsistentError
 	return errors.As(err, &target)
+}
+
+// itemVersionConflict reports a row version that contradicts the authoritative
+// item version. Zero means "legacy/unversioned" in every result table and is
+// only readable as a legacy item too: an unversioned item cannot vouch for a
+// foreign non-zero turn/log version, so that still fails closed.
+func itemVersionConflict(itemVersion, rowVersion int64) bool {
+	return rowVersion != 0 && rowVersion != itemVersion
+}
+
+// versionPairConflict reports two optional versions that disagree. Both sides
+// carry no authority over the other, so a legacy zero simply means "unknown".
+func versionPairConflict(a, b int64) bool {
+	return a != 0 && b != 0 && a != b
 }
 
 func (dao *exptItemResultDAOImpl) GetCurrentItemRunSource(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptCurrentItemRunSource, error) {
@@ -93,7 +113,7 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 		return nil, err
 	}
 	if run.Status == nil {
-		return nil, inconsistentCurrentSource("source run status missing")
+		return nil, fmt.Errorf("source run status missing")
 	}
 	runStatus := entity.ExptStatus(*run.Status)
 	if !publication {
@@ -101,23 +121,23 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 			return nil, nil
 		}
 		if runStatus != entity.ExptStatus_Processing && runStatus != entity.ExptStatus_Pending {
-			return nil, inconsistentCurrentSource("invalid source run status")
+			return nil, fmt.Errorf("invalid source run status")
 		}
 	} else if runStatus != entity.ExptStatus_Processing && runStatus != entity.ExptStatus_Pending && !entity.IsExptFinished(runStatus) && !entity.IsExptFinishing(runStatus) {
-		return nil, inconsistentCurrentSource("invalid publication run status")
+		return nil, fmt.Errorf("invalid publication run status")
 	}
 	mode := entity.ExptRunMode(gptr.Indirect(run.Mode))
 	if manual != nil {
 		mode = manual.Mode
 	}
 	if mode < entity.EvaluationModeSubmit || mode > entity.EvaluationModeTrialRun {
-		return nil, inconsistentCurrentSource("invalid current source mode")
+		return nil, fmt.Errorf("invalid current source mode")
 	}
 	var log model.ExptItemResultRunLog
 	if err := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", spaceID, exptID, runID, itemID).Take(&log).Error; err != nil {
 		return nil, err
 	}
-	if (log.ItemVersionID != 0 && item.ItemVersionID != 0 && item.ItemVersionID != log.ItemVersionID) || log.RetryTimes < 0 || !validCurrentItemStatus(entity.ItemRunState(item.Status)) || !validCurrentItemStatus(entity.ItemRunState(log.Status)) || log.ResultState == nil || *log.ResultState < 0 || *log.ResultState > int32(entity.ExptItemResultStateLogged) {
+	if itemVersionConflict(item.ItemVersionID, log.ItemVersionID) || log.RetryTimes < 0 || !validCurrentItemStatus(entity.ItemRunState(item.Status)) || !validCurrentItemStatus(entity.ItemRunState(log.Status)) || log.ResultState == nil || *log.ResultState < 0 || *log.ResultState > int32(entity.ExptItemResultStateLogged) {
 		return nil, inconsistentCurrentSource("damaged current item source")
 	}
 	source := &entity.ExptCurrentItemRunSource{Current: entity.ExptItemCurrentRequest{SpaceID: spaceID, ExptID: exptID, RunID: runID, ItemID: itemID, ItemVersionID: item.ItemVersionID, RequestID: request, Mode: mode, Status: entity.ItemRunState(log.Status), ResultState: entity.ExptItemResultState(*log.ResultState), RetryTimes: log.RetryTimes, UpdatedAt: gptr.Of(log.UpdatedAt)}, Turns: map[int64]*entity.ExptTurnResultRunLog{}}
@@ -144,8 +164,10 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 	canonicalIDs := make([]int64, 0, len(canonical))
 	byTurn := map[int64]model.ExptTurnResult{}
 	for _, turn := range canonical {
-		// Legacy rows may carry item_version_id=0; any non-zero disagreement is damage.
-		if (turn.ItemVersionID != 0 && turn.ItemVersionID != item.ItemVersionID) || turn.TurnID < 0 {
+		// Legacy rows are written with item_version_id=0 in every table. A
+		// non-zero turn version must match the authoritative item version; an
+		// unversioned item cannot vouch for one.
+		if itemVersionConflict(item.ItemVersionID, turn.ItemVersionID) || turn.TurnID < 0 {
 			return nil, inconsistentCurrentSource("damaged canonical turn source")
 		}
 		if turn.ExptRunID != runID {
@@ -156,8 +178,10 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 			// Successful history legitimately stays in its old run. A retried
 			// turn may still carry the old canonical row until the reset lands,
 			// which is legal only when the current run already owns its turn log.
+			// Without that log the frozen turn would silently disappear from
+			// execution/publication, so isolate instead of dropping it.
 			if entity.TurnRunState(turn.Status) != entity.TurnRunState_Success && !retriedNow {
-				continue
+				return nil, inconsistentCurrentSource("frozen canonical turn has no current run log")
 			}
 		}
 		byTurn[turn.TurnID] = turn
@@ -170,10 +194,10 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 		if !ok || log.TurnID < 0 || log.Status < int32(entity.TurnRunState_Queueing) || log.Status > int32(entity.TurnRunState_Terminal) {
 			return nil, inconsistentCurrentSource("damaged current turn source")
 		}
-		if log.ItemVersionID != 0 && item.ItemVersionID != 0 && log.ItemVersionID != item.ItemVersionID {
+		if itemVersionConflict(item.ItemVersionID, log.ItemVersionID) {
 			return nil, inconsistentCurrentSource("damaged current turn source")
 		}
-		if log.ItemVersionID != 0 && turn.ItemVersionID != 0 && log.ItemVersionID != turn.ItemVersionID {
+		if versionPairConflict(log.ItemVersionID, turn.ItemVersionID) {
 			return nil, inconsistentCurrentSource("damaged current turn source")
 		}
 		converted, err := convert.NewExptTurnResultRunLogConvertor().PO2DO(log)
@@ -181,13 +205,26 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 			return nil, err
 		}
 		if err := validateCurrentEvaluatorRefs(converted.EvaluatorResultIds); err != nil {
-			return nil, err
+			// Stored evaluator references are part of this turn's frozen snapshot:
+			// isolate the item instead of failing the whole run scan. The write
+			// path still validates incoming references with the plain error.
+			return nil, inconsistentCurrentSource("damaged current evaluator references: %v", err)
 		}
 		source.Turns[log.TurnID] = converted
 	}
-	// A failed first turn need not execute all later turns, but every frozen turn log exists.
-	if manual != nil && (len(source.CanonicalTurns) != len(logs) || len(source.CanonicalTurns) == 0) {
-		return nil, inconsistentCurrentSource("current frozen turn logs incomplete")
+	// A failed first turn need not execute all later turns, but every frozen
+	// canonical turn must own exactly one current-run log. Counting the filtered
+	// snapshot alone would let a skipped frozen turn disappear silently, so check
+	// both the row count and every canonical turn identity.
+	if manual != nil {
+		if len(canonical) == 0 || len(canonical) != len(logs) {
+			return nil, inconsistentCurrentSource("current frozen turn logs incomplete")
+		}
+		for _, turn := range canonical {
+			if _, ok := logTurns[turn.TurnID]; !ok {
+				return nil, inconsistentCurrentSource("current frozen turn log missing")
+			}
+		}
 	}
 	var refs []model.ExptTurnEvaluatorResultRef
 	if err := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND expt_turn_result_id IN ?", spaceID, exptID, canonicalIDs).Order("id ASC").Find(&refs).Error; err != nil {

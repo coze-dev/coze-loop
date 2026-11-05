@@ -199,3 +199,38 @@ func TestCurrentRequestScanUnstableItemKeepsOccupancy(t *testing.T) {
 	require.Nil(t, incomplete[0].Source)
 	require.Empty(t, complete)
 }
+
+// An unstable Queueing row must not be dispatched on this tick, an unstable
+// Processing row must keep its concurrency slot, and healthy siblings must keep
+// flowing. The scan marks the row, so the same marker must gate dispatch.
+func TestCurrentRequestScanUnstableQueueingNotDispatched(t *testing.T) {
+	for _, concur := range []int{1, 2} {
+		t.Run(fmt.Sprintf("concurrency_%d", concur), func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			items := repomocks.NewMockIExptItemResultRepo(ctrl)
+			config := componentmocks.NewMockIConfiger(ctrl)
+			config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{ConcurNum: concur, MaxItemConcurNum: concur}}).AnyTimes()
+			items.EXPECT().ScanCurrentRequests(gomock.Any(), int64(3), int64(1), int64(2), false).Return([]*entity.ExptItemCurrentRequest{
+				{ItemID: 10, Status: entity.ItemRunState_Processing, ObservationUnstable: true},
+				{ItemID: 11, Status: entity.ItemRunState_Queueing, RequestID: "rq-unstable", ObservationUnstable: true},
+				{ItemID: 12, Status: entity.ItemRunState_Queueing, RequestID: "rq-ok", Mode: entity.EvaluationModeSubmit},
+			}, nil)
+			expt := &entity.Experiment{SpaceID: 3, EvalConf: &entity.EvaluationConfiguration{}, EvalSet: &entity.EvaluationSet{EvaluationSetVersion: &entity.EvaluationSetVersion{ID: 7}}}
+			exec := &exptBaseExec{exptItemResultRepo: items, configer: config}
+			to, incomplete, complete, err := exec.ScanEvalItems(context.Background(), &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2}, expt)
+			require.NoError(t, err)
+			require.Len(t, incomplete, 1)
+			require.Equal(t, int64(10), incomplete[0].ItemID, "unstable Processing keeps its slot")
+			for _, item := range to {
+				require.NotEqual(t, int64(11), item.ItemID, "unstable Queueing must not be dispatched")
+			}
+			if concur == 1 {
+				require.Empty(t, to, "no free slot while the unstable Processing item holds it")
+			} else {
+				require.Len(t, to, 1)
+				require.Equal(t, int64(12), to[0].ItemID, "healthy sibling continues")
+			}
+			require.Empty(t, complete)
+		})
+	}
+}
