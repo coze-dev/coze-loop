@@ -22,6 +22,7 @@ import (
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	mysqlmodel "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/redis/go-redis/v9"
+	"github.com/rs/xid"
 
 	idemmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
 	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
@@ -197,6 +198,12 @@ func TestRunFinishLogRunBindsLifecycleOwnerToRunID(t *testing.T) {
 	require.NoError(t, manager.LogRun(context.Background(), 1, 2, entity.EvaluationModeSubmit, 3, nil, &entity.Session{UserID: "test"}))
 }
 
+// 用真实 XID 构造可迁移的老 holder，或模拟刚获取的新 holder。
+func legacyHolderAt(t *testing.T, when time.Time) string {
+	t.Helper()
+	return "test-host-" + xid.NewWithTime(when).String()
+}
+
 func finishRealLockerFactory(t *testing.T) (ManualRetryLockerFactory, *miniredis.Miniredis) {
 	t.Helper()
 	server := miniredis.RunT(t)
@@ -230,7 +237,7 @@ func TestRunFinishCleanupMigratesLegacyLifecycleHolder(t *testing.T) {
 		t.Run(kind, func(t *testing.T) {
 			factory, server := finishRealLockerFactory(t)
 			key := "expt_run_mutex_lock:1"
-			require.NoError(t, server.Set(key, "legacy-random-holder"))
+			require.NoError(t, server.Set(key, legacyHolderAt(t, time.Now().Add(-10*time.Minute))))
 			server.SetTTL(key, time.Hour)
 			ctrl := gomock.NewController(t)
 			now := time.Now()
@@ -262,7 +269,7 @@ func TestRunFinishCleanupMigratesLegacyLifecycleHolder(t *testing.T) {
 func TestRunFinishCleanupDoesNotMigrateFreshLegacyHolder(t *testing.T) {
 	factory, server := finishRealLockerFactory(t)
 	key := "expt_run_mutex_lock:1"
-	require.NoError(t, server.Set(key, "newer-run-random-holder"))
+	require.NoError(t, server.Set(key, legacyHolderAt(t, time.Now())))
 	server.SetTTL(key, 36*time.Hour)
 	ctrl := gomock.NewController(t)
 	now := time.Now()
@@ -271,9 +278,28 @@ func TestRunFinishCleanupDoesNotMigrateFreshLegacyHolder(t *testing.T) {
 	manager := &ExptMangerImpl{manualRetryLocker: factory, exptRepo: experiments}
 	err := manager.cleanupNaturallyFinishedRun(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, current)
 	require.Error(t, err)
-	owner, getErr := server.Get(key)
-	require.NoError(t, getErr)
-	require.Equal(t, "newer-run-random-holder", owner)
+	_, getErr := server.Get(key)
+	require.NoError(t, getErr, "fresh holder must be retained")
+}
+
+// 评审反例：写锁时 TTL 600s，迁移时配置改成 1200s。
+// 按 TTL 反推会把刚获取的 holder 判老；XID 时间戳与配置无关，必须保留。
+func TestRunFinishCleanupKeepsFreshHolderAfterConfigIncrease(t *testing.T) {
+	factory, server := finishRealLockerFactory(t)
+	key := "expt_run_mutex_lock:1"
+	require.NoError(t, server.Set(key, legacyHolderAt(t, time.Now())))
+	server.SetTTL(key, 10*time.Minute)
+	ctrl := gomock.NewController(t)
+	config := componentmocks.NewMockIConfiger(ctrl)
+	config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{ZombieIntervalSecond: 1200}).AnyTimes()
+	now := time.Now()
+	current := &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Success, EndAt: &now}
+	experiments := repomocks.NewMockIExperimentRepo(ctrl)
+	manager := &ExptMangerImpl{manualRetryLocker: factory, exptRepo: experiments, configer: config}
+	err := manager.cleanupNaturallyFinishedRun(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, current)
+	require.Error(t, err)
+	_, getErr := server.Get(key)
+	require.NoError(t, getErr, "config increase must not make a fresh holder look old")
 }
 
 func TestRunFinishCleanupKeepsLegacyHolderWhenLockTTLIsShort(t *testing.T) {

@@ -1785,6 +1785,20 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return &expt.RetryExperimentResponse{RunID: gptr.Of(runID), AcceptedCount: gptr.Of(receipt.AcceptedCount), RejectedItems: rejected, SnapshotAtMs: gptr.Of(receipt.SnapshotAtMS), BaseResp: base.NewBaseResp()}, nil
 	}
 
+	// 显式声明了 expected_run_id 却不在当前-run 重排语义内：先拒绝，再考虑沙箱/新 run，
+	// 不能把并发保护静默丢掉后执行另一个操作。
+	if req.ExpectedRunID != nil {
+		if req.GetExpectedRunID() < 0 {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid current run retry identity"))
+		}
+		if runMode != entity.EvaluationModeFailRetry && runMode != entity.EvaluationModeRetryItems {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("unsupported manual retry mode"))
+		}
+		if got.LatestRunID != req.GetExpectedRunID() {
+			return nil, errorx.NewByCode(errno.ManualRetryRunConflictCode)
+		}
+	}
+
 	// SandboxAgent 评测对象：重试前重新初始化沙箱任务。
 	// 首次运行结束后每条 execute 已被 destroy，沙箱侧任务不再持有可用 execute，Retry 必须重跑一次 Init 才能继续 SandboxRun。
 	// 与 Submit 保持一致：并发度先归一化，再按实际 task 的 execution 数分别计算。

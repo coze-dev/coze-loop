@@ -133,8 +133,10 @@ func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
 				req.Ext = map[string]string{"caller": "keep"}
 				got.Target = &entity.EvalTarget{EvalTargetType: entity.EvalTargetTypeSandboxAgent}
 			case "explicit_retry_all":
+				// 显式并发保护 + RetryAll：必须 fail-closed，不得静默起新 run。
 				req.ExpectedRunID = gptr.Of(int64(8))
 				req.RetryMode = gptr.Of(domain_expt.ExptRetryMode_RetryAll)
+				got.Target = &entity.EvalTarget{EvalTargetType: entity.EvalTargetTypeSandboxAgent}
 			case "old_live_join", "old_terminal_items":
 				req.RetryMode = gptr.Of(domain_expt.ExptRetryMode_RetryTargetItems)
 			case "old_terminal_all", "enabled_processing_retry_all":
@@ -177,16 +179,25 @@ func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
 				manager.EXPECT().LogRetryItemsRun(gomock.Any(), int64(7), entity.EvaluationModeRetryItems, int64(9), []int64{11}, gomock.Any()).Return(int64(18), false, nil)
 				manager.EXPECT().RetryItems(gomock.Any(), int64(7), int64(18), int64(9), 3, []int64{11}, gomock.Any(), gomock.Any()).Return(nil)
 			default:
-				mode := entity.EvaluationModeFailRetry
-				if kind == "old_terminal_all" || kind == "enabled_processing_retry_all" || kind == "explicit_retry_all" {
-					mode = entity.EvaluationModeRetryAll
+				if kind == "explicit_retry_all" {
+					// 仅验证拒绝分支：没有任何 GenID/LogRun/Run 期望。
+				} else {
+					mode := entity.EvaluationModeFailRetry
+					if kind == "old_terminal_all" || kind == "enabled_processing_retry_all" {
+						mode = entity.EvaluationModeRetryAll
+					}
+					generator.EXPECT().GenID(gomock.Any()).Return(int64(18), nil)
+					manager.EXPECT().LogRun(gomock.Any(), int64(7), int64(18), mode, int64(9), gomock.Any(), gomock.Any()).Return(nil)
+					manager.EXPECT().Run(gomock.Any(), int64(7), int64(18), int64(9), 3, gomock.Any(), mode, gomock.Any()).Return(nil)
 				}
-				generator.EXPECT().GenID(gomock.Any()).Return(int64(18), nil)
-				manager.EXPECT().LogRun(gomock.Any(), int64(7), int64(18), mode, int64(9), gomock.Any(), gomock.Any()).Return(nil)
-				manager.EXPECT().Run(gomock.Any(), int64(7), int64(18), int64(9), 3, gomock.Any(), mode, gomock.Any()).Return(nil)
 			}
 			app := &experimentApplication{manager: manager, auth: auth, idgen: generator, configer: config, sandboxSchedulerAdapter: sandbox}
 			resp, err := app.RetryExperiment(context.Background(), req)
+			if kind == "explicit_retry_all" {
+				require.Error(t, err)
+				require.Nil(t, resp)
+				return
+			}
 			require.NoError(t, err)
 			if kind == "explicit_sandbox" || kind == "enabled_without_identity" {
 				require.Equal(t, int64(8), resp.GetRunID())
