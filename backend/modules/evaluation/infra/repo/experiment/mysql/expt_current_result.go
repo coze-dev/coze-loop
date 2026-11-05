@@ -19,6 +19,14 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 )
 
+func itemSourceError(err error) error {
+	return &entity.ExptItemSourceError{Cause: err}
+}
+
+func itemSourceErrorf(format string, args ...any) error {
+	return itemSourceError(fmt.Errorf(format, args...))
+}
+
 func (dao *exptItemResultDAOImpl) GetCurrentItemRunSource(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptCurrentItemRunSource, error) {
 	var result *entity.ExptCurrentItemRunSource
 	err := dao.provider.Transaction(ctx, func(tx *gorm.DB) error {
@@ -59,16 +67,16 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 	}
 	ext, err := entity.ParseExptItemResultExt(gptr.Indirect(item.Ext))
 	if err != nil {
-		return nil, err
+		return nil, itemSourceError(err)
 	}
 	manual, err := entity.ParseManualRetryContext(ext)
 	if err != nil {
-		return nil, err
+		return nil, itemSourceError(err)
 	}
 	request := ""
 	if manual != nil {
 		if manual.RunID != runID {
-			return nil, fmt.Errorf("manual current source run mismatch")
+			return nil, itemSourceErrorf("manual current source run mismatch")
 		}
 		request = manual.RequestID
 	}
@@ -99,10 +107,13 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 	}
 	var log model.ExptItemResultRunLog
 	if err := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", spaceID, exptID, runID, itemID).Take(&log).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, itemSourceError(err)
+		}
 		return nil, err
 	}
 	if item.ItemVersionID != log.ItemVersionID || log.RetryTimes < 0 || !validCurrentItemStatus(entity.ItemRunState(item.Status)) || !validCurrentItemStatus(entity.ItemRunState(log.Status)) || log.ResultState == nil || *log.ResultState < 0 || *log.ResultState > int32(entity.ExptItemResultStateLogged) {
-		return nil, fmt.Errorf("damaged current item source")
+		return nil, itemSourceErrorf("damaged current item source")
 	}
 	source := &entity.ExptCurrentItemRunSource{Current: entity.ExptItemCurrentRequest{SpaceID: spaceID, ExptID: exptID, RunID: runID, ItemID: itemID, ItemVersionID: item.ItemVersionID, RequestID: request, Mode: mode, Status: entity.ItemRunState(log.Status), ResultState: entity.ExptItemResultState(*log.ResultState), RetryTimes: log.RetryTimes, UpdatedAt: gptr.Of(log.UpdatedAt)}, Turns: map[int64]*entity.ExptTurnResultRunLog{}}
 	if entity.IsItemRunFinished(entity.ItemRunState(item.Status)) && item.Status != log.Status {
@@ -125,7 +136,7 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 	byTurn := map[int64]model.ExptTurnResult{}
 	for _, turn := range canonical {
 		if turn.ItemVersionID != item.ItemVersionID || turn.TurnID < 0 {
-			return nil, fmt.Errorf("damaged canonical turn source")
+			return nil, itemSourceErrorf("damaged canonical turn source")
 		}
 		if turn.ExptRunID != runID && (mode != entity.EvaluationModeFailRetry || entity.TurnRunState(turn.Status) != entity.TurnRunState_Success) {
 			continue
@@ -142,11 +153,11 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 		// success history retained in its original run above;
 		// manual frozen sources and nonzero conflicts must still match exactly.
 		if !ok || !entity.MatchesExptTurnRunLogVersion(log.ItemVersionID, turn.ItemVersionID, request) || log.TurnID < 0 || log.Status < int32(entity.TurnRunState_Queueing) || log.Status > int32(entity.TurnRunState_Terminal) {
-			return nil, fmt.Errorf("damaged current turn source")
+			return nil, itemSourceErrorf("damaged current turn source")
 		}
 		converted, err := convert.NewExptTurnResultRunLogConvertor().PO2DO(log)
 		if err != nil {
-			return nil, err
+			return nil, itemSourceError(err)
 		}
 		converted.ItemVersionID = turn.ItemVersionID
 		if err := validateCurrentEvaluatorRefs(converted.EvaluatorResultIds); err != nil {
@@ -156,7 +167,7 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 	}
 	// A failed first turn need not execute all later turns, but every frozen turn log exists.
 	if manual != nil && (len(canonical) != len(logs) || len(canonical) == 0) {
-		return nil, fmt.Errorf("current frozen turn logs incomplete")
+		return nil, itemSourceErrorf("current frozen turn logs incomplete")
 	}
 	var refs []model.ExptTurnEvaluatorResultRef
 	if err := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND expt_turn_result_id IN ?", spaceID, exptID, canonicalIDs).Order("id ASC").Find(&refs).Error; err != nil {
@@ -176,27 +187,27 @@ func validateCurrentEvaluatorRefs(refs *entity.EvaluatorResults) error {
 	seen := map[string]bool{}
 	for _, ref := range refs.Registered {
 		if ref == nil || ref.VersionID <= 0 || ref.RecordID <= 0 {
-			return fmt.Errorf("incomplete registered source reference")
+			return itemSourceErrorf("incomplete registered source reference")
 		}
 		key := fmt.Sprintf("r:%d:%s", ref.VersionID, ref.Alias)
 		if seen[key] {
-			return fmt.Errorf("duplicate source reference")
+			return itemSourceErrorf("duplicate source reference")
 		}
 		seen[key] = true
 	}
 	for _, ref := range refs.Inline {
 		if ref == nil || ref.InlineKey == "" || ref.RecordID <= 0 {
-			return fmt.Errorf("incomplete inline source reference")
+			return itemSourceErrorf("incomplete inline source reference")
 		}
 		key := "i:" + ref.InlineKey
 		if seen[key] {
-			return fmt.Errorf("duplicate source reference")
+			return itemSourceErrorf("duplicate source reference")
 		}
 		seen[key] = true
 	}
 	for version, record := range refs.EvalVerIDToResID {
 		if version <= 0 || record <= 0 {
-			return fmt.Errorf("incomplete legacy source reference")
+			return itemSourceErrorf("incomplete legacy source reference")
 		}
 	}
 	return nil

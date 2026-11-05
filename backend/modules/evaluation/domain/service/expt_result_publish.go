@@ -44,6 +44,10 @@ func publicationReady(source *entity.ExptItemResultPublishSource) bool {
 	return source != nil && source.Source != nil && source.ItemLog != nil && source.ItemLog.ResultState == int32(entity.ExptItemResultStateLogged) && entity.IsItemRunFinished(entity.ItemRunState(source.ItemLog.Status))
 }
 
+func publicationSourceError(message string) error {
+	return errno.WrapMQRetryErr(&entity.ExptItemSourceError{Cause: fmt.Errorf("%s", message)})
+}
+
 func (e *ExptResultServiceImpl) PrepareItemResultPublication(ctx context.Context, source *entity.ExptItemResultPublishSource, expt *entity.Experiment) (*entity.ExptItemResultPublication, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, errno.WrapMQRetryErr(err)
@@ -52,7 +56,7 @@ func (e *ExptResultServiceImpl) PrepareItemResultPublication(ctx context.Context
 		return nil, nil
 	}
 	if source.Item == nil || len(source.Source.CanonicalTurns) == 0 || len(source.Source.CanonicalTurns) != len(source.Source.Turns) {
-		return nil, errno.NewMQRetryErr("publication source incomplete")
+		return nil, publicationSourceError("publication source incomplete")
 	}
 	ctx = contexts.WithCtxWriteDB(ctx)
 	c := source.Source.Current
@@ -66,11 +70,11 @@ func (e *ExptResultServiceImpl) PrepareItemResultPublication(ctx context.Context
 			return nil, errno.WrapMQRetryErr(err)
 		}
 		if old == nil {
-			return nil, errno.NewMQRetryErr("publication canonical turn missing")
+			return nil, publicationSourceError("publication canonical turn missing")
 		}
 		log := source.Source.Turns[old.TurnID]
 		if log == nil {
-			return nil, errno.NewMQRetryErr("publication frozen turn missing")
+			return nil, publicationSourceError("publication frozen turn missing")
 		}
 		turn := *old
 		turn.Status = int32(log.Status)
@@ -84,7 +88,7 @@ func (e *ExptResultServiceImpl) PrepareItemResultPublication(ctx context.Context
 			targetSpace := resolveLoadSpaceID(c.SpaceID, expt.TargetSpaceID)
 			if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
 				if source.ItemRef == nil || source.ItemRef.ItemConfig == nil {
-					return nil, errno.NewMQRetryErr("publication frozen item configuration missing")
+					return nil, publicationSourceError("publication frozen item configuration missing")
 				}
 				if source.ItemRef.ItemConfig.TargetSourceSpaceID > 0 {
 					targetSpace = source.ItemRef.ItemConfig.TargetSourceSpaceID
@@ -98,7 +102,7 @@ func (e *ExptResultServiceImpl) PrepareItemResultPublication(ctx context.Context
 				return nil, errno.WrapMQRetryErr(err)
 			}
 			if record == nil || record.ID != log.TargetResultID || record.ItemID != c.ItemID || record.TurnID != log.TurnID || record.SpaceID != targetSpace || record.ExperimentRunID <= 0 || record.Status == nil || *record.Status < entity.EvalTargetRunStatusSuccess || *record.Status > entity.EvalTargetRunStatusAsyncInvoking || record.ItemVersionID != 0 && record.ItemVersionID != c.ItemVersionID {
-				return nil, errno.NewMQRetryErr("publication target source record incomplete or foreign")
+				return nil, publicationSourceError("publication target source record incomplete or foreign")
 			}
 		}
 		if err := ctx.Err(); err != nil {
@@ -109,7 +113,7 @@ func (e *ExptResultServiceImpl) PrepareItemResultPublication(ctx context.Context
 		seen := map[int64]bool{}
 		for _, ref := range refs {
 			if ref == nil || ref.EvaluatorResultID <= 0 {
-				return nil, errno.NewMQRetryErr("publication evaluator ref incomplete")
+				return nil, publicationSourceError("publication evaluator ref incomplete")
 			}
 			if !seen[ref.EvaluatorResultID] {
 				ids = append(ids, ref.EvaluatorResultID)
@@ -131,22 +135,22 @@ func (e *ExptResultServiceImpl) PrepareItemResultPublication(ctx context.Context
 			byID := map[int64]*entity.EvaluatorRecord{}
 			for _, record := range records {
 				if record == nil || byID[record.ID] != nil {
-					return nil, errno.NewMQRetryErr("publication evaluator records incomplete or duplicated")
+					return nil, publicationSourceError("publication evaluator records incomplete or duplicated")
 				}
 				byID[record.ID] = record
 			}
 			for _, ref := range refs {
 				record := byID[ref.EvaluatorResultID]
 				if record == nil || record.ItemID != c.ItemID || record.TurnID != log.TurnID || record.ExperimentID != c.ExptID || record.ExperimentRunID <= 0 || record.SpaceID <= 0 || record.Status < entity.EvaluatorRunStatusSuccess || record.Status > entity.EvaluatorRunStatusSkipped || record.ItemVersionID != 0 && record.ItemVersionID != c.ItemVersionID || record.TargetRecordID != 0 && record.TargetRecordID != log.TargetResultID {
-					return nil, errno.NewMQRetryErr("publication evaluator source record incomplete or foreign")
+					return nil, publicationSourceError("publication evaluator source record incomplete or foreign")
 				}
 				if ref.SourceType == int32(entity.EvaluatorRecordSourceTypeInline) {
 					if record.SourceType != entity.EvaluatorRecordSourceTypeInline || record.InlineKey != ref.InlineKey {
-						return nil, errno.NewMQRetryErr("publication inline source mismatch")
+						return nil, publicationSourceError("publication inline source mismatch")
 					}
 				} else {
 					if record.SourceType == entity.EvaluatorRecordSourceTypeInline || record.EvaluatorVersionID != ref.EvaluatorVersionID || record.Alias != ref.Alias {
-						return nil, errno.NewMQRetryErr("publication registered source mismatch")
+						return nil, publicationSourceError("publication registered source mismatch")
 					}
 					if record.Status == entity.EvaluatorRunStatusSuccess {
 						scoreRecords[entity.EncodeEvaluatorInstanceKey(record.EvaluatorVersionID, record.Alias)] = record
@@ -224,7 +228,7 @@ func (e *ExptResultServiceImpl) PublishPreparedItemResult(ctx context.Context, p
 		return false, nil
 	}
 	if !publicationReady(publication.Source) {
-		return false, errno.NewMQRetryErr("publication prepared source invalid")
+		return false, publicationSourceError("publication prepared source invalid")
 	}
 	if e.resultPublishRepo == nil || e.resultPublishLocker == nil {
 		return false, errno.NewMQRetryErr("publication repository or independent item locker missing")
@@ -240,7 +244,15 @@ func (e *ExptResultServiceImpl) PublishPreparedItemResult(ctx context.Context, p
 		return false, errno.WrapMQRetryErr(err)
 	}
 	if !locked {
-		return false, errno.NewMQRetryErr("publication item lock busy")
+		if cancel != nil {
+			cancel()
+		}
+		if err := ctx.Err(); err != nil {
+			return false, errno.WrapMQRetryErr(err)
+		}
+		// No publication was applied. Logged remains durable work for the next
+		// scan and the finish gate, while other items can progress in this tick.
+		return false, nil
 	}
 	defer cancel()
 	defer func() {
@@ -297,6 +309,9 @@ func (e *ExptSchedulerImpl) recordCurrentItemResults(ctx context.Context, event 
 			var err error
 			source, err = service.GetItemResultPublishSource(ctx, event.SpaceID, event.ExptID, event.ExptRunID, item.ItemID)
 			if err != nil {
+				if deferDamagedItemPublication(ctx, item, err) {
+					continue
+				}
 				return err
 			}
 			if source == nil || source.Source.Current.RequestID != item.RequestID || source.ItemLog.Status != int32(item.State) {
@@ -315,6 +330,9 @@ func (e *ExptSchedulerImpl) recordCurrentItemResults(ctx context.Context, event 
 		}
 		publication, err := service.PrepareItemResultPublication(ctx, source, expt)
 		if err != nil {
+			if deferDamagedItemPublication(ctx, item, err) {
+				continue
+			}
 			return err
 		}
 		applied, err := service.PublishPreparedItemResult(ctx, publication, func(lockCtx context.Context, source *entity.ExptItemResultPublishSource) error {
@@ -327,6 +345,9 @@ func (e *ExptSchedulerImpl) recordCurrentItemResults(ctx context.Context, event 
 			return e.sendItemComplete(lockCtx, event, expt, &current, itemMeta[item.ItemID], itemVer[item.ItemID])
 		})
 		if err != nil {
+			if deferDamagedItemPublication(ctx, item, err) {
+				continue
+			}
 			return err
 		}
 		if !applied {
@@ -355,4 +376,15 @@ func (e *ExptSchedulerImpl) recordCurrentItemResults(ctx context.Context, event 
 		return nil
 	}
 	return e.Publisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{ExperimentID: event.ExptID, SpaceID: event.SpaceID, ItemID: appliedItems, RetryTimes: gptr.Of(int32(0)), FilterType: gptr.Of(entity.UpsertExptTurnResultFilterTypeCheck)}, gptr.Of(10*time.Second))
+}
+
+func deferDamagedItemPublication(ctx context.Context, item *entity.ExptEvalItem, err error) bool {
+	if ctx.Err() != nil || !entity.IsExptItemSourceError(err) {
+		return false
+	}
+	item.ObservationUnstable = true
+	item.Source = nil
+	item.Publication = nil
+	logs.CtxWarn(ctx, "damaged item publication remains pending, item_id: %d, err: %v", item.ItemID, err)
+	return true
 }

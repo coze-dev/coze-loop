@@ -1395,17 +1395,19 @@ func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptSche
 	toSubmit = make([]*entity.ExptEvalItem, 0)
 	incomplete = make([]*entity.ExptEvalItem, 0)
 	complete = make([]*entity.ExptEvalItem, 0)
+	occupied := 0
 	for _, source := range rows {
 		if source == nil {
 			return nil, nil, nil, errno.NewMQRetryErr("nil current item source")
 		}
 		item := &entity.ExptEvalItem{ExptID: event.ExptID, EvalSetVersionID: expt.EvalSet.EvaluationSetVersion.ID, ItemID: source.ItemID, Publication: source.Publication, PublicationObserved: source.PublicationObserved, Source: source.Source, State: source.Status, RequestID: source.RequestID, Mode: source.Mode, RetryTimes: source.RetryTimes, UpdatedAt: source.UpdatedAt, ObservationUnstable: source.ObservationUnstable}
+		if source.Status == entity.ItemRunState_Processing || source.QuotaReservationState.IsQuotaReserved() {
+			occupied++
+		}
 		if source.ObservationUnstable {
-			// Preserve an active item's concurrency slot, but do not let a
-			// terminal row's transient mismatch keep the run incomplete forever.
-			if source.Status == entity.ItemRunState_Processing || source.QuotaReservationState.IsQuotaReserved() {
-				incomplete = append(incomplete, item)
-			}
+			// Keep every unresolved source on the tick, including terminal Logged
+			// rows. Only actual execution/reservation evidence occupies a slot.
+			incomplete = append(incomplete, item)
 			continue
 		}
 		if source.Status == entity.ItemRunState_Processing || source.QuotaReservationState.IsQuotaReserved() {
@@ -1418,7 +1420,7 @@ func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptSche
 			candidates = append(candidates, item)
 		}
 	}
-	limit := e.getItemConcurNum(ctx, expt) - len(incomplete)
+	limit := e.getItemConcurNum(ctx, expt) - occupied
 	if limit > 0 {
 		if limit > len(candidates) {
 			limit = len(candidates)

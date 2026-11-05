@@ -4,17 +4,20 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	goredis "github.com/redis/go-redis/v9"
 	"github.com/rs/xid"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
+	infraredis "github.com/coze-dev/coze-loop/backend/infra/redis"
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	confmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -50,7 +53,7 @@ func newCompleteOwnerFixture(t *testing.T) *completeOwnerFixture {
 	finished, err := finishRepo.FinishCurrentRun(ctx, &entity.ExptRunFinishRequest{SpaceID: f.space, ExptID: f.expt, RunID: f.run})
 	require.NoError(t, err)
 	require.Equal(t, entity.ExptRunFinishFinished, finished.Disposition)
-	client, server := newTickOwnerFixture(t)
+	client, server := newCompleteOwnerRedis(t)
 	quota := quotadao.NewQuotaDAO(client)
 	require.NoError(t, quota.SetQuotaSpaceExpt(ctx, f.space, &entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{f.expt: 111, f.expt + 99: 222}}))
 	ctrl := gomock.NewController(t)
@@ -94,9 +97,9 @@ func TestCompleteRunOwnerMigratesMatureLegacyAndOwnNumeric(t *testing.T) {
 			require.NoError(t, err)
 			require.NotContains(t, q.ExptID2RunTime, p.f.expt)
 			require.Equal(t, int64(222), q.ExptID2RunTime[p.f.expt+99])
-			snapshot := p.f.snapshot()
+			snapshot := p.businessSnapshot()
 			require.NoError(t, p.complete(), "cleanup must remain replayable after its exact owner is released")
-			require.Equal(t, snapshot, p.f.snapshot())
+			require.Equal(t, snapshot, p.businessSnapshot())
 			current, err := p.manager.exptRepo.GetByID(context.Background(), p.f.expt, p.f.space)
 			require.NoError(t, err)
 			require.Equal(t, p.f.run, current.LatestRunID)
@@ -216,4 +219,29 @@ func TestCompleteRunOwnerLegacyLogRunABAStaysClosed(t *testing.T) {
 			t.Logf("REAL_MYSQL_LEGACY_LOGRUN_ABA numeric=%v old_sql_terminal=true r2_lease_preserved=true", numeric)
 		})
 	}
+}
+
+func newCompleteOwnerRedis(t *testing.T) (infraredis.Cmdable, *miniredis.Miniredis) {
+	t.Helper()
+	server := miniredis.RunT(t)
+	client, err := infraredis.NewClient(&goredis.Options{Addr: server.Addr()})
+	require.NoError(t, err)
+	raw, _ := infraredis.Unwrap(client)
+	t.Cleanup(func() { _ = raw.Close() })
+	return client, server
+}
+
+func (p *completeOwnerFixture) businessSnapshot() map[string]string {
+	p.f.t.Helper()
+	snapshot := p.f.snapshot()
+	var runs []map[string]json.RawMessage
+	require.NoError(p.f.t, json.Unmarshal([]byte(snapshot["expt_run_log"]), &runs))
+	// Replaying cleanup refreshes run-log updated_at but must preserve business data.
+	for _, run := range runs {
+		delete(run, "updated_at")
+	}
+	data, err := json.Marshal(runs)
+	require.NoError(p.f.t, err)
+	snapshot["expt_run_log"] = string(data)
+	return snapshot
 }

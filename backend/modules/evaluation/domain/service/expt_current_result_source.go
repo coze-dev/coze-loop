@@ -421,13 +421,16 @@ func (e *ExptSchedulerImpl) withCurrentScannedItem(ctx context.Context, event *e
 
 func (e *ExptSchedulerImpl) handleCurrentZombies(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, expt *entity.Experiment, zombieSecond int, asyncExec bool) (alives, zombies []*entity.ExptEvalItem, err error) {
 	for _, item := range items {
-		if item == nil || item.State != entity.ItemRunState_Processing {
+		if item == nil {
 			continue
 		}
 		if item.ObservationUnstable {
 			// The row is occupied but its source snapshot is not trustworthy;
 			// let the next stable scan judge it as a zombie.
 			alives = append(alives, item)
+			continue
+		}
+		if item.State != entity.ItemRunState_Processing {
 			continue
 		}
 		if item.UpdatedAt == nil || item.UpdatedAt.IsZero() || time.Since(*item.UpdatedAt).Seconds() <= float64(zombieSecond) {

@@ -4,10 +4,24 @@
 package entity
 
 import (
+	"errors"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
+
+// ExptItemSourceError identifies deterministic damage in one persisted item
+// source. Execution rejects it; scans can keep the item pending and recover
+// other items. Database, run lifecycle and global owner failures use other errors.
+type ExptItemSourceError struct{ Cause error }
+
+func (e *ExptItemSourceError) Error() string { return e.Cause.Error() }
+func (e *ExptItemSourceError) Unwrap() error { return e.Cause }
+
+func IsExptItemSourceError(err error) bool {
+	var source *ExptItemSourceError
+	return errors.As(err, &source)
+}
 
 // ExptItemCurrentRequest is one primary database observation of the canonical item and run log.
 type ExptItemCurrentRequest struct {
@@ -22,8 +36,8 @@ type ExptItemCurrentRequest struct {
 	RetryTimes                                    int32
 	UpdatedAt                                     *time.Time
 	QuotaReservationState                         QuotaReservationState
-	// ObservationUnstable marks a row whose concurrent read changed. Its source
-	// cannot be dispatched or published, but it must still count as occupied.
+	// ObservationUnstable marks a changed or damaged source. It remains pending
+	// without permitting dispatch/publication or releasing an occupied request.
 	ObservationUnstable bool `gorm:"-" json:"-"`
 }
 

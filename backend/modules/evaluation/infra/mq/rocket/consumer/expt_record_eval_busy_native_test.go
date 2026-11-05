@@ -102,7 +102,7 @@ func TestItemBusyNativeConsumerKeepsPendingAndConvergesDuplicates(t *testing.T) 
 		require.NoError(t, err)
 		require.NoError(t, sqlDB.Close())
 	})
-	require.NoError(t, conn.Create(&model.Experiment{ID: expt, SpaceID: space, LatestRunID: run, ExptType: int32(entity.ExptType_Offline), Status: int32(entity.ExptStatus_Processing), ExptDispatchMode: entity.ExptDispatchModeEnforce, SchedulerScope: "busy-native"}).Error)
+	require.NoError(t, conn.Exec("INSERT INTO experiment (id,space_id,latest_run_id,expt_type,status,scheduler_mode,scheduler_scope) VALUES (?,?,?,?,?,?,?)", expt, space, run, entity.ExptType_Offline, entity.ExptStatus_Processing, entity.ExptDispatchModeEnforce, "busy-native").Error)
 	require.NoError(t, conn.Create(&model.ExptRunLog{ID: run, SpaceID: space, ExptID: expt, ExptRunID: run, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(entity.EvaluationModeSubmit))}).Error)
 	require.NoError(t, conn.Create(&model.ExptStats{ID: base + 6, SpaceID: space, ExptID: expt, ProcessingCnt: 1}).Error)
 	require.NoError(t, conn.Create(&model.ExptItemResult{ID: base + 7, SpaceID: space, ExptID: expt, ExptRunID: run, ItemID: item, ItemVersionID: version, Status: int32(entity.ItemRunState_Processing)}).Error)
@@ -123,6 +123,7 @@ func TestItemBusyNativeConsumerKeepsPendingAndConvergesDuplicates(t *testing.T) 
 	config.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{}).AnyTimes()
 	config.EXPECT().GetExptExecConf(gomock.Any(), space).Return(&entity.ExptExecConf{}).AnyTimes()
 	config.EXPECT().GetErrRetryConf(gomock.Any(), space, gomock.Any()).Return(&entity.RetryConf{}).AnyTimes()
+	config.EXPECT().BuildEvalExt(gomock.Any(), space, gomock.Any()).Return(map[string]string{}).AnyTimes()
 	metric := metricsmocks.NewMockExptMetric(ctrl)
 	metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	metric.EXPECT().EmitTurnExecEval(gomock.Any(), gomock.Any()).AnyTimes()
@@ -143,14 +144,15 @@ func TestItemBusyNativeConsumerKeepsPendingAndConvergesDuplicates(t *testing.T) 
 
 		close(entered)
 		<-resume
-		return []*entity.EvaluationSetItem{{ItemID: item, ItemVersionID: gptr.Of(version), Turns: []*entity.Turn{{ID: 0}, {ID: 1}}}}, nil
+		return []*entity.EvaluationSetItem{{ID: base + 40, SpaceID: space, EvaluationSetID: base + 31, ItemID: item, ItemVersionID: gptr.Of(version), BaseInfo: &entity.BaseInfo{CreatedAt: gptr.Of(time.Now().Unix())}, Turns: []*entity.Turn{{ID: 0, ItemID: item, EvalSetID: base + 31}, {ID: 1, ItemID: item, EvalSetID: base + 31}}}}, nil
 	}).Times(1)
-	detail := &entity.Experiment{ID: expt, SpaceID: space, LatestRunID: run, ExptType: entity.ExptType_Offline, Status: entity.ExptStatus_Processing, EvalSet: &entity.EvaluationSet{EvaluationSetVersion: &entity.EvaluationSetVersion{ID: base + 30, EvaluationSetID: base + 31}}, EvalConf: &entity.EvaluationConfiguration{ConnectorConf: &entity.Connector{EvaluatorsConf: &entity.EvaluatorsConf{}}}}
+	detail := &entity.Experiment{ID: expt, SpaceID: space, LatestRunID: run, ExptType: entity.ExptType_Offline, Status: entity.ExptStatus_Processing, EvalSet: &entity.EvaluationSet{EvaluationSetVersion: &entity.EvaluationSetVersion{ID: base + 30, EvaluationSetID: base + 31}}, EvalConf: &entity.EvaluationConfiguration{ConnectorConf: entity.Connector{EvaluatorsConf: &entity.EvaluatorsConf{}}}}
 	runs := exptrepo.NewExptRunLogRepo(exptmysql.NewExptRunLogDAO(provider))
 	items := exptrepo.NewExptItemResultRepo(exptmysql.NewExptItemResultDAO(provider))
 	turns := exptrepo.NewExptTurnResultRepo(nil, exptmysql.NewExptTurnResultDAO(provider), exptmysql.NewExptTurnEvaluatorResultRefDAO(provider))
 	manager := &busyNativeManager{runs: runs, detail: detail}
-	svc := service.NewExptRecordEvalService(manager, config, nil, items, turns, exptrepo.NewExptStatsRepo(exptmysql.NewExptStatsDAO(provider)), exptrepo.NewExptRepo(exptmysql.NewExptDAO(provider), exptmysql.NewExptEvaluatorRefDAO(provider), nil), nil, nil, lock.NewRedisLocker(client), idem, nil, metric, nil, nil, dataset, nil, nil, nil, nil, nil, nil, nil, guard, nil, nil)
+	dispatch := exptrepo.NewExptItemDispatchRepo(exptmysql.NewExptItemDispatchDAO(provider))
+	svc := service.NewExptRecordEvalService(manager, config, nil, items, turns, exptrepo.NewExptStatsRepo(exptmysql.NewExptStatsDAO(provider)), exptrepo.NewExptRepo(exptmysql.NewExptDAO(provider), exptmysql.NewExptEvaluatorRefDAO(provider), nil), nil, nil, lock.NewRedisLocker(client), idem, nil, metric, nil, nil, dataset, nil, nil, nil, nil, nil, nil, nil, guard, dispatch, nil)
 	consumer := NewExptRecordEvalConsumer(svc)
 	deliver := func(message *mq.MessageExt) error { return consumer.HandleMessage(ctx, message) }
 	event := &entity.ExptItemEvalEvent{SpaceID: space, ExptID: expt, ExptRunID: run, EvalSetItemID: item, ExptRunMode: entity.EvaluationModeSubmit, CreateAt: time.Now().Unix(), Session: &entity.Session{UserID: "busy-native"}}

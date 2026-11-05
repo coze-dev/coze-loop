@@ -920,7 +920,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventLock(next RecordEvalEndPoint) 
 			return errno.WrapMQRetryErr(err)
 		}
 		if !locked {
-			return errno.NewMQRetryErr("item execution lock busy")
+			return e.handleItemLockBusy(ctx, event)
 		}
 		defer func() {
 			cancel()
@@ -937,6 +937,69 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventLock(next RecordEvalEndPoint) 
 		}
 		return err
 	}
+}
+
+func (e *ExptItemEventEvalServiceImpl) handleItemLockBusy(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+	busy := errno.NewMQRetryErr("item execution lock busy")
+	port, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo)
+	if !ok {
+		return busy
+	}
+	observedCtx, cancel := context.WithTimeout(contexts.WithCtxWriteDB(ctx), time.Second)
+	defer cancel()
+	current, err := e.exptItemResultRepo.GetCurrentRequest(observedCtx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
+	if err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if err := observedCtx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	// Before acquiring the lock, a missing row may still be an uncommitted admission.
+	if current == nil {
+		return busy
+	}
+	if event.RetryTimes < 0 {
+		return errno.NewMQRetryErr("invalid busy event retry count")
+	}
+	if current.RunID == event.ExptRunID && current.RequestID == event.RequestID {
+		if current.Mode != event.ExptRunMode {
+			return errno.NewMQRetryErr("invalid busy event source")
+		}
+		if !entity.IsItemRunFinished(current.Status) && event.ResumeSource == nil {
+			return busy
+		}
+	}
+	frozen, err := port.GetCurrentItemRunSource(observedCtx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
+	if err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if err := observedCtx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if frozen == nil {
+		return busy
+	}
+	if frozen.Current.RunID != event.ExptRunID || frozen.Current.RequestID != event.RequestID {
+		return nil
+	}
+	if frozen.Current.Mode != event.ExptRunMode {
+		return errno.NewMQRetryErr("busy event source mode changed")
+	}
+	observedCtx = context.WithValue(observedCtx, currentItemSourceKey{}, &currentItemExecution{Source: frozen})
+	valid, err := e.validateResumeSource(observedCtx, event, &frozen.Current)
+	if err != nil {
+		return err
+	}
+	if err := observedCtx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if !valid {
+		return nil
+	}
+	if entity.IsItemRunFinished(frozen.Current.Status) && (frozen.Current.ResultState == entity.ExptItemResultStateLogged || frozen.Current.ResultState == entity.ExptItemResultStateResulted) {
+		return nil
+	}
+	return busy
 }
 
 func (e *ExptItemEventEvalServiceImpl) HandleEventExec(next RecordEvalEndPoint) RecordEvalEndPoint {

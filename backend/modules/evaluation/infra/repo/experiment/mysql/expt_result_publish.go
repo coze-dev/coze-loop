@@ -66,17 +66,17 @@ func readItemResultPublishSourceWithLocks(tx *gorm.DB, space, expt, run, item in
 	}
 	if err == nil {
 		if ref.ItemVersionID != canonical.ItemVersionID {
-			return nil, fmt.Errorf("publication frozen item version mismatch")
+			return nil, itemSourceErrorf("publication frozen item version mismatch")
 		}
 		result.ItemRef = convert.NewExptItemRefConvertor().PO2DO(&ref)
 		result.ItemConfigJSON = append([]byte(nil), gptr.Indirect(ref.ItemConfig)...)
 		if len(result.ItemConfigJSON) > 0 {
 			var config entity.ExptItemConfig
 			if err := json.Unmarshal(result.ItemConfigJSON, &config); err != nil {
-				return nil, err
+				return nil, itemSourceError(err)
 			}
 			if string(result.ItemConfigJSON) == "null" {
-				return nil, fmt.Errorf("publication frozen item configuration null")
+				return nil, itemSourceErrorf("publication frozen item configuration null")
 			}
 			result.ItemRef.ItemConfig = &config
 		}

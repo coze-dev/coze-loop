@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"testing"
@@ -28,6 +29,8 @@ func TestItemBusyMySQLDisposition(t *testing.T) {
 		"manual_zero_version", "manual_missing_turn", "invalid_manual_ext",
 		"legacy_async", "manual_async_without_source", "invalid_resume_source",
 		"null_result_state", "completed_damaged_turn",
+		"completed_mode_conflict", "completed_manual_async_without_source",
+		"completed_invalid_resume_source", "completed_default_result_state",
 	} {
 		t.Run(kind, func(t *testing.T) {
 			token := "rq1"
@@ -49,7 +52,9 @@ func TestItemBusyMySQLDisposition(t *testing.T) {
 				for _, table := range []any{&model.ExptItemResult{}, &model.ExptItemResultRunLog{}} {
 					require.NoError(t, f.conn.Model(table).Where("space_id=? AND item_id=?", f.space, f.item).Update("status", entity.ItemRunState_Queueing).Error)
 				}
-			case "success_logged", "success_resulted", "fail_logged", "terminal_logged", "completed_damaged_turn":
+			case "success_logged", "success_resulted", "fail_logged", "terminal_logged", "completed_damaged_turn",
+				"completed_mode_conflict", "completed_manual_async_without_source",
+				"completed_invalid_resume_source", "completed_default_result_state":
 				status := entity.ItemRunState_Success
 				if kind == "fail_logged" {
 					status = entity.ItemRunState_Fail
@@ -68,12 +73,28 @@ func TestItemBusyMySQLDisposition(t *testing.T) {
 					require.NoError(t, f.conn.Model(&model.ExptTurnResultRunLog{}).Where("id=?", f.base+500).Update("item_version_id", f.version+1).Error)
 					ack = false
 				}
+				switch kind {
+				case "completed_mode_conflict":
+					event.ExptRunMode = entity.EvaluationModeRetryItems
+					ack = false
+				case "completed_manual_async_without_source":
+					event.AsyncReportTrigger = true
+					ack = false
+				case "completed_invalid_resume_source":
+					event.AsyncReportTrigger = true
+					event.ResumeSource = &entity.ExptResumeSource{Kind: "target", TurnID: 0, RecordID: f.base + 41, InvokeID: "foreign"}
+					ack = false
+				case "completed_default_result_state":
+					require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("id=?", f.base+200).Update("result_state", entity.ExptItemResultStateDefault).Error)
+					ack = false
+				}
 			case "superseded_request":
 				event.RequestID = "rq0"
 				ack = true
 			case "superseded_run":
 				require.NoError(t, f.conn.Model(&model.ExptItemResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("expt_run_id", f.run+1).Error)
-				ack = true
+				// A partial projection move alone does not prove that the event is obsolete.
+				ack = false
 			case "superseded_target_callback":
 				event.AsyncReportTrigger = true
 				event.ResumeSource = &entity.ExptResumeSource{Kind: "target", TurnID: 0, RecordID: f.base + 40, InvokeID: strconv.FormatInt(f.base+40, 10)}
@@ -150,5 +171,67 @@ func TestItemBusyMySQLObservationDeadline(t *testing.T) {
 		return nil
 	}))(context.Background(), f.event())
 	require.True(t, errno.NeedMQRetry(err))
+	require.Less(t, time.Since(start), 3*time.Second)
+}
+
+func TestItemBusyMySQLRetainsUncommittedAdmission(t *testing.T) {
+	f := newLateWriteFixture(t, "")
+	factory, server := finishRealLockerFactory(t)
+	itemID := f.item + 1000
+	key := fmt.Sprintf("expt_item_eval_run_lock:%d:%d", f.expt, itemID)
+	require.NoError(t, server.Set(key, "dispatch-transaction"))
+	tx := f.conn.Begin()
+	require.NoError(t, tx.Error)
+	defer tx.Rollback()
+	require.NoError(t, tx.Create(&model.ExptItemResult{ID: f.base + 1800, SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, ItemID: itemID, ItemVersionID: f.version, Status: int32(entity.ItemRunState_Queueing)}).Error)
+	state := int32(entity.ExptItemResultStateDefault)
+	require.NoError(t, tx.Create(&model.ExptItemResultRunLog{ID: f.base + 1801, SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, ItemID: itemID, ItemVersionID: f.version, Status: int32(entity.ItemRunState_Queueing), ResultState: &state}).Error)
+	event := f.event()
+	event.EvalSetItemID, event.RequestID, event.ExptRunMode = itemID, "", entity.EvaluationModeSubmit
+	visible, err := f.itemRepo().GetCurrentRequest(context.Background(), f.space, f.expt, f.run, itemID)
+	require.NoError(t, err)
+	require.Nil(t, visible)
+	svc := &ExptItemEventEvalServiceImpl{exptItemResultRepo: f.itemRepo(), itemLocker: factory}
+	err = svc.HandleEventErr(svc.HandleEventLock(func(context.Context, *entity.ExptItemEvalEvent) error {
+		t.Fatal("an uncommitted admission cannot execute")
+		return nil
+	}))(context.Background(), event)
+	require.True(t, errno.NeedMQRetry(err), "absence before another holder commits is not proof of an obsolete delivery")
+	require.NoError(t, tx.Commit().Error)
+	visible, err = f.itemRepo().GetCurrentRequest(context.Background(), f.space, f.expt, f.run, itemID)
+	require.NoError(t, err)
+	require.NotNil(t, visible)
+	require.Equal(t, entity.ItemRunState_Queueing, visible.Status)
+	owner, err := server.Get(key)
+	require.NoError(t, err)
+	require.Equal(t, "dispatch-transaction", owner)
+}
+
+func TestItemBusyMySQLRetainsReplacementWhileSourceTransactionIsOpen(t *testing.T) {
+	f := newLateWriteFixture(t, "rq1")
+	factory, server := finishRealLockerFactory(t)
+	key := fmt.Sprintf("expt_item_eval_run_lock:%d:%d", f.expt, f.item)
+	require.NoError(t, server.Set(key, "manual-admission"))
+	tx := f.conn.Begin()
+	require.NoError(t, tx.Error)
+	defer tx.Rollback()
+	// Keep the existing row visible as rq1 until the replacement metadata commits.
+	manual, err := json.Marshal(&entity.ManualRetryContext{RunID: f.run, RequestID: "rq2", Mode: entity.EvaluationModeFailRetry, Operator: "test", AcceptedAtMS: 1})
+	require.NoError(t, err)
+	ext, err := json.Marshal(map[string]string{entity.ManualRetryExtKey: string(manual)})
+	require.NoError(t, err)
+	require.NoError(t, tx.Model(&model.ExptItemResult{}).Where("space_id=? AND item_id=?", f.space, f.item).Update("ext", ext).Error)
+	event := f.event()
+	event.RequestID = "rq2"
+	visible, err := f.itemRepo().GetCurrentRequest(context.Background(), f.space, f.expt, f.run, f.item)
+	require.NoError(t, err)
+	require.Equal(t, "rq1", visible.RequestID)
+	svc := &ExptItemEventEvalServiceImpl{exptItemResultRepo: f.itemRepo(), itemLocker: factory}
+	start := time.Now()
+	err = svc.HandleEventErr(svc.HandleEventLock(func(context.Context, *entity.ExptItemEvalEvent) error {
+		t.Fatal("a pending replacement cannot execute through another holder")
+		return nil
+	}))(context.Background(), event)
+	require.True(t, errno.NeedMQRetry(err), "visible old metadata cannot ACK a delivery while its replacement is uncommitted")
 	require.Less(t, time.Since(start), 3*time.Second)
 }

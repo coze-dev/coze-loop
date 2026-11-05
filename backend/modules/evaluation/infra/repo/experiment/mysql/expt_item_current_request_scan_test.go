@@ -205,7 +205,7 @@ func TestCurrentRequestMySQLOriginalEmptyToken(t *testing.T) {
 	require.Equal(t, int32(3), log.RetryTimes)
 }
 
-func TestCurrentRequestMySQLScanRejectsBadSource(t *testing.T) {
+func TestCurrentRequestMySQLScanIsolatesBadSource(t *testing.T) {
 	for _, kind := range []string{"bad_json", "null_context", "status", "mode", "run_deleted", "foreign_manual_run"} {
 		t.Run(kind, func(t *testing.T) {
 			f := newManualRetryFixture(t)
@@ -227,9 +227,27 @@ func TestCurrentRequestMySQLScanRejectsBadSource(t *testing.T) {
 				require.NoError(t, q.Update("ext", ext).Error)
 			}
 			before := f.snapshot()
-			rows, err := NewExptItemResultDAO(f.provider).ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, false)
-			require.Error(t, err)
-			require.Nil(t, rows)
+			dao := NewExptItemResultDAO(f.provider)
+			current, err := dao.GetCurrentRequest(context.Background(), f.space, f.expt, f.run, 13)
+			require.Error(t, err, "execution must still reject the invalid source")
+			require.Nil(t, current)
+			rows, err := dao.ScanCurrentRequests(context.Background(), f.space, f.expt, f.run, false)
+			if kind == "mode" || kind == "run_deleted" {
+				require.Error(t, err, "run-level failures must remain visible")
+				require.Nil(t, rows)
+			} else {
+				require.NoError(t, err)
+				found := false
+				for _, row := range rows {
+					if row.ItemID == 13 {
+						found = true
+						require.True(t, row.ObservationUnstable, "the damaged item must remain unresolved")
+						require.Nil(t, row.Source)
+						require.Nil(t, row.Publication)
+					}
+				}
+				require.True(t, found, "scanning must retain the damaged item")
+			}
 			require.Equal(t, before, f.snapshot())
 		})
 	}

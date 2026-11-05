@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 type currentRequestRow struct {
@@ -30,7 +31,7 @@ type currentRequestRow struct {
 	UpdatedAt                                                                      time.Time
 }
 
-func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, itemIDs []int64, retryFirst bool, opts ...db.Option) ([]*entity.ExptItemCurrentRequest, error) {
+func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, itemIDs []int64, retryFirst, isolateDamaged bool, opts ...db.Option) ([]*entity.ExptItemCurrentRequest, error) {
 	session := dao.provider.NewSession(ctx, append(opts, db.WithMaster())...).Table("expt_item_result_run_log AS l").
 		Select("l.id,l.item_id,l.item_version_id,l.status,l.result_state,l.retry_times,l.quota_reservation_state,l.updated_at,c.id AS canonical_id,c.expt_run_id AS canonical_run_id,c.status AS canonical_status,c.item_version_id AS canonical_item_version_id,c.ext,r.mode,r.status AS run_status").
 		Joins("LEFT JOIN expt_item_result AS c ON c.space_id=l.space_id AND c.expt_id=l.expt_id AND c.item_id=l.item_id AND c.deleted_at IS NULL").
@@ -48,64 +49,75 @@ func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, space
 	}
 	out := make([]*entity.ExptItemCurrentRequest, 0, len(rows))
 	for _, row := range rows {
-		if row.CanonicalID == 0 || row.CanonicalRunID != runID {
-			continue
-		}
-		ext, err := entity.ParseExptItemResultExt(row.Ext)
+		current, err := currentRequestFromRow(row, spaceID, exptID, runID)
 		if err != nil {
-			return nil, err
-		}
-		manual, err := entity.ParseManualRetryContext(ext)
-		if err != nil {
-			return nil, err
-		}
-		status := entity.ItemRunState(row.Status)
-		if !validCurrentItemStatus(status) || !validCurrentItemStatus(entity.ItemRunState(row.CanonicalStatus)) || row.RetryTimes < 0 {
-			return nil, fmt.Errorf("invalid current item state")
-		}
-		if row.ItemVersionID != row.CanonicalItemVersionID {
-			return nil, fmt.Errorf("canonical/run-log item version mismatch")
-		}
-		if row.RunStatus == nil {
-			return nil, fmt.Errorf("source run missing")
-		}
-		runStatus := entity.ExptStatus(*row.RunStatus)
-		if entity.IsExptFinished(runStatus) || entity.IsExptFinishing(runStatus) {
-			continue
-		}
-		if runStatus != entity.ExptStatus_Processing && runStatus != entity.ExptStatus_Pending {
-			return nil, fmt.Errorf("unknown source run state")
-		}
-		mode := entity.ExptRunMode(gptr.Indirect(row.Mode))
-		if mode < entity.EvaluationModeSubmit || mode > entity.EvaluationModeTrialRun {
-			return nil, fmt.Errorf("invalid source run mode")
-		}
-		request := ""
-		if manual != nil {
-			if manual.RunID != runID {
-				return nil, fmt.Errorf("manual retry run mismatch")
+			if !isolateDamaged || !entity.IsExptItemSourceError(err) {
+				return nil, err
 			}
-			mode = manual.Mode
-			request = manual.RequestID
+			current.ObservationUnstable = true
+			logs.CtxWarn(ctx, "invalid current item source remains pending, item_id: %d, err: %v", row.ItemID, err)
 		}
-		if mode < entity.EvaluationModeSubmit || mode > entity.EvaluationModeTrialRun {
-			return nil, fmt.Errorf("invalid current run mode")
+		if current != nil {
+			out = append(out, current)
 		}
-		result := gptr.Indirect(row.ResultState)
-		if result < 0 || result > int32(entity.ExptItemResultStateLogged) {
-			return nil, fmt.Errorf("invalid item result state")
-		}
-		// The run log leads completion/yield/start; the canonical projection is synchronized later.
-		// A finished canonical item remains absorbing even if a late run-log write disagrees.
-		canonicalStatus := entity.ItemRunState(row.CanonicalStatus)
-		if entity.IsItemRunFinished(canonicalStatus) && canonicalStatus != status {
-			status = canonicalStatus
-			result = int32(entity.ExptItemResultStateDefault)
-		}
-
-		out = append(out, &entity.ExptItemCurrentRequest{SpaceID: spaceID, ExptID: exptID, RunID: runID, ItemID: row.ItemID, ItemVersionID: row.ItemVersionID, RequestID: request, Mode: mode, Status: status, ResultState: entity.ExptItemResultState(result), RetryTimes: row.RetryTimes, UpdatedAt: gptr.Of(row.UpdatedAt), QuotaReservationState: entity.QuotaReservationState(row.QuotaReservationState)})
 	}
 	return out, nil
+}
+
+func currentRequestFromRow(row currentRequestRow, spaceID, exptID, runID int64) (*entity.ExptItemCurrentRequest, error) {
+	if row.CanonicalID == 0 || row.CanonicalRunID != runID {
+		return nil, nil
+	}
+	// Run authority is shared by all items and must never be isolated as damage.
+	if row.RunStatus == nil {
+		return nil, fmt.Errorf("source run missing")
+	}
+	runStatus := entity.ExptStatus(*row.RunStatus)
+	if entity.IsExptFinished(runStatus) || entity.IsExptFinishing(runStatus) {
+		return nil, nil
+	}
+	if runStatus != entity.ExptStatus_Processing && runStatus != entity.ExptStatus_Pending {
+		return nil, fmt.Errorf("unknown source run state")
+	}
+	mode := entity.ExptRunMode(gptr.Indirect(row.Mode))
+	if mode < entity.EvaluationModeSubmit || mode > entity.EvaluationModeTrialRun {
+		return nil, fmt.Errorf("invalid source run mode")
+	}
+	current := &entity.ExptItemCurrentRequest{SpaceID: spaceID, ExptID: exptID, RunID: runID, ItemID: row.ItemID, ItemVersionID: row.ItemVersionID, Mode: mode, Status: entity.ItemRunState(row.Status), ResultState: entity.ExptItemResultState(gptr.Indirect(row.ResultState)), RetryTimes: row.RetryTimes, UpdatedAt: gptr.Of(row.UpdatedAt), QuotaReservationState: entity.QuotaReservationState(row.QuotaReservationState)}
+	ext, err := entity.ParseExptItemResultExt(row.Ext)
+	if err != nil {
+		return current, itemSourceError(err)
+	}
+	manual, err := entity.ParseManualRetryContext(ext)
+	if err != nil {
+		return current, itemSourceError(err)
+	}
+	if !validCurrentItemStatus(current.Status) || !validCurrentItemStatus(entity.ItemRunState(row.CanonicalStatus)) || row.RetryTimes < 0 {
+		return current, itemSourceErrorf("invalid current item state")
+	}
+	if row.ItemVersionID != row.CanonicalItemVersionID {
+		return current, itemSourceErrorf("canonical/run-log item version mismatch")
+	}
+	if manual != nil {
+		if manual.RunID != runID {
+			return current, itemSourceErrorf("manual retry run mismatch")
+		}
+		current.Mode = manual.Mode
+		current.RequestID = manual.RequestID
+	}
+	if current.Mode < entity.EvaluationModeSubmit || current.Mode > entity.EvaluationModeTrialRun {
+		return current, itemSourceErrorf("invalid current run mode")
+	}
+	if current.ResultState < 0 || current.ResultState > entity.ExptItemResultStateLogged {
+		return current, itemSourceErrorf("invalid item result state")
+	}
+	// Preserve the absorbing canonical completion rule and the persisted identity.
+	canonicalStatus := entity.ItemRunState(row.CanonicalStatus)
+	if entity.IsItemRunFinished(canonicalStatus) && canonicalStatus != current.Status {
+		current.Status = canonicalStatus
+		current.ResultState = entity.ExptItemResultStateDefault
+	}
+	return current, nil
 }
 
 func validCurrentItemStatus(status entity.ItemRunState) bool {
@@ -124,16 +136,23 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 		if len(before.Experiment) != 1 || before.Experiment[0].LatestRunID != runID {
 			return nil
 		}
-		rows, err = dao.readCurrentRequests(ctx, spaceID, exptID, runID, nil, retryFirst, db.WithTransaction(tx))
+		rows, err = dao.readCurrentRequests(ctx, spaceID, exptID, runID, nil, retryFirst, true, db.WithTransaction(tx))
 		if err != nil {
 			return err
 		}
 		for _, row := range rows {
+			if row.ObservationUnstable {
+				continue
+			}
 			if row.ResultState == entity.ExptItemResultStateLogged {
 				row.PublicationObserved = true
 				publication, err := readItemResultPublishSourceWithLocks(tx, spaceID, exptID, runID, row.ItemID, false)
 				if err != nil {
-					return err
+					if !entity.IsExptItemSourceError(err) {
+						return err
+					}
+					row.ObservationUnstable = true
+					continue
 				}
 				if publication != nil && publication.Source.Current.RequestID == row.RequestID && publication.ItemLog.Status == int32(row.Status) && publication.ItemLog.ResultState == int32(row.ResultState) && publication.ItemLog.RetryTimes == row.RetryTimes && publication.ItemLog.UpdatedAt != nil && row.UpdatedAt != nil && publication.ItemLog.UpdatedAt.Equal(*row.UpdatedAt) {
 					row.Publication = publication
@@ -146,7 +165,11 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 			}
 			source, err := readItemRunSource(tx, spaceID, exptID, runID, row.ItemID, false, false)
 			if err != nil {
-				return err
+				if !entity.IsExptItemSourceError(err) {
+					return err
+				}
+				row.ObservationUnstable = true
+				continue
 			}
 			if source == nil || !source.Current.Matches(runID, row.RequestID) || source.Current.ItemVersionID != row.ItemVersionID || source.Current.Status != row.Status || source.Current.RetryTimes != row.RetryTimes || source.Current.UpdatedAt == nil || row.UpdatedAt == nil || !source.Current.UpdatedAt.Equal(*row.UpdatedAt) {
 				continue
@@ -181,7 +204,7 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 }
 
 func (dao *exptItemResultDAOImpl) GetCurrentRequest(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptItemCurrentRequest, error) {
-	rows, err := dao.readCurrentRequests(ctx, spaceID, exptID, runID, []int64{itemID}, false)
+	rows, err := dao.readCurrentRequests(ctx, spaceID, exptID, runID, []int64{itemID}, false, false)
 	if err != nil {
 		return nil, err
 	}
