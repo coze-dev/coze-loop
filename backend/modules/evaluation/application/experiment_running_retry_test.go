@@ -101,9 +101,8 @@ func TestRunningRetryWithoutIdentityUsesResolvedRun(t *testing.T) {
 		SpaceID: 9, ExptID: 7, ExpectedRunID: 0,
 		Mode: entity.EvaluationModeRetryItems, ItemIDs: []int64{11}, Ext: req.Ext, Session: session,
 	}).Return(&entity.ManualRetryReceipt{RunID: 18, AcceptedCount: 1, SnapshotAtMS: 1700000000123}, nil)
-	config := componentmocks.NewMockIConfiger(ctrl)
-	config.EXPECT().GetExptExecConf(ctx, int64(9)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)})
-	app := &experimentApplication{manager: manager, auth: auth, configer: config}
+	// 运行中离线实验即使未显式传 expected_run_id 也直接进入 same-run，且不读取任何配置。
+	app := &experimentApplication{manager: manager, auth: auth}
 	resp, err := app.RetryExperiment(ctx, req)
 	require.NoError(t, err)
 	require.Nil(t, req.ExpectedRunID)
@@ -116,8 +115,55 @@ func TestRunningRetryWithoutIdentityUsesResolvedRun(t *testing.T) {
 	require.Empty(t, resp.RejectedItems)
 }
 
-func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
-	for _, kind := range []string{"explicit_sandbox", "old_live_join", "old_terminal_failure", "old_terminal_all", "old_terminal_items", "enabled_without_identity", "enabled_online_live", "enabled_pending_offline", "enabled_finishing_offline", "enabled_processing_retry_all", "explicit_retry_all"} {
+// 开关/白名单门禁已下线：configer nil、存量 false、存量 true 三种形态对 same-run 准入完全等价，
+// 且 RetryExperiment 不再读取 GetExptExecConf。
+func TestSameRunAdmissionIsConfigIndependent(t *testing.T) {
+	for _, configKind := range []string{"config_nil", "legacy_false", "legacy_true"} {
+		for _, mode := range []struct {
+			retryMode domain_expt.ExptRetryMode
+			runMode   entity.ExptRunMode
+		}{
+			{domain_expt.ExptRetryMode_RetryFailure, entity.EvaluationModeFailRetry},
+			{domain_expt.ExptRetryMode_RetryTargetItems, entity.EvaluationModeRetryItems},
+		} {
+			t.Run(configKind+"_"+mode.retryMode.String(), func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				manager := svcmocks.NewMockIExptManager(ctrl)
+				auth := rpcmocks.NewMockIAuthProvider(ctrl)
+				config := componentmocks.NewMockIConfiger(ctrl)
+				got := &entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, CreatedBy: "owner", Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline, EvalConf: &entity.EvaluationConfiguration{ItemRetryNum: gptr.Of(3)}}
+				req := &exptpb.RetryExperimentRequest{
+					WorkspaceID: gptr.Of(int64(9)), ExptID: gptr.Of(int64(7)),
+					RetryMode: gptr.Of(mode.retryMode), ItemIds: []int64{11}, Ext: map[string]string{"caller": "keep"},
+				}
+				manager.EXPECT().Get(gomock.Any(), int64(7), int64(9), gomock.Any()).Return(got, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				manager.EXPECT().RetryInCurrentRun(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.RetryInCurrentRunRequest) (*entity.ManualRetryReceipt, error) {
+					require.Equal(t, &entity.RetryInCurrentRunRequest{
+						SpaceID: 9, ExptID: 7, ExpectedRunID: 0, Mode: mode.runMode,
+						ItemIDs: []int64{11}, Ext: map[string]string{"caller": "keep"}, Session: entity.NewSession(context.Background()),
+					}, r)
+					return &entity.ManualRetryReceipt{RunID: 8, AcceptedCount: 1, SnapshotAtMS: 1700000000123}, nil
+				})
+				// 任何对执行配置的读取都会让 mock 直接失败，证明门禁与配置无关。
+				config.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Times(0)
+				app := &experimentApplication{manager: manager, auth: auth, configer: config}
+				if configKind == "config_nil" {
+					app.configer = nil
+				}
+				resp, err := app.RetryExperiment(context.Background(), req)
+				require.NoError(t, err)
+				require.Equal(t, int64(8), resp.GetRunID())
+				require.Equal(t, int32(1), resp.GetAcceptedCount())
+				require.Equal(t, int64(1700000000123), resp.GetSnapshotAtMs())
+				require.NotContains(t, fmt.Sprintf("%+v", resp), "RequestID")
+			})
+		}
+	}
+}
+
+func TestRunningRetryExplicitReceiptAndFallbacks(t *testing.T) {
+	for _, kind := range []string{"explicit_sandbox", "old_terminal_failure", "old_terminal_all", "old_terminal_items", "processing_without_identity", "online_live", "pending_offline", "finishing_offline", "processing_retry_all", "explicit_retry_all"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			manager := svcmocks.NewMockIExptManager(ctrl)
@@ -137,32 +183,26 @@ func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
 				req.ExpectedRunID = gptr.Of(int64(8))
 				req.RetryMode = gptr.Of(domain_expt.ExptRetryMode_RetryAll)
 				got.Target = &entity.EvalTarget{EvalTargetType: entity.EvalTargetTypeSandboxAgent}
-			case "old_live_join", "old_terminal_items":
+			case "old_terminal_items":
 				req.RetryMode = gptr.Of(domain_expt.ExptRetryMode_RetryTargetItems)
-			case "old_terminal_all", "enabled_processing_retry_all":
+			case "old_terminal_all", "processing_retry_all":
 				req.RetryMode = gptr.Of(domain_expt.ExptRetryMode_RetryAll)
-			}
-			if kind == "enabled_processing_retry_all" {
-				config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)}).AnyTimes()
 			}
 			if strings.HasPrefix(kind, "old_terminal") {
 				got.Status = entity.ExptStatus_Success
 			}
 			switch kind {
-			case "enabled_online_live":
+			case "online_live":
 				got.ExptType = entity.ExptType_Online
-			case "enabled_pending_offline":
+			case "pending_offline":
 				got.Status = entity.ExptStatus_Pending
-			case "enabled_finishing_offline":
+			case "finishing_offline":
 				got.Status = entity.ExptStatus_Terminating
 			}
 			manager.EXPECT().Get(gomock.Any(), int64(7), int64(9), gomock.Any()).Return(got, nil)
 			auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 			switch kind {
-			case "explicit_sandbox", "enabled_without_identity":
-				if kind == "enabled_without_identity" {
-					config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)})
-				}
+			case "explicit_sandbox", "processing_without_identity":
 				manager.EXPECT().RetryInCurrentRun(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.RetryInCurrentRunRequest) (*entity.ManualRetryReceipt, error) {
 					want := &entity.RetryInCurrentRunRequest{SpaceID: 9, ExptID: 7, Mode: entity.EvaluationModeFailRetry, ItemIDs: []int64{11}, Session: entity.NewSession(context.Background())}
 					if kind == "explicit_sandbox" {
@@ -172,9 +212,6 @@ func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
 					require.Equal(t, want, r)
 					return &entity.ManualRetryReceipt{RunID: 8, AcceptedCount: 1, RejectedItems: []*entity.ManualRetryRejectedItem{{ItemID: 12, Reason: "busy"}}, SnapshotAtMS: 1700000000123}, nil
 				})
-			case "old_live_join":
-				config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{})
-				manager.EXPECT().LogRetryItemsRun(gomock.Any(), int64(7), entity.EvaluationModeRetryItems, int64(9), []int64{11}, gomock.Any()).Return(int64(8), true, nil)
 			case "old_terminal_items":
 				manager.EXPECT().LogRetryItemsRun(gomock.Any(), int64(7), entity.EvaluationModeRetryItems, int64(9), []int64{11}, gomock.Any()).Return(int64(18), false, nil)
 				manager.EXPECT().RetryItems(gomock.Any(), int64(7), int64(18), int64(9), 3, []int64{11}, gomock.Any(), gomock.Any()).Return(nil)
@@ -183,7 +220,7 @@ func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
 					// 仅验证拒绝分支：没有任何 GenID/LogRun/Run 期望。
 				} else {
 					mode := entity.EvaluationModeFailRetry
-					if kind == "old_terminal_all" || kind == "enabled_processing_retry_all" {
+					if kind == "old_terminal_all" || kind == "processing_retry_all" {
 						mode = entity.EvaluationModeRetryAll
 					}
 					generator.EXPECT().GenID(gomock.Any()).Return(int64(18), nil)
@@ -199,7 +236,7 @@ func TestRunningRetryExplicitReceiptAndLegacySwitch(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			if kind == "explicit_sandbox" || kind == "enabled_without_identity" {
+			if kind == "explicit_sandbox" || kind == "processing_without_identity" {
 				require.Equal(t, int64(8), resp.GetRunID())
 				require.NotContains(t, fmt.Sprintf("%+v", resp), "RequestID")
 				require.Equal(t, int32(1), resp.GetAcceptedCount())
