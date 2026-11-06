@@ -57,6 +57,11 @@ type IExptItemResultDAO interface {
 	MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, error)
 }
 
+type IExptItemCancellationDAO interface {
+	ScanItemRunLogsForCancellation(ctx context.Context, spaceID, exptID int64, exptRunID *int64, itemIDs []int64, cursor, limit int64) ([]*model.ExptItemResultRunLog, int64, error)
+	UpdateItemRunLogIfNonterminal(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, fields map[string]any, spaceID int64) error
+}
+
 type exptItemResultDAOImpl struct {
 	provider db.Provider
 }
@@ -296,6 +301,30 @@ func (dao *exptItemResultDAOImpl) UpdateItemRunLogIfNotTerminal(ctx context.Cont
 		logs.CtxInfo(ctx, "[ExptItemTerminate] UpdateItemRunLogIfNotTerminal skipped by terminal absorbing state, expt_id: %v, expt_run_id: %v, item_ids: %v", exptID, exptRunID, itemID)
 	}
 	return nil
+}
+
+func (dao *exptItemResultDAOImpl) UpdateItemRunLogIfNonterminal(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, fields map[string]any, spaceID int64) error {
+	q := query.Use(dao.provider.NewSession(ctx).Clauses(dbresolver.Write)).ExptItemResultRunLog
+	_, err := q.WithContext(ctx).Where(q.SpaceID.Eq(spaceID), q.ExptID.Eq(exptID), q.ExptRunID.Eq(exptRunID), q.ItemID.In(itemIDs...),
+		q.Status.In(int32(entity.ItemRunState_Queueing), int32(entity.ItemRunState_Processing))).UpdateColumns(fields)
+	return err
+}
+
+func (dao *exptItemResultDAOImpl) ScanItemRunLogsForCancellation(ctx context.Context, spaceID, exptID int64, exptRunID *int64, itemIDs []int64, cursor, limit int64) ([]*model.ExptItemResultRunLog, int64, error) {
+	q := query.Use(dao.provider.NewSession(ctx).Clauses(dbresolver.Write)).ExptItemResultRunLog
+	conds := []gen.Condition{q.SpaceID.Eq(spaceID), q.ExptID.Eq(exptID), q.ID.Gt(cursor),
+		q.Status.In(int32(entity.ItemRunState_Queueing), int32(entity.ItemRunState_Processing), int32(entity.ItemRunState_Terminal))}
+	if exptRunID != nil {
+		conds = append(conds, q.ExptRunID.Eq(*exptRunID))
+	}
+	if len(itemIDs) > 0 {
+		conds = append(conds, q.ItemID.In(itemIDs...))
+	}
+	rows, err := q.WithContext(ctx).Where(conds...).Order(q.ID.Asc()).Limit(int(limit)).Find()
+	if err != nil || len(rows) == 0 {
+		return nil, 0, err
+	}
+	return rows, rows[len(rows)-1].ID, nil
 }
 
 func (dao *exptItemResultDAOImpl) ScanItemResults(ctx context.Context, exptID, cursor, limit int64, status []int32, spaceID int64, opts ...db.Option) (results []*model.ExptItemResult, ncursor int64, err error) {

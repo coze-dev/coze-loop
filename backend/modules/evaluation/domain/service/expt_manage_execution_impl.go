@@ -18,8 +18,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -640,6 +642,15 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		return err
 	}
 
+	if e.usesCentralResourceProtocol(got) {
+		if err := e.exptRepo.Update(ctx, &entity.Experiment{ID: exptID, SpaceID: spaceID, Status: entity.ExptStatus_Terminating}); err != nil {
+			return err
+		}
+		if err := e.cancelCentralItems(ctx, got, nil, nil); err != nil {
+			return err
+		}
+	}
+
 	stats, err := e.exptResultService.CalculateStats(ctx, exptID, spaceID, session)
 	if err != nil {
 		return err
@@ -693,9 +704,11 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	// ★ 紧跟在释放之后：把 item run log 里仍未终态的行一并置终态。
 	// 顺序不可调换 —— 上面那行靠 run log 的 Queueing/Processing 反查待释放集合，
 	// 先置终态它就一条都查不到（静默不释放）。理由见 terminateIncompleteItemRunLogs。
-	e.terminateIncompleteItemRunLogs(ctx, got, exptRunID)
+	if !e.usesCentralResourceProtocol(got) {
+		e.terminateIncompleteItemRunLogs(ctx, got, exptRunID)
+	}
 
-	if !opt.NoCompleteItemTurn {
+	if !opt.NoCompleteItemTurn && !e.usesCentralResourceProtocol(got) {
 		incompleteTurnIDs, err := e.exptResultService.GetIncompleteTurns(ctx, exptID, spaceID, session)
 		if err != nil {
 			return err
@@ -950,6 +963,9 @@ func (e *ExptMangerImpl) releaseCentralQuotaForRun(
 	reason string,
 	occasion string,
 ) {
+	if e.usesCentralResourceProtocol(expt) {
+		return
+	}
 	if e.centralGuard == nil || expt == nil {
 		return
 	}
@@ -1216,6 +1232,15 @@ func (e *ExptMangerImpl) TerminateItems(ctx context.Context, exptID, exptRunID, 
 	}
 
 	logs.CtxInfo(ctx, "[ExptItemTerminate] start, expt_id: %v, expt_run_id: %v, space_id: %v, req_item_ids: %v", exptID, exptRunID, spaceID, itemIDs)
+	if _, resourceProtocol := e.centralGuard.(component.ICentralItemExecution); resourceProtocol {
+		expt, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
+		if err != nil {
+			return err
+		}
+		if e.usesCentralResourceProtocol(expt) {
+			return e.cancelCentralItems(ctx, expt, &exptRunID, itemIDs)
+		}
+	}
 
 	// ① 幂等过滤：只终止仍未进入终态的行（外加「Terminal 但 turn run log 缺失」的待补齐行）
 	runLogs, err := e.itemResultRepo.MGetItemRunLog(ctx, exptID, exptRunID, itemIDs, spaceID)

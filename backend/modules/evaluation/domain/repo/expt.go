@@ -85,6 +85,13 @@ type IExptItemResultRepo interface {
 	MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64) ([]*entity.ExptItemResultRunLog, error)
 }
 
+// IExptItemCancellationRepo extends the Item repository for primary, all-run cancellation without changing legacy implementations.
+type IExptItemCancellationRepo interface {
+	ScanItemRunLogsForCancellation(ctx context.Context, spaceID, exptID int64, exptRunID *int64, itemIDs []int64, cursor, limit int64) ([]*entity.ExptItemResultRunLog, int64, error)
+	// Success/Fail/Terminal cannot be overwritten by cancellation or delayed zombie writes.
+	UpdateItemRunLogIfNonterminal(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, fields map[string]any, spaceID int64) error
+}
+
 type IExptTurnResultRepo interface {
 	ListTurnResult(ctx context.Context, spaceID, exptID int64, filter *entity.ExptTurnResultFilter, page entity.Page, desc bool) ([]*entity.ExptTurnResult, int64, error)
 	// ListTurnResultWithCursor 按 (item_idx, turn_idx, item_id, turn_id) 与 ListTurnResult 一致的顺序游标分页；cursor 为 nil 时返回 total，否则 total 为 0。

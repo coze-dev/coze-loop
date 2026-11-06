@@ -440,7 +440,16 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		entity.ExptEvalItems(toSubmit).GetItemIDs(), entity.ExptEvalItems(incomplete).GetItemIDs(), entity.ExptEvalItems(complete).GetItemIDs())
 
 	for _, item := range complete {
-		notifyCentralItemTerminal(ctx, e.centralGuard, e.ExptItemResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, item.ItemID)
+		if resourceProtocol && dispatchByCentral && item.State == entity.ItemRunState_Terminal {
+			callbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
+			err := e.Manager.TerminateItems(callbackCtx, event.ExptID, event.ExptRunID, event.SpaceID, []int64{item.ItemID}, event.Session)
+			cancel()
+			if err != nil {
+				logs.CtxWarn(ctx, "[EvaluationResource] terminal stop retry failed, item_id=%d err=%v", item.ItemID, err)
+			}
+		} else {
+			notifyCentralItemTerminal(ctx, e.centralGuard, e.ExptItemResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, item.ItemID)
+		}
 	}
 	if err = e.recordEvalItemRunLogs(ctx, event, complete, mode, exptDetail); err != nil {
 		return err
@@ -775,12 +784,25 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 
 	if err := e.terminateZombieEvalTargetRecords(ctx, event, expt, zombieItemIDs); err != nil {
 		logs.CtxError(ctx, "[ExptEval] terminate async eval target records for zombie items fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, zombieItemIDs, err)
+		if _, resourceProtocol := e.centralGuard.(component.ICentralItemExecution); resourceProtocol && expt != nil && entity.IsCentralDispatch(expt.ExptDispatchMode) {
+			return nil, nil, err
+		}
 	}
 
 	// 把行超时错误写入 err_msg，供 API 层（ItemSystemInfo.Error）暴露给用户
 	zombieErrBytes := []byte(errno.SerializeErr(errno.NewItemZombieTimeoutErr(zombieSecond, asyncExec)))
 
-	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, map[string]any{
+	updateItemRunLog := e.ExptItemResultRepo.UpdateItemRunLog
+	if expt != nil && entity.IsCentralDispatch(expt.ExptDispatchMode) {
+		if _, resourceProtocol := e.centralGuard.(component.ICentralItemExecution); resourceProtocol {
+			items, ok := e.ExptItemResultRepo.(repo.IExptItemCancellationRepo)
+			if !ok {
+				return nil, nil, fmt.Errorf("central zombie conditional persistence not wired")
+			}
+			updateItemRunLog = items.UpdateItemRunLogIfNonterminal
+		}
+	}
+	if err := updateItemRunLog(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, map[string]any{
 		"status":       int32(entity.ItemRunState_Fail),
 		"result_state": int32(entity.ExptItemResultStateLogged),
 		"err_msg":      zombieErrBytes,
@@ -1003,19 +1025,39 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 
 	// 沙箱已经是终态，Destroy 不需要再发 EndCmd，zombieTimeout=false。
 	// targetSpaceID 复用上面 CheckSandboxTerminated 用的来源空间, 保持一致。
-	_ = e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
+	_, resourceProtocol := e.centralGuard.(component.ICentralItemExecution)
+	strictStop := resourceProtocol && entity.IsCentralDispatch(expt.ExptDispatchMode)
+	var stopOptions []bool
+	if strictStop {
+		stopOptions = []bool{true, true}
+	}
+	stopErr := e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
 		ctx,
 		targetSpaceID,
 		terminatedRecordIDs,
 		int32(errno.SandboxTerminatedBeforeReportCode),
 		fmt.Sprintf("sandbox execute reached terminal state (%s) before result was reported", firstStatus),
 		false,
+		stopOptions...,
 	)
+	if strictStop && stopErr != nil {
+		return nil, nil, stopErr
+	}
 
 	// 与 handleZombies 一致的写库形状（含只写 err_msg 不写 status 的理由，见那边注释）。
 	errBytes := []byte(errno.SerializeErr(errno.NewSandboxTerminatedBeforeReportErr(firstStatus)))
 
-	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, terminatedItemIDs, map[string]any{
+	updateItemRunLog := e.ExptItemResultRepo.UpdateItemRunLog
+	if entity.IsCentralDispatch(expt.ExptDispatchMode) {
+		if _, resourceProtocol := e.centralGuard.(component.ICentralItemExecution); resourceProtocol {
+			items, ok := e.ExptItemResultRepo.(repo.IExptItemCancellationRepo)
+			if !ok {
+				return nil, nil, fmt.Errorf("central sandbox conditional persistence not wired")
+			}
+			updateItemRunLog = items.UpdateItemRunLogIfNonterminal
+		}
+	}
+	if err := updateItemRunLog(ctx, event.ExptID, event.ExptRunID, terminatedItemIDs, map[string]any{
 		"status":       int32(entity.ItemRunState_Fail),
 		"result_state": int32(entity.ExptItemResultStateLogged),
 		"err_msg":      errBytes,
@@ -1107,6 +1149,17 @@ func (e *ExptSchedulerImpl) emitSandboxSweptInvokeFinished(
 // 并 best-effort 销毁对应的沙箱 execute。expt 用来判断实验类型: 只有 SandboxAgent 才补 EmitInvokeFinished 打点,
 // 避免非 sandbox zombie 污染 sandbox_agent 看板。
 func (e *ExptSchedulerImpl) terminateZombieEvalTargetRecords(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, zombieItemIDs []int64) error {
+	if _, resourceProtocol := e.centralGuard.(component.ICentralItemExecution); resourceProtocol && expt != nil && entity.IsCentralDispatch(expt.ExptDispatchMode) && len(zombieItemIDs) > 0 {
+		attempts, ok := e.evalTargetService.(interface {
+			TerminateSandboxAttemptsForRunItems(context.Context, int64, int64, []int64, ...bool) error
+		})
+		if !ok {
+			return fmt.Errorf("central zombie sandbox attempt discovery not wired")
+		}
+		if err := attempts.TerminateSandboxAttemptsForRunItems(ctx, resolveLoadSpaceID(event.SpaceID, expt.TargetSpaceID), event.ExptRunID, zombieItemIDs, true, true); err != nil {
+			return err
+		}
+	}
 	if len(zombieItemIDs) == 0 || e.evalTargetService == nil {
 		return nil
 	}
@@ -1140,14 +1193,24 @@ func (e *ExptSchedulerImpl) terminateZombieEvalTargetRecords(ctx context.Context
 		targetSourceSpaceID = expt.TargetSpaceID
 	}
 	targetSpaceID := resolveLoadSpaceID(event.SpaceID, targetSourceSpaceID)
-	_ = e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
+	_, resourceProtocol := e.centralGuard.(component.ICentralItemExecution)
+	strictStop := resourceProtocol && expt != nil && entity.IsCentralDispatch(expt.ExptDispatchMode)
+	var stopOptions []bool
+	if strictStop {
+		stopOptions = []bool{true, true}
+	}
+	stopErr := e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
 		ctx,
 		targetSpaceID,
 		recordIDs,
 		int32(errno.AsyncEvalTargetZombieTimeoutCode),
 		"async eval target terminated: experiment item exceeded zombie timeout",
 		true,
+		stopOptions...,
 	)
+	if strictStop && stopErr != nil {
+		return stopErr
+	}
 
 	// 打点: 与 sweep 命中路径复用同一 EmitInvokeFinished, 让 zombie 兜底 fail 与其它 fail 在同一 dashboard 上可比。
 	// errCode = AsyncEvalTargetZombieTimeoutCode, classifier 归入 non_engineering (未在 engineering 白名单)。

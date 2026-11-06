@@ -208,6 +208,15 @@ func TestResourceCreateSandboxFreezesModeWithoutLegacyQuota(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, entity.ExptDispatchModeEnforce, created.ExptDispatchMode)
 	require.Equal(t, testScope, created.SchedulerScope)
+	configErr := errors.New("central scheduling configuration missing")
+	mgr.centralAdmissionPolicy = resourceCreationPolicy{err: configErr}
+	_, err = mgr.CreateExpt(context.Background(), req, &entity.Session{UserID: "1"})
+	require.ErrorIs(t, err, configErr)
+	mgr.centralAdmissionPolicy = resourceCreationPolicy{}
+	req.TriggerType = "evalx"
+	created, err = mgr.CreateExpt(context.Background(), req, &entity.Session{UserID: "1"})
+	require.NoError(t, err)
+	require.Equal(t, entity.ExptDispatchModeLegacy, created.ExptDispatchMode, "EvalX must not enter the new protocol")
 }
 
 func TestExptMangerImpl_CreateExpt(t *testing.T) {

@@ -314,6 +314,20 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 
 		strictStart := false
 		if execution, ok := guard.(component.ICentralItemExecution); ok {
+			if e.experimentRepo == nil {
+				return fmt.Errorf("%w: experiment repository not wired", errCentralItemAdmission)
+			}
+			currentExpt, err := e.experimentRepo.GetByID(contexts.WithCtxWriteDB(ctx), event.ExptID, event.SpaceID)
+			if err != nil {
+				return fmt.Errorf("%w: %w", errCentralItemAdmission, err)
+			}
+			if currentExpt == nil || currentExpt.ID != event.ExptID || currentExpt.SpaceID != event.SpaceID {
+				return fmt.Errorf("%w: experiment identity mismatch", errCentralItemAdmission)
+			}
+			if entity.IsExptFinished(currentExpt.Status) || entity.IsExptFinishing(currentExpt.Status) {
+				return nil
+			}
+			expt = currentExpt
 			if e.exptItemResultRepo == nil || e.dispatchRepo == nil {
 				return fmt.Errorf("%w: item repositories not wired", errCentralItemAdmission)
 			}

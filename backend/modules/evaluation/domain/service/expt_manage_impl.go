@@ -489,6 +489,13 @@ func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID i
 
 // Resolve existing cleanup references while deletion has not hidden the experiment.
 func (e *ExptMangerImpl) cancelSandboxBeforeDelete(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
+	if e.usesCentralResourceProtocol(expt) {
+		// Freeze experiment admission before scanning every Run, including unclaimed Items and prior Terminal stop retries.
+		if err := e.exptRepo.Update(ctx, &entity.Experiment{ID: expt.ID, SpaceID: expt.SpaceID, Status: entity.ExptStatus_Terminated}); err != nil {
+			return err
+		}
+		return e.cancelCentralItems(ctx, expt, nil, nil)
+	}
 	if expt == nil || expt.LatestRunID <= 0 || (expt.TargetType != entity.EvalTargetTypeSandboxAgent && !expt.IsSandboxAgentTarget()) {
 		return nil
 	}
