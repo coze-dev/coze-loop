@@ -14,6 +14,7 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	lwtmocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	configmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -27,6 +28,19 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
+
+type setupCompensationStartReadFailureIdem struct {
+	idem.IdempotentService
+	key   string
+	cause error
+}
+
+func (i *setupCompensationStartReadFailureIdem) Exist(ctx context.Context, key string) (bool, error) {
+	if key == i.key {
+		return false, i.cause
+	}
+	return i.IdempotentService.Exist(ctx, key)
+}
 
 type setupCompensationFixture struct {
 	f                    *lateWriteFixture
@@ -160,7 +174,7 @@ func TestSetupCompensationReservedQuota(t *testing.T) {
 					runs.fault = failure
 					m.runLogRepo = runs
 				}
-				startIdem := &completeStartReadFailureIdem{IdempotentService: m.idem, key: makeStartIdemKey(p.event), cause: errors.New("evaluation set item 999 does not exist")}
+				startIdem := &setupCompensationStartReadFailureIdem{IdempotentService: m.idem, key: makeStartIdemKey(p.event), cause: errors.New("evaluation set item 999 does not exist")}
 				startCalls := 0
 				scheduler := &ExptSchedulerImpl{Manager: m, ExptRepo: m.exptRepo, Configer: m.configer}
 				handler := scheduler.HandleEventCheck(scheduler.HandleEventErr(func(ctx context.Context, event *entity.ExptScheduleEvent) error {
