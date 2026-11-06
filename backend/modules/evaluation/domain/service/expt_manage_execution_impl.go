@@ -20,6 +20,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
@@ -321,6 +322,17 @@ func (e *ExptMangerImpl) prepareRun(ctx context.Context, exptID, runID, spaceID 
 	return expt, err
 }
 
+func (e *ExptMangerImpl) prepareFluxWorkflowSchedule(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
+	preparer, ok := e.publisher.(events.ExptSchedulePreparer)
+	if ok {
+		return preparer.BeforeExptSchedule(ctx, expt, session)
+	}
+	if expt != nil && expt.EvalConf != nil && expt.EvalConf.RunModeConfig != nil && expt.EvalConf.RunModeConfig.FluxWorkflow != nil {
+		return errorx.New("Flux Workflow requires an experiment schedule preparer")
+	}
+	return nil
+}
+
 func (e *ExptMangerImpl) cleanupUnscheduledRun(ctx context.Context, exptID, runID, spaceID int64, cause error) {
 	if e.runFinishRepo != nil {
 		if err := e.cleanupCurrentUnscheduledRun(ctx, exptID, runID, spaceID, cause); err != nil {
@@ -364,6 +376,10 @@ func (e *ExptMangerImpl) cleanupLegacyUnscheduledRun(ctx context.Context, exptID
 func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error {
 	expt, err := e.prepareRun(ctx, exptID, runID, spaceID, session)
 	if err != nil {
+		return err
+	}
+	if err := e.prepareFluxWorkflowSchedule(ctx, expt, session); err != nil {
+		e.cleanupUnscheduledRun(ctx, exptID, runID, spaceID, err)
 		return err
 	}
 
@@ -470,6 +486,10 @@ func buildExptNotifyParam(expt *entity.Experiment, toStatus entity.ExptStatus) (
 func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, itemIDs []int64, session *entity.Session, ext map[string]string) error {
 	expt, err := e.prepareRun(ctx, exptID, runID, spaceID, session)
 	if err != nil {
+		return err
+	}
+	if err := e.prepareFluxWorkflowSchedule(ctx, expt, session); err != nil {
+		e.cleanupUnscheduledRun(ctx, exptID, runID, spaceID, err)
 		return err
 	}
 
@@ -1659,6 +1679,13 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 		logs.CtxInfo(ctx, "InvokeExpt with no new item, expt_id: %v", invokeExptReq.ExptID)
 		return nil
 	}
+	expt, err := e.GetDetail(ctx, invokeExptReq.ExptID, invokeExptReq.SpaceID, invokeExptReq.Session)
+	if err != nil {
+		return err
+	}
+	if err := e.prepareFluxWorkflowSchedule(ctx, expt, invokeExptReq.Session); err != nil {
+		return err
+	}
 	maxItemIdx, err := e.itemResultRepo.GetMaxItemIdxByExptID(ctx, invokeExptReq.ExptID, invokeExptReq.SpaceID)
 	logs.CtxInfo(ctx, "GetMaxItemIdxByExptID, expt_id: %v, max_item_idx: %v", invokeExptReq.ExptID, maxItemIdx)
 	if err != nil {
@@ -1745,11 +1772,6 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 			entity.ItemRunState_Queueing: itemCnt,
 		},
 	}); err != nil {
-		return err
-	}
-
-	expt, err := e.GetDetail(ctx, invokeExptReq.ExptID, invokeExptReq.SpaceID, invokeExptReq.Session)
-	if err != nil {
 		return err
 	}
 

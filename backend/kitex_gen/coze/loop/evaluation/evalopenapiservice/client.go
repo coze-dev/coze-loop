@@ -69,6 +69,9 @@ type Client interface {
 	ListExptTemplatesOApi(ctx context.Context, req *openapi.ListExptTemplatesOApiRequest, callOptions ...callopt.Option) (r *openapi.ListExptTemplatesOApiResponse, err error)
 	SubmitExptFromTemplateOApi(ctx context.Context, req *openapi.SubmitExptFromTemplateOApiRequest, callOptions ...callopt.Option) (r *openapi.SubmitExptFromTemplateOApiResponse, err error)
 	ReportEvaluatorInvokeResult_(ctx context.Context, req *openapi.ReportEvaluatorInvokeResultRequest, callOptions ...callopt.Option) (r *openapi.ReportEvaluatorInvokeResultResponse, err error)
+	GetFluxWorkflowRun(ctx context.Context, req *openapi.GetFluxWorkflowRunRequest, callOptions ...callopt.Option) (r *openapi.GetFluxWorkflowRunResponse, err error)
+	CompareAndSwapFluxWorkflowRun(ctx context.Context, req *openapi.CompareAndSwapFluxWorkflowRunRequest, callOptions ...callopt.Option) (r *openapi.CompareAndSwapFluxWorkflowRunResponse, err error)
+	GetFluxWorkflowCopyYAML(ctx context.Context, req *openapi.GetFluxWorkflowCopyYAMLRequest, callOptions ...callopt.Option) (r *openapi.GetFluxWorkflowCopyYAMLResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -388,4 +391,19 @@ func (p *kEvalOpenAPIServiceClient) SubmitExptFromTemplateOApi(ctx context.Conte
 func (p *kEvalOpenAPIServiceClient) ReportEvaluatorInvokeResult_(ctx context.Context, req *openapi.ReportEvaluatorInvokeResultRequest, callOptions ...callopt.Option) (r *openapi.ReportEvaluatorInvokeResultResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ReportEvaluatorInvokeResult_(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) GetFluxWorkflowRun(ctx context.Context, req *openapi.GetFluxWorkflowRunRequest, callOptions ...callopt.Option) (r *openapi.GetFluxWorkflowRunResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetFluxWorkflowRun(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) CompareAndSwapFluxWorkflowRun(ctx context.Context, req *openapi.CompareAndSwapFluxWorkflowRunRequest, callOptions ...callopt.Option) (r *openapi.CompareAndSwapFluxWorkflowRunResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CompareAndSwapFluxWorkflowRun(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) GetFluxWorkflowCopyYAML(ctx context.Context, req *openapi.GetFluxWorkflowCopyYAMLRequest, callOptions ...callopt.Option) (r *openapi.GetFluxWorkflowCopyYAMLResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetFluxWorkflowCopyYAML(ctx, req)
 }

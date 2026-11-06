@@ -91,6 +91,7 @@ func TestItemRunConf_WireTagsAreTheCrossRepoContract(t *testing.T) {
 		SuaPersona:               "p",
 		SuaBehavioralConstraints: "c",
 		SuaPETemplate:            "tpl {{eval_result}}",
+		FluxWorkflowInputs:       json.RawMessage(`{"checkpoint":"answer"}`),
 		EvaluatorTrigger:         "final_turn_only",
 		FixedQueryList: []*FixedQuery{{
 			Query:      "q",
@@ -108,7 +109,7 @@ func TestItemRunConf_WireTagsAreTheCrossRepoContract(t *testing.T) {
 	assert.ElementsMatch(t,
 		[]string{
 			"max_turns", "max_run_minutes", "fixed_query_list", "sua_goal", "sua_persona",
-			"sua_behavioral_constraints", "sua_pe_template", "evaluator_trigger",
+			"sua_behavioral_constraints", "sua_pe_template", "evaluator_trigger", "flux_workflow_inputs",
 		},
 		wireKeys(t, rc),
 		"ItemRunConf 的 wire tag 集合变了 —— 必须同步 runtime 的 testcase.RunConf, 否则单向丢字段")

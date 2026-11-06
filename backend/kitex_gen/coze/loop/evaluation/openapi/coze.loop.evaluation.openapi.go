@@ -72318,6 +72318,2193 @@ func (p *ReportEvaluatorInvokeResultResponse) Field255DeepEqual(src *base.BaseRe
 // ===============================
 // 服务定义
 // ===============================
+type GetFluxWorkflowRunRequest struct {
+	WorkspaceID *int64     `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	InvokeID    *int64     `thrift:"invoke_id,2,optional" frugal:"2,optional,i64" json:"invoke_id" form:"invoke_id" query:"invoke_id"`
+	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewGetFluxWorkflowRunRequest() *GetFluxWorkflowRunRequest {
+	return &GetFluxWorkflowRunRequest{}
+}
+
+func (p *GetFluxWorkflowRunRequest) InitDefault() {
+}
+
+var GetFluxWorkflowRunRequest_WorkspaceID_DEFAULT int64
+
+func (p *GetFluxWorkflowRunRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return GetFluxWorkflowRunRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var GetFluxWorkflowRunRequest_InvokeID_DEFAULT int64
+
+func (p *GetFluxWorkflowRunRequest) GetInvokeID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInvokeID() {
+		return GetFluxWorkflowRunRequest_InvokeID_DEFAULT
+	}
+	return *p.InvokeID
+}
+
+var GetFluxWorkflowRunRequest_Base_DEFAULT *base.Base
+
+func (p *GetFluxWorkflowRunRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return GetFluxWorkflowRunRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *GetFluxWorkflowRunRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *GetFluxWorkflowRunRequest) SetInvokeID(val *int64) {
+	p.InvokeID = val
+}
+func (p *GetFluxWorkflowRunRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_GetFluxWorkflowRunRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "invoke_id",
+	255: "Base",
+}
+
+func (p *GetFluxWorkflowRunRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *GetFluxWorkflowRunRequest) IsSetInvokeID() bool {
+	return p.InvokeID != nil
+}
+
+func (p *GetFluxWorkflowRunRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *GetFluxWorkflowRunRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetFluxWorkflowRunRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowRunRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *GetFluxWorkflowRunRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.InvokeID = _field
+	return nil
+}
+func (p *GetFluxWorkflowRunRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *GetFluxWorkflowRunRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetFluxWorkflowRunRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowRunRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *GetFluxWorkflowRunRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvokeID() {
+		if err = oprot.WriteFieldBegin("invoke_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.InvokeID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *GetFluxWorkflowRunRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowRunRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetFluxWorkflowRunRequest(%+v)", *p)
+
+}
+
+func (p *GetFluxWorkflowRunRequest) DeepEqual(ano *GetFluxWorkflowRunRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.InvokeID) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *GetFluxWorkflowRunRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *GetFluxWorkflowRunRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.InvokeID == src {
+		return true
+	} else if p.InvokeID == nil || src == nil {
+		return false
+	}
+	if *p.InvokeID != *src {
+		return false
+	}
+	return true
+}
+func (p *GetFluxWorkflowRunRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type GetFluxWorkflowRunResponse struct {
+	RunJSON  *string        `thrift:"run_json,1,optional" frugal:"1,optional,string" form:"run_json" json:"run_json,omitempty" query:"run_json"`
+	Version  *int64         `thrift:"version,2,optional" frugal:"2,optional,i64" form:"version" json:"version,omitempty" query:"version"`
+	BaseResp *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewGetFluxWorkflowRunResponse() *GetFluxWorkflowRunResponse {
+	return &GetFluxWorkflowRunResponse{}
+}
+
+func (p *GetFluxWorkflowRunResponse) InitDefault() {
+}
+
+var GetFluxWorkflowRunResponse_RunJSON_DEFAULT string
+
+func (p *GetFluxWorkflowRunResponse) GetRunJSON() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRunJSON() {
+		return GetFluxWorkflowRunResponse_RunJSON_DEFAULT
+	}
+	return *p.RunJSON
+}
+
+var GetFluxWorkflowRunResponse_Version_DEFAULT int64
+
+func (p *GetFluxWorkflowRunResponse) GetVersion() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVersion() {
+		return GetFluxWorkflowRunResponse_Version_DEFAULT
+	}
+	return *p.Version
+}
+
+var GetFluxWorkflowRunResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *GetFluxWorkflowRunResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return GetFluxWorkflowRunResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *GetFluxWorkflowRunResponse) SetRunJSON(val *string) {
+	p.RunJSON = val
+}
+func (p *GetFluxWorkflowRunResponse) SetVersion(val *int64) {
+	p.Version = val
+}
+func (p *GetFluxWorkflowRunResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_GetFluxWorkflowRunResponse = map[int16]string{
+	1:   "run_json",
+	2:   "version",
+	255: "BaseResp",
+}
+
+func (p *GetFluxWorkflowRunResponse) IsSetRunJSON() bool {
+	return p.RunJSON != nil
+}
+
+func (p *GetFluxWorkflowRunResponse) IsSetVersion() bool {
+	return p.Version != nil
+}
+
+func (p *GetFluxWorkflowRunResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *GetFluxWorkflowRunResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetFluxWorkflowRunResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowRunResponse) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RunJSON = _field
+	return nil
+}
+func (p *GetFluxWorkflowRunResponse) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Version = _field
+	return nil
+}
+func (p *GetFluxWorkflowRunResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *GetFluxWorkflowRunResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetFluxWorkflowRunResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowRunResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRunJSON() {
+		if err = oprot.WriteFieldBegin("run_json", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.RunJSON); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *GetFluxWorkflowRunResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVersion() {
+		if err = oprot.WriteFieldBegin("version", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Version); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *GetFluxWorkflowRunResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowRunResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetFluxWorkflowRunResponse(%+v)", *p)
+
+}
+
+func (p *GetFluxWorkflowRunResponse) DeepEqual(ano *GetFluxWorkflowRunResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.RunJSON) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Version) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *GetFluxWorkflowRunResponse) Field1DeepEqual(src *string) bool {
+
+	if p.RunJSON == src {
+		return true
+	} else if p.RunJSON == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.RunJSON, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *GetFluxWorkflowRunResponse) Field2DeepEqual(src *int64) bool {
+
+	if p.Version == src {
+		return true
+	} else if p.Version == nil || src == nil {
+		return false
+	}
+	if *p.Version != *src {
+		return false
+	}
+	return true
+}
+func (p *GetFluxWorkflowRunResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type CompareAndSwapFluxWorkflowRunRequest struct {
+	WorkspaceID     *int64     `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	InvokeID        *int64     `thrift:"invoke_id,2,optional" frugal:"2,optional,i64" json:"invoke_id" form:"invoke_id" query:"invoke_id"`
+	ExpectedVersion *int64     `thrift:"expected_version,3,optional" frugal:"3,optional,i64" form:"expected_version" json:"expected_version,omitempty" query:"expected_version"`
+	RunJSON         *string    `thrift:"run_json,4,optional" frugal:"4,optional,string" form:"run_json" json:"run_json,omitempty" query:"run_json"`
+	Base            *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewCompareAndSwapFluxWorkflowRunRequest() *CompareAndSwapFluxWorkflowRunRequest {
+	return &CompareAndSwapFluxWorkflowRunRequest{}
+}
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) InitDefault() {
+}
+
+var CompareAndSwapFluxWorkflowRunRequest_WorkspaceID_DEFAULT int64
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return CompareAndSwapFluxWorkflowRunRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var CompareAndSwapFluxWorkflowRunRequest_InvokeID_DEFAULT int64
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) GetInvokeID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInvokeID() {
+		return CompareAndSwapFluxWorkflowRunRequest_InvokeID_DEFAULT
+	}
+	return *p.InvokeID
+}
+
+var CompareAndSwapFluxWorkflowRunRequest_ExpectedVersion_DEFAULT int64
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) GetExpectedVersion() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExpectedVersion() {
+		return CompareAndSwapFluxWorkflowRunRequest_ExpectedVersion_DEFAULT
+	}
+	return *p.ExpectedVersion
+}
+
+var CompareAndSwapFluxWorkflowRunRequest_RunJSON_DEFAULT string
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) GetRunJSON() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRunJSON() {
+		return CompareAndSwapFluxWorkflowRunRequest_RunJSON_DEFAULT
+	}
+	return *p.RunJSON
+}
+
+var CompareAndSwapFluxWorkflowRunRequest_Base_DEFAULT *base.Base
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return CompareAndSwapFluxWorkflowRunRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) SetInvokeID(val *int64) {
+	p.InvokeID = val
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) SetExpectedVersion(val *int64) {
+	p.ExpectedVersion = val
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) SetRunJSON(val *string) {
+	p.RunJSON = val
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_CompareAndSwapFluxWorkflowRunRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "invoke_id",
+	3:   "expected_version",
+	4:   "run_json",
+	255: "Base",
+}
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) IsSetInvokeID() bool {
+	return p.InvokeID != nil
+}
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) IsSetExpectedVersion() bool {
+	return p.ExpectedVersion != nil
+}
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) IsSetRunJSON() bool {
+	return p.RunJSON != nil
+}
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CompareAndSwapFluxWorkflowRunRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.InvokeID = _field
+	return nil
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExpectedVersion = _field
+	return nil
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RunJSON = _field
+	return nil
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CompareAndSwapFluxWorkflowRunRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvokeID() {
+		if err = oprot.WriteFieldBegin("invoke_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.InvokeID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExpectedVersion() {
+		if err = oprot.WriteFieldBegin("expected_version", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ExpectedVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRunJSON() {
+		if err = oprot.WriteFieldBegin("run_json", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.RunJSON); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CompareAndSwapFluxWorkflowRunRequest(%+v)", *p)
+
+}
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) DeepEqual(ano *CompareAndSwapFluxWorkflowRunRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.InvokeID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.ExpectedVersion) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.RunJSON) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *CompareAndSwapFluxWorkflowRunRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.InvokeID == src {
+		return true
+	} else if p.InvokeID == nil || src == nil {
+		return false
+	}
+	if *p.InvokeID != *src {
+		return false
+	}
+	return true
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) Field3DeepEqual(src *int64) bool {
+
+	if p.ExpectedVersion == src {
+		return true
+	} else if p.ExpectedVersion == nil || src == nil {
+		return false
+	}
+	if *p.ExpectedVersion != *src {
+		return false
+	}
+	return true
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) Field4DeepEqual(src *string) bool {
+
+	if p.RunJSON == src {
+		return true
+	} else if p.RunJSON == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.RunJSON, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CompareAndSwapFluxWorkflowRunRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type CompareAndSwapFluxWorkflowRunResponse struct {
+	Updated        *bool          `thrift:"updated,1,optional" frugal:"1,optional,bool" form:"updated" json:"updated,omitempty" query:"updated"`
+	CurrentJSON    *string        `thrift:"current_json,2,optional" frugal:"2,optional,string" form:"current_json" json:"current_json,omitempty" query:"current_json"`
+	CurrentVersion *int64         `thrift:"current_version,3,optional" frugal:"3,optional,i64" form:"current_version" json:"current_version,omitempty" query:"current_version"`
+	BaseResp       *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewCompareAndSwapFluxWorkflowRunResponse() *CompareAndSwapFluxWorkflowRunResponse {
+	return &CompareAndSwapFluxWorkflowRunResponse{}
+}
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) InitDefault() {
+}
+
+var CompareAndSwapFluxWorkflowRunResponse_Updated_DEFAULT bool
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) GetUpdated() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetUpdated() {
+		return CompareAndSwapFluxWorkflowRunResponse_Updated_DEFAULT
+	}
+	return *p.Updated
+}
+
+var CompareAndSwapFluxWorkflowRunResponse_CurrentJSON_DEFAULT string
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) GetCurrentJSON() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCurrentJSON() {
+		return CompareAndSwapFluxWorkflowRunResponse_CurrentJSON_DEFAULT
+	}
+	return *p.CurrentJSON
+}
+
+var CompareAndSwapFluxWorkflowRunResponse_CurrentVersion_DEFAULT int64
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) GetCurrentVersion() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCurrentVersion() {
+		return CompareAndSwapFluxWorkflowRunResponse_CurrentVersion_DEFAULT
+	}
+	return *p.CurrentVersion
+}
+
+var CompareAndSwapFluxWorkflowRunResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return CompareAndSwapFluxWorkflowRunResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *CompareAndSwapFluxWorkflowRunResponse) SetUpdated(val *bool) {
+	p.Updated = val
+}
+func (p *CompareAndSwapFluxWorkflowRunResponse) SetCurrentJSON(val *string) {
+	p.CurrentJSON = val
+}
+func (p *CompareAndSwapFluxWorkflowRunResponse) SetCurrentVersion(val *int64) {
+	p.CurrentVersion = val
+}
+func (p *CompareAndSwapFluxWorkflowRunResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_CompareAndSwapFluxWorkflowRunResponse = map[int16]string{
+	1:   "updated",
+	2:   "current_json",
+	3:   "current_version",
+	255: "BaseResp",
+}
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) IsSetUpdated() bool {
+	return p.Updated != nil
+}
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) IsSetCurrentJSON() bool {
+	return p.CurrentJSON != nil
+}
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) IsSetCurrentVersion() bool {
+	return p.CurrentVersion != nil
+}
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CompareAndSwapFluxWorkflowRunResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Updated = _field
+	return nil
+}
+func (p *CompareAndSwapFluxWorkflowRunResponse) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CurrentJSON = _field
+	return nil
+}
+func (p *CompareAndSwapFluxWorkflowRunResponse) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CurrentVersion = _field
+	return nil
+}
+func (p *CompareAndSwapFluxWorkflowRunResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CompareAndSwapFluxWorkflowRunResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetUpdated() {
+		if err = oprot.WriteFieldBegin("updated", thrift.BOOL, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Updated); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *CompareAndSwapFluxWorkflowRunResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCurrentJSON() {
+		if err = oprot.WriteFieldBegin("current_json", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.CurrentJSON); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *CompareAndSwapFluxWorkflowRunResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCurrentVersion() {
+		if err = oprot.WriteFieldBegin("current_version", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.CurrentVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *CompareAndSwapFluxWorkflowRunResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CompareAndSwapFluxWorkflowRunResponse(%+v)", *p)
+
+}
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) DeepEqual(ano *CompareAndSwapFluxWorkflowRunResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Updated) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.CurrentJSON) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.CurrentVersion) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *CompareAndSwapFluxWorkflowRunResponse) Field1DeepEqual(src *bool) bool {
+
+	if p.Updated == src {
+		return true
+	} else if p.Updated == nil || src == nil {
+		return false
+	}
+	if *p.Updated != *src {
+		return false
+	}
+	return true
+}
+func (p *CompareAndSwapFluxWorkflowRunResponse) Field2DeepEqual(src *string) bool {
+
+	if p.CurrentJSON == src {
+		return true
+	} else if p.CurrentJSON == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.CurrentJSON, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CompareAndSwapFluxWorkflowRunResponse) Field3DeepEqual(src *int64) bool {
+
+	if p.CurrentVersion == src {
+		return true
+	} else if p.CurrentVersion == nil || src == nil {
+		return false
+	}
+	if *p.CurrentVersion != *src {
+		return false
+	}
+	return true
+}
+func (p *CompareAndSwapFluxWorkflowRunResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type GetFluxWorkflowCopyYAMLRequest struct {
+	WorkspaceID *int64     `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	InvokeID    *int64     `thrift:"invoke_id,2,optional" frugal:"2,optional,i64" json:"invoke_id" form:"invoke_id" query:"invoke_id"`
+	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewGetFluxWorkflowCopyYAMLRequest() *GetFluxWorkflowCopyYAMLRequest {
+	return &GetFluxWorkflowCopyYAMLRequest{}
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) InitDefault() {
+}
+
+var GetFluxWorkflowCopyYAMLRequest_WorkspaceID_DEFAULT int64
+
+func (p *GetFluxWorkflowCopyYAMLRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return GetFluxWorkflowCopyYAMLRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var GetFluxWorkflowCopyYAMLRequest_InvokeID_DEFAULT int64
+
+func (p *GetFluxWorkflowCopyYAMLRequest) GetInvokeID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInvokeID() {
+		return GetFluxWorkflowCopyYAMLRequest_InvokeID_DEFAULT
+	}
+	return *p.InvokeID
+}
+
+var GetFluxWorkflowCopyYAMLRequest_Base_DEFAULT *base.Base
+
+func (p *GetFluxWorkflowCopyYAMLRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return GetFluxWorkflowCopyYAMLRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) SetInvokeID(val *int64) {
+	p.InvokeID = val
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_GetFluxWorkflowCopyYAMLRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "invoke_id",
+	255: "Base",
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) IsSetInvokeID() bool {
+	return p.InvokeID != nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetFluxWorkflowCopyYAMLRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.InvokeID = _field
+	return nil
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetFluxWorkflowCopyYAMLRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvokeID() {
+		if err = oprot.WriteFieldBegin("invoke_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.InvokeID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetFluxWorkflowCopyYAMLRequest(%+v)", *p)
+
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) DeepEqual(ano *GetFluxWorkflowCopyYAMLRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.InvokeID) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *GetFluxWorkflowCopyYAMLRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.InvokeID == src {
+		return true
+	} else if p.InvokeID == nil || src == nil {
+		return false
+	}
+	if *p.InvokeID != *src {
+		return false
+	}
+	return true
+}
+func (p *GetFluxWorkflowCopyYAMLRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type GetFluxWorkflowCopyYAMLResponse struct {
+	YamlContent *string        `thrift:"yaml_content,1,optional" frugal:"1,optional,string" form:"yaml_content" json:"yaml_content,omitempty" query:"yaml_content"`
+	Sha256      *string        `thrift:"sha256,2,optional" frugal:"2,optional,string" form:"sha256" json:"sha256,omitempty" query:"sha256"`
+	BaseResp    *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewGetFluxWorkflowCopyYAMLResponse() *GetFluxWorkflowCopyYAMLResponse {
+	return &GetFluxWorkflowCopyYAMLResponse{}
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) InitDefault() {
+}
+
+var GetFluxWorkflowCopyYAMLResponse_YamlContent_DEFAULT string
+
+func (p *GetFluxWorkflowCopyYAMLResponse) GetYamlContent() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetYamlContent() {
+		return GetFluxWorkflowCopyYAMLResponse_YamlContent_DEFAULT
+	}
+	return *p.YamlContent
+}
+
+var GetFluxWorkflowCopyYAMLResponse_Sha256_DEFAULT string
+
+func (p *GetFluxWorkflowCopyYAMLResponse) GetSha256() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSha256() {
+		return GetFluxWorkflowCopyYAMLResponse_Sha256_DEFAULT
+	}
+	return *p.Sha256
+}
+
+var GetFluxWorkflowCopyYAMLResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *GetFluxWorkflowCopyYAMLResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return GetFluxWorkflowCopyYAMLResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) SetYamlContent(val *string) {
+	p.YamlContent = val
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) SetSha256(val *string) {
+	p.Sha256 = val
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_GetFluxWorkflowCopyYAMLResponse = map[int16]string{
+	1:   "yaml_content",
+	2:   "sha256",
+	255: "BaseResp",
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) IsSetYamlContent() bool {
+	return p.YamlContent != nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) IsSetSha256() bool {
+	return p.Sha256 != nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetFluxWorkflowCopyYAMLResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.YamlContent = _field
+	return nil
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Sha256 = _field
+	return nil
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetFluxWorkflowCopyYAMLResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetYamlContent() {
+		if err = oprot.WriteFieldBegin("yaml_content", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.YamlContent); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSha256() {
+		if err = oprot.WriteFieldBegin("sha256", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Sha256); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetFluxWorkflowCopyYAMLResponse(%+v)", *p)
+
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) DeepEqual(ano *GetFluxWorkflowCopyYAMLResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.YamlContent) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Sha256) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *GetFluxWorkflowCopyYAMLResponse) Field1DeepEqual(src *string) bool {
+
+	if p.YamlContent == src {
+		return true
+	} else if p.YamlContent == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.YamlContent, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) Field2DeepEqual(src *string) bool {
+
+	if p.Sha256 == src {
+		return true
+	} else if p.Sha256 == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Sha256, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *GetFluxWorkflowCopyYAMLResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type EvaluationOpenAPIService interface {
 	// 评测集接口
 	// 创建评测集
@@ -72440,6 +74627,12 @@ type EvaluationOpenAPIService interface {
 	// 评估器接口
 	// 评估器调用结果上报接口
 	ReportEvaluatorInvokeResult_(ctx context.Context, req *ReportEvaluatorInvokeResultRequest) (r *ReportEvaluatorInvokeResultResponse, err error)
+
+	GetFluxWorkflowRun(ctx context.Context, req *GetFluxWorkflowRunRequest) (r *GetFluxWorkflowRunResponse, err error)
+
+	CompareAndSwapFluxWorkflowRun(ctx context.Context, req *CompareAndSwapFluxWorkflowRunRequest) (r *CompareAndSwapFluxWorkflowRunResponse, err error)
+
+	GetFluxWorkflowCopyYAML(ctx context.Context, req *GetFluxWorkflowCopyYAMLRequest) (r *GetFluxWorkflowCopyYAMLResponse, err error)
 }
 
 type EvaluationOpenAPIServiceClient struct {
@@ -72990,6 +75183,33 @@ func (p *EvaluationOpenAPIServiceClient) ReportEvaluatorInvokeResult_(ctx contex
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *EvaluationOpenAPIServiceClient) GetFluxWorkflowRun(ctx context.Context, req *GetFluxWorkflowRunRequest) (r *GetFluxWorkflowRunResponse, err error) {
+	var _args EvaluationOpenAPIServiceGetFluxWorkflowRunArgs
+	_args.Req = req
+	var _result EvaluationOpenAPIServiceGetFluxWorkflowRunResult
+	if err = p.Client_().Call(ctx, "GetFluxWorkflowRun", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *EvaluationOpenAPIServiceClient) CompareAndSwapFluxWorkflowRun(ctx context.Context, req *CompareAndSwapFluxWorkflowRunRequest) (r *CompareAndSwapFluxWorkflowRunResponse, err error) {
+	var _args EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs
+	_args.Req = req
+	var _result EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult
+	if err = p.Client_().Call(ctx, "CompareAndSwapFluxWorkflowRun", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *EvaluationOpenAPIServiceClient) GetFluxWorkflowCopyYAML(ctx context.Context, req *GetFluxWorkflowCopyYAMLRequest) (r *GetFluxWorkflowCopyYAMLResponse, err error) {
+	var _args EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs
+	_args.Req = req
+	var _result EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult
+	if err = p.Client_().Call(ctx, "GetFluxWorkflowCopyYAML", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 
 type EvaluationOpenAPIServiceProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
@@ -73069,6 +75289,9 @@ func NewEvaluationOpenAPIServiceProcessor(handler EvaluationOpenAPIService) *Eva
 	self.AddToProcessorMap("ListExptTemplatesOApi", &evaluationOpenAPIServiceProcessorListExptTemplatesOApi{handler: handler})
 	self.AddToProcessorMap("SubmitExptFromTemplateOApi", &evaluationOpenAPIServiceProcessorSubmitExptFromTemplateOApi{handler: handler})
 	self.AddToProcessorMap("ReportEvaluatorInvokeResult", &evaluationOpenAPIServiceProcessorReportEvaluatorInvokeResult_{handler: handler})
+	self.AddToProcessorMap("GetFluxWorkflowRun", &evaluationOpenAPIServiceProcessorGetFluxWorkflowRun{handler: handler})
+	self.AddToProcessorMap("CompareAndSwapFluxWorkflowRun", &evaluationOpenAPIServiceProcessorCompareAndSwapFluxWorkflowRun{handler: handler})
+	self.AddToProcessorMap("GetFluxWorkflowCopyYAML", &evaluationOpenAPIServiceProcessorGetFluxWorkflowCopyYAML{handler: handler})
 	return self
 }
 func (p *EvaluationOpenAPIServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -75856,6 +78079,150 @@ func (p *evaluationOpenAPIServiceProcessorReportEvaluatorInvokeResult_) Process(
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("ReportEvaluatorInvokeResult", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type evaluationOpenAPIServiceProcessorGetFluxWorkflowRun struct {
+	handler EvaluationOpenAPIService
+}
+
+func (p *evaluationOpenAPIServiceProcessorGetFluxWorkflowRun) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceGetFluxWorkflowRunArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("GetFluxWorkflowRun", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := EvaluationOpenAPIServiceGetFluxWorkflowRunResult{}
+	var retval *GetFluxWorkflowRunResponse
+	if retval, err2 = p.handler.GetFluxWorkflowRun(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetFluxWorkflowRun: "+err2.Error())
+		oprot.WriteMessageBegin("GetFluxWorkflowRun", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("GetFluxWorkflowRun", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type evaluationOpenAPIServiceProcessorCompareAndSwapFluxWorkflowRun struct {
+	handler EvaluationOpenAPIService
+}
+
+func (p *evaluationOpenAPIServiceProcessorCompareAndSwapFluxWorkflowRun) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("CompareAndSwapFluxWorkflowRun", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult{}
+	var retval *CompareAndSwapFluxWorkflowRunResponse
+	if retval, err2 = p.handler.CompareAndSwapFluxWorkflowRun(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing CompareAndSwapFluxWorkflowRun: "+err2.Error())
+		oprot.WriteMessageBegin("CompareAndSwapFluxWorkflowRun", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("CompareAndSwapFluxWorkflowRun", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type evaluationOpenAPIServiceProcessorGetFluxWorkflowCopyYAML struct {
+	handler EvaluationOpenAPIService
+}
+
+func (p *evaluationOpenAPIServiceProcessorGetFluxWorkflowCopyYAML) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("GetFluxWorkflowCopyYAML", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult{}
+	var retval *GetFluxWorkflowCopyYAMLResponse
+	if retval, err2 = p.handler.GetFluxWorkflowCopyYAML(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetFluxWorkflowCopyYAML: "+err2.Error())
+		oprot.WriteMessageBegin("GetFluxWorkflowCopyYAML", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("GetFluxWorkflowCopyYAML", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -95818,6 +98185,1038 @@ func (p *EvaluationOpenAPIServiceReportEvaluatorInvokeResultResult) DeepEqual(an
 }
 
 func (p *EvaluationOpenAPIServiceReportEvaluatorInvokeResultResult) Field0DeepEqual(src *ReportEvaluatorInvokeResultResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceGetFluxWorkflowRunArgs struct {
+	Req *GetFluxWorkflowRunRequest `thrift:"req,1" frugal:"1,default,GetFluxWorkflowRunRequest"`
+}
+
+func NewEvaluationOpenAPIServiceGetFluxWorkflowRunArgs() *EvaluationOpenAPIServiceGetFluxWorkflowRunArgs {
+	return &EvaluationOpenAPIServiceGetFluxWorkflowRunArgs{}
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunArgs) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceGetFluxWorkflowRunArgs_Req_DEFAULT *GetFluxWorkflowRunRequest
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunArgs) GetReq() (v *GetFluxWorkflowRunRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return EvaluationOpenAPIServiceGetFluxWorkflowRunArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunArgs) SetReq(val *GetFluxWorkflowRunRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceGetFluxWorkflowRunArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetFluxWorkflowRunArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewGetFluxWorkflowRunRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetFluxWorkflowRun_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetFluxWorkflowRunArgs(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunArgs) DeepEqual(ano *EvaluationOpenAPIServiceGetFluxWorkflowRunArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunArgs) Field1DeepEqual(src *GetFluxWorkflowRunRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceGetFluxWorkflowRunResult struct {
+	Success *GetFluxWorkflowRunResponse `thrift:"success,0,optional" frugal:"0,optional,GetFluxWorkflowRunResponse"`
+}
+
+func NewEvaluationOpenAPIServiceGetFluxWorkflowRunResult() *EvaluationOpenAPIServiceGetFluxWorkflowRunResult {
+	return &EvaluationOpenAPIServiceGetFluxWorkflowRunResult{}
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunResult) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceGetFluxWorkflowRunResult_Success_DEFAULT *GetFluxWorkflowRunResponse
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunResult) GetSuccess() (v *GetFluxWorkflowRunResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return EvaluationOpenAPIServiceGetFluxWorkflowRunResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetFluxWorkflowRunResponse)
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceGetFluxWorkflowRunResult = map[int16]string{
+	0: "success",
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetFluxWorkflowRunResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewGetFluxWorkflowRunResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetFluxWorkflowRun_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetFluxWorkflowRunResult(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunResult) DeepEqual(ano *EvaluationOpenAPIServiceGetFluxWorkflowRunResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowRunResult) Field0DeepEqual(src *GetFluxWorkflowRunResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs struct {
+	Req *CompareAndSwapFluxWorkflowRunRequest `thrift:"req,1" frugal:"1,default,CompareAndSwapFluxWorkflowRunRequest"`
+}
+
+func NewEvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs() *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs {
+	return &EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs{}
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs_Req_DEFAULT *CompareAndSwapFluxWorkflowRunRequest
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs) GetReq() (v *CompareAndSwapFluxWorkflowRunRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs) SetReq(val *CompareAndSwapFluxWorkflowRunRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewCompareAndSwapFluxWorkflowRunRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CompareAndSwapFluxWorkflowRun_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs) DeepEqual(ano *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs) Field1DeepEqual(src *CompareAndSwapFluxWorkflowRunRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult struct {
+	Success *CompareAndSwapFluxWorkflowRunResponse `thrift:"success,0,optional" frugal:"0,optional,CompareAndSwapFluxWorkflowRunResponse"`
+}
+
+func NewEvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult() *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult {
+	return &EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult{}
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult_Success_DEFAULT *CompareAndSwapFluxWorkflowRunResponse
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult) GetSuccess() (v *CompareAndSwapFluxWorkflowRunResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CompareAndSwapFluxWorkflowRunResponse)
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult = map[int16]string{
+	0: "success",
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewCompareAndSwapFluxWorkflowRunResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CompareAndSwapFluxWorkflowRun_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult) DeepEqual(ano *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult) Field0DeepEqual(src *CompareAndSwapFluxWorkflowRunResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs struct {
+	Req *GetFluxWorkflowCopyYAMLRequest `thrift:"req,1" frugal:"1,default,GetFluxWorkflowCopyYAMLRequest"`
+}
+
+func NewEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs() *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs {
+	return &EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs{}
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs_Req_DEFAULT *GetFluxWorkflowCopyYAMLRequest
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) GetReq() (v *GetFluxWorkflowCopyYAMLRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) SetReq(val *GetFluxWorkflowCopyYAMLRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewGetFluxWorkflowCopyYAMLRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetFluxWorkflowCopyYAML_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) DeepEqual(ano *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs) Field1DeepEqual(src *GetFluxWorkflowCopyYAMLRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult struct {
+	Success *GetFluxWorkflowCopyYAMLResponse `thrift:"success,0,optional" frugal:"0,optional,GetFluxWorkflowCopyYAMLResponse"`
+}
+
+func NewEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult() *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult {
+	return &EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult{}
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult_Success_DEFAULT *GetFluxWorkflowCopyYAMLResponse
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) GetSuccess() (v *GetFluxWorkflowCopyYAMLResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetFluxWorkflowCopyYAMLResponse)
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult = map[int16]string{
+	0: "success",
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewGetFluxWorkflowCopyYAMLResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetFluxWorkflowCopyYAML_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) DeepEqual(ano *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult) Field0DeepEqual(src *GetFluxWorkflowCopyYAMLResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

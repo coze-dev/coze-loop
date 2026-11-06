@@ -23,6 +23,11 @@ type ExptEventPublisher interface {
 	PublishExptWebhookNotifyEvent(ctx context.Context, event *entity.WebhookRetryEvent, duration *time.Duration) error
 }
 
+// ExptSchedulePreparer prepares commercial execution state before an experiment is dispatched.
+type ExptSchedulePreparer interface {
+	BeforeExptSchedule(ctx context.Context, expt *entity.Experiment, session *entity.Session) error
+}
+
 //go:generate mockgen -destination mocks/evaluator_event_publisher_mock.go -package mocks . EvaluatorEventPublisher
 type EvaluatorEventPublisher interface {
 	PublishEvaluatorRecordCorrection(ctx context.Context, events *entity.EvaluatorRecordCorrectionEvent, duration *time.Duration) error

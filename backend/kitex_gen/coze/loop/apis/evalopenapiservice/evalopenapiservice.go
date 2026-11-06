@@ -420,6 +420,27 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetFluxWorkflowRun": kitex.NewMethodInfo(
+		getFluxWorkflowRunHandler,
+		newEvaluationOpenAPIServiceGetFluxWorkflowRunArgs,
+		newEvaluationOpenAPIServiceGetFluxWorkflowRunResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"CompareAndSwapFluxWorkflowRun": kitex.NewMethodInfo(
+		compareAndSwapFluxWorkflowRunHandler,
+		newEvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs,
+		newEvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetFluxWorkflowCopyYAML": kitex.NewMethodInfo(
+		getFluxWorkflowCopyYAMLHandler,
+		newEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs,
+		newEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -1555,6 +1576,63 @@ func newEvaluationOpenAPIServiceReportEvaluatorInvokeResultResult() interface{} 
 	return openapi.NewEvaluationOpenAPIServiceReportEvaluatorInvokeResultResult()
 }
 
+func getFluxWorkflowRunHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceGetFluxWorkflowRunArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceGetFluxWorkflowRunResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).GetFluxWorkflowRun(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceGetFluxWorkflowRunArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetFluxWorkflowRunArgs()
+}
+
+func newEvaluationOpenAPIServiceGetFluxWorkflowRunResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetFluxWorkflowRunResult()
+}
+
+func compareAndSwapFluxWorkflowRunHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).CompareAndSwapFluxWorkflowRun(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs()
+}
+
+func newEvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult()
+}
+
+func getFluxWorkflowCopyYAMLHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).GetFluxWorkflowCopyYAML(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs()
+}
+
+func newEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -2142,6 +2220,36 @@ func (p *kClient) ReportEvaluatorInvokeResult_(ctx context.Context, req *openapi
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceReportEvaluatorInvokeResultResult
 	if err = p.c.Call(ctx, "ReportEvaluatorInvokeResult", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetFluxWorkflowRun(ctx context.Context, req *openapi.GetFluxWorkflowRunRequest) (r *openapi.GetFluxWorkflowRunResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceGetFluxWorkflowRunArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceGetFluxWorkflowRunResult
+	if err = p.c.Call(ctx, "GetFluxWorkflowRun", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CompareAndSwapFluxWorkflowRun(ctx context.Context, req *openapi.CompareAndSwapFluxWorkflowRunRequest) (r *openapi.CompareAndSwapFluxWorkflowRunResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceCompareAndSwapFluxWorkflowRunResult
+	if err = p.c.Call(ctx, "CompareAndSwapFluxWorkflowRun", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetFluxWorkflowCopyYAML(ctx context.Context, req *openapi.GetFluxWorkflowCopyYAMLRequest) (r *openapi.GetFluxWorkflowCopyYAMLResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceGetFluxWorkflowCopyYAMLResult
+	if err = p.c.Call(ctx, "GetFluxWorkflowCopyYAML", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

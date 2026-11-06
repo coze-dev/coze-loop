@@ -35,7 +35,34 @@ func (p *AgentSkillDeclare) IsValid() error {
 func (p *VerificationConfig) IsValid() error {
 	return nil
 }
+func (p *FluxWorkflowNodePolicy) IsValid() error {
+	return nil
+}
+func (p *FluxWorkflowPhaseReview) IsValid() error {
+	return nil
+}
+func (p *FluxWorkflowInteractionSUA) IsValid() error {
+	return nil
+}
+func (p *FluxWorkflowConfig) IsValid() error {
+	if p.PhaseReview != nil {
+		if err := p.PhaseReview.IsValid(); err != nil {
+			return fmt.Errorf("field PhaseReview not valid, %w", err)
+		}
+	}
+	if p.InteractionSua != nil {
+		if err := p.InteractionSua.IsValid(); err != nil {
+			return fmt.Errorf("field InteractionSua not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *RunModeConfig) IsValid() error {
+	if p.FluxWorkflow != nil {
+		if err := p.FluxWorkflow.IsValid(); err != nil {
+			return fmt.Errorf("field FluxWorkflow not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ExpectedResourceConsumption) IsValid() error {

@@ -5,12 +5,14 @@ package mysql
 
 import (
 	"context"
+	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/bytedance/gg/gptr"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
@@ -73,10 +75,30 @@ type exptDAOImpl struct {
 }
 
 func (d *exptDAOImpl) UpdateFields(ctx context.Context, id int64, ufields map[string]any, opts ...db.Option) error {
-	q := query.Use(d.db.NewSession(ctx, opts...)).Experiment
-	_, err := q.WithContext(ctx).
-		Where(q.ID.Eq(id)).
-		UpdateColumns(ufields)
+	update := func(tx *gorm.DB) error {
+		q := query.Use(tx).Experiment
+		_, err := q.WithContext(ctx).Where(q.ID.Eq(id)).UpdateColumns(ufields)
+		return err
+	}
+	var err error
+	if incoming, ok := ufields["eval_conf"]; ok {
+		err = d.db.NewSession(ctx, opts...).Transaction(func(tx *gorm.DB) error {
+			merged, mergeErr := d.mergeFluxBinding(ctx, tx, id, incoming)
+			if mergeErr != nil {
+				return mergeErr
+			}
+			fields := make(map[string]any, len(ufields))
+			for k, v := range ufields {
+				fields[k] = v
+			}
+			fields["eval_conf"] = merged
+			q := query.Use(tx).Experiment
+			_, updateErr := q.WithContext(ctx).Where(q.ID.Eq(id)).UpdateColumns(fields)
+			return updateErr
+		})
+	} else {
+		err = update(d.db.NewSession(ctx, opts...))
+	}
 	if err != nil {
 		return errorx.Wrapf(err, "update expt fail, expt_id: %v, ufields: %v", id, ufields)
 	}
@@ -109,12 +131,63 @@ func (d *exptDAOImpl) Create(ctx context.Context, expt *model.Experiment) error 
 var schedulingFrozenColumns = []string{"priority_level", "scheduler_mode", "scheduler_scope"}
 
 func (d *exptDAOImpl) Update(ctx context.Context, expt *model.Experiment) error {
-	if err := d.db.NewSession(ctx).Model(&model.Experiment{}).Where("id = ?", expt.ID).
-		Omit(schedulingFrozenColumns...).
-		Updates(expt).Error; err != nil {
+	update := func(tx *gorm.DB) error {
+		return tx.Model(&model.Experiment{}).Where("id = ?", expt.ID).Omit(schedulingFrozenColumns...).Updates(expt).Error
+	}
+	var err error
+	if expt.EvalConf == nil {
+		err = update(d.db.NewSession(ctx))
+	} else {
+		err = d.db.NewSession(ctx).Transaction(func(tx *gorm.DB) error {
+			merged, mergeErr := d.mergeFluxBinding(ctx, tx, expt.ID, expt.EvalConf)
+			if mergeErr != nil {
+				return mergeErr
+			}
+			copy := *expt
+			copy.EvalConf = &merged
+			return tx.Model(&model.Experiment{}).Where("id = ?", copy.ID).Omit(schedulingFrozenColumns...).Updates(&copy).Error
+		})
+	}
+	if err != nil {
 		return errorx.Wrapf(err, "update expt fail, expt_id: %v, updated: %v", expt.ID, json.Jsonify(expt))
 	}
 	return nil
+}
+
+func (d *exptDAOImpl) mergeFluxBinding(ctx context.Context, tx *gorm.DB, id int64, incoming any) ([]byte, error) {
+	var row model.Experiment
+	if err := tx.WithContext(ctx).Clauses(clause.Locking{Strength: "UPDATE"}).Select("eval_conf").Where("id = ?", id).Take(&row).Error; err != nil {
+		return nil, err
+	}
+	var current, next map[string]stdjson.RawMessage
+	if row.EvalConf != nil && len(*row.EvalConf) != 0 {
+		if err := stdjson.Unmarshal(*row.EvalConf, &current); err != nil {
+			return nil, err
+		}
+	}
+	var raw []byte
+	switch v := incoming.(type) {
+	case *[]byte:
+		if v != nil {
+			raw = *v
+		}
+	case []byte:
+		raw = v
+	case string:
+		raw = []byte(v)
+	default:
+		return nil, fmt.Errorf("unsupported eval_conf type %T", incoming)
+	}
+	if err := stdjson.Unmarshal(raw, &next); err != nil {
+		return nil, err
+	}
+	if binding := current["flux_workflow_binding"]; len(binding) != 0 {
+		if next == nil {
+			next = make(map[string]stdjson.RawMessage)
+		}
+		next["flux_workflow_binding"] = binding
+	}
+	return stdjson.Marshal(next)
 }
 
 func (d *exptDAOImpl) Delete(ctx context.Context, id int64) error {
