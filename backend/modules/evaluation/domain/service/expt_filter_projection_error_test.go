@@ -126,7 +126,7 @@ func TestBuildProjectionDependencyErrorsKeepVerifiedKey(t *testing.T) {
 			failedRead := stage
 			wantKey := true
 			switch stage {
-			case "experiment", "turns", "foreign_experiment", "foreign_turn", "foreign_item", "foreign_item_ref", "foreign_mapping", "foreign_target_unrequested", "foreign_evaluator_unrequested":
+			case "experiment", "turns", "foreign_experiment", "foreign_turn":
 				wantKey = false
 			case "multiple_turns":
 				wantKey, failedRead = false, "mappings"
@@ -277,10 +277,10 @@ func TestBuildProjectionDependencyErrorsKeepVerifiedKey(t *testing.T) {
 				require.ErrorIs(t, upsertErr, fault)
 			}
 			if wantKey {
-				assert.Contains(t, buildErr.Error(), "item=3 turn=7", "known source key must be retained by the original contract")
+				assert.Contains(t, buildErr.Error(), "item=3 turn=7", "the failed projection context must retain its verified key")
 				assert.Contains(t, upsertErr.Error(), "item=3 turn=7", "direct upsert did not restore the known key")
 			} else {
-				assert.Contains(t, buildErr.Error(), "item=0 turn=0", "unknown, ambiguous or foreign data must not supply a key")
+				assert.Contains(t, buildErr.Error(), "item=0 turn=0", "unknown or ambiguous projection context must not supply a key")
 				assert.Contains(t, upsertErr.Error(), "item=0 turn=0")
 			}
 			assert.NotContains(t, buildErr.Error(), "item=998 turn=997")

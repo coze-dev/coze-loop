@@ -19,6 +19,13 @@ func TestProjectionRejectsInvalidSourceRecordsAndScoreCalculation(t *testing.T) 
 		stage  string
 		change func(*projectionFixture, *ExptResultServiceImpl)
 	}{
+		{"missing_start_date", "created_date", func(f *projectionFixture, _ *ExptResultServiceImpl) { f.expt.StartAt = nil }},
+		{"nil_item", "items", func(f *projectionFixture, _ *ExptResultServiceImpl) { f.items[0] = nil }},
+		{"foreign_item_id", "items", func(f *projectionFixture, _ *ExptResultServiceImpl) { f.items[0].ItemID = 999 }},
+		{"foreign_item_ref_id", "item_refs", func(f *projectionFixture, _ *ExptResultServiceImpl) { f.refs[0].ItemID = 999 }},
+		{"missing_multiset_ref", "item_refs", func(f *projectionFixture, _ *ExptResultServiceImpl) { f.refs = nil }},
+		{"nil_mapping", "mappings", func(f *projectionFixture, _ *ExptResultServiceImpl) { f.mappings[0] = nil }},
+		{"foreign_evaluator_ref", "evaluator_refs", func(f *projectionFixture, _ *ExptResultServiceImpl) { f.evaluatorRefs[0].SpaceID = 99 }},
 		{"nil_evaluator", "evaluators", func(f *projectionFixture, _ *ExptResultServiceImpl) { f.evaluators[0] = nil }},
 		{"duplicate_evaluator", "evaluators", func(f *projectionFixture, _ *ExptResultServiceImpl) {
 			f.evaluators = append(f.evaluators, f.evaluators[0])
@@ -30,6 +37,7 @@ func TestProjectionRejectsInvalidSourceRecordsAndScoreCalculation(t *testing.T) 
 			f.annotations = append(f.annotations, f.annotations[0])
 		}},
 		{"duplicate_tag", "tag_refs", func(f *projectionFixture, _ *ExptResultServiceImpl) { f.tags = append(f.tags, f.tags[0]) }},
+		{"foreign_annotation_record", "annotations", func(f *projectionFixture, _ *ExptResultServiceImpl) { f.annotations[0].SpaceID = 99 }},
 		{"foreign_annotation_ref", "annotation_refs", func(f *projectionFixture, _ *ExptResultServiceImpl) { f.annotationRefs[0].SpaceID = 99 }},
 		{"missing_annotation_mapping", "annotation_refs", func(f *projectionFixture, _ *ExptResultServiceImpl) { f.mappings = f.mappings[:2] }},
 		{"unknown_annotation_type", "annotation", func(f *projectionFixture, _ *ExptResultServiceImpl) {
@@ -37,6 +45,8 @@ func TestProjectionRejectsInvalidSourceRecordsAndScoreCalculation(t *testing.T) 
 		}},
 		{"unknown_experiment_type", "experiment", func(f *projectionFixture, _ *ExptResultServiceImpl) { f.expt.ExptType = 99 }},
 		{"multiset_reader_missing", "item_refs", func(_ *projectionFixture, svc *ExptResultServiceImpl) { svc.exptItemRefRepo = nil }},
+		{"evaluator_reader_missing", "evaluators", func(_ *projectionFixture, svc *ExptResultServiceImpl) { svc.evaluatorRecordService = nil }},
+		{"target_reader_missing", "targets", func(_ *projectionFixture, svc *ExptResultServiceImpl) { svc.evalTargetService = nil }},
 		{"pure_calculator_missing", "weighted_score", func(_ *projectionFixture, svc *ExptResultServiceImpl) { svc.scoreCalculator = nil }},
 		{"nonfinite_persisted_weight", "weighted_score", func(f *projectionFixture, _ *ExptResultServiceImpl) {
 			value := math.Inf(1)
@@ -60,11 +70,46 @@ func TestProjectionRejectsInvalidSourceRecordsAndScoreCalculation(t *testing.T) 
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newProjectionFixture(t)
+			f.turns[0].TurnID, f.targets[0].TurnID = 7, 7
+			for _, record := range f.evaluators {
+				record.TurnID = 7
+			}
 			svc := f.service()
 			tc.change(f, &svc)
 			rows, err := svc.BuildExptFilterProjection(context.Background(), 1, 2, []int64{3})
 			require.ErrorContains(t, err, "stage="+tc.stage)
+			require.ErrorContains(t, err, "item=3 turn=7", "key identifies the failed projection, not the rejected source record")
 			require.Empty(t, rows, "invalid source must not publish a partial projection")
+		})
+	}
+}
+
+func TestProjectionValidationDoesNotInventKeyForAmbiguousContext(t *testing.T) {
+	for _, mode := range []string{"multiple_turns_foreign_item", "multiple_turns_foreign_mapping", "multiple_items_foreign_ref"} {
+		t.Run(mode, func(t *testing.T) {
+			f := newProjectionFixture(t)
+			ids := []int64{3}
+			stage := "items"
+			if mode == "multiple_items_foreign_ref" {
+				ids = []int64{3, 4}
+				f.refs[0].SpaceID = 99
+				stage = "item_refs"
+			} else {
+				other := *f.turns[0]
+				other.ID, other.TurnID, other.TargetResultID = 12, 8, 0
+				f.turns = append(f.turns, &other)
+				if mode == "multiple_turns_foreign_mapping" {
+					f.mappings[0].SpaceID = 99
+					stage = "mappings"
+				} else {
+					f.items[0].SpaceID = 99
+				}
+			}
+			before := projectionSourceDigest(t, f)
+			rows, err := f.service().BuildExptFilterProjection(context.Background(), 1, 2, ids)
+			require.ErrorContains(t, err, "space=1 expt=2 item=0 turn=0 stage="+stage)
+			require.Nil(t, rows)
+			require.Equal(t, before, projectionSourceDigest(t, f))
 		})
 	}
 }
