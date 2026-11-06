@@ -497,6 +497,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		return nil, err
 	}
 
+	res.Total = total
 	if len(turnResultDAOs) == 0 {
 		return res, nil
 	}
@@ -662,7 +663,6 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 	}
 
 	res.ItemResults = itemResults
-	res.Total = total
 	// ★ 跨空间共享脱敏: 冻结 access_level=execute 的评测集为黑盒, 抹评测集题目内容 (列定义 + 每条 Payload.EvalSet),
 	// 保留 evaluator/target/system 列. per-set 判定: 单评测集看主表冻结级别, 多评测集看对应 EvalSetConfig.
 	desensitizeSharedEvalSetResult(res, exptMap)
@@ -865,6 +865,9 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 				itemIDs = append(itemIDs, item.ItemID)
 			}
 			total = iTotal
+			if err == nil && len(itemIDs) == 0 {
+				return nil, nil, total, nil
+			}
 		} else {
 			logs.CtxInfo(ctx, "filter accelerator has filters, exptID: %v", baseExptID)
 			if err = e.mapItemSnapshotFilter(ctx, filterAccelerator, expt); err != nil {
@@ -888,7 +891,7 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 					errOccur = true
 				} else {
 					if len(itemID2ItemRunState) == 0 {
-						return nil, nil, 0, nil
+						return nil, nil, total, nil
 					}
 					itemIDs = maps.ToSlice(itemID2ItemRunState, func(k int64, v entity.ItemRunState) int64 {
 						return k
@@ -916,7 +919,7 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 			total = totalTurn
 		}
 		if len(turnResultDAOs) == 0 {
-			return nil, nil, 0, nil
+			return nil, nil, total, nil
 		}
 
 		// 按 ItemIdx 排序
@@ -960,7 +963,7 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 		}
 
 		if len(turnResultDAOs) == 0 {
-			return nil, nil, 0, nil
+			return nil, nil, total, nil
 		}
 
 		// 按 ItemIdx 排序

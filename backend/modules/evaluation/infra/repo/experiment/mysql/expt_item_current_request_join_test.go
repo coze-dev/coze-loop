@@ -55,9 +55,10 @@ func TestCurrentRequestMySQLWithoutJoins(t *testing.T) {
 			}
 			require.NoError(t, err, "queueing current requests must be readable without JOIN support")
 			wantIDs := []int64{f.item, f.item + 1, f.item + 2}
-			if operation == "retry_first" {
+			switch operation {
+			case "retry_first":
 				wantIDs = []int64{f.item + 1, f.item + 2, f.item}
-			} else if operation == "get" {
+			case "get":
 				wantIDs = []int64{f.item}
 			}
 			require.Len(t, rows, len(wantIDs))

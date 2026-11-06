@@ -71,9 +71,10 @@ func TestRecordCurrentItemResultsRefreshesCommittedPrefix(t *testing.T) {
 			default:
 				suffix := &entity.ExptItemResultPublication{Source: second.Publication}
 				f.service.EXPECT().PrepareItemResultPublication(gomock.Any(), second.Publication, f.expt).Return(suffix, nil)
-				if stopAt == "lock_busy" {
+				switch stopAt {
+				case "lock_busy":
 					fault = errno.NewMQRetryErr("publication item lock busy")
-				} else if stopAt == "not_applied" {
+				case "not_applied":
 					fault = nil
 				}
 				f.service.EXPECT().PublishPreparedItemResult(gomock.Any(), suffix, gomock.Any()).Return(false, fault)
