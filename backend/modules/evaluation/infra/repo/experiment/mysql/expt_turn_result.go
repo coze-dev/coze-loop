@@ -298,6 +298,9 @@ func (dao *ExptTurnResultDAOImpl) ListTurnResult(ctx context.Context, spaceID, e
 
 	// score 排序本期不做
 	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 
 	subQueries := make([]*gorm.DB, 0)
 	if filter != nil && len(filter.ScoreFilters) > 0 {

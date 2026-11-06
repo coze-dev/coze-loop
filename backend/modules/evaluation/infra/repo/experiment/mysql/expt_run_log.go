@@ -9,11 +9,13 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"gorm.io/gorm"
+	"gorm.io/plugin/dbresolver"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/query"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -67,6 +69,9 @@ func NewExptRunLogDAO(db db.Provider) IExptRunLogDAO {
 func (dao *ExptRunLogDAOImpl) Get(ctx context.Context, exptID, exptRunID int64, opts ...db.Option) (*model.ExptRunLog, error) {
 	var exptRunLog model.ExptRunLog
 	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	cond := db.WithContext(ctx).Where("id = ?", exptRunID)
 	// exptID 未知时只按 run id 查：destroy 链路要按 run id 反查 expt（resolveSandboxTaskIDByRunID 传 0），
 	// 这里再要求 expt_id 相等会让查询恒空、taskID 变空串，双沙箱的 -orch 销毁请求被丢弃。

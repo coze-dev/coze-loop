@@ -1559,7 +1559,7 @@ func (e *exptBaseExec) exptEnd(ctx context.Context, event *entity.ExptScheduleEv
 // 直接查 DB 是否仍有 Queueing/Processing 的 item(不受并发名额门控影响)，limit 1 即可，
 // 仅在准备收工这条冷路径触发，成本可控。
 func (e *exptBaseExec) hasPendingAfterRescan(ctx context.Context, event *entity.ExptScheduleEvent) (bool, error) {
-	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{
+	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(contexts.WithCtxWriteDB(ctx), event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{
 		Status: []entity.ItemRunState{entity.ItemRunState_Queueing, entity.ItemRunState_Processing},
 	}, 0, 1, event.SpaceID)
 	if err != nil {
@@ -1574,7 +1574,7 @@ func (e *exptBaseExec) hasPendingAfterRescan(ctx context.Context, event *entity.
 	// Production also rescans Logged so publication can retry before calibration.
 	if _, current := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); current {
 		logged := entity.ExptItemResultStateLogged
-		logs, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{ResultState: &logged}, 0, 1, event.SpaceID)
+		logs, _, err := e.exptItemResultRepo.ScanItemRunLogs(contexts.WithCtxWriteDB(ctx), event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{ResultState: &logged}, 0, 1, event.SpaceID)
 		if err != nil {
 			return false, err
 		}

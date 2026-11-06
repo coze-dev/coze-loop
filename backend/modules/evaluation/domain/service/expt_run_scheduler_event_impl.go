@@ -169,6 +169,17 @@ func (e *ExptSchedulerImpl) Schedule(ctx context.Context, event *entity.ExptSche
 
 type SchedulerEndPoint func(ctx context.Context, event *entity.ExptScheduleEvent) error
 
+type completionResumeContextKey struct{}
+
+func withCompletionResume(ctx context.Context) context.Context {
+	return context.WithValue(ctx, completionResumeContextKey{}, true)
+}
+
+func completionResumeRequested(ctx context.Context) bool {
+	resume, _ := ctx.Value(completionResumeContextKey{}).(bool)
+	return resume
+}
+
 type SchedulerMiddleware func(next SchedulerEndPoint) SchedulerEndPoint
 
 func SchedulerChain(mws ...SchedulerMiddleware) SchedulerMiddleware {
@@ -198,7 +209,17 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 		}
 
 		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
-			if event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && (status == entity.ExptStatus_Terminated || status == entity.ExptStatus_Failed) {
+			exptType := event.ExptType
+			if exptType == 0 && event.ExptRunMode != entity.EvaluationModeAppend {
+				current, err := e.Manager.GetDetail(contexts.WithCtxWriteDB(ctx), event.ExptID, event.SpaceID, event.Session)
+				if err != nil {
+					return errno.WrapMQRetryErr(err)
+				}
+				if current != nil {
+					exptType = current.ExptType
+				}
+			}
+			if exptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && (status == entity.ExptStatus_Terminated || status == entity.ExptStatus_Failed) {
 				if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok {
 					options := []entity.CompleteExptOptionFn{entity.WithStatus(status)}
 					if status == entity.ExptStatus_Terminated {
@@ -208,18 +229,38 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 					return err
 				}
 			}
-			if status == entity.ExptStatus_Terminating && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+			if status == entity.ExptStatus_Terminating && exptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
 				if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok {
 					_, err := terminate.TerminateCurrentRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, nil, entity.WithStatus(entity.ExptStatus_Terminated), entity.NoAggrCalculate())
 					return err
 				}
 			}
 			logs.CtxInfo(ctx, "ExptSchedulerConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
+			if status == entity.ExptStatus_Success && exptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+				return e.Manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(fmt.Sprintf("exptexec:onend:%d", event.ExptRunID)))
+			}
 			return nil
 		}
 
 		interval := int64(e.Configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond())
 		if time.Now().Unix()-event.CreatedAt >= interval {
+			if event.ExptRunMode != entity.EvaluationModeAppend {
+				current, err := e.Manager.GetDetail(contexts.WithCtxWriteDB(ctx), event.ExptID, event.SpaceID, event.Session)
+				if err != nil {
+					return errno.WrapMQRetryErr(err)
+				}
+				if current != nil && current.ExptType == entity.ExptType_Offline && current.LatestRunID == event.ExptRunID && entity.IsExptFinished(current.Status) {
+					if e.Idem != nil {
+						started, err := e.Idem.Exist(ctx, fmt.Sprintf("CompleteExpt:exptexec:onend:%d", event.ExptRunID))
+						if err != nil {
+							return err
+						}
+						if started {
+							return next(withCompletionResume(ctx), event)
+						}
+					}
+				}
+			}
 			return errno.NewExptZombieTimeoutErr(interval, event.ExptID, event.ExptRunID)
 		}
 
@@ -442,6 +483,16 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	mode, err := e.schedulerModeFactory.NewSchedulerMode(event.ExptRunMode)
 	if err != nil {
 		return err
+	}
+	if completionResumeRequested(ctx) {
+		if err := mode.ScheduleStart(ctx, event, exptDetail); err != nil {
+			return err
+		}
+		nextTick, err := mode.ExptEnd(ctx, event, exptDetail, 0, 0)
+		if err != nil || !nextTick {
+			return err
+		}
+		return mode.NextTick(ctx, event, true)
 	}
 
 	err = mode.ExptStart(ctx, event, exptDetail)

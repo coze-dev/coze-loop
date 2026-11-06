@@ -75,6 +75,18 @@ func (e *exptRepoImpl) Update(ctx context.Context, expt *entity.Experiment) erro
 	return e.exptDAO.Update(ctx, po)
 }
 
+func (e *exptRepoImpl) UpdateIfLatestRun(ctx context.Context, expt *entity.Experiment, expectedRunID int64) (bool, error) {
+	po, err := convert.NewExptConverter().DO2PO(expt)
+	if err != nil {
+		return false, err
+	}
+	current, ok := e.exptDAO.(mysql.IExptCurrentRunCompletionDAO)
+	if !ok {
+		return false, errorx.New("current run completion DAO missing")
+	}
+	return current.UpdateIfLatestRun(ctx, po, expectedRunID)
+}
+
 func (e *exptRepoImpl) MarkRetryProcessing(ctx context.Context, spaceID, exptID, runID int64) (bool, error) {
 	marker, ok := e.exptDAO.(mysql.IExptRetryRunStatusDAO)
 	if !ok {

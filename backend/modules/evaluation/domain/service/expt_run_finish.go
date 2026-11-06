@@ -163,7 +163,7 @@ func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, loc
 		return err
 	} else if !hasTTL {
 		logs.CtxWarn(ctx, "[ExptLifecycle] legacy holder has no expiry or TTL is unavailable; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
-		return nil
+		return errno.NewMQRetryErr("legacy lifecycle holder has no expiry")
 	}
 	if holder == legacyStaticLifecycleHolder {
 		// 固定的旧 "evaluation" holder 没有 acquisition token：旧 LogRun 在上一
@@ -179,10 +179,10 @@ func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, loc
 	if !provable {
 		// 不认识的老 holder 格式：无法证明获取时间，宁可等自然过期也不删。
 		logs.CtxWarn(ctx, "[ExptLifecycle] legacy holder age unverifiable; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
-		return nil
+		return errno.NewMQRetryErr("legacy lifecycle holder age unverifiable")
 	}
 	if time.Since(acquiredAt) < LegacyLifecycleMigrationGrace {
-		return nil
+		return errno.NewMQRetryErr("legacy lifecycle holder migration grace pending")
 	}
 	if e.exptRepo == nil {
 		return errno.NewMQRetryErr("legacy lifecycle ownership repository missing")
