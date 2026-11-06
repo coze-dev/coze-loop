@@ -1156,9 +1156,14 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 
 	if _, admitted := event.CtxCentralAdmittedExpt(ctx); admitted {
 		if execution, ok := e.centralGuard.(component.ICentralItemExecution); ok {
-			if err := execution.PrepareItemResources(ctx, eiec); err != nil {
+			preparedCtx, err := execution.PrepareItemResources(ctx, eiec)
+			if err != nil {
 				return err
 			}
+			if preparedCtx == nil {
+				return fmt.Errorf("%w: nil granted resource context", errCentralItemAdmission)
+			}
+			ctx = preparedCtx
 		}
 	}
 
