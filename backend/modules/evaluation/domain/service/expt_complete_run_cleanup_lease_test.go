@@ -26,22 +26,22 @@ func TestCompleteRunCleanupRetainsAdmissionAndSkipsCompletedReplay(t *testing.T)
 	ctx := context.Background()
 	endedAt := time.Now().Add(-time.Minute)
 	require.NoError(t, provider.NewSession(ctx).Create(&model.Experiment{ID: 7, SpaceID: 9, ExptType: int32(entity.ExptType_Offline), LatestRunID: 8, Status: int32(entity.ExptStatus_Success), EndAt: &endedAt}).Error)
-	require.NoError(t, provider.NewSession(ctx).Create(&model.ExptRunLog{ID: 8, ExptID: 7, ExptRunID: 8, SpaceID: 9, Status: gptr.Of(int64(entity.ExptStatus_Success))}).Error)
+	require.NoError(t, provider.NewSession(ctx).Create(&model.ExptRunLog{ID: 8, ExptID: 7, ExptRunID: 8, SpaceID: 9, Mode: gptr.Of(int32(entity.EvaluationModeSubmit)), Status: gptr.Of(int64(entity.ExptStatus_Success))}).Error)
 	factory, server := finishRealLockerFactory(t)
 	key := "expt_run_mutex_lock:7"
-	require.NoError(t, server.Set(key, "8"))
+	require.NoError(t, server.Set(key, "evaluation"))
 	quota := repomocks.NewMockQuotaRepo(ctrl)
 	quota.EXPECT().CreateOrUpdate(gomock.Any(), int64(9), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, _ int64, update func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
 		holder, err := server.Get(key)
 		require.NoError(t, err)
-		require.Equal(t, "8", holder, "quota release must retain original admission")
+		require.Equal(t, "evaluation", holder, "quota release must retain original admission")
 		locked, _, err := factory().BackoffLockWithValue(ctx, key, "9", time.Hour, time.Millisecond)
 		require.NoError(t, err)
 		require.False(t, locked, "replacement must remain excluded during quota release")
 		_, _, err = update(&entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{7: 1}})
 		return err
 	})
-	manager := &ExptMangerImpl{exptRepo: exptrepo.NewExptRepo(exptmysql.NewExptDAO(provider), exptmysql.NewExptEvaluatorRefDAO(provider), nil), runLogRepo: exptrepo.NewExptRunLogRepo(exptmysql.NewExptRunLogDAO(provider)), runFinishRepo: exptrepo.NewExptRunFinishRepo(provider), manualRetryLocker: factory, quotaRepo: quota, idem: &cleanupTestIdem{}}
+	manager := &ExptMangerImpl{exptRepo: exptrepo.NewExptRepo(exptmysql.NewExptDAO(provider), exptmysql.NewExptEvaluatorRefDAO(provider), nil), runLogRepo: exptrepo.NewExptRunLogRepo(exptmysql.NewExptRunLogDAO(provider)), runFinishRepo: exptrepo.NewExptRunFinishRepo(provider), mutex: factory().WithHolder("evaluation"), manualRetryLocker: factory, quotaRepo: quota, idem: &cleanupTestIdem{}}
 	require.NoError(t, manager.CompleteRun(ctx, 7, 8, 9, &entity.Session{}))
 	require.False(t, server.Exists(key))
 	// B has only acquired the fixed holder: completed A replay must exit before

@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -350,8 +351,10 @@ func (e *ExptMangerImpl) cleanupLegacyUnscheduledRun(ctx context.Context, exptID
 	var released bool
 	var unlockErr error
 	if e.runFinishRepo != nil {
-		released, unlockErr = e.mutex.UnlockWithValue(unlockCtx, e.makeExptMutexLockKey(exptID), strconv.FormatInt(runID, 10))
-		if unlockErr == nil && !released {
+		logged, readErr := e.runLogRepo.Get(unlockCtx, exptID, runID)
+		if readErr == nil && logged != nil && entity.ExptRunMode(logged.Mode) == entity.EvaluationModeRetryItems {
+			released, unlockErr = e.mutex.UnlockWithValue(unlockCtx, e.makeExptMutexLockKey(exptID), strconv.FormatInt(runID, 10))
+		} else {
 			released, unlockErr = e.mutex.Unlock(e.makeExptMutexLockKey(exptID))
 		}
 	} else {
@@ -497,6 +500,184 @@ func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID 
 	return nil
 }
 
+// The context carries the existing tick lease and the immutable SQL commit
+// result between the two standard Complete methods. It is not another run state.
+type completeTickKey struct{}
+type completeTickIdentity struct{ expt, run int64 }
+type completeCalibratedKey struct{}
+type completeDataKey struct{}
+type completeCaptureKey struct{}
+type completeExpectedSourceKey struct{}
+type completeData struct {
+	result  *entity.ExptRunFinishResult
+	sources []*entity.ExptCurrentItemRunSource
+	from    entity.ExptStatus
+}
+
+func withHeldCompleteTick(ctx context.Context, expt, run int64) context.Context {
+	return context.WithValue(ctx, completeTickKey{}, completeTickIdentity{expt, run})
+}
+
+func (e *ExptMangerImpl) completeTick(ctx context.Context, expt, run int64) (context.Context, func(), error) {
+	if identity, ok := ctx.Value(completeTickKey{}).(completeTickIdentity); ok && identity == (completeTickIdentity{expt, run}) {
+		return ctx, func() {}, ctx.Err()
+	}
+	if e.manualRetryLocker == nil {
+		return nil, nil, errno.NewMQRetryErr("completion tick locker missing")
+	}
+	locker := e.manualRetryLocker()
+	if locker == nil {
+		return nil, nil, errno.NewMQRetryErr("completion tick locker missing")
+	}
+	key := fmt.Sprintf("expt_run_exec_lock:%d:%d", expt, run)
+	locked, lockCtx, cancel, err := locker.LockWithRenew(ctx, key, 5*time.Second, 5*time.Minute)
+	if err != nil {
+		return nil, nil, errno.WrapMQRetryErr(err)
+	}
+	if !locked {
+		return nil, nil, errno.NewMQRetryErr("completion tick lock busy")
+	}
+	if err := lockCtx.Err(); err != nil {
+		cancel()
+		return nil, nil, errno.WrapMQRetryErr(err)
+	}
+	return withHeldCompleteTick(lockCtx, expt, run), cancel, nil
+}
+
+func captureCompleteResult(ctx context.Context, result *entity.ExptRunFinishResult) {
+	if capture, ok := ctx.Value(completeCaptureKey{}).(*entity.ExptRunFinishResult); ok && result != nil {
+		*capture = *result
+	}
+}
+
+// This is only the current-source SQL boundary. Resource and notification duties
+// belong to CompleteExpt below, including the normal best-effort options.
+func (e *ExptMangerImpl) commitCompleteData(ctx context.Context, current *entity.Experiment, run int64, opt *entity.CompleteExptOption) (*completeData, error) {
+	data := &completeData{from: current.Status, result: &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishNonCurrent}}
+	if current.LatestRunID != run {
+		return data, nil
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errno.WrapMQRetryErr(err)
+	}
+	if opt.Status != entity.ExptStatus_Failed && opt.Status != entity.ExptStatus_Terminated {
+		if !entity.IsExptFinished(current.Status) && ctx.Value(completeCalibratedKey{}) != true {
+			calibration, ok := e.exptResultService.(ExptManualRetryFilterService)
+			if !ok {
+				return nil, errno.NewMQRetryErr("completion calibration service missing")
+			}
+			ready, err := reconcileManualRetryFilterBeforeFinish(ctx, calibration, current.SpaceID, current.ID, run)
+			if err != nil {
+				return nil, errno.WrapMQRetryErr(err)
+			}
+			if !ready {
+				data.result.Disposition = entity.ExptRunFinishPending
+				return data, nil
+			}
+		}
+		result, err := e.runFinishRepo.FinishCurrentRun(ctx, &entity.ExptRunFinishRequest{SpaceID: current.SpaceID, ExptID: current.ID, RunID: run})
+		if err != nil {
+			return nil, errno.WrapMQRetryErr(err)
+		}
+		if result == nil {
+			return nil, errno.NewMQRetryErr("completion returned no disposition")
+		}
+		switch result.Disposition {
+		case entity.ExptRunFinishPending, entity.ExptRunFinishNonCurrent:
+		case entity.ExptRunFinishFinished, entity.ExptRunFinishAlreadyFinished:
+			if result.Experiment == nil || result.Experiment.ID != current.ID || result.Experiment.SpaceID != current.SpaceID || result.Experiment.LatestRunID != run || !entity.IsExptFinished(result.Experiment.Status) {
+				return nil, errno.NewMQRetryErr("completion result binding corrupt")
+			}
+		default:
+			return nil, errno.NewMQRetryErr("invalid completion disposition")
+		}
+		data.result = result
+		return data, nil
+	}
+	port, err := e.terminationRepo()
+	if err != nil {
+		return nil, err
+	}
+	expected, _ := ctx.Value(completeExpectedSourceKey{}).(*entity.ExptCurrentItemRunSource)
+	if expected != nil {
+		source, err := port.GetTerminationItemSource(ctx, current.SpaceID, current.ID, run, expected.Current.ItemID)
+		if err != nil {
+			return nil, errno.WrapMQRetryErr(err)
+		}
+		if !sameExecutionIdentity(expected, source) {
+			return data, nil
+		}
+	}
+	var ids []int64
+	var cursor int64
+	for {
+		rows, next, err := e.itemResultRepo.ScanItemRunLogs(contexts.WithCtxWriteDB(ctx), current.ID, run, &entity.ExptItemRunLogFilter{}, cursor, 500, current.SpaceID)
+		if err != nil {
+			return nil, errno.WrapMQRetryErr(err)
+		}
+		for _, row := range rows {
+			if row == nil {
+				return nil, errno.NewMQRetryErr("completion source missing")
+			}
+			ids = append(ids, row.ItemID)
+		}
+		if next == 0 || len(rows) == 0 {
+			break
+		}
+		if next <= cursor {
+			return nil, errno.NewMQRetryErr("completion source cursor invalid")
+		}
+		cursor = next
+	}
+	data.sources, err = e.captureTerminationSources(ctx, port, current.SpaceID, current.ID, run, ids)
+	if err != nil {
+		return nil, err
+	}
+	result, err := e.commitTerminationItems(ctx, port, &entity.ExptRunTerminationRequest{SpaceID: current.SpaceID, ExptID: current.ID, RunID: run, Finalize: true, Status: opt.Status, StatusMessage: opt.StatusMessage, NoCompleteItemTurn: opt.NoCompleteItemTurn, ExpectedSource: expected, Items: data.sources})
+	if err != nil {
+		return nil, err
+	}
+	if result.NonCurrent {
+		if expected == nil {
+			return nil, errno.NewMQRetryErr("completion source advanced")
+		}
+		return data, nil
+	}
+	if result.Experiment == nil {
+		return nil, errno.NewMQRetryErr("completion experiment missing")
+	}
+	data.result.Experiment = result.Experiment
+	data.result.Disposition = entity.ExptRunFinishAlreadyFinished
+	if result.Applied {
+		data.result.Disposition = entity.ExptRunFinishFinished
+	}
+	return data, nil
+}
+
+func (e *ExptMangerImpl) releaseCompleteAdmission(ctx context.Context, expt, run, space int64) error {
+	if e.mutex == nil {
+		return errno.NewMQRetryErr("completion admission locker missing")
+	}
+	releaseCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
+	defer cancel()
+	if e.runLogRepo == nil {
+		return errno.NewMQRetryErr("completion run repository missing")
+	}
+	logged, err := e.runLogRepo.Get(releaseCtx, expt, run)
+	if err != nil {
+		return err
+	}
+	if logged == nil {
+		return errno.NewMQRetryErr("completion run missing")
+	}
+	if entity.ExptRunMode(logged.Mode) == entity.EvaluationModeRetryItems {
+		_, err = e.mutex.UnlockWithValue(releaseCtx, e.makeExptMutexLockKey(expt), strconv.FormatInt(run, 10))
+	} else {
+		_, err = e.mutex.Unlock(e.makeExptMutexLockKey(expt))
+	}
+	return err
+}
+
 func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
 	if e.runFinishRepo == nil {
 		if _, current := e.itemResultRepo.(repo.IExptCurrentResultRepo); current {
@@ -505,6 +686,9 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 	}
 
 	if e.runFinishRepo != nil {
+		if e.exptRepo == nil {
+			return errno.NewMQRetryErr("complete repository missing")
+		}
 		current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
 		if err != nil {
 			return errno.WrapMQRetryErr(err)
@@ -514,16 +698,28 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 		}
 		if current.ExptType == entity.ExptType_Offline {
 			if current.LatestRunID != exptRunID {
+				captureCompleteResult(ctx, &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishNonCurrent})
 				return nil
 			}
-			// A failed retry setup can leave the previous experiment terminal while
-			// the newly logged current run is Pending. Do not recalculate that snapshot.
-			if entity.IsExptFinished(current.Status) && e.runLogRepo != nil {
-				run, err := e.runLogRepo.Get(ctx, exptID, exptRunID)
+			lockCtx, cancel, err := e.completeTick(ctx, exptID, exptRunID)
+			if err != nil {
+				return err
+			}
+			defer cancel()
+			ctx = lockCtx
+			current, err = e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
+			if err != nil {
+				return errno.WrapMQRetryErr(err)
+			}
+			if current == nil {
+				return errno.NewMQRetryErr("complete run experiment missing")
+			}
+			if entity.IsExptFinished(current.Status) && current.LatestRunID == exptRunID && e.runLogRepo != nil {
+				logged, err := e.runLogRepo.Get(ctx, exptID, exptRunID)
 				if err != nil {
-					return errno.WrapMQRetryErr(err)
+					return err
 				}
-				if run != nil && run.Status == int64(entity.ExptStatus_Pending) {
+				if logged != nil && logged.Status == int64(entity.ExptStatus_Pending) {
 					return e.cleanupCurrentUnscheduledRun(ctx, exptID, exptRunID, spaceID, fmt.Errorf("run setup did not start"))
 				}
 			}
@@ -531,16 +727,19 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 			for _, fn := range opts {
 				fn(opt)
 			}
-			if opt.Status == entity.ExptStatus_Terminated || opt.Status == entity.ExptStatus_Failed {
-				_, err := e.TerminateCurrentRun(ctx, exptID, exptRunID, spaceID, session, nil, opts...)
-				return err
-			}
-			result, err := e.FinishCurrentRun(ctx, &entity.ExptScheduleEvent{ExptID: exptID, ExptRunID: exptRunID, SpaceID: spaceID, Session: session})
+			data, err := e.commitCompleteData(ctx, current, exptRunID, opt)
 			if err != nil {
 				return err
 			}
-			if result == nil || result.Disposition == entity.ExptRunFinishPending {
+			captureCompleteResult(ctx, data.result)
+			if data.result.Disposition == entity.ExptRunFinishNonCurrent {
+				return nil
+			}
+			if data.result.Disposition == entity.ExptRunFinishPending {
 				return errno.NewMQRetryErr("current run completion pending")
+			}
+			if err := e.CompleteExpt(context.WithValue(ctx, completeDataKey{}, data), exptID, &exptRunID, spaceID, session, opts...); err != nil {
+				return errno.WrapMQRetryErr(err)
 			}
 			return nil
 		}
@@ -588,7 +787,16 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 	if err := e.runLogRepo.Update(ctx, exptID, exptRunID, spaceID, runLogMutableFields(runLog)); err != nil {
 		return err
 	}
-	if _, err := e.mutex.UnlockForce(ctx, e.makeExptMutexLockKey(exptID)); err != nil {
+
+	// Online/legacy completion keeps its original CompleteRun release pair.
+	// Its scheduler can stop after a failed CompleteExpt, so deferring admission
+	// to that second half would strand the lock without a terminal replay path.
+	if entity.ExptRunMode(runLog.Mode) == entity.EvaluationModeRetryItems {
+		_, err = e.mutex.UnlockWithValue(ctx, e.makeExptMutexLockKey(exptID), strconv.FormatInt(exptRunID, 10))
+	} else {
+		_, err = e.mutex.Unlock(e.makeExptMutexLockKey(exptID))
+	}
+	if err != nil {
 		return err
 	}
 
@@ -686,40 +894,102 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		}
 	}
 
-	if e.runFinishRepo != nil {
-		current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
-		if err != nil {
-			return errno.WrapMQRetryErr(err)
-		}
-		if current == nil {
-			return errno.NewMQRetryErr("complete experiment missing")
-		}
-		if current.ExptType == entity.ExptType_Offline {
-			if exptRunID == nil || *exptRunID <= 0 {
-				return errno.NewMQRetryErr("offline completion requires original run identity")
-			}
-			opt := &entity.CompleteExptOption{}
-			for _, fn := range opts {
-				fn(opt)
-			}
-			if opt.Status == entity.ExptStatus_Terminated || opt.Status == entity.ExptStatus_Failed {
-				_, err := e.TerminateCurrentRun(ctx, exptID, *exptRunID, spaceID, session, nil, opts...)
-				return err
-			}
-			_, err := e.FinishCurrentRun(ctx, &entity.ExptScheduleEvent{ExptID: exptID, ExptRunID: *exptRunID, SpaceID: spaceID, Session: session})
-			return err
-		}
-	}
 	const idemKeyPrefix = "CompleteExpt:"
 
 	opt := &entity.CompleteExptOption{}
 	for _, fn := range opts {
 		fn(opt)
 	}
+	data, _ := ctx.Value(completeDataKey{}).(*completeData)
+	if data != nil && (data.result == nil || data.result.Experiment == nil || data.result.Experiment.ID != exptID || exptRunID == nil || data.result.Experiment.LatestRunID != *exptRunID) {
+		return errno.NewMQRetryErr("complete frozen binding missing")
+	}
+	var current *entity.Experiment
+	if e.runFinishRepo != nil {
+		readCtx := ctx
+		if data != nil {
+			var stopRead context.CancelFunc
+			readCtx, stopRead = context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+			defer stopRead()
+			readCtx = contexts.WithCtxWriteDB(readCtx)
+		}
+		var err error
+		if e.exptRepo == nil {
+			return errno.NewMQRetryErr("complete repository missing")
+		}
+		current, err = e.exptRepo.GetByID(readCtx, exptID, spaceID)
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if current == nil {
+			return errno.NewMQRetryErr("complete experiment missing")
+		}
+		if current.ExptType == entity.ExptType_Offline || data != nil {
+			if exptRunID == nil || *exptRunID <= 0 {
+				return errno.NewMQRetryErr("offline completion requires original run identity")
+			}
+			if current.LatestRunID != *exptRunID {
+				captureCompleteResult(ctx, &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishNonCurrent})
+				return nil
+			}
+			if opt.CID == "" {
+				opt.CID = fmt.Sprintf("exptexec:onend:%d", *exptRunID)
+			}
+			if e.idem != nil {
+				seen, err := e.idem.Exist(readCtx, idemKeyPrefix+opt.CID)
+				if err != nil {
+					return err
+				}
+				if seen {
+					return nil
+				}
+			}
+			if data == nil {
+				lockCtx, cancel, err := e.completeTick(ctx, exptID, *exptRunID)
+				if err != nil {
+					return err
+				}
+				defer cancel()
+				ctx = lockCtx
+				current, err = e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
+				if err != nil {
+					return errno.WrapMQRetryErr(err)
+				}
+				if current == nil {
+					return errno.NewMQRetryErr("complete experiment missing")
+				}
+				if current.LatestRunID != *exptRunID {
+					captureCompleteResult(ctx, &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishNonCurrent})
+					return nil
+				}
+				if e.idem != nil {
+					seen, err := e.idem.Exist(ctx, idemKeyPrefix+opt.CID)
+					if err != nil {
+						return err
+					}
+					if seen {
+						return nil
+					}
+				}
+				data, err = e.commitCompleteData(ctx, current, *exptRunID, opt)
+				if err != nil {
+					return err
+				}
+				captureCompleteResult(ctx, data.result)
+				if data.result.Disposition == entity.ExptRunFinishNonCurrent {
+					return nil
+				}
+				if data.result.Disposition == entity.ExptRunFinishPending {
+					return errno.NewMQRetryErr("current run completion pending")
+				}
+				ctx = context.WithValue(ctx, completeDataKey{}, data)
+			}
+		}
+	}
 	if interval := opt.CompleteInterval; interval > 0 {
 		time.Sleep(interval)
 	}
-	if len(opt.CID) > 0 {
+	if data == nil && len(opt.CID) > 0 {
 		if exist, err := e.idem.Exist(ctx, idemKeyPrefix+opt.CID); err != nil {
 			logs.CtxInfo(ctx, "Exist fail, key: %v", opt.CID)
 		} else {
@@ -730,7 +1000,11 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		}
 	}
 
-	got, err := e.exptRepo.GetByID(ctx, exptID, spaceID)
+	got := current
+	var err error
+	if got == nil {
+		got, err = e.exptRepo.GetByID(ctx, exptID, spaceID)
+	}
 	if err != nil {
 		if se, ok := errorx.FromStatusError(err); ok && se.Code() == errno.ResourceNotFoundCode {
 			// 实验已被删除。这里**刻意不补释放额度**：拿不到实验就拿不到
@@ -747,31 +1021,40 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		return err
 	}
 
-	stats, err := e.exptResultService.CalculateStats(ctx, exptID, spaceID, session)
-	if err != nil {
-		return err
-	}
-
-	if err := e.statsRepo.UpdateByExptID(ctx, exptID, spaceID, &entity.ExptStats{
-		SuccessItemCnt:    int32(stats.SuccessItemCnt),
-		PendingItemCnt:    int32(stats.PendingItemCnt),
-		FailItemCnt:       int32(stats.FailItemCnt),
-		ProcessingItemCnt: int32(stats.ProcessingItemCnt),
-		TerminatedItemCnt: int32(stats.TerminatedItemCnt),
-	}); err != nil {
-		return err
-	}
-
+	var stats *entity.ExptCalculateStats
 	status := opt.Status
-	if !entity.IsExptFinished(status) {
-		// ⚠️ 判据中**不含** stats.TerminatedItemCnt（design D5）：terminated 是用户主动放弃的行，不是跑失败。
-		// 保留它会让「用户终止了 2 行、其余全绿」的实验渲染成红色 Failed 并触发失败侧 webhook。
-		// 实验级 Kill 不受影响：它走 opt.Status=Terminated，IsExptFinished 为真、根本不进这个分支。
-		if stats.FailItemCnt > 0 || stats.ProcessingItemCnt > 0 || stats.PendingItemCnt > 0 {
-			status = entity.ExptStatus_Failed
-		} else {
-			status = entity.ExptStatus_Success
+	if data != nil {
+		got = data.result.Experiment
+		status = got.Status
+	} else {
+		calculated, err := e.exptResultService.CalculateStats(ctx, exptID, spaceID, session)
+		stats = calculated
+		if err != nil {
+			return err
 		}
+
+		if err := e.statsRepo.UpdateByExptID(ctx, exptID, spaceID, &entity.ExptStats{
+			SuccessItemCnt:    int32(calculated.SuccessItemCnt),
+			PendingItemCnt:    int32(calculated.PendingItemCnt),
+			FailItemCnt:       int32(calculated.FailItemCnt),
+			ProcessingItemCnt: int32(calculated.ProcessingItemCnt),
+			TerminatedItemCnt: int32(calculated.TerminatedItemCnt),
+		}); err != nil {
+			return err
+		}
+
+		status = opt.Status
+		if !entity.IsExptFinished(status) {
+			// ⚠️ 判据中**不含** calculated.TerminatedItemCnt（design D5）：terminated 是用户主动放弃的行，不是跑失败。
+			// 保留它会让「用户终止了 2 行、其余全绿」的实验渲染成红色 Failed 并触发失败侧 webhook。
+			// 实验级 Kill 不受影响：它走 opt.Status=Terminated，IsExptFinished 为真、根本不进这个分支。
+			if calculated.FailItemCnt > 0 || calculated.ProcessingItemCnt > 0 || calculated.PendingItemCnt > 0 {
+				status = entity.ExptStatus_Failed
+			} else {
+				status = entity.ExptStatus_Success
+			}
+		}
+
 	}
 
 	// ★ 实验终态时，未跑完的 item 的中心调度额度必须在这里释放。
@@ -800,16 +1083,39 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	// ★ 紧跟在释放之后：把 item run log 里仍未终态的行一并置终态。
 	// 顺序不可调换 —— 上面那行靠 run log 的 Queueing/Processing 反查待释放集合，
 	// 先置终态它就一条都查不到（静默不释放）。理由见 terminateIncompleteItemRunLogs。
-	e.terminateIncompleteItemRunLogs(ctx, got, exptRunID)
+	if data == nil {
+		e.terminateIncompleteItemRunLogs(ctx, got, exptRunID)
+	}
 
-	if !opt.NoCompleteItemTurn {
-		incompleteTurnIDs, err := e.exptResultService.GetIncompleteTurns(ctx, exptID, spaceID, session)
+	resourceCtx := ctx
+	stopResources := func() {}
+	if data != nil {
+		resourceCtx, stopResources = context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+	}
+	defer stopResources()
+	if data != nil && len(data.sources) > 0 {
+		var ids []int64
+		for _, source := range data.sources {
+			ids = append(ids, source.Current.ItemID)
+		}
+		_ = e.terminateSandboxExecutesForCancelledItems(resourceCtx, spaceID, got.TargetSpaceID, exptID, exptRunID, ids)
+	}
+	if !opt.NoCompleteItemTurn && data != nil && data.sources != nil && ctx.Err() == nil {
+		if err := e.refreshTerminatedRunFilters(ctx, &entity.ExptScheduleEvent{SpaceID: spaceID, ExptID: exptID, ExptRunID: *exptRunID}, data.sources); err != nil {
+			return err
+		}
+	}
+	if !opt.NoCompleteItemTurn && (data == nil || data.sources == nil) && e.exptResultService != nil {
+		incompleteTurnIDs, err := e.exptResultService.GetIncompleteTurns(resourceCtx, exptID, spaceID, session)
 		if err != nil {
 			return err
 		}
 
 		switch status {
 		case entity.ExptStatus_Terminated:
+			if data != nil {
+				break
+			}
 			terminatedItemIDSet := make(map[int64]bool)
 			for _, chunk := range gslice.Chunk(incompleteTurnIDs, 30) {
 				if err := e.terminateItemTurns(ctx, exptID, chunk, spaceID, session); err != nil {
@@ -851,7 +1157,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 					itemIDSet[itemTurnID.ItemID] = true
 				}
 				itemIDs := maps.ToSlice(itemIDSet, func(k int64, v bool) int64 { return k })
-				_ = e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, exptRunID, itemIDs)
+				_ = e.terminateSandboxExecutesForCancelledItems(resourceCtx, spaceID, got.TargetSpaceID, exptID, exptRunID, itemIDs)
 			}
 		}
 	}
@@ -865,7 +1171,39 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	if len(opt.StatusMessage) > 0 {
 		exptDo.StatusMessage = opt.StatusMessage
 	}
-	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
+	if data == nil {
+		if err := e.exptRepo.Update(ctx, exptDo); err != nil {
+			return err
+		}
+	} else {
+		exptDo.EndAt = got.EndAt
+	}
+
+	if e.quotaRepo != nil {
+		quotaCtx := ctx
+		stopQuota := func() {}
+		if data != nil {
+			quotaCtx, stopQuota = context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+		}
+		defer stopQuota()
+		if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(quotaCtx, exptID, spaceID, session); err != nil {
+			return err
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		if data != nil {
+			if releaseErr := e.releaseCompleteAdmission(resourceCtx, exptID, *exptRunID, spaceID); releaseErr != nil {
+				return errors.Join(errno.WrapMQRetryErr(err), releaseErr)
+			}
+			// Resource cleanup completed despite caller cancellation. Record the
+			// successful release so its error replay cannot release admission twice.
+			if e.idem != nil && opt.CID != "" {
+				if markErr := e.idem.Set(resourceCtx, idemKeyPrefix+opt.CID, 3*time.Minute); markErr != nil {
+					logs.CtxError(resourceCtx, "CompleteExpt SetNX fail, expt_id: %v, err: %v", exptID, markErr)
+				}
+			}
+			return errno.WrapMQRetryErr(err)
+		}
 		return err
 	}
 
@@ -880,17 +1218,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		}
 	}
 
-	if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(ctx, exptID, spaceID, session); err != nil {
-		return err
-	}
-
-	if len(opt.CID) > 0 {
-		if err := e.idem.Set(ctx, idemKeyPrefix+opt.CID, time.Second*60*3); err != nil {
-			logs.CtxError(ctx, "CompleteExpt SetNX fail, expt_id: %v, err: %v", exptID, err)
-		}
-	}
-
-	if !opt.NoAggrCalculate {
+	if !opt.NoAggrCalculate && e.exptAggrResultService != nil {
 		if err = e.exptAggrResultService.PublishExptAggrResultEvent(ctx, &entity.AggrCalculateEvent{
 			ExperimentID:  exptID,
 			SpaceID:       spaceID,
@@ -901,6 +1229,12 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	}
 
 	fromStatus := got.Status
+	if data != nil {
+		fromStatus = data.from
+		if entity.IsExptFinished(fromStatus) {
+			fromStatus = entity.ExptStatus_Processing
+		}
+	}
 	got.Status = status
 	got.EndAt = exptDo.EndAt
 
@@ -908,7 +1242,9 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		logs.CtxWarn(ctx, "[ExptEval] AfterCompleteExpt failed, expt_id: %v, status: %v, error: %v", exptID, status, err)
 	}
 
-	e.mtr.EmitExptExecResult(spaceID, int64(got.ExptType), int64(status), gptr.Indirect(got.StartAt))
+	if e.mtr != nil {
+		e.mtr.EmitExptExecResult(spaceID, int64(got.ExptType), int64(status), gptr.Indirect(got.StartAt))
+	}
 
 	// SandboxAgent 稳定性打点: experiment_finished + experiment_duration
 	// 从 lifecycle event 迁移到这里的原因: lifecycle event 走 rocket MQ, 灰度实例常常
@@ -918,6 +1254,18 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 
 	logs.CtxInfo(ctx, "[ExptEval] CompleteExpt success, expt_id: %v, status: %v, stats: %v", exptID, status, json.Jsonify(stats))
 
+	if data != nil {
+		if err := e.releaseCompleteAdmission(resourceCtx, exptID, *exptRunID, spaceID); err != nil {
+			return err
+		}
+	}
+	// Done includes the paired admission release. A failed release must remain
+	// replayable; a seen CID must never perform another release.
+	if e.idem != nil && len(opt.CID) > 0 {
+		if err := e.idem.Set(resourceCtx, idemKeyPrefix+opt.CID, 3*time.Minute); err != nil {
+			logs.CtxError(resourceCtx, "CompleteExpt SetNX fail, expt_id: %v, err: %v", exptID, err)
+		}
+	}
 	return nil
 }
 
@@ -992,7 +1340,7 @@ func (e *ExptMangerImpl) notifyWorkflowPipelineOnExptFinished(ctx context.Contex
 }
 
 func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity.Experiment, exptRunID *int64, fromStatus entity.ExptStatus) error {
-	if !entity.IsExptFinished(expt.Status) {
+	if !entity.IsExptFinished(expt.Status) || e.publisher == nil {
 		return nil
 	}
 
@@ -1098,7 +1446,15 @@ func (e *ExptMangerImpl) releaseCentralQuotaForRun(
 	//     （判据只能用预占时刻，分不出"卡死很久"与"刚被接管"，按它释放会真超发）；
 	//   zombie 清理只扫 Processing，但实验已终态、daemon 不再跳。
 	// 三条路都不接 ⇒ 永久泄漏。
-	observations, err := e.incompleteItemObservationsForRelease(ctx, expt.ID, runID, expt.SpaceID)
+	var observations []*repo.ExptDispatchObservation
+	var err error
+	if data, ok := ctx.Value(completeDataKey{}).(*completeData); ok && len(data.sources) > 0 {
+		for _, source := range data.sources {
+			observations = append(observations, &repo.ExptDispatchObservation{ItemID: source.Current.ItemID, RequestID: source.Current.RequestID})
+		}
+	} else {
+		observations, err = e.incompleteItemObservationsForRelease(ctx, expt.ID, runID, expt.SpaceID)
+	}
 	if err != nil {
 		// 查不到就不猜：宁可这次不释放（留给对账/人工），也不能凭空构造 item 列表。
 		logs.CtxError(ctx, "[CentralReservation] scan incomplete items fail on %s, skip release, expt_id: %v, expt_run_id: %v, err: %v",
@@ -1543,6 +1899,28 @@ func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.C
 				return err
 			}
 		}
+	}
+	if data, ok := ctx.Value(completeDataKey{}).(*completeData); ok && len(data.sources) > 0 {
+		seen := map[int64]bool{}
+		var records []int64
+		for _, source := range data.sources {
+			ids := frozenTargetRecordIDs(source)
+			for _, turn := range source.CanonicalTurns {
+				if turn != nil && turn.TargetResultID > 0 {
+					ids = append(ids, turn.TargetResultID)
+				}
+			}
+			for _, id := range ids {
+				if !seen[id] {
+					seen[id] = true
+					records = append(records, id)
+				}
+			}
+		}
+		if len(records) == 0 {
+			return nil
+		}
+		return e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(ctx, resolveLoadSpaceID(spaceID, targetSourceSpaceID), records, int32(errno.AsyncEvalTargetTerminatedCode), "async eval target terminated: experiment cancelled", false, waitForDestroy...)
 	}
 	turnRunLogs, err := e.turnResultRepo.MGetItemTurnRunLogs(ctx, exptID, *exptRunID, terminatedItemIDs, spaceID)
 	if err != nil {

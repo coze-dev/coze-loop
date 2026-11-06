@@ -170,15 +170,16 @@ func TestOfflineTrialSubsetFinishesWithCanonicalCounts(t *testing.T) {
 			quota := repomocks.NewMockQuotaRepo(ctrl)
 			quota.EXPECT().CreateOrUpdate(gomock.Any(), int64(3), gomock.Any(), gomock.Any()).Return(nil)
 			idem := idemmocks.NewMockIdempotentService(ctrl)
-			idem.EXPECT().Exist(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, key string) (bool, error) { return key == "finish-cleanup:1:2", nil }).AnyTimes()
-			idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			seen := map[string]bool{}
+			idem.EXPECT().Exist(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, key string) (bool, error) { return seen[key], nil }).AnyTimes()
+			idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, key string, _ time.Duration) error { seen[key] = true; return nil }).AnyTimes()
 			config := componentmocks.NewMockIConfiger(ctrl)
 			config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{})
 			items := repomocks.NewMockIExptItemResultRepo(ctrl)
 			items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(0), int64(1), int64(3)).Return(nil, int64(0), nil)
 			factory, _ := finishRealLockerFactory(t)
 			port := &trialSubsetFinishPort{IExptRunFinishRepo: exptmysql.NewExptRunFinishDAO(provider), current: expt}
-			manager := &ExptMangerImpl{runFinishRepo: port, exptRepo: experiments, quotaRepo: quota, manualRetryLocker: factory, idem: idem}
+			manager := &ExptMangerImpl{runFinishRepo: port, exptRepo: experiments, quotaRepo: quota, manualRetryLocker: factory, mutex: factory().WithHolder(legacyStaticHolderValue), runLogRepo: &completedFixtureRunRepo{event: event}, idem: idem}
 			calibration := &finishTickCalibration{ready: true}
 			trial := &ExptTrialRunExec{ExptSubmitExec: &ExptSubmitExec{manager: manager, idem: idem, configer: config, exptItemResultRepo: items, resultSvc: calibration}}
 			scheduler := &ExptSchedulerImpl{Manager: manager, Mutex: factory()}

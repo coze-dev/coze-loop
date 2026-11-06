@@ -18,6 +18,7 @@ import (
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
+	experimentmysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	mysqlmodel "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -95,17 +96,20 @@ func TestLifecycleProtocolFinishRetainsAdmissionUntilEffectsComplete(t *testing.
 				})
 				mgr := &ExptMangerImpl{manualRetryLocker: factory, mutex: factory().WithHolder("evaluation"), exptRepo: expts, quotaRepo: quota, idem: &cleanupTestIdem{}}
 				event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Session: &entity.Session{}}
+				if holder == "2" {
+					event.ExptRunMode = entity.EvaluationModeRetryItems
+				}
 				ctx := context.Background()
 				var err error
 				if endpoint == "natural" {
-					err = mgr.cleanupNaturallyFinishedRun(ctx, event, current)
+					err = completeNaturalFixture(mgr, ctx, event, current)
 				} else {
 					if endpoint == "cancelled" {
 						var cancel context.CancelFunc
 						ctx, cancel = context.WithCancel(ctx)
 						cancel()
 					}
-					err = mgr.cleanupTerminatedRun(ctx, event, current, nil, &entity.CompleteExptOption{NoCompleteItemTurn: true})
+					err = completeTerminationFixture(mgr, ctx, event, current, nil, &entity.CompleteExptOption{NoCompleteItemTurn: true})
 				}
 				if endpoint == "cancelled" {
 					require.Error(t, err)
@@ -143,9 +147,9 @@ func TestLifecycleProtocolCompletedReplayDoesNotTouchReplacementAdmission(t *tes
 				}
 				var err error
 				if endpoint == "natural" {
-					err = mgr.cleanupNaturallyFinishedRun(context.Background(), event, &frozen)
+					err = completeNaturalFixture(mgr, context.Background(), event, &frozen)
 				} else {
-					err = mgr.cleanupTerminatedRun(ctx, event, &frozen, nil, &entity.CompleteExptOption{NoCompleteItemTurn: true})
+					err = completeTerminationFixture(mgr, ctx, event, &frozen, nil, &entity.CompleteExptOption{NoCompleteItemTurn: true})
 				}
 				require.NoError(t, err)
 				actual, err := server.Get("expt_run_mutex_lock:1")
@@ -180,17 +184,18 @@ func TestLifecycleProtocolRetryItemsNumericJoinPreserved(t *testing.T) {
 // The real SQL composite finisher must preserve its atomic counts/endAt and
 // current-run condition through all public completion entry points.
 func TestLifecycleProtocolSQLCompletionEndpoints(t *testing.T) {
-	for _, numeric := range []bool{false, true} {
+	for _, mode := range []entity.ExptRunMode{entity.EvaluationModeSubmit, entity.EvaluationModeRetryItems} {
 		for _, endpoint := range []string{"natural", "complete_run", "complete_expt"} {
-			t.Run(fmt.Sprintf("numeric_%v/%s", numeric, endpoint), func(t *testing.T) {
+			t.Run(fmt.Sprintf("mode_%v/%s", mode, endpoint), func(t *testing.T) {
 				f := newLateWriteFixture(t, "rq1")
 				require.NoError(t, f.conn.Model(&mysqlmodel.ExptItemResult{}).Where("space_id=?", f.space).Update("status", int32(entity.ItemRunState_Success)).Error)
 				require.NoError(t, f.conn.Model(&mysqlmodel.ExptItemResultRunLog{}).Where("space_id=?", f.space).Updates(map[string]any{"status": int32(entity.ItemRunState_Success), "result_state": int32(entity.ExptItemResultStateResulted)}).Error)
 				require.NoError(t, f.conn.Model(&mysqlmodel.ExptTurnResult{}).Where("space_id=?", f.space).Update("status", int32(entity.TurnRunState_Success)).Error)
+				require.NoError(t, f.conn.Model(&mysqlmodel.ExptRunLog{}).Where("space_id=?", f.space).Update("mode", int32(mode)).Error)
 				factory, server := finishRealLockerFactory(t)
 				key := fmt.Sprintf("expt_run_mutex_lock:%d", f.expt)
 				holder := "evaluation"
-				if numeric {
+				if mode == entity.EvaluationModeRetryItems {
 					holder = fmt.Sprint(f.run)
 				}
 				require.NoError(t, server.Set(key, holder))
@@ -208,7 +213,7 @@ func TestLifecycleProtocolSQLCompletionEndpoints(t *testing.T) {
 				})
 				resultSvc := svcmocks.NewMockExptResultService(ctrl)
 				resultSvc.EXPECT().GetIncompleteTurns(gomock.Any(), f.expt, f.space, gomock.Any()).Return(nil, nil).AnyTimes()
-				mgr := &ExptMangerImpl{runFinishRepo: experimentrepo.NewExptRunFinishRepo(f.provider), manualRetryLocker: factory, mutex: factory().WithHolder("evaluation"), exptRepo: f.experimentRepo(), quotaRepo: quota, idem: &cleanupTestIdem{}, exptResultService: &finishCalibrationTestResult{ExptResultService: resultSvc, ready: true}}
+				mgr := &ExptMangerImpl{runFinishRepo: experimentrepo.NewExptRunFinishRepo(f.provider), runLogRepo: experimentrepo.NewExptRunLogRepo(experimentmysql.NewExptRunLogDAO(f.provider)), manualRetryLocker: factory, mutex: factory().WithHolder("evaluation"), exptRepo: f.experimentRepo(), quotaRepo: quota, idem: &cleanupTestIdem{}, exptResultService: &finishCalibrationTestResult{ExptResultService: resultSvc, ready: true}}
 				event := &entity.ExptScheduleEvent{ExptID: f.expt, ExptRunID: f.run, SpaceID: f.space, Session: &entity.Session{}}
 				complete := func() error {
 					switch endpoint {
@@ -247,7 +252,6 @@ func TestLifecycleProtocolFailedPreparationReleaseContracts(t *testing.T) {
 		cancelled, released bool
 	}{
 		{"ordinary_evaluation", "evaluation", entity.EvaluationModeSubmit, 2, false, true},
-		{"ordinary_numeric_badf", "2", entity.EvaluationModeSubmit, 2, false, true},
 		{"retry_items_numeric", "2", entity.EvaluationModeRetryItems, 2, false, true},
 		{"other_numeric_owner", "99", entity.EvaluationModeSubmit, 2, false, false},
 		{"confirmed_replacement", "evaluation", entity.EvaluationModeSubmit, 99, false, false},
@@ -307,14 +311,14 @@ func TestLifecycleProtocolLateCleanupSkipsConfirmedNumericReplacement(t *testing
 				ctx := context.Background()
 				var err error
 				if endpoint == "natural" {
-					err = mgr.cleanupNaturallyFinishedRun(ctx, event, frozen)
+					err = completeNaturalFixture(mgr, ctx, event, frozen)
 				} else {
 					if endpoint == "cancelled" {
 						var cancel context.CancelFunc
 						ctx, cancel = context.WithCancel(ctx)
 						cancel()
 					}
-					err = mgr.cleanupTerminatedRun(ctx, event, frozen, nil, &entity.CompleteExptOption{NoCompleteItemTurn: true})
+					err = completeTerminationFixture(mgr, ctx, event, frozen, nil, &entity.CompleteExptOption{NoCompleteItemTurn: true})
 				}
 				require.NoError(t, err, "confirmed replacement is an idempotent exit, including resource-only cancellation replay")
 				actual, err := server.Get(key)

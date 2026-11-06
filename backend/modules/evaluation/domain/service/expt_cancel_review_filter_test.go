@@ -125,7 +125,11 @@ func TestFilterRefreshFinishedReplayBeforeNotificationMarker(t *testing.T) {
 				m.publisher = pub
 			}
 			_, err := m.TerminateCurrentRun(context.Background(), f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
-			require.Error(t, err, "a failed filter or notification must remain retryable after commit")
+			if fault == "filter_write" {
+				require.Error(t, err, "failed canonical filter refresh must remain retryable after commit")
+			} else {
+				require.NoError(t, err, "standard lifecycle publication retries internally and remains best effort")
+			}
 			require.Positive(t, attempts)
 			before := f.snapshot()
 			store.fail = false
@@ -153,7 +157,7 @@ func TestFilterRefreshMissingPayloadCannotMarkNotificationComplete(t *testing.T)
 	_, err := m.TerminateCurrentRun(context.Background(), f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
 	require.Error(t, err)
 	require.True(t, errno.NeedMQRetry(err))
-	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("finish-cleanup:%d:%d", f.expt, f.run))
+	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run))
 	require.NoError(t, err)
 	require.False(t, marked)
 	require.Empty(t, store.rows)
