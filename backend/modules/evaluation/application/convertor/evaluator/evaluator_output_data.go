@@ -24,6 +24,7 @@ func ConvertEvaluatorOutputDataDTO2DO(dto *evaluatordto.EvaluatorOutputData) *ev
 		TimeConsumingMS:   dto.GetTimeConsumingMs(),
 		Stdout:            dto.GetStdout(),
 		ExtraOutput:       ConvertEvaluatorExtraOutputContentDTO2DO(dto.ExtraOutput),
+		EvidenceArchive:   ConvertEvaluatorEvidenceArchiveDTO2DO(dto.EvidenceArchive),
 	}
 }
 
@@ -39,7 +40,44 @@ func ConvertEvaluatorOutputDataDO2DTO(do *evaluatorentity.EvaluatorOutputData) *
 		TimeConsumingMs:   gptr.Of(do.TimeConsumingMS),
 		Stdout:            gptr.Of(do.Stdout),
 		ExtraOutput:       ConvertEvaluatorExtraOutputContentDO2DTO(do.ExtraOutput),
+		EvidenceArchive:   ConvertEvaluatorEvidenceArchiveDO2DTO(do.EvidenceArchive),
 	}
+}
+
+func ConvertEvaluatorEvidenceArchiveDTO2DO(dto *evaluatordto.EvaluatorEvidenceArchive) *evaluatorentity.EvaluatorEvidenceArchive {
+	if dto == nil {
+		return nil
+	}
+	return &evaluatorentity.EvaluatorEvidenceArchive{
+		SchemaVersion:  dto.GetSchemaVersion(),
+		ObjectKey:      dto.GetObjectKey(),
+		Status:         dto.GetStatus(),
+		Trigger:        dto.GetTrigger(),
+		SizeBytes:      dto.GetSizeBytes(),
+		SHA256:         dto.GetSha256(),
+		TruncatedFiles: dto.GetTruncatedFiles(),
+		Error:          dto.GetError(),
+	}
+}
+
+func ConvertEvaluatorEvidenceArchiveDO2DTO(do *evaluatorentity.EvaluatorEvidenceArchive) *evaluatordto.EvaluatorEvidenceArchive {
+	if do == nil {
+		return nil
+	}
+	dto := &evaluatordto.EvaluatorEvidenceArchive{
+		SchemaVersion:  gptr.Of(do.SchemaVersion),
+		ObjectKey:      gptr.Of(do.ObjectKey),
+		Status:         gptr.Of(do.Status),
+		Trigger:        gptr.Of(do.Trigger),
+		SizeBytes:      gptr.Of(do.SizeBytes),
+		Sha256:         gptr.Of(do.SHA256),
+		TruncatedFiles: gptr.Of(do.TruncatedFiles),
+		Error:          gptr.Of(do.Error),
+	}
+	if do.FornaxEvaluatorLogURL != "" {
+		dto.FornaxEvaluatorLogURL = gptr.Of(do.FornaxEvaluatorLogURL)
+	}
+	return dto
 }
 
 // ConvertEvaluatorExtraOutputContentDTO2DO 将 DTO 转换为 DO
@@ -189,6 +227,7 @@ func ToInvokeEvaluatorOutputDataDO(outputData *spi.InvokeEvaluatorOutputData, st
 			EvaluatorUsage:    toInvokeEvaluatorUsageDO(outputData.EvaluatorUsage),
 			EvaluatorRunError: nil,
 			ExtraOutput:       toInvokeEvaluatorExtraOutputDO(outputData.ExtraOutput),
+			EvidenceArchive:   toInvokeEvaluatorEvidenceArchiveDO(outputData.EvidenceArchive),
 		}
 	case spi.InvokeEvaluatorRunStatus_FAILED:
 		return &evaluatorentity.EvaluatorOutputData{
@@ -196,6 +235,7 @@ func ToInvokeEvaluatorOutputDataDO(outputData *spi.InvokeEvaluatorOutputData, st
 			EvaluatorUsage:    toInvokeEvaluatorUsageDO(outputData.EvaluatorUsage),
 			EvaluatorRunError: toInvokeEvaluatorRunErrorDO(outputData.EvaluatorRunError),
 			ExtraOutput:       toInvokeEvaluatorExtraOutputDO(outputData.ExtraOutput),
+			EvidenceArchive:   toInvokeEvaluatorEvidenceArchiveDO(outputData.EvidenceArchive),
 		}
 	default:
 		return nil
@@ -247,4 +287,20 @@ func toInvokeEvaluatorExtraOutputDO(extraOutput *spi.EvaluatorExtraOutputContent
 	result.URI = extraOutput.URI
 	result.URL = extraOutput.URL
 	return result
+}
+
+func toInvokeEvaluatorEvidenceArchiveDO(archive *spi.EvaluatorEvidenceArchive) *evaluatorentity.EvaluatorEvidenceArchive {
+	if archive == nil {
+		return nil
+	}
+	return &evaluatorentity.EvaluatorEvidenceArchive{
+		SchemaVersion:  archive.GetSchemaVersion(),
+		ObjectKey:      archive.GetObjectKey(),
+		Status:         archive.GetStatus(),
+		Trigger:        archive.GetTrigger(),
+		SizeBytes:      archive.GetSizeBytes(),
+		SHA256:         archive.GetSha256(),
+		TruncatedFiles: archive.GetTruncatedFiles(),
+		Error:          archive.GetError(),
+	}
 }

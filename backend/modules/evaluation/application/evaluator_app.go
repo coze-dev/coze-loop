@@ -44,6 +44,17 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+const evaluatorEvidenceArchiveURLTTL = 10 * time.Minute
+
+func isEvaluatorEvidenceArchiveDownloadable(status string) bool {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "complete", "partial":
+		return true
+	default:
+		return false
+	}
+}
+
 // NewEvaluatorHandlerImpl 创建 EvaluatorService 实例
 func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 	configer conf.IConfiger,
@@ -1310,6 +1321,9 @@ func (e *EvaluatorHandlerImpl) GetEvaluatorRecord(ctx context.Context, request *
 	if err := e.transformExtraOutputURIToURL(ctx, evaluatorRecord); err != nil {
 		logs.CtxError(ctx, "[GetEvaluatorRecord] transformExtraOutputURIToURL fail, err: %v", err)
 	}
+	if err := fillEvaluatorEvidenceArchiveURLs(ctx, e.fileProvider, []*entity.EvaluatorRecord{evaluatorRecord}, nil); err != nil {
+		logs.CtxError(ctx, "[GetEvaluatorRecord] fillEvaluatorEvidenceArchiveURLs fail, err: %v", err)
+	}
 	dto := evaluatorconvertor.ConvertEvaluatorRecordDO2DTO(evaluatorRecord)
 	e.userInfoService.PackUserInfo(ctx, []userinfo.UserInfoCarrier{dto})
 	return &evaluatorservice.GetEvaluatorRecordResponse{
@@ -1343,6 +1357,9 @@ func (e *EvaluatorHandlerImpl) BatchGetEvaluatorRecords(ctx context.Context, req
 		}); err != nil {
 			return nil, err
 		}
+	}
+	if err := fillEvaluatorEvidenceArchiveURLs(ctx, e.fileProvider, evaluatorRecords, nil); err != nil {
+		logs.CtxError(ctx, "[BatchGetEvaluatorRecords] fillEvaluatorEvidenceArchiveURLs fail, err: %v", err)
 	}
 	dtoList := make([]*evaluatordto.EvaluatorRecord, 0, len(evaluatorRecords))
 	for _, evaluatorRecord := range evaluatorRecords {
@@ -1586,6 +1603,51 @@ func (e *EvaluatorHandlerImpl) transformExtraOutputURIToURL(ctx context.Context,
 		extraOutput.URL = gptr.Of(url)
 	}
 	return nil
+}
+
+func fillEvaluatorEvidenceArchiveURLs(ctx context.Context, fileProvider rpc.IFileProvider, records []*entity.EvaluatorRecord, callerSpaceID *int64) error {
+	requests := make([]*rpc.EvidenceArchiveDownloadRequest, 0, len(records))
+	for _, record := range records {
+		if record == nil || record.EvaluatorOutputData == nil || record.EvaluatorOutputData.EvidenceArchive == nil {
+			continue
+		}
+		archive := record.EvaluatorOutputData.EvidenceArchive
+		archive.FornaxEvaluatorLogURL = ""
+		caller := record.SpaceID
+		if callerSpaceID != nil {
+			caller = *callerSpaceID
+		}
+		if caller <= 0 || record.ID <= 0 || record.SpaceID <= 0 || archive.ObjectKey == "" {
+			record.EvaluatorOutputData.EvidenceArchive = nil
+			continue
+		}
+		requests = append(requests, &rpc.EvidenceArchiveDownloadRequest{
+			CallerSpaceID: caller, RecordID: record.ID, ResourceSpaceID: record.SpaceID,
+			EvaluatorVersionID: record.EvaluatorVersionID, ObjectKey: archive.ObjectKey, Status: archive.Status,
+		})
+	}
+	if len(requests) == 0 {
+		return nil
+	}
+	var urls map[int64]string
+	var err error
+	if provider, ok := fileProvider.(rpc.IEvidenceArchiveURLProvider); ok {
+		urls, err = provider.MGetEvidenceArchiveDownloadURL(ctx, requests, evaluatorEvidenceArchiveURLTTL)
+	}
+	for _, record := range records {
+		if record == nil || record.EvaluatorOutputData == nil || record.EvaluatorOutputData.EvidenceArchive == nil {
+			continue
+		}
+		url, authorized := urls[record.ID]
+		if !authorized || record.ID <= 0 || record.SpaceID <= 0 {
+			record.EvaluatorOutputData.EvidenceArchive = nil
+			continue
+		}
+		if isEvaluatorEvidenceArchiveDownloadable(record.EvaluatorOutputData.EvidenceArchive.Status) {
+			record.EvaluatorOutputData.EvidenceArchive.FornaxEvaluatorLogURL = url
+		}
+	}
+	return err
 }
 
 // ValidateEvaluator 验证评估器

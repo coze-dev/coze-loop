@@ -7397,6 +7397,31 @@ func TestExperimentApplication_transformExtraOutputURIsToURLs(t *testing.T) {
 	}
 }
 
+func TestFillItemEvidenceArchiveURLs(t *testing.T) {
+	records := map[int64]*entity.EvaluatorRecord{
+		1: newEvidenceArchiveRecordForTest(1, 200, "evidence/a.tar.gz", "complete"),
+		2: newEvidenceArchiveRecordForTest(2, 200, "evidence/b.tar.gz", "partial"),
+		3: newEvidenceArchiveRecordForTest(3, 200, "evidence/a.tar.gz", "pending"),
+		4: newEvidenceArchiveRecordForTest(4, 200, "evidence/b.tar.gz", "failed"),
+	}
+	items := []*entity.ItemResult{{TurnResults: []*entity.TurnResult{{ExperimentResults: []*entity.ExperimentResult{{
+		Payload: &entity.ExperimentTurnPayload{EvaluatorOutput: &entity.TurnEvaluatorOutput{EvaluatorRecords: records}},
+	}}}}}}
+	provider := &evidenceArchiveURLProviderStub{urls: map[string]string{"evidence/a.tar.gz": "https://signed.example/a", "evidence/b.tar.gz": "https://signed.example/b"}}
+	require.NoError(t, fillItemEvidenceArchiveURLs(context.Background(), provider, items, 100))
+	assert.ElementsMatch(t, []string{"evidence/a.tar.gz", "evidence/b.tar.gz"}, provider.gotKeys)
+	assert.Equal(t, 10*time.Minute, provider.gotTTL)
+	for _, req := range provider.requests {
+		assert.Equal(t, int64(100), req.CallerSpaceID)
+		assert.Equal(t, int64(200), req.ResourceSpaceID)
+		assert.Equal(t, int64(30), req.EvaluatorVersionID)
+	}
+	assert.Equal(t, "https://signed.example/a", records[1].EvaluatorOutputData.EvidenceArchive.FornaxEvaluatorLogURL)
+	assert.Equal(t, "https://signed.example/b", records[2].EvaluatorOutputData.EvidenceArchive.FornaxEvaluatorLogURL)
+	assert.Empty(t, records[3].EvaluatorOutputData.EvidenceArchive.FornaxEvaluatorLogURL)
+	assert.Empty(t, records[4].EvaluatorOutputData.EvidenceArchive.FornaxEvaluatorLogURL)
+}
+
 func TestExperimentApplication_BatchGetExperimentResult_ExtraOutputURIErrorSwallowed(t *testing.T) {
 	ctx := context.Background()
 	workspaceID := int64(100)
@@ -7494,6 +7519,39 @@ func TestExperimentApplication_BatchGetExperimentResult_ExtraOutputURIErrorSwall
 			}
 		})
 	}
+}
+
+func TestExperimentApplication_BatchGetExperimentResult_EvidenceArchiveURLSignErrorSwallowed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	workspaceID := int64(100)
+	exptID := int64(200)
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	resultSvc := servicemocks.NewMockExptResultService(ctrl)
+	provider := &evidenceArchiveURLProviderStub{err: errors.New("sign failed")}
+	record := &entity.EvaluatorRecord{ID: 1, SpaceID: 100, EvaluatorVersionID: 30, EvaluatorOutputData: &entity.EvaluatorOutputData{
+		EvidenceArchive: &entity.EvaluatorEvidenceArchive{ObjectKey: "evidence/result.tar.gz", Status: "complete"},
+	}}
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(&entity.MGetExperimentReportResult{
+		Total: 1,
+		ItemResults: []*entity.ItemResult{{TurnResults: []*entity.TurnResult{{
+			ExperimentResults: []*entity.ExperimentResult{{
+				ExperimentID: exptID,
+				Payload: &entity.ExperimentTurnPayload{EvaluatorOutput: &entity.TurnEvaluatorOutput{
+					EvaluatorRecords: map[int64]*entity.EvaluatorRecord{1: record},
+				}},
+			}},
+		}}}},
+	}, nil)
+	app := &experimentApplication{auth: auth, resultSvc: resultSvc, fileProvider: provider}
+
+	resp, err := app.BatchGetExperimentResult_(context.Background(), &exptpb.BatchGetExperimentResultRequest{
+		WorkspaceID: workspaceID, ExperimentIds: []int64{exptID},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 10*time.Minute, provider.gotTTL)
+	archive := resp.ItemResults[0].TurnResults[0].ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords[1].EvaluatorOutputData.EvidenceArchive
+	assert.Nil(t, archive.FornaxEvaluatorLogURL)
 }
 
 func Test_hasDuplicates(t *testing.T) {

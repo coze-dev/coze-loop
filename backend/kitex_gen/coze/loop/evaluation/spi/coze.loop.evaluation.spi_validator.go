@@ -170,6 +170,14 @@ func (p *InvokeEvaluatorOutputData) IsValid() error {
 			return fmt.Errorf("field ExtraOutput not valid, %w", err)
 		}
 	}
+	if p.EvidenceArchive != nil {
+		if err := p.EvidenceArchive.IsValid(); err != nil {
+			return fmt.Errorf("field EvidenceArchive not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *EvaluatorEvidenceArchive) IsValid() error {
 	return nil
 }
 func (p *InvokeEvaluatorResult_) IsValid() error {
