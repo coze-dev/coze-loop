@@ -482,9 +482,13 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
-	nextTick, err := mode.ExptEnd(ctx, event, exptDetail, submitted, len(incomplete))
-	if err != nil {
-		return err
+	// Submission can terminalize candidates after the complete scan; allow their next archive pass before ending.
+	nextTick := dispatchByCentral && resourceProtocol && len(toSubmit) > 0 && submitted == 0 && len(incomplete) == 0
+	if !nextTick {
+		nextTick, err = mode.ExptEnd(ctx, event, exptDetail, submitted, len(incomplete))
+		if err != nil {
+			return err
+		}
 	}
 
 	if !nextTick {
