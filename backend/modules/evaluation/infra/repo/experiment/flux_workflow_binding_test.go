@@ -59,3 +59,12 @@ func TestReserveFluxWorkflowBindingOnlyFirstCallerOwnsCopy(t *testing.T) {
 	require.Equal(t, "owner-1", second.BindingID)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
+
+func TestReadyFluxWorkflowBindingRejectsChangedAssetMap(t *testing.T) {
+	repo := NewFluxWorkflowBindingRepo(nil)
+	err := repo.PutReadyFluxWorkflowBinding(context.Background(), 8, 9, &entity.FluxWorkflowBinding{
+		BindingID: "binding", State: "ready", AssetMapJSON: json.RawMessage(`{"skill":"version"}`),
+		AssetMapSHA256: "stale",
+	})
+	require.ErrorContains(t, err, "asset map digest differs")
+}

@@ -10,35 +10,37 @@ import (
 
 // FluxWorkflowBinding pins one evaluation copy to an experiment. Large YAML lives in private object storage.
 type FluxWorkflowBinding struct {
-	ExperimentID          int64  `json:"experiment_id,omitempty"`
-	SpaceID               int64  `json:"space_id,omitempty"`
-	SourceKind            string `json:"source_kind,omitempty"`
-	SourceSpaceID         string `json:"source_space_id,omitempty"`
-	ConsumerSpaceID       string `json:"consumer_space_id,omitempty"`
-	SourceWorkflowID      string `json:"source_workflow_id,omitempty"`
-	SourceRevision        int64  `json:"source_revision,omitempty"`
-	SourceDigest          string `json:"source_digest,omitempty"`
-	SourceTemplateID      string `json:"source_template_id,omitempty"`
-	SourceSnapshotID      string `json:"source_snapshot_id,omitempty"`
-	SourceReleaseID       string `json:"source_release_id,omitempty"`
-	EvalSpaceID           string `json:"eval_space_id,omitempty"`
-	EvalWorkflowID        string `json:"eval_workflow_id,omitempty"`
-	CopyTemplateID        string `json:"copy_template_id,omitempty"`
-	CopySnapshotID        string `json:"copy_snapshot_id,omitempty"`
-	CopyReleaseID         string `json:"copy_release_id,omitempty"`
-	CopyRevision          int64  `json:"copy_revision,omitempty"`
-	CopyDigest            string `json:"copy_digest,omitempty"`
-	CopyYAMLRef           string `json:"copy_yaml_ref,omitempty"`
-	CopyYAMLSHA256        string `json:"copy_yaml_sha256,omitempty"`
-	PolicyDigest          string `json:"policy_digest,omitempty"`
-	ExecutionPolicyJSON   []byte `json:"execution_policy_json,omitempty"`
-	TransformVersion      string `json:"transform_version,omitempty"`
-	NodeMapJSON           []byte `json:"node_map_json,omitempty"`
-	BindingID             string `json:"binding_id,omitempty"`
-	EvalOperatorUsername  string `json:"eval_operator_username,omitempty"`
-	WorkerPostSetupURL    string `json:"worker_post_setup_url,omitempty"`
-	WorkerPostSetupSHA256 string `json:"worker_post_setup_sha256,omitempty"`
-	State                 string `json:"state,omitempty"`
+	ExperimentID          int64           `json:"experiment_id,omitempty"`
+	SpaceID               int64           `json:"space_id,omitempty"`
+	SourceKind            string          `json:"source_kind,omitempty"`
+	SourceSpaceID         string          `json:"source_space_id,omitempty"`
+	ConsumerSpaceID       string          `json:"consumer_space_id,omitempty"`
+	SourceWorkflowID      string          `json:"source_workflow_id,omitempty"`
+	SourceRevision        int64           `json:"source_revision,omitempty"`
+	SourceDigest          string          `json:"source_digest,omitempty"`
+	SourceTemplateID      string          `json:"source_template_id,omitempty"`
+	SourceSnapshotID      string          `json:"source_snapshot_id,omitempty"`
+	SourceReleaseID       string          `json:"source_release_id,omitempty"`
+	EvalSpaceID           string          `json:"eval_space_id,omitempty"`
+	EvalWorkflowID        string          `json:"eval_workflow_id,omitempty"`
+	CopyTemplateID        string          `json:"copy_template_id,omitempty"`
+	CopySnapshotID        string          `json:"copy_snapshot_id,omitempty"`
+	CopyReleaseID         string          `json:"copy_release_id,omitempty"`
+	CopyRevision          int64           `json:"copy_revision,omitempty"`
+	CopyDigest            string          `json:"copy_digest,omitempty"`
+	CopyYAMLRef           string          `json:"copy_yaml_ref,omitempty"`
+	CopyYAMLSHA256        string          `json:"copy_yaml_sha256,omitempty"`
+	PolicyDigest          string          `json:"policy_digest,omitempty"`
+	ExecutionPolicyJSON   []byte          `json:"execution_policy_json,omitempty"`
+	TransformVersion      string          `json:"transform_version,omitempty"`
+	NodeMapJSON           []byte          `json:"node_map_json,omitempty"`
+	AssetMapJSON          json.RawMessage `json:"asset_map_json,omitempty"`
+	AssetMapSHA256        string          `json:"asset_map_sha256,omitempty"`
+	BindingID             string          `json:"binding_id,omitempty"`
+	EvalOperatorUsername  string          `json:"eval_operator_username,omitempty"`
+	WorkerPostSetupURL    string          `json:"worker_post_setup_url,omitempty"`
+	WorkerPostSetupSHA256 string          `json:"worker_post_setup_sha256,omitempty"`
+	State                 string          `json:"state,omitempty"`
 }
 
 // FluxItemRun is the run state kept in eval_target_record.ext for one invoke_id.

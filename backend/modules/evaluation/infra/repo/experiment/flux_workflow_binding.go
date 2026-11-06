@@ -4,7 +4,10 @@
 package experiment
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -66,6 +69,16 @@ func (r *fluxWorkflowBindingRepo) PutReadyFluxWorkflowBinding(ctx context.Contex
 	if ready == nil || ready.BindingID == "" || ready.State != "ready" {
 		return errors.New("Flux Workflow ready binding must have identity and ready state")
 	}
+	if len(ready.AssetMapJSON) != 0 || ready.AssetMapSHA256 != "" {
+		var compact bytes.Buffer
+		if len(ready.AssetMapJSON) == 0 || json.Compact(&compact, ready.AssetMapJSON) != nil {
+			return errors.New("Flux Workflow asset map is invalid")
+		}
+		digest := sha256.Sum256(compact.Bytes())
+		if hex.EncodeToString(digest[:]) != ready.AssetMapSHA256 {
+			return errors.New("Flux Workflow asset map digest differs from content")
+		}
+	}
 	return r.db.NewSession(ctx).Transaction(func(tx *gorm.DB) error {
 		row, conf, err := lockFluxExperiment(ctx, tx, spaceID, exptID)
 		if err != nil {
@@ -76,7 +89,8 @@ func (r *fluxWorkflowBindingRepo) PutReadyFluxWorkflowBinding(ctx context.Contex
 			return errors.New("Flux Workflow binding reservation changed")
 		}
 		if before.State == "ready" {
-			if before.CopyDigest == ready.CopyDigest && before.EvalWorkflowID == ready.EvalWorkflowID && before.CopyTemplateID == ready.CopyTemplateID && before.CopyReleaseID == ready.CopyReleaseID {
+			if before.CopyDigest == ready.CopyDigest && before.EvalWorkflowID == ready.EvalWorkflowID && before.CopyTemplateID == ready.CopyTemplateID && before.CopyReleaseID == ready.CopyReleaseID &&
+				before.AssetMapSHA256 == ready.AssetMapSHA256 && bytes.Equal(before.AssetMapJSON, ready.AssetMapJSON) {
 				return nil
 			}
 			return errors.New("Flux Workflow binding already ready with another copy")
