@@ -79,6 +79,12 @@ func (e ExptResultServiceImpl) BuildExptFilterProjection(ctx context.Context, sp
 	if len(turns) == 0 {
 		return nil, nil
 	}
+	var knownKey *entity.ExptFilterKey
+	if len(itemsWanted) == 1 && len(turns) == 1 {
+		// Every canonical turn has passed ownership and duplicate validation above.
+		tr := turns[0]
+		knownKey = &entity.ExptFilterKey{SpaceID: spaceID, ExptID: exptID, ItemID: tr.ItemID, TurnID: tr.TurnID}
+	}
 	if expt.StartAt == nil || expt.StartAt.IsZero() || expt.StartAt.In(time.Local).Format("2006-01-02") < "1970-01-01" || expt.StartAt.In(time.Local).Format("2006-01-02") > "2149-06-06" {
 		return nil, projectionError(spaceID, exptID, 0, 0, "created_date", fmt.Errorf("valid business start date required"))
 	}
@@ -87,7 +93,7 @@ func (e ExptResultServiceImpl) BuildExptFilterProjection(ctx context.Context, sp
 	}
 	items, err := e.ExptItemResultRepo.BatchGet(ctx, spaceID, exptID, itemIDs)
 	if err != nil {
-		return nil, projectionError(spaceID, exptID, 0, 0, "items", err)
+		return nil, projectionReadError(expt, knownKey, "items", err)
 	}
 	itemByID := make(map[int64]*entity.ExptItemResult, len(items))
 	for _, item := range items {
@@ -96,13 +102,13 @@ func (e ExptResultServiceImpl) BuildExptFilterProjection(ctx context.Context, sp
 		}
 		itemByID[item.ItemID] = item
 	}
-	refs, err := e.projectionItemRefs(ctx, expt, itemIDs, itemsWanted)
+	refs, err := e.projectionItemRefs(ctx, expt, itemIDs, itemsWanted, knownKey)
 	if err != nil {
 		return nil, err
 	}
 	mappings, err := e.exptTurnResultFilterRepo.GetExptTurnResultFilterKeyMappings(ctx, spaceID, exptID)
 	if err != nil {
-		return nil, projectionError(spaceID, exptID, 0, 0, "mappings", err)
+		return nil, projectionReadError(expt, knownKey, "mappings", err)
 	}
 	evaluatorMapping, annotationMapping, err := projectionMappings(expt, mappings)
 	if err != nil {
@@ -112,15 +118,15 @@ func (e ExptResultServiceImpl) BuildExptFilterProjection(ctx context.Context, sp
 	for _, tr := range turns {
 		turnIDs = append(turnIDs, tr.ID)
 	}
-	records, err := e.projectionEvaluators(ctx, expt, turnIDs, turnByID, evaluatorMapping)
+	records, err := e.projectionEvaluators(ctx, expt, turnIDs, turnByID, evaluatorMapping, knownKey)
 	if err != nil {
 		return nil, err
 	}
-	targets, err := e.projectionTargets(ctx, expt, turns, refs)
+	targets, err := e.projectionTargets(ctx, expt, turns, refs, knownKey)
 	if err != nil {
 		return nil, err
 	}
-	annotations, err := e.projectionAnnotations(ctx, expt, turnIDs, turnByID, annotationMapping)
+	annotations, err := e.projectionAnnotations(ctx, expt, turnIDs, turnByID, annotationMapping, knownKey)
 	if err != nil {
 		return nil, err
 	}
@@ -203,9 +209,17 @@ func (e ExptResultServiceImpl) BuildExptFilterProjection(ctx context.Context, sp
 func projectionError(space, expt, item, turn int64, stage string, cause error) error {
 	return fmt.Errorf("invalid_projection: space=%d expt=%d item=%d turn=%d stage=%s: %w", space, expt, item, turn, stage, cause)
 }
+
+func projectionReadError(expt *entity.Experiment, key *entity.ExptFilterKey, stage string, cause error) error {
+	if key != nil {
+		return projectionError(key.SpaceID, key.ExptID, key.ItemID, key.TurnID, stage, cause)
+	}
+	return projectionError(expt.SpaceID, expt.ID, 0, 0, stage, cause)
+}
+
 func projectionFinite(value float64) bool { return !math.IsNaN(value) && !math.IsInf(value, 0) }
 
-func (e ExptResultServiceImpl) projectionItemRefs(ctx context.Context, expt *entity.Experiment, itemIDs []int64, wanted map[int64]bool) (map[int64]*entity.ExptItemRef, error) {
+func (e ExptResultServiceImpl) projectionItemRefs(ctx context.Context, expt *entity.Experiment, itemIDs []int64, wanted map[int64]bool, knownKey *entity.ExptFilterKey) (map[int64]*entity.ExptItemRef, error) {
 	multi := expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig
 	if e.exptItemRefRepo == nil {
 		if multi {
@@ -215,7 +229,7 @@ func (e ExptResultServiceImpl) projectionItemRefs(ctx context.Context, expt *ent
 	}
 	refs, err := e.exptItemRefRepo.MGetByExptIDAndItemIDs(ctx, expt.SpaceID, expt.ID, itemIDs)
 	if err != nil {
-		return nil, projectionError(expt.SpaceID, expt.ID, 0, 0, "item_refs", err)
+		return nil, projectionReadError(expt, knownKey, "item_refs", err)
 	}
 	result := make(map[int64]*entity.ExptItemRef, len(refs))
 	for _, ref := range refs {
@@ -283,10 +297,10 @@ func projectionMappings(expt *entity.Experiment, mappings []*entity.ExptTurnResu
 	return evaluators, annotations, nil
 }
 
-func (e ExptResultServiceImpl) projectionEvaluators(ctx context.Context, expt *entity.Experiment, turnIDs []int64, turns map[int64]*entity.ExptTurnResult, mappings map[string]string) (map[int64]map[string]*entity.EvaluatorRecord, error) {
+func (e ExptResultServiceImpl) projectionEvaluators(ctx context.Context, expt *entity.Experiment, turnIDs []int64, turns map[int64]*entity.ExptTurnResult, mappings map[string]string, knownKey *entity.ExptFilterKey) (map[int64]map[string]*entity.EvaluatorRecord, error) {
 	refs, err := e.ExptTurnResultRepo.BatchGetTurnEvaluatorResultRef(ctx, expt.SpaceID, turnIDs)
 	if err != nil {
-		return nil, projectionError(expt.SpaceID, expt.ID, 0, 0, "evaluator_refs", err)
+		return nil, projectionReadError(expt, knownKey, "evaluator_refs", err)
 	}
 	ids := make([]int64, 0, len(refs))
 	byRecord := make(map[int64]*entity.ExptTurnEvaluatorResultRef)
@@ -327,7 +341,7 @@ func (e ExptResultServiceImpl) projectionEvaluators(ctx context.Context, expt *e
 		records, err = e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, ids, false, false)
 	}
 	if err != nil {
-		return nil, projectionError(expt.SpaceID, expt.ID, 0, 0, "evaluators", err)
+		return nil, projectionReadError(expt, knownKey, "evaluators", err)
 	}
 	seen := make(map[int64]bool)
 	for _, record := range records {
@@ -335,10 +349,13 @@ func (e ExptResultServiceImpl) projectionEvaluators(ctx context.Context, expt *e
 			return nil, projectionError(expt.SpaceID, expt.ID, 0, 0, "evaluators", fmt.Errorf("nil record"))
 		}
 		ref := byRecord[record.ID]
-		if ref == nil || seen[record.ID] {
-			return nil, projectionError(expt.SpaceID, expt.ID, record.ItemID, record.TurnID, "evaluators", fmt.Errorf("unexpected or duplicate record"))
+		if ref == nil {
+			return nil, projectionError(expt.SpaceID, expt.ID, 0, 0, "evaluators", fmt.Errorf("unexpected or duplicate record"))
 		}
 		tr := turns[ref.ExptTurnResultID]
+		if seen[record.ID] {
+			return nil, projectionError(expt.SpaceID, expt.ID, tr.ItemID, tr.TurnID, "evaluators", fmt.Errorf("unexpected or duplicate record"))
+		}
 		if record.SpaceID <= 0 || (record.SpaceID != expt.SpaceID && record.Ext[consts.EvaluatorRecordExtKeyCallerSpaceID] != strconv.FormatInt(expt.SpaceID, 10)) || record.ExperimentID != expt.ID || record.ItemID != tr.ItemID || record.TurnID != tr.TurnID || record.ExperimentRunID <= 0 || record.EvaluatorVersionID != ref.EvaluatorVersionID || record.Alias != ref.Alias || record.InlineKey != ref.InlineKey || (record.SourceType == entity.EvaluatorRecordSourceTypeInline) != (ref.SourceType == int32(entity.EvaluatorRecordSourceTypeInline)) || (record.TargetRecordID != 0 && record.TargetRecordID != tr.TargetResultID) {
 			return nil, projectionError(expt.SpaceID, expt.ID, tr.ItemID, tr.TurnID, "evaluators", fmt.Errorf("record ownership or instance mismatch"))
 		}
@@ -353,12 +370,12 @@ func (e ExptResultServiceImpl) projectionEvaluators(ctx context.Context, expt *e
 		seen[record.ID] = true
 	}
 	if len(seen) != len(ids) {
-		return nil, projectionError(expt.SpaceID, expt.ID, 0, 0, "evaluators", fmt.Errorf("referenced evaluator record missing"))
+		return nil, projectionReadError(expt, knownKey, "evaluators", fmt.Errorf("referenced evaluator record missing"))
 	}
 	return result, nil
 }
 
-func (e ExptResultServiceImpl) projectionTargets(ctx context.Context, expt *entity.Experiment, turns []*entity.ExptTurnResult, refs map[int64]*entity.ExptItemRef) (map[int64]*entity.EvalTargetRecord, error) {
+func (e ExptResultServiceImpl) projectionTargets(ctx context.Context, expt *entity.Experiment, turns []*entity.ExptTurnResult, refs map[int64]*entity.ExptItemRef, knownKey *entity.ExptFilterKey) (map[int64]*entity.EvalTargetRecord, error) {
 	result := make(map[int64]*entity.EvalTargetRecord)
 	if expt.ExptType == entity.ExptType_Online {
 		return result, nil
@@ -395,15 +412,18 @@ func (e ExptResultServiceImpl) projectionTargets(ctx context.Context, expt *enti
 			records, err = e.evalTargetService.BatchGetRecordByIDs(ctx, space, ids)
 		}
 		if err != nil {
-			return nil, projectionError(expt.SpaceID, expt.ID, 0, 0, "targets", err)
+			return nil, projectionReadError(expt, knownKey, "targets", err)
 		}
 		for _, record := range records {
 			if record == nil {
 				return nil, projectionError(expt.SpaceID, expt.ID, 0, 0, "targets", fmt.Errorf("nil target record"))
 			}
 			tr := byID[record.ID]
-			if tr == nil || result[tr.ID] != nil || record.SpaceID != space || record.ItemID != tr.ItemID || record.TurnID != tr.TurnID || record.ExperimentRunID <= 0 || record.EvalTargetOutputData == nil {
-				return nil, projectionError(expt.SpaceID, expt.ID, record.ItemID, record.TurnID, "targets", fmt.Errorf("target missing output or ownership mismatch"))
+			if tr == nil {
+				return nil, projectionError(expt.SpaceID, expt.ID, 0, 0, "targets", fmt.Errorf("target missing output or ownership mismatch"))
+			}
+			if result[tr.ID] != nil || record.SpaceID != space || record.ItemID != tr.ItemID || record.TurnID != tr.TurnID || record.ExperimentRunID <= 0 || record.EvalTargetOutputData == nil {
+				return nil, projectionError(expt.SpaceID, expt.ID, tr.ItemID, tr.TurnID, "targets", fmt.Errorf("target missing output or ownership mismatch"))
 			}
 			version := expt.TargetVersionID
 			if ref := refs[tr.ItemID]; ref != nil && ref.ItemConfig != nil && ref.ItemConfig.EvalTargetConf != nil {
@@ -423,10 +443,10 @@ func (e ExptResultServiceImpl) projectionTargets(ctx context.Context, expt *enti
 	return result, nil
 }
 
-func (e ExptResultServiceImpl) projectionAnnotations(ctx context.Context, expt *entity.Experiment, turnIDs []int64, turns map[int64]*entity.ExptTurnResult, mappings map[string]string) (map[int64]map[int64]*entity.AnnotateRecord, error) {
+func (e ExptResultServiceImpl) projectionAnnotations(ctx context.Context, expt *entity.Experiment, turnIDs []int64, turns map[int64]*entity.ExptTurnResult, mappings map[string]string, knownKey *entity.ExptFilterKey) (map[int64]map[int64]*entity.AnnotateRecord, error) {
 	tags, err := e.ExptAnnotateRepo.GetExptTurnResultTagRefs(ctx, expt.ID, expt.SpaceID)
 	if err != nil {
-		return nil, projectionError(expt.SpaceID, expt.ID, 0, 0, "tag_refs", err)
+		return nil, projectionReadError(expt, knownKey, "tag_refs", err)
 	}
 	bound := make(map[int64]bool)
 	for _, tag := range tags {
@@ -437,7 +457,7 @@ func (e ExptResultServiceImpl) projectionAnnotations(ctx context.Context, expt *
 	}
 	refs, err := e.ExptAnnotateRepo.GetExptTurnAnnotateRecordRefsByTurnResultIDs(ctx, expt.SpaceID, turnIDs)
 	if err != nil {
-		return nil, projectionError(expt.SpaceID, expt.ID, 0, 0, "annotation_refs", err)
+		return nil, projectionReadError(expt, knownKey, "annotation_refs", err)
 	}
 	byID := make(map[int64]*entity.ExptTurnAnnotateRecordRef)
 	ids := make([]int64, 0, len(refs))
@@ -460,7 +480,7 @@ func (e ExptResultServiceImpl) projectionAnnotations(ctx context.Context, expt *
 	}
 	records, err := e.ExptAnnotateRepo.GetAnnotateRecordsByIDs(ctx, expt.SpaceID, ids)
 	if err != nil {
-		return nil, projectionError(expt.SpaceID, expt.ID, 0, 0, "annotations", err)
+		return nil, projectionReadError(expt, knownKey, "annotations", err)
 	}
 	seen := make(map[int64]bool)
 	for _, record := range records {
@@ -484,7 +504,7 @@ func (e ExptResultServiceImpl) projectionAnnotations(ctx context.Context, expt *
 		seen[record.ID] = true
 	}
 	if len(seen) != len(ids) {
-		return nil, projectionError(expt.SpaceID, expt.ID, 0, 0, "annotations", fmt.Errorf("referenced annotation record missing"))
+		return nil, projectionReadError(expt, knownKey, "annotations", fmt.Errorf("referenced annotation record missing"))
 	}
 	return result, nil
 }
