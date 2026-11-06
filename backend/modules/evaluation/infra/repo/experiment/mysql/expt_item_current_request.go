@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -30,22 +31,70 @@ type currentRequestRow struct {
 	UpdatedAt                                                                      time.Time
 }
 
-func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, itemIDs []int64, retryFirst bool, opts ...db.Option) ([]*entity.ExptItemCurrentRequest, error) {
-	session := dao.provider.NewSession(ctx, append(opts, db.WithMaster())...).Table("expt_item_result_run_log AS l").
-		Select("l.id,l.item_id,l.item_version_id,l.status,l.result_state,l.retry_times,l.quota_reservation_state,l.updated_at,c.id AS canonical_id,c.expt_run_id AS canonical_run_id,c.status AS canonical_status,c.item_version_id AS canonical_item_version_id,c.ext,r.mode,r.status AS run_status").
-		Joins("LEFT JOIN expt_item_result AS c ON c.space_id=l.space_id AND c.expt_id=l.expt_id AND c.item_id=l.item_id AND c.deleted_at IS NULL").
-		Joins("LEFT JOIN expt_run_log AS r ON r.space_id=l.space_id AND r.expt_id=l.expt_id AND r.expt_run_id=l.expt_run_id AND r.deleted_at IS NULL").
-		Where("l.space_id=? AND l.expt_id=? AND l.expt_run_id=? AND l.deleted_at IS NULL", spaceID, exptID, runID)
+func (dao *exptItemResultDAOImpl) readCurrentRequestRows(ctx context.Context, spaceID, exptID, runID int64, itemIDs []int64, retryFirst bool, opts ...db.Option) ([]currentRequestRow, error) {
+	opts = append(opts, db.WithMaster())
+	session := dao.provider.NewSession(ctx, opts...).
+		Select("id,item_id,item_version_id,status,result_state,retry_times,quota_reservation_state,updated_at").
+		Where("space_id=? AND expt_id=? AND expt_run_id=?", spaceID, exptID, runID)
 	if itemIDs != nil {
-		session = session.Where("l.item_id IN ?", itemIDs)
+		session = session.Where("item_id IN ?", itemIDs)
 	}
 	if retryFirst {
-		session = session.Order("l.retry_times ASC")
+		session = session.Order("retry_times ASC")
 	}
-	var rows []currentRequestRow
-	if err := session.Order("l.id ASC").Find(&rows).Error; err != nil {
+	var itemLogs []model.ExptItemResultRunLog
+	if err := session.Order("id ASC").Find(&itemLogs).Error; err != nil {
 		return nil, err
 	}
+	if len(itemLogs) == 0 {
+		return nil, nil
+	}
+	logItemIDs := make([]int64, 0, len(itemLogs))
+	for _, itemLog := range itemLogs {
+		logItemIDs = append(logItemIDs, itemLog.ItemID)
+	}
+	// NDB rejects this cross-table JOIN; callers validate the split observation.
+	var items []model.ExptItemResult
+	if err := dao.provider.NewSession(ctx, opts...).Select("id,item_id,expt_run_id,status,item_version_id,ext").
+		Where("space_id=? AND expt_id=? AND item_id IN ?", spaceID, exptID, logItemIDs).Find(&items).Error; err != nil {
+		return nil, err
+	}
+	itemsByID := make(map[int64]model.ExptItemResult, len(items))
+	for _, item := range items {
+		itemsByID[item.ItemID] = item
+	}
+	var runs []model.ExptRunLog
+	if err := dao.provider.NewSession(ctx, opts...).Select("mode,status").
+		Where("space_id=? AND expt_id=? AND expt_run_id=?", spaceID, exptID, runID).Find(&runs).Error; err != nil {
+		return nil, err
+	}
+	rows := make([]currentRequestRow, 0, len(itemLogs))
+	for _, itemLog := range itemLogs {
+		item := itemsByID[itemLog.ItemID]
+		row := currentRequestRow{
+			ID: itemLog.ID, ItemID: itemLog.ItemID, ItemVersionID: itemLog.ItemVersionID,
+			Status: itemLog.Status, ResultState: itemLog.ResultState, RetryTimes: itemLog.RetryTimes,
+			QuotaReservationState: itemLog.QuotaReservationState, UpdatedAt: itemLog.UpdatedAt,
+			CanonicalID: item.ID, CanonicalRunID: item.ExptRunID, CanonicalStatus: item.Status,
+			CanonicalItemVersionID: item.ItemVersionID, Ext: gptr.Indirect(item.Ext),
+		}
+		if len(runs) > 0 {
+			row.Mode, row.RunStatus = runs[0].Mode, runs[0].Status
+		}
+		rows = append(rows, row)
+	}
+	return rows, nil
+}
+
+func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, itemIDs []int64, retryFirst bool, opts ...db.Option) ([]*entity.ExptItemCurrentRequest, error) {
+	rows, err := dao.readCurrentRequestRows(ctx, spaceID, exptID, runID, itemIDs, retryFirst, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return currentRequestsFromRows(rows, spaceID, exptID, runID)
+}
+
+func currentRequestsFromRows(rows []currentRequestRow, spaceID, exptID, runID int64) ([]*entity.ExptItemCurrentRequest, error) {
 	out := make([]*entity.ExptItemCurrentRequest, 0, len(rows))
 	for _, row := range rows {
 		if row.CanonicalID == 0 || row.CanonicalRunID != runID {
@@ -181,7 +230,22 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 }
 
 func (dao *exptItemResultDAOImpl) GetCurrentRequest(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptItemCurrentRequest, error) {
-	rows, err := dao.readCurrentRequests(ctx, spaceID, exptID, runID, []int64{itemID}, false)
+	var rows []*entity.ExptItemCurrentRequest
+	err := dao.provider.Transaction(ctx, func(tx *gorm.DB) error {
+		before, err := dao.readCurrentRequestRows(ctx, spaceID, exptID, runID, []int64{itemID}, false, db.WithTransaction(tx))
+		if err != nil {
+			return err
+		}
+		after, err := dao.readCurrentRequestRows(ctx, spaceID, exptID, runID, []int64{itemID}, false, db.WithTransaction(tx))
+		if err != nil {
+			return err
+		}
+		if !reflect.DeepEqual(before, after) {
+			return fmt.Errorf("current item observation changed; retry primary read")
+		}
+		rows, err = currentRequestsFromRows(before, spaceID, exptID, runID)
+		return err
+	}, db.WithMaster())
 	if err != nil {
 		return nil, err
 	}

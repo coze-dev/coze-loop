@@ -112,7 +112,7 @@ func (e ExptAnnotateServiceImpl) CreateExptTurnResultTagRefs(ctx context.Context
 		return err
 	}
 
-	return nil
+	return publishFilterAuto(ctx, e.exptPublisher, ref.SpaceID, ref.ExptID, nil)
 }
 
 func (e ExptAnnotateServiceImpl) DeleteExptTurnResultTagRef(ctx context.Context, exptID, spaceID, tagKeyID int64) error {
@@ -158,7 +158,7 @@ func (e ExptAnnotateServiceImpl) DeleteExptTurnResultTagRef(ctx context.Context,
 		return err
 	}
 
-	return nil
+	return publishFilterAuto(ctx, e.exptPublisher, spaceID, exptID, nil)
 }
 
 func (e ExptAnnotateServiceImpl) GetExptTurnResultTagRefs(ctx context.Context, exptID, spaceID int64) ([]*entity.ExptTurnResultTagRef, error) {
@@ -219,18 +219,8 @@ func (e ExptAnnotateServiceImpl) SaveAnnotateRecord(ctx context.Context, exptID,
 		}
 	}
 
-	err = e.exptResultService.UpsertExptTurnResultFilter(ctx, record.SpaceID, exptID, []int64{itemID})
-	if err != nil {
-		logs.CtxError(ctx, "UpsertExptTurnResultFilter fail, err: %v", err)
-	}
-	err = e.exptPublisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
-		ExperimentID: exptID,
-		SpaceID:      record.SpaceID,
-		ItemID:       []int64{itemID},
-		RetryTimes:   ptr.Of(int32(0)),
-		FilterType:   ptr.Of(entity.UpsertExptTurnResultFilterTypeCheck),
-	}, ptr.Of(10*time.Second))
-	if err != nil {
+	refreshErr := e.exptResultService.UpsertExptTurnResultFilter(ctx, record.SpaceID, exptID, []int64{itemID})
+	if err := completeFilterRefresh(ctx, e.exptPublisher, record.SpaceID, exptID, []int64{itemID}, refreshErr); err != nil {
 		return err
 	}
 
@@ -250,18 +240,8 @@ func (e ExptAnnotateServiceImpl) UpdateAnnotateRecord(ctx context.Context, itemI
 		return err
 	}
 
-	err = e.exptResultService.UpsertExptTurnResultFilter(ctx, record.SpaceID, record.ExperimentID, []int64{itemID})
-	if err != nil {
-		logs.CtxError(ctx, "UpsertExptTurnResultFilter fail, err: %v", err)
-	}
-	err = e.exptPublisher.PublishExptTurnResultFilterEvent(ctx, &entity.ExptTurnResultFilterEvent{
-		ExperimentID: record.ExperimentID,
-		SpaceID:      record.SpaceID,
-		ItemID:       []int64{itemID},
-		RetryTimes:   ptr.Of(int32(0)),
-		FilterType:   ptr.Of(entity.UpsertExptTurnResultFilterTypeCheck),
-	}, ptr.Of(10*time.Second))
-	if err != nil {
+	refreshErr := e.exptResultService.UpsertExptTurnResultFilter(ctx, record.SpaceID, record.ExperimentID, []int64{itemID})
+	if err := completeFilterRefresh(ctx, e.exptPublisher, record.SpaceID, record.ExperimentID, []int64{itemID}, refreshErr); err != nil {
 		return err
 	}
 

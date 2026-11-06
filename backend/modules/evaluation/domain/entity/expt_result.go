@@ -1028,8 +1028,9 @@ type ExptTurnResultFilterEntity struct {
 }
 
 type BmqProducerCfg struct {
-	Topic   string `json:"topic"`
-	Cluster string `json:"cluster"`
+	Topic     string `json:"topic"`
+	Cluster   string `json:"cluster"`
+	V2Cluster string `json:"v2_cluster,omitempty"`
 }
 
 // IntersectInt64String 返回两个集合的交集（int64和string）

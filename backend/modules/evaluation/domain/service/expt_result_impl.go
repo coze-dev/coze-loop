@@ -107,7 +107,8 @@ type ExptResultServiceImpl struct {
 	tagRPCAdapter            rpc.ITagRPCAdapter
 	// exptItemRefRepo ★ 多评测集实验 item -> (eval_set_id, eval_set_version_id) 的真值源；
 	// 可能为 nil（老调用方未注入），此时退化为按主集写入。
-	exptItemRefRepo repo.IExptItemRefRepo
+	exptItemRefRepo     repo.IExptItemRefRepo
+	filterEvaluatorRepo repo.IEvaluatorRecordRepo
 
 	evalTargetService           IEvalTargetService
 	evalTargetRepo              repo.IEvalTargetRepo
@@ -421,10 +422,17 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 	// 只有一个实验，且没有指定baseline
 	if len(exptIDs) == 1 && baselineExptID == nil {
 		baseExptID = exptIDs[0]
+		queryParam := *param
+		queryParam.BaseExptID = &baseExptID
+		param = &queryParam
 	}
 
 	allExptIDs := make([]int64, 0, len(exptIDs)+1)
 	allExptIDs = gslice.Uniq(append(append(allExptIDs, baseExptID), exptIDs...))
+	ctx, err = e.freezeFilterPlan(ctx, allExptIDs)
+	if err != nil {
+		return nil, err
+	}
 
 	exptList, err := e.ExperimentRepo.MGetByID(ctx, allExptIDs, spaceID)
 	if err != nil {
@@ -489,6 +497,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		return nil, err
 	}
 
+	res.Total = total
 	if len(turnResultDAOs) == 0 {
 		return res, nil
 	}
@@ -654,7 +663,6 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 	}
 
 	res.ItemResults = itemResults
-	res.Total = total
 	// ★ 跨空间共享脱敏: 冻结 access_level=execute 的评测集为黑盒, 抹评测集题目内容 (列定义 + 每条 Payload.EvalSet),
 	// 保留 evaluator/target/system 列. per-set 判定: 单评测集看主表冻结级别, 多评测集看对应 EvalSetConfig.
 	desensitizeSharedEvalSetResult(res, exptMap)
@@ -760,6 +768,17 @@ func (e ExptResultServiceImpl) exportListTurnResultByCursor(ctx context.Context,
 }
 
 func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity.MGetExperimentResultParam, expt *entity.Experiment) (turnResultDAOs []*entity.ExptTurnResult, itemID2ItemRunState map[int64]entity.ItemRunState, totalTurn int64, err error) {
+	planIDs := append([]int64(nil), param.ExptIDs...)
+	if param.BaseExptID != nil {
+		planIDs = append(planIDs, *param.BaseExptID)
+	}
+	if expt != nil {
+		planIDs = append(planIDs, expt.ID)
+	}
+	ctx, err = e.freezeFilterPlan(ctx, planIDs)
+	if err != nil {
+		return nil, nil, 0, err
+	}
 	var (
 		spaceID        = param.SpaceID
 		baselineExptID = param.BaseExptID
@@ -819,6 +838,9 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 		if filterAccelerator == nil {
 			filterAccelerator = &entity.ExptTurnResultFilterAccelerator{}
 		}
+		if plan := contexts.ExptFilterPlanFromContext(ctx); plan != nil && plan.ReadTarget == entity.ExptFilterTargetV2 {
+			filterAccelerator = copyFilterAccelerator(filterAccelerator)
+		}
 		filterAccelerator.ExptID = baseExptID
 		filterAccelerator.SpaceID = spaceID
 		// ★ 跨空间共享: 评测集快照数据属来源空间，查 dis 表要用它（0=同空间）。
@@ -843,6 +865,9 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 				itemIDs = append(itemIDs, item.ItemID)
 			}
 			total = iTotal
+			if err == nil && len(itemIDs) == 0 {
+				return nil, nil, total, nil
+			}
 		} else {
 			logs.CtxInfo(ctx, "filter accelerator has filters, exptID: %v", baseExptID)
 			if err = e.mapItemSnapshotFilter(ctx, filterAccelerator, expt); err != nil {
@@ -866,7 +891,7 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 					errOccur = true
 				} else {
 					if len(itemID2ItemRunState) == 0 {
-						return nil, nil, 0, nil
+						return nil, nil, total, nil
 					}
 					itemIDs = maps.ToSlice(itemID2ItemRunState, func(k int64, v entity.ItemRunState) int64 {
 						return k
@@ -877,7 +902,7 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 			if errOccur {
 				// item_key 强筛选请求 fail-loud：继续走下去会用空 itemIDs + 原分页查 RDS，
 				// 等于未筛选全量，且覆盖原始错误
-				if filterAccelerator.HasItemKeyFilter() {
+				if filterAccelerator.HasItemKeyFilter() || (contexts.ExptFilterPlanFromContext(ctx) != nil && contexts.ExptFilterPlanFromContext(ctx).ReadTarget == entity.ExptFilterTargetV2) {
 					return nil, nil, 0, err
 				}
 			} else {
@@ -894,7 +919,7 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 			total = totalTurn
 		}
 		if len(turnResultDAOs) == 0 {
-			return nil, nil, 0, nil
+			return nil, nil, total, nil
 		}
 
 		// 按 ItemIdx 排序
@@ -938,7 +963,7 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 		}
 
 		if len(turnResultDAOs) == 0 {
-			return nil, nil, 0, nil
+			return nil, nil, total, nil
 		}
 
 		// 按 ItemIdx 排序
@@ -2909,7 +2934,13 @@ func (e ExptResultServiceImpl) ManualUpsertExptTurnResultFilter(ctx context.Cont
 }
 
 func (e ExptResultServiceImpl) upsertExptTurnResultFilterLocked(ctx context.Context, space, expt int64, ids []int64) error {
-	filters, err := e.buildExptTurnResultFiltersLocked(ctx, space, expt, ids)
+	var filters []*entity.ExptTurnResultFilterEntity
+	var err error
+	if _, ok := e.exptTurnResultFilterRepo.(repo.IExptFilterIndexRepo); ok {
+		filters, err = e.BuildExptFilterProjection(ctx, space, expt, ids)
+	} else {
+		filters, err = e.buildExptTurnResultFiltersLocked(ctx, space, expt, ids)
+	}
 	if err != nil {
 		return err
 	}
@@ -2919,7 +2950,7 @@ func (e ExptResultServiceImpl) upsertExptTurnResultFilterLocked(ctx context.Cont
 	if err := ctx.Err(); err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
-	return e.exptTurnResultFilterRepo.Save(ctx, filters)
+	return e.saveCurrentFilterIndex(ctx, filters)
 }
 
 func (e ExptResultServiceImpl) buildExptTurnResultFiltersLocked(ctx context.Context, spaceID, exptID int64, itemIDs []int64) ([]*entity.ExptTurnResultFilterEntity, error) {
@@ -3044,6 +3075,15 @@ func (e ExptResultServiceImpl) loadItemEvalSetRefs(ctx context.Context, spaceID,
 // 评测集上生效。这里改为遍历实验的全部 (set, version, sourceSpace)，每个集产出一组条件，
 // 由 DAO 侧分组查询后取 item_id 并集。单评测集实验只有 1 组，行为与改动前一致。
 func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter *entity.ExptTurnResultFilterAccelerator, baseExpt *entity.Experiment) error {
+	if plan := contexts.ExptFilterPlanFromContext(ctx); plan != nil && plan.ReadTarget == entity.ExptFilterTargetV2 && filter.ItemSnapshotCond != nil && filter.ItemSnapshotCond.ItemKey != nil {
+		key := filter.ItemSnapshotCond.ItemKey
+		if key.Op != "LIKE" || len(key.Values) != 1 {
+			return fmt.Errorf("invalid item_key filter")
+		}
+		if _, ok := key.Values[0].(string); !ok {
+			return fmt.Errorf("invalid item_key filter value")
+		}
+	}
 	rawCond := filter.ItemSnapshotCond
 	if rawCond != nil {
 		// ItemKey 校验要先于下面的早退判断：非法条件丢弃后可能整体无 map 条件。
@@ -3273,6 +3313,44 @@ func (e ExptResultServiceImpl) mapTurnResultFilterCond(ctx context.Context, filt
 	turnResultFilterKeyMappings, err := e.exptTurnResultFilterRepo.GetExptTurnResultFilterKeyMappings(ctx, spaceID, baseExptID)
 	if err != nil {
 		return err
+	}
+	if plan := contexts.ExptFilterPlanFromContext(ctx); plan != nil && plan.ReadTarget == entity.ExptFilterTargetV2 {
+		translate := func(filters []*entity.FieldFilter, fieldType entity.FieldTypeMapping) ([]*entity.FieldFilter, error) {
+			mapping := make(map[string]*entity.ExptTurnResultFilterKeyMapping)
+			for _, m := range turnResultFilterKeyMappings {
+				if m != nil && m.FieldType == fieldType {
+					if mapping[m.FromField] != nil {
+						return nil, fmt.Errorf("invalid filter mapping: duplicate field %q", m.FromField)
+					}
+					mapping[m.FromField] = m
+				}
+			}
+			out := make([]*entity.FieldFilter, 0, len(filters))
+			for _, f := range filters {
+				if f == nil {
+					return nil, fmt.Errorf("invalid nil filter condition")
+				}
+				m := mapping[f.Key]
+				if m == nil || m.ToKey == "" {
+					return nil, fmt.Errorf("filter mapping unavailable for field %q", f.Key)
+				}
+				out = append(out, &entity.FieldFilter{Key: m.ToKey, Op: f.Op, Values: f.Values})
+			}
+			return out, nil
+		}
+		if filter.MapCond.EvaluatorScoreFilters, err = translate(filter.MapCond.EvaluatorScoreFilters, entity.FieldTypeEvaluator); err != nil {
+			return err
+		}
+		if filter.MapCond.AnnotationFloatFilters, err = translate(filter.MapCond.AnnotationFloatFilters, entity.FieldTypeManualAnnotation); err != nil {
+			return err
+		}
+		if filter.MapCond.AnnotationBoolFilters, err = translate(filter.MapCond.AnnotationBoolFilters, entity.FieldTypeManualAnnotation); err != nil {
+			return err
+		}
+		if filter.MapCond.AnnotationStringFilters, err = translate(filter.MapCond.AnnotationStringFilters, entity.FieldTypeManualAnnotation); err != nil {
+			return err
+		}
+		return nil
 	}
 	turnResultFilterKeyMappingsMap := make(map[string]*entity.ExptTurnResultFilterKeyMapping)
 	for _, mapping := range turnResultFilterKeyMappings {

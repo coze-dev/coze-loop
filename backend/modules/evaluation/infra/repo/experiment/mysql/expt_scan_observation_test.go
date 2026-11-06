@@ -219,18 +219,18 @@ func TestScanObservationMySQLConsistentAcrossSessionIsolation(t *testing.T) {
 				AccessMode     string
 			}
 			var metadataErr error
-			require.NoError(t, conn.Callback().Query().After("gorm:query").Register("scan_pause_after_initial_join", func(tx *gorm.DB) {
+			require.NoError(t, conn.Callback().Query().After("gorm:query").Register("scan_pause_after_current_request", func(tx *gorm.DB) {
 				query := tx.Statement.SQL.String()
 				if strings.Contains(query, "FOR UPDATE") {
 					locks++
 				}
-				if strings.Contains(query, "AS l") && strings.Contains(query, "LEFT JOIN") {
+				if tx.Statement.Table == "expt_run_log" && len(tx.Statement.Selects) > 0 {
 					metadataErr = tx.Session(&gorm.Session{NewDB: true}).Raw("SELECT et.ISOLATION_LEVEL AS isolation_level,et.ACCESS_MODE AS access_mode FROM performance_schema.events_transactions_current AS et JOIN performance_schema.threads AS th ON th.THREAD_ID=et.THREAD_ID WHERE th.PROCESSLIST_ID=CONNECTION_ID() LIMIT 1").Scan(&txMetadata).Error
 					close(joined)
 					<-resume
 				}
 			}))
-			defer func() { require.NoError(t, conn.Callback().Query().Remove("scan_pause_after_initial_join")) }()
+			defer func() { require.NoError(t, conn.Callback().Query().Remove("scan_pause_after_current_request")) }()
 			type scanResult struct {
 				rows []*entity.ExptItemCurrentRequest
 				err  error
@@ -414,7 +414,7 @@ func TestScanObservationMySQLProcessingSharesSnapshot(t *testing.T) {
 		if strings.Contains(text, "FOR UPDATE") {
 			locks++
 		}
-		if strings.Contains(text, "AS l") && strings.Contains(text, "LEFT JOIN") {
+		if tx.Statement.Table == "expt_run_log" && len(tx.Statement.Selects) > 0 {
 			close(scannedInitial)
 			<-resume
 		}

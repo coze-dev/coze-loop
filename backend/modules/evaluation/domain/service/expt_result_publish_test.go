@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -161,6 +162,51 @@ type publicationSchedulerResult struct{ *ExptResultServiceImpl }
 
 func (*publicationSchedulerResult) UpsertExptTurnResultFilter(context.Context, int64, int64, []int64) error {
 	return nil
+}
+
+type failingPublicationFilter struct{ *ExptResultServiceImpl }
+
+func (*failingPublicationFilter) UpsertExptTurnResultFilter(context.Context, int64, int64, []int64) error {
+	return errors.New("filter target unavailable")
+}
+
+func TestCommittedPublicationQueuesRepairWithoutRepublishing(t *testing.T) {
+	for _, publishFails := range []bool{false, true} {
+		t.Run(fmt.Sprint(publishFails), func(t *testing.T) {
+			f, svc, records, expt := publicationFixture(t)
+			ctrl := gomock.NewController(t)
+			records.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).Return([]*entity.EvaluatorRecord{publicationRecord(f, gptr.Of(0.0))}, nil).Times(1)
+			mode := entitymocks.NewMockExptSchedulerMode(ctrl)
+			mode.EXPECT().PublishResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+			var types []entity.UpsertExptTurnResultFilterType
+			publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, event *entity.ExptTurnResultFilterEvent, _ *time.Duration) error {
+				require.Equal(t, []int64{f.item}, event.ItemID)
+				require.Equal(t, f.space, event.SpaceID)
+				types = append(types, *event.FilterType)
+				if publishFails {
+					return errors.New("notification unavailable")
+				}
+				return nil
+			}).AnyTimes()
+			scheduler := &ExptSchedulerImpl{ResultSvc: &failingPublicationFilter{svc}, Publisher: publisher}
+			event := &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run}
+			items := []*entity.ExptEvalItem{{ItemID: f.item, State: entity.ItemRunState_Success, RequestID: "rq1"}}
+			err := scheduler.recordCurrentItemResults(context.Background(), event, items, mode, expt, svc)
+			if publishFails {
+				require.Error(t, err)
+				require.True(t, errno.NeedMQRetry(err))
+				require.Contains(t, err.Error(), "filter target unavailable")
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, []entity.UpsertExptTurnResultFilterType{entity.UpsertExptTurnResultFilterTypeAuto, entity.UpsertExptTurnResultFilterTypeCheck}, types)
+			afterCommit := f.snapshot()
+			require.NoError(t, scheduler.recordCurrentItemResults(context.Background(), event, items, mode, expt, svc))
+			require.Equal(t, afterCommit, f.snapshot())
+			require.Len(t, types, 2, "committed result must not repeat business publication")
+		})
+	}
 }
 
 func TestResultPublishPreparedRealWritepoints(t *testing.T) {
@@ -410,7 +456,7 @@ func TestResultPublishLockCancellationNoWrites(t *testing.T) {
 				cancel()
 				ctx = child
 			} else {
-				locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, _ string, _ time.Duration, _ time.Duration) (bool, context.Context, func(), error) {
+				locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, _ string, _, _ time.Duration) (bool, context.Context, func(), error) {
 					if kind == "busy" {
 						return false, ctx, func() {}, nil
 					}
@@ -586,4 +632,46 @@ func TestResultPublishPreparationStopsAfterCancelledRecordRead(t *testing.T) {
 	_, err = svc.PrepareItemResultPublication(ctx, source, expt)
 	require.True(t, errno.NeedMQRetry(err))
 	require.Equal(t, before, f.snapshot())
+}
+
+func TestScheduledFilterCheckCarriesRepairRound(t *testing.T) {
+	publisher := eventmocks.NewMockExptEventPublisher(gomock.NewController(t))
+	publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), &entity.ExptTurnResultFilterEvent{SpaceID: 1, ExperimentID: 2, ItemID: []int64{3}, RetryTimes: gptr.Of(int32(2)), FilterType: gptr.Of(entity.UpsertExptTurnResultFilterTypeCheck)}, gptr.Of(10*time.Second)).Return(nil).Times(1)
+	svc := &ExptResultServiceImpl{publisher: publisher}
+	require.NoError(t, svc.ScheduleExptFilterCheck(context.Background(), 1, 2, []int64{3}, 2))
+}
+
+func TestCommittedPublicationNotificationFailureDoesNotReplayBusiness(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	source := &entity.ExptItemResultPublishSource{
+		Source:  &entity.ExptCurrentItemRunSource{Current: entity.ExptItemCurrentRequest{SpaceID: 1, ExptID: 2, RunID: 3, ItemID: 4, RequestID: "rq1"}},
+		ItemLog: &entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Success), ResultState: int32(entity.ExptItemResultStateLogged)},
+	}
+	publication := &entity.ExptItemResultPublication{Source: source}
+	service := svcmocks.NewMockExptResultPublicationService(ctrl)
+	service.EXPECT().GetItemResultPublishSource(gomock.Any(), int64(1), int64(2), int64(3), int64(4)).Return(source, nil).Times(2)
+	service.EXPECT().PrepareItemResultPublication(gomock.Any(), source, gomock.Any()).Return(publication, nil).Times(1)
+	service.EXPECT().PublishPreparedItemResult(gomock.Any(), publication, gomock.Any()).DoAndReturn(func(context.Context, *entity.ExptItemResultPublication, func(context.Context, *entity.ExptItemResultPublishSource) error) (bool, error) {
+		source.ItemLog.ResultState = int32(entity.ExptItemResultStateResulted)
+		return true, nil
+	}).Times(1)
+	mode := entitymocks.NewMockExptSchedulerMode(ctrl)
+	mode.EXPECT().PublishResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	result := svcmocks.NewMockExptResultService(ctrl)
+	result.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), int64(1), int64(2), []int64{4}).Return(errors.New("index down")).Times(1)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	var notifications []entity.UpsertExptTurnResultFilterType
+	publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, event *entity.ExptTurnResultFilterEvent, _ *time.Duration) error {
+		notifications = append(notifications, *event.FilterType)
+		return errors.New("notification unavailable")
+	}).Times(2)
+	scheduler := &ExptSchedulerImpl{ResultSvc: result, Publisher: publisher}
+	event := &entity.ExptScheduleEvent{SpaceID: 1, ExptID: 2, ExptRunID: 3}
+	items := []*entity.ExptEvalItem{{ItemID: 4, RequestID: "rq1", State: entity.ItemRunState_Success}}
+	err := scheduler.recordCurrentItemResults(context.Background(), event, items, mode, &entity.Experiment{}, service)
+	require.Error(t, err)
+	require.True(t, errno.NeedMQRetry(err))
+	require.Contains(t, err.Error(), "index down")
+	require.Equal(t, []entity.UpsertExptTurnResultFilterType{entity.UpsertExptTurnResultFilterTypeAuto, entity.UpsertExptTurnResultFilterTypeCheck}, notifications)
+	require.NoError(t, scheduler.recordCurrentItemResults(context.Background(), event, items, mode, &entity.Experiment{}, service))
 }

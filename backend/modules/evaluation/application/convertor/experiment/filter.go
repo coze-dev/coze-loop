@@ -648,6 +648,18 @@ func ConvertExptTurnResultFilterAccelerator(experimentFilter *domain_expt.Experi
 				op = "!="
 			case domain_expt.FilterOperatorType_NotLike:
 				op = "NOT LIKE"
+			case domain_expt.FilterOperatorType_IsNull, domain_expt.FilterOperatorType_IsNotNull:
+				switch fieldType {
+				case domain_expt.FieldType_ActualOutput, domain_expt.FieldType_EvaluatorScore,
+					domain_expt.FieldType_AnnotationScore, domain_expt.FieldType_AnnotationText, domain_expt.FieldType_AnnotationCategorical,
+					domain_expt.FieldType_TotalLatency, domain_expt.FieldType_InputTokens, domain_expt.FieldType_OutputTokens, domain_expt.FieldType_TotalTokens:
+				default:
+					return nil, fmt.Errorf("presence operator is unsupported for field %v", fieldType)
+				}
+				op = "IS NULL"
+				if opType == domain_expt.FilterOperatorType_IsNotNull {
+					op = "IS NOT NULL"
+				}
 
 			default:
 				return nil, fmt.Errorf("unsupported operator: %v", opType)
@@ -660,7 +672,7 @@ func ConvertExptTurnResultFilterAccelerator(experimentFilter *domain_expt.Experi
 				for _, v := range parts {
 					values = append(values, v)
 				}
-			} else {
+			} else if op != "IS NULL" && op != "IS NOT NULL" {
 				values = []any{value}
 			}
 

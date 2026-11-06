@@ -2532,6 +2532,21 @@ func (e *experimentApplication) FinishExperiment(ctx context.Context, req *expt.
 }
 
 func (e *experimentApplication) UpsertExptTurnResultFilter(ctx context.Context, req *expt.UpsertExptTurnResultFilterRequest) (r *expt.UpsertExptTurnResultFilterResponse, err error) {
+	if req == nil || req.GetWorkspaceID() <= 0 || req.GetExperimentID() <= 0 || req.GetRetryTimes() < 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid filter refresh scope or retry count"))
+	}
+	for _, itemID := range req.GetItemIds() {
+		if itemID <= 0 {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid filter refresh item ID"))
+		}
+	}
+	if req.FilterType != nil {
+		switch req.GetFilterType() {
+		case expt.UpsertExptTurnResultFilterTypeAUTO, expt.UpsertExptTurnResultFilterTypeCHECK, expt.UpsertExptTurnResultFilterTypeMANUAL:
+		default:
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("unknown filter refresh type"))
+		}
+	}
 	if req.GetFilterType() == expt.UpsertExptTurnResultFilterTypeMANUAL {
 		logs.CtxInfo(ctx, "ManualUpsertExptTurnResultFilter, req: %v", json.Jsonify(req))
 		err = e.resultSvc.ManualUpsertExptTurnResultFilter(ctx, req.GetWorkspaceID(), req.GetExperimentID(), req.GetItemIds())
@@ -2548,6 +2563,13 @@ func (e *experimentApplication) UpsertExptTurnResultFilter(ctx context.Context, 
 		err = e.resultSvc.UpsertExptTurnResultFilter(ctx, req.GetWorkspaceID(), req.GetExperimentID(), req.GetItemIds())
 		if err != nil {
 			return nil, err
+		}
+		if scheduler, ok := e.resultSvc.(interface {
+			ScheduleExptFilterCheck(context.Context, int64, int64, []int64, int32) error
+		}); ok {
+			if err := scheduler.ScheduleExptFilterCheck(ctx, req.GetWorkspaceID(), req.GetExperimentID(), req.GetItemIds(), req.GetRetryTimes()); err != nil {
+				return nil, err
+			}
 		}
 	}
 

@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/stretchr/testify/assert" // 新增 testify/assert
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
@@ -730,4 +732,23 @@ func TestEvaluatorRecordServiceImpl_BatchGetEvaluatorRecordForAggr(t *testing.T)
 		assert.Error(t, err)
 		assert.Nil(t, got)
 	})
+}
+
+func TestCorrectionNotificationFailureRemainsRetryable(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	recordRepo := repo_mocks.NewMockIEvaluatorRecordRepo(ctrl)
+	exptRepo := repo_mocks.NewMockIExperimentRepo(ctrl)
+	publisher := mocks.NewMockExptEventPublisher(ctrl)
+	record := &entity.EvaluatorRecord{ID: 4, SpaceID: 1, ExperimentID: 2, ItemID: 3}
+	recordRepo.EXPECT().CorrectEvaluatorRecord(gomock.Any(), record).Return(nil).Times(1)
+	exptRepo.EXPECT().GetByID(gomock.Any(), int64(2), int64(1)).Return(&entity.Experiment{ID: 2}, nil)
+	publisher.EXPECT().PublishExptAggrCalculateEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), nil).Return(errors.New("AUTO publish unavailable"))
+	publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), ptr.Of(10*time.Second)).Return(nil)
+	svc := &EvaluatorRecordServiceImpl{evaluatorRecordRepo: recordRepo, exptRepo: exptRepo, exptPublisher: publisher}
+	err := svc.CorrectEvaluatorRecord(context.Background(), record, &entity.Correction{Explain: "corrected"})
+	require.Error(t, err)
+	require.True(t, errno.NeedMQRetry(err))
+	require.Contains(t, err.Error(), "AUTO publish unavailable")
+	require.Contains(t, err.Error(), "item_ids=[3]")
 }

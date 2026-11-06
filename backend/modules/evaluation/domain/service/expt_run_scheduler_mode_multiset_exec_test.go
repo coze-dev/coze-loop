@@ -7,6 +7,7 @@ import (
 	"context"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -16,6 +17,7 @@ import (
 	idemmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
 	configmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	mock_repo "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -65,6 +67,14 @@ func TestExptSubmitExec_exptStartMultiSet(t *testing.T) {
 		resultSvc := svcmocks.NewMockExptResultService(ctrl)
 		configer := configmocks.NewMockIConfiger(ctrl)
 		idemSvc := idemmocks.NewMockIdempotentService(ctrl)
+		publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+		var emitted *entity.ExptTurnResultFilterEvent
+		persisted := false
+		publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), nil).DoAndReturn(func(_ context.Context, event *entity.ExptTurnResultFilterEvent, _ *time.Duration) error {
+			assert.True(t, persisted, "AUTO must follow all source commits")
+			emitted = event
+			return nil
+		}).Times(1)
 
 		// idgen: 按请求数量返回连续 id, 避免下标越界
 		idgenerator.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -94,7 +104,7 @@ func TestExptSubmitExec_exptStartMultiSet(t *testing.T) {
 		// createItemTurnResults
 		turnRepo.EXPECT().BatchCreateNX(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 		itemResultRepo.EXPECT().BatchCreateNX(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-		itemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+		itemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, []*entity.ExptItemResultRunLog) error { persisted = true; return nil }).Times(1)
 
 		// finishExptStart
 		resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
@@ -115,6 +125,7 @@ func TestExptSubmitExec_exptStartMultiSet(t *testing.T) {
 			resultSvc:                resultSvc,
 			configer:                 configer,
 			idem:                     idemSvc,
+			publisher:                publisher,
 		}
 
 		expt := &entity.Experiment{
@@ -137,6 +148,7 @@ func TestExptSubmitExec_exptStartMultiSet(t *testing.T) {
 		ctx := session.WithCtxUser(context.Background(), &session.User{ID: testUserID})
 		err := e.exptStartMultiSet(ctx, baseEvent(), expt)
 		assert.NoError(t, err)
+		assert.Equal(t, &entity.ExptTurnResultFilterEvent{SpaceID: 3, ExperimentID: 1, ItemID: []int64{1, 2}, FilterType: ptr.Of(entity.UpsertExptTurnResultFilterTypeAuto)}, emitted)
 
 		// 扁平化结果: 2 行 expt_item_ref
 		assert.Len(t, captured, 2)
@@ -175,6 +187,8 @@ func newExptStartMultiSetTestExec(ctrl *gomock.Controller) (*ExptSubmitExec, *sv
 	resultSvc := svcmocks.NewMockExptResultService(ctrl)
 	configer := configmocks.NewMockIConfiger(ctrl)
 	idemSvc := idemmocks.NewMockIdempotentService(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	idgenerator.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, n int) ([]int64, error) {
@@ -209,6 +223,7 @@ func newExptStartMultiSetTestExec(ctrl *gomock.Controller) (*ExptSubmitExec, *sv
 		resultSvc:                resultSvc,
 		configer:                 configer,
 		idem:                     idemSvc,
+		publisher:                publisher,
 	}
 	return exec, setItemSvc, itemRefRepo
 }
