@@ -423,7 +423,7 @@ func TestRunCancelR2LifecycleOwnerPreventsAnyCleanup(t *testing.T) {
 	require.True(t, locked)
 	source := f.source()
 	before := f.snapshot()
-	err = p.manager.cleanupTerminatedRun(context.Background(), p.event, &finished, []*entity.ExptCurrentItemRunSource{source}, &entity.CompleteExptOption{})
+	err = completeTerminationFixture(p.manager, context.Background(), p.event, &finished, []*entity.ExptCurrentItemRunSource{source}, &entity.CompleteExptOption{})
 	require.True(t, errno.NeedMQRetry(err))
 	require.Equal(t, before, f.snapshot())
 	require.Zero(t, p.resources.Load())

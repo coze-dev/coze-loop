@@ -299,7 +299,7 @@ func TestCancelCleanupLeaseReplacementOwnerHasZeroActions(t *testing.T) {
 			if cancelled {
 				cancel()
 			}
-			err = m.cleanupTerminatedRun(ctx, &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, Session: &entity.Session{}}, finished, []*entity.ExptCurrentItemRunSource{source}, &entity.CompleteExptOption{})
+			err = completeTerminationFixture(m, ctx, &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, Session: &entity.Session{}}, finished, []*entity.ExptCurrentItemRunSource{source}, &entity.CompleteExptOption{})
 			require.True(t, errno.NeedMQRetry(err))
 			require.Equal(t, fmt.Sprint(f.run+100), raw.Get(context.Background(), m.makeExptMutexLockKey(f.expt)).Val())
 			require.Equal(t, before, f.snapshot())
@@ -343,7 +343,7 @@ func TestCancelCleanupLeaseExpiredReplacementStillFencesQuota(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	event := &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, Session: &entity.Session{}}
-	err = m.cleanupCancelledTerminationResources(ctx, event, frozen, nil)
+	err = completeCancelledFixture(m, ctx, event, frozen, nil)
 	require.True(t, errno.NeedMQRetry(err))
 	locked, owner, err := m.mutex.BackoffLockWithValue(context.Background(), lockKey, fmt.Sprint(replacement), time.Minute, time.Millisecond)
 	require.NoError(t, err)

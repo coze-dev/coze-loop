@@ -129,7 +129,7 @@ func TestStaticLegacyHolderRealRedisAndMySQL(t *testing.T) {
 	}
 	// Current completion uses the original fixed holder and does not wait for TTL.
 	event := &entity.ExptScheduleEvent{ExptID: expt, ExptRunID: run, SpaceID: space, Session: &entity.Session{}}
-	require.NoError(t, manager.cleanupNaturallyFinishedRun(ctx, event, stored))
+	require.NoError(t, completeNaturalFixture(manager, ctx, event, stored))
 	require.True(t, quotaReleased)
 	require.True(t, idem.seen)
 	exists, err := raw.Exists(ctx, key).Result()
@@ -138,7 +138,7 @@ func TestStaticLegacyHolderRealRedisAndMySQL(t *testing.T) {
 	// B has acquired the same fixed value but has not advanced SQL yet. A's
 	// successfully completed marker must suppress this known duplicate.
 	require.NoError(t, raw.Set(ctx, key, legacyStaticHolderValue, legacyStaticZombieTTL).Err())
-	require.NoError(t, manager.cleanupNaturallyFinishedRun(ctx, event, stored))
+	require.NoError(t, completeNaturalFixture(manager, ctx, event, stored))
 	holder, getErr := raw.Get(ctx, key).Result()
 	require.NoError(t, getErr)
 	require.Equal(t, legacyStaticHolderValue, holder)

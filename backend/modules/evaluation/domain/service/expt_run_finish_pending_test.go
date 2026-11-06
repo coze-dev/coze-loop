@@ -100,7 +100,7 @@ func newPendingRunFixture(t *testing.T, initMode entity.ExptRunMode) *pendingRun
 		}
 		return nil
 	}).AnyTimes()
-	manager := &ExptMangerImpl{configer: config, mutex: factory().WithHolder(legacyStaticLifecycleHolder), manualRetryLocker: factory, runLogRepo: runs, exptRepo: experiments, itemResultRepo: f.itemRepo(), itemRefRepo: exptrepo.NewExptItemRefRepo(exptmysql.NewExptItemRefDAO(f.provider)), turnResultRepo: f.turnRepo(), statsRepo: stats, runFinishRepo: exptrepo.NewExptRunFinishRepo(f.provider), manualRetryRepo: exptrepo.NewExptManualRetryRepo(f.provider, ids), mtr: metric, idgenerator: ids, idem: idem, centralGuard: component.NewNoopCentralReservationGuard(), currentRunWaker: component.NewNoopCurrentRunSchedulerWaker(), quotaRepo: quota, exptResultService: cleanupResult}
+	manager := &ExptMangerImpl{configer: config, mutex: factory().WithHolder(legacyStaticHolderValue), manualRetryLocker: factory, runLogRepo: runs, exptRepo: experiments, itemResultRepo: f.itemRepo(), itemRefRepo: exptrepo.NewExptItemRefRepo(exptmysql.NewExptItemRefDAO(f.provider)), turnResultRepo: f.turnRepo(), statsRepo: stats, runFinishRepo: exptrepo.NewExptRunFinishRepo(f.provider), manualRetryRepo: exptrepo.NewExptManualRetryRepo(f.provider, ids), mtr: metric, idgenerator: ids, idem: idem, centralGuard: component.NewNoopCentralReservationGuard(), currentRunWaker: component.NewNoopCurrentRunSchedulerWaker(), quotaRepo: quota, exptResultService: cleanupResult}
 	session := &entity.Session{UserID: "pending-run-test"}
 	if initMode == entity.EvaluationModeRetryItems {
 		run, joined, err := manager.LogRetryItemsRun(ctx, f.expt, initMode, f.space, []int64{f.item}, session)

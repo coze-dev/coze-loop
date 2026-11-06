@@ -198,41 +198,19 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 		}
 
 		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
-			if event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && (status == entity.ExptStatus_Terminated || status == entity.ExptStatus_Failed) {
-				if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok {
-					options := []entity.CompleteExptOptionFn{entity.WithStatus(status)}
-					if status == entity.ExptStatus_Terminated {
-						options = append(options, entity.NoAggrCalculate())
-					}
-					_, err := terminate.TerminateCurrentRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, nil, options...)
-					return err
-				}
-			}
-			if status == entity.ExptStatus_Terminating && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
-				if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok {
-					_, err := terminate.TerminateCurrentRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, nil, entity.WithStatus(entity.ExptStatus_Terminated), entity.NoAggrCalculate())
-					return err
-				}
-			}
 			logs.CtxInfo(ctx, "ExptSchedulerConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-			if entity.IsExptFinished(status) && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
-				if finish, ok := e.Manager.(IExptNaturalRunFinisher); ok {
-					result, err := finish.FinishCurrentRun(ctx, event)
-					if err != nil {
-						return errno.WrapMQRetryErr(err)
-					}
-					if result == nil {
-						return errno.NewMQRetryErr("finish returned no disposition")
-					}
-					switch result.Disposition {
-					case entity.ExptRunFinishFinished, entity.ExptRunFinishAlreadyFinished, entity.ExptRunFinishNonCurrent:
-						return nil
-					case entity.ExptRunFinishPending:
-						return errno.NewMQRetryErr("current run finish pending")
-					default:
-						return errno.NewMQRetryErr("invalid finish disposition")
-					}
+			if event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+				options := []entity.CompleteExptOptionFn{}
+				if status == entity.ExptStatus_Terminating || status == entity.ExptStatus_Terminated {
+					options = append(options, entity.WithStatus(entity.ExptStatus_Terminated), entity.NoAggrCalculate())
 				}
+				if status == entity.ExptStatus_Failed {
+					options = append(options, entity.WithStatus(entity.ExptStatus_Failed))
+				}
+				if err := e.Manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, options...); err != nil {
+					return errno.WrapMQRetryErr(err)
+				}
+				return nil
 			}
 			return nil
 		}
@@ -272,7 +250,7 @@ func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEnd
 			}
 		}()
 
-		return next(ctx, event)
+		return next(withHeldCompleteTick(ctx, event.ExptID, event.ExptRunID), event)
 	}
 }
 
@@ -376,8 +354,8 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 				exptFinished = entity.IsExptFinished(current.Status)
 			}
 		}
-		if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok && !exptFinished && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
-			_, err := terminate.TerminateCurrentRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, nil, entity.WithStatus(entity.ExptStatus_Failed), entity.WithStatusMessage(userVisibleErrMsg(nextErr)))
+		if _, ok := e.Manager.(IExptCurrentRunTerminator); ok && !exptFinished && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+			err := e.Manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, entity.WithStatus(entity.ExptStatus_Failed), entity.WithStatusMessage(userVisibleErrMsg(nextErr)))
 			return err
 		}
 		// 业务逻辑错误：终止实验

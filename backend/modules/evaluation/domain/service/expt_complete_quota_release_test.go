@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	lockMocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -347,6 +348,8 @@ func TestCompleteExpt_ReleasesCentralQuotaForIncompleteItems(t *testing.T) {
 	defer ctrl.Finish()
 	mgr := newTestExptManager(ctrl)
 
+	mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Get(gomock.Any(), int64(123), int64(456)).Return(&entity.ExptRunLog{ExptID: 123, ExptRunID: 456, SpaceID: 789, Mode: int32(entity.EvaluationModeSubmit)}, nil)
+	mgr.mutex.(*lockMocks.MockILocker).EXPECT().Unlock(gomock.Any()).Return(true, nil)
 	guard := &fakeGuard{}
 	mgr.centralGuard = guard
 
@@ -377,7 +380,7 @@ func TestCompleteExpt_ReleasesCentralQuotaForIncompleteItems(t *testing.T) {
 	// 于是一条都不放；改成按 item run log 查之后，下面的 ScanItemRunLogs 才是真值来源。
 	// 谁把判据改回 turn，这条用例会因为 releases 为空而变红。
 	mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
-		GetIncompleteTurns(ctx, exptID, spaceID, session).
+		GetIncompleteTurns(gomock.Any(), exptID, spaceID, session).
 		Return(nil, nil).AnyTimes()
 
 	// item run log 才是待释放集合的真值：两个 item 未终态 → 两份额度必须归还。

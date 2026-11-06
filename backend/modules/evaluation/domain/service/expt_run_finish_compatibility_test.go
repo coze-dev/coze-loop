@@ -63,6 +63,16 @@ type checkFinishProbe struct {
 	err    error
 }
 
+func (p *checkFinishProbe) CompleteExpt(_ context.Context, _ int64, _ *int64, _ int64, _ *entity.Session, _ ...entity.CompleteExptOptionFn) error {
+	if p.err != nil {
+		return p.err
+	}
+	if p.result == nil || p.result.Disposition == entity.ExptRunFinishPending {
+		return errno.NewMQRetryErr("current run completion pending")
+	}
+	return nil
+}
+
 func (p *checkFinishProbe) FinishCurrentRun(context.Context, *entity.ExptScheduleEvent) (*entity.ExptRunFinishResult, error) {
 	return p.result, p.err
 }
@@ -155,19 +165,19 @@ func TestRunFinishCleanupNotificationGateAndFailureOrder(t *testing.T) {
 			config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{}).AnyTimes()
 			manager := &ExptMangerImpl{sandboxAgentMetrics: sandbox, configer: config, exptRepo: expts, quotaRepo: quota, manualRetryLocker: factory, idem: idem, templateManager: template, exptAggrResultService: aggr, publisher: publisher, pipelineListAdapter: pipeline, mtr: metric}
 			event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
-			err := manager.cleanupNaturallyFinishedRun(context.Background(), event, expt)
+			err := completeNaturalFixture(manager, context.Background(), event, expt)
 			if fault != "none" {
 				require.Error(t, err)
 				require.Zero(t, calls["workflow"], "failure before completed notification must not emit workflow")
 				require.Zero(t, calls["metric"])
 				require.Zero(t, calls["sandbox_metric"])
 				idem.readErr = nil
-				require.NoError(t, manager.cleanupNaturallyFinishedRun(context.Background(), event, expt))
+				require.NoError(t, completeNaturalFixture(manager, context.Background(), event, expt))
 			} else {
 				require.NoError(t, err)
 			}
 			before := fmt.Sprint(calls)
-			require.NoError(t, manager.cleanupNaturallyFinishedRun(context.Background(), event, expt))
+			require.NoError(t, completeNaturalFixture(manager, context.Background(), event, expt))
 			require.Equal(t, before, fmt.Sprint(calls), "normal duplicate repeats notifications")
 			require.Equal(t, 1, calls["workflow"])
 			require.Equal(t, 1, calls["metric"])
@@ -197,11 +207,11 @@ func TestRunFinishCleanupSetFailureHasExplicitReplayWindow(t *testing.T) {
 	idem := &cleanupTestIdem{setErr: errors.New("marker unavailable")}
 	manager := &ExptMangerImpl{exptRepo: expts, quotaRepo: quota, manualRetryLocker: factory, idem: idem, mtr: metric}
 	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
-	require.Error(t, manager.cleanupNaturallyFinishedRun(context.Background(), event, expt))
+	require.Error(t, completeNaturalFixture(manager, context.Background(), event, expt))
 	require.False(t, idem.seen)
 	require.Equal(t, 1, count)
 	idem.setErr = nil
-	require.NoError(t, manager.cleanupNaturallyFinishedRun(context.Background(), event, expt))
+	require.NoError(t, completeNaturalFixture(manager, context.Background(), event, expt))
 	require.True(t, idem.seen)
 	require.Equal(t, 2, count, "marker failure after external success is a documented replay window")
 }
@@ -213,7 +223,7 @@ func TestRunFinishCleanupMissingIdemFailsClosed(t *testing.T) {
 	expts := repomocks.NewMockIExperimentRepo(ctrl)
 	quota := repomocks.NewMockQuotaRepo(ctrl)
 	manager := &ExptMangerImpl{exptRepo: expts, quotaRepo: quota, manualRetryLocker: factory, publisher: eventmocks.NewMockExptEventPublisher(ctrl), mtr: metricsmocks.NewMockExptMetric(ctrl)}
-	require.True(t, errno.NeedMQRetry(manager.cleanupNaturallyFinishedRun(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, expt)))
+	require.True(t, errno.NeedMQRetry(completeNaturalFixture(manager, context.Background(), &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, expt)))
 }
 
 func TestRunFinishResourceFailureRemainsReplayableUntilCleanupMarked(t *testing.T) {
@@ -228,11 +238,11 @@ func TestRunFinishResourceFailureRemainsReplayableUntilCleanupMarked(t *testing.
 	idem := &cleanupTestIdem{}
 	manager := &ExptMangerImpl{exptRepo: expts, quotaRepo: quota, manualRetryLocker: factory, idem: idem}
 	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
-	require.Error(t, manager.cleanupNaturallyFinishedRun(context.Background(), event, expt))
+	require.Error(t, completeNaturalFixture(manager, context.Background(), event, expt))
 	require.False(t, idem.seen, "resource failure cannot mark cleanup complete")
-	require.NoError(t, manager.cleanupNaturallyFinishedRun(context.Background(), event, expt))
+	require.NoError(t, completeNaturalFixture(manager, context.Background(), event, expt))
 	require.True(t, idem.seen)
-	require.NoError(t, manager.cleanupNaturallyFinishedRun(context.Background(), event, expt))
+	require.NoError(t, completeNaturalFixture(manager, context.Background(), event, expt))
 }
 
 func TestRunFinishRealCommitNotificationFailureRetry(t *testing.T) {

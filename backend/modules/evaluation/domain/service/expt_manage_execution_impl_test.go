@@ -275,11 +275,6 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 						{Status: int32(entity.TurnRunState_Success)},
 					}, int64(2), nil)
 
-				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().
-					UnlockForce(ctx, "expt_run_mutex_lock:123").
-					Return(true, nil)
-
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().
 					Update(ctx, int64(123), int64(456), int64(789), gomock.Any()).
@@ -319,11 +314,6 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 					EXPECT().
 					ListTurnResult(ctx, int64(789), int64(123), nil, gomock.Any(), false).
 					Return([]*entity.ExptTurnResult{}, int64(0), nil)
-
-				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().
-					UnlockForce(ctx, "expt_run_mutex_lock:123").
-					Return(true, nil)
 
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().
@@ -380,11 +370,6 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 					EXPECT().
 					ListTurnResult(ctx, int64(789), int64(123), nil, gomock.Any(), false).
 					Return([]*entity.ExptTurnResult{}, int64(0), nil)
-
-				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().
-					UnlockForce(ctx, "expt_run_mutex_lock:123").
-					Return(true, nil)
 
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().
@@ -1510,6 +1495,8 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 	defer ctrl.Finish()
 	mgr := newTestExptManager(ctrl)
 	ctx := context.Background()
+	mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptRunLog{Mode: int32(entity.EvaluationModeSubmit)}, nil).AnyTimes()
+	mgr.mutex.(*lockMocks.MockILocker).EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
 	session := &entity.Session{UserID: "test_user"}
 
 	tests := []struct {
