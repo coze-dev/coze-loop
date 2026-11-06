@@ -273,6 +273,10 @@ func ollamaBuilder(ctx context.Context, model *entity.Model, opts ...entity.Opti
 	if err := checkModelBeforeBuild(model); err != nil {
 		return nil, err
 	}
+	return ollama.NewChatModel(ctx, ollamaChatModelConfig(model, opts...))
+}
+
+func ollamaChatModelConfig(model *entity.Model, opts ...entity.Option) *ollama.ChatModelConfig {
 	p := model.ProtocolConfig
 	// 不再从default val里拿，而是从opts里拿这些参数
 	// cp := model.ParamConfig.GetCommonParamDefaultVal()
@@ -285,9 +289,9 @@ func ollamaBuilder(ctx context.Context, model *entity.Model, opts ...entity.Opti
 		Options: &api.Options{
 			// NumKeep:          0,
 			// Seed:             0,
-			// NumPredict:       0,
-			TopK: int(ptr.From(ops.TopK)),
-			TopP: ptr.From(ops.TopP),
+			NumPredict: int(ptr.From(ops.MaxTokens)),
+			TopK:       int(ptr.From(ops.TopK)),
+			TopP:       ptr.From(ops.TopP),
 			// MinP:             0,
 			// TypicalP:         0,
 			// RepeatLastN:      0,
@@ -309,7 +313,7 @@ func ollamaBuilder(ctx context.Context, model *entity.Model, opts ...entity.Opti
 			cfg.KeepAlive = ptr.Of(time.Duration(*pc.KeepAliveMs) * time.Millisecond)
 		}
 	}
-	return ollama.NewChatModel(ctx, cfg)
+	return cfg
 }
 
 func qwenBuilder(ctx context.Context, model *entity.Model, opts ...entity.Option) (einoModel.ToolCallingChatModel, error) {
