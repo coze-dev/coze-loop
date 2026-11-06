@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	errno "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	errorx "github.com/coze-dev/coze-loop/backend/pkg/errorx"
+
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -97,6 +100,10 @@ func TestSandboxRecordSchedulerWorkspace(t *testing.T) {
 func TestAsyncExecuteTarget_CreateRecordFail_ExperimentWorkspace(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	svc, target, input, got, mu, done := createRecordFailFixture(t, ctrl, entity.EvalTargetTypeSandboxAgent, nil)
+	store := svc.evalTargetRepo.(*repomocks.MockIEvalTargetRepo)
+	store.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(2), target.EvalTargetVersion.ID).Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode))
+	store.EXPECT().GetEvalTarget(gomock.Any(), target.ID).Return(target, nil)
+
 	_, _, err := svc.asyncExecuteTarget(context.Background(), target.SpaceID, target, &entity.ExecuteTargetCtx{
 		ExperimentID: gptr.Of(int64(40)), ExptSpaceID: 2,
 	}, input)

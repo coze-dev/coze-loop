@@ -584,7 +584,11 @@ func (e *EvalTargetServiceImpl) AsyncExecuteTarget(ctx context.Context, spaceID,
 func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID int64, target *entity.EvalTarget, param *entity.ExecuteTargetCtx,
 	inputData *entity.EvalTargetInputData,
 ) (record *entity.EvalTargetRecord, callee string, err error) {
-	defer func(st time.Time) { e.metric.EmitRun(spaceID, err, st) }(time.Now()) // todo(@liushengyang): mtr
+	recordSpaceID := spaceID
+	if target.EvalTargetType == entity.EvalTargetTypeSandboxAgent && param.ExptSpaceID > 0 {
+		recordSpaceID = param.ExptSpaceID
+	}
+	defer func(st time.Time) { e.metric.EmitRun(recordSpaceID, err, st) }(time.Now()) // todo(@liushengyang): mtr
 	defer goroutine.Recovery(ctx)
 
 	targetID := target.ID
@@ -606,11 +610,11 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		TimeConsumingMS: gptr.Of(int64(0)),
 	}
 
-	ctx, span := looptracer.GetTracer().StartSpan(ctx, "EvalTarget", "eval_target", looptracer.WithStartNewTrace(), looptracer.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
+	ctx, span := looptracer.GetTracer().StartSpan(ctx, "EvalTarget", "eval_target", looptracer.WithStartNewTrace(), looptracer.WithSpanWorkspaceID(strconv.FormatInt(recordSpaceID, 10)))
 	span.SetCallType("EvalTarget")
 	ctx = looptracer.GetTracer().Inject(ctx)
 
-	lifecycle := &sandboxInvocationLifecycle{service: e, spaceID: spaceID, target: target, param: param, input: inputData, traceID: span.GetTraceID()}
+	lifecycle := &sandboxInvocationLifecycle{service: e, spaceID: recordSpaceID, target: target, param: param, input: inputData, traceID: span.GetTraceID()}
 
 	invokeID, callee, ext, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
 		PrepareSandboxExecution: lifecycle.prepare,
@@ -662,7 +666,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	userID := session.UserIDInCtxOrEmpty(ctx)
 	record = &entity.EvalTargetRecord{
 		ID:                   invokeID,
-		SpaceID:              spaceID,
+		SpaceID:              recordSpaceID,
 		TargetID:             targetID,
 		TargetVersionID:      targetVersionID,
 		ExperimentRunID:      gptr.Indirect(param.ExperimentRunID),
@@ -858,7 +862,7 @@ func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Contex
 		return
 	}
 	// 仅 SandboxAgent 评测对象需要销毁沙箱执行
-	targetVersion, err := e.evalTargetRepo.GetEvalTargetVersion(ctx, record.SpaceID, record.TargetVersionID)
+	targetVersion, err := e.recordTargetVersion(ctx, record)
 	if err != nil {
 		logs.CtxWarn(ctx, "[SandboxDestroy] get eval target version fail, space_id=%d, version_id=%d, err=%v",
 			record.SpaceID, record.TargetVersionID, err)
@@ -880,7 +884,7 @@ func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Contex
 	executeIDs := sandboxExecuteIDsOf(ctx, record)
 	logs.CtxInfo(ctx, "[SandboxDestroy] destroying sandbox executes, record_id=%d, task_id=%s, expt_run_id=%d, execute_ids=%v",
 		record.ID, taskID, record.ExperimentRunID, executeIDs)
-	_ = e.destroySandboxExecute(ctx, taskID, sandboxWorkspaceIDOf(record), record.SpaceID, executeIDs, false)
+	_ = e.destroySandboxExecute(ctx, taskID, sandboxWorkspaceIDOf(record), resolveLoadSpaceID(record.SpaceID, targetVersion.SpaceID), executeIDs, false)
 }
 
 // sandboxWorkspaceIDOf 保留旧任务的来源空间归属，新任务使用 operator 记录的调度空间。
@@ -1116,18 +1120,18 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 	for id := range versionIDSet {
 		versionIDs = append(versionIDs, id)
 	}
-	versions, err := e.evalTargetRepo.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs)
+	versions, err := e.recordTargetVersions(ctx, spaceID, versionIDs, records)
 	if err != nil {
 		logs.CtxWarn(ctx, "[SandboxDestroy] batch get eval target versions fail, space_id=%d, err=%v", spaceID, err)
 		return err
 	}
-	sandboxVersionIDs := make(map[int64]struct{})
+	sandboxVersionIDs := make(map[int64]int64)
 	for _, v := range versions {
 		if v == nil || v.EvalTargetVersion == nil {
 			continue
 		}
 		if v.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
-			sandboxVersionIDs[v.EvalTargetVersion.ID] = struct{}{}
+			sandboxVersionIDs[v.EvalTargetVersion.ID] = v.SpaceID
 		}
 	}
 	if len(sandboxVersionIDs) == 0 {
@@ -1168,14 +1172,14 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 				if id == extraExecuteID {
 					continue
 				}
-				if err := e.destroySandboxExecute(ctx, taskID, schedulerSpaceID, r.SpaceID, []string{id}, zombieTimeout, wait); err != nil {
+				if err := e.destroySandboxExecute(ctx, taskID, schedulerSpaceID, resolveLoadSpaceID(r.SpaceID, sandboxVersionIDs[r.TargetVersionID]), []string{id}, zombieTimeout, wait); err != nil {
 					return err
 				}
 			}
 			// 双沙箱：额外销毁从沙箱 execute，语义对齐 destroySandboxExecuteIfNeeded (success 分支)。
 			// 从沙箱 zombieTimeout 恒为 false，不需要下发 SandboxAgent EndCmd（EndCmd 只对主沙箱有意义）。
 			if extraExecuteID != "" {
-				if err := e.destroySandboxExtraExecute(ctx, taskID, schedulerSpaceID, r.SpaceID, extraExecuteID, wait); err != nil {
+				if err := e.destroySandboxExtraExecute(ctx, taskID, schedulerSpaceID, resolveLoadSpaceID(r.SpaceID, sandboxVersionIDs[r.TargetVersionID]), extraExecuteID, wait); err != nil {
 					return err
 				}
 			}
@@ -1260,18 +1264,18 @@ func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spac
 	for id := range versionIDSet {
 		versionIDs = append(versionIDs, id)
 	}
-	versions, err := e.evalTargetRepo.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs)
+	versions, err := e.recordTargetVersions(ctx, spaceID, versionIDs, records)
 	if err != nil {
 		logs.CtxWarn(ctx, "[SandboxStatusCheck] batch get eval target versions fail, space_id=%d, err=%v", spaceID, err)
 		return nil, nil
 	}
-	sandboxVersionIDs := make(map[int64]struct{})
+	sandboxVersionIDs := make(map[int64]int64)
 	for _, v := range versions {
 		if v == nil || v.EvalTargetVersion == nil {
 			continue
 		}
 		if v.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
-			sandboxVersionIDs[v.EvalTargetVersion.ID] = struct{}{}
+			sandboxVersionIDs[v.EvalTargetVersion.ID] = v.SpaceID
 		}
 	}
 	if len(sandboxVersionIDs) == 0 {
@@ -1561,7 +1565,7 @@ func (e *EvalTargetServiceImpl) emitTargetTrace(ctx context.Context, span looptr
 	setSpanInputOutput(ctx, spanParam, record.EvalTargetInputData, record.EvalTargetOutputData)
 
 	if record.TargetVersionID > 0 {
-		evalTargetDO, err := e.GetEvalTargetVersion(ctx, record.SpaceID, record.TargetVersionID, false)
+		evalTargetDO, err := e.recordTargetVersion(ctx, record)
 		if err != nil {
 			return "", err
 		}

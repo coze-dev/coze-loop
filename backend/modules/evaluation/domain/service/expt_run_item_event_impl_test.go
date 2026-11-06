@@ -1678,7 +1678,7 @@ func Test_failRetrySelectTurnRunLogRefs(t *testing.T) {
 					}}, nil)
 			}
 			gotTargetID, gotEvalResults, selectErr := failRetrySelectTurnRunLogRefs(
-				context.Background(), tt.spaceID, targetRequired, tt.tr, evalTarget, evalRecord, refs, sourceLogs,
+				context.Background(), tt.spaceID, 0, targetRequired, tt.tr, evalTarget, evalRecord, refs, sourceLogs,
 			)
 			if tt.name == "TargetResultID > 0, evalTarget is nil -> dependency error" || tt.name == "TargetResultID > 0, GetRecordByID returns error -> returns 0, nil" {
 				require.Error(t, selectErr)
