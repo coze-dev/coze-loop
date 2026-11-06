@@ -1078,7 +1078,11 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	// 自查（见 incompleteItemIDsForRelease）。原因是 reservation 是 item 粒度，
 	// 而 turn 与 item 可以不同步 —— turn 已终态、item 仍 Processing 时用 turn 判据会漏，
 	// 那正是沙箱执行进程死亡的典型形态（2026-08-24 PPE 实测 45 条卡住）。
-	e.releaseCentralQuotaForIncompleteItems(ctx, got, exptRunID, status)
+	if err := e.releaseCentralQuotaForIncompleteItems(ctx, got, exptRunID, status); err != nil && data != nil && data.sources != nil {
+		// Whole termination has committed its original sources. Keep admission
+		// and Done pending until replay releases those same RequestIDs.
+		return errno.WrapMQRetryErr(err)
+	}
 
 	// ★ 紧跟在释放之后：把 item run log 里仍未终态的行一并置终态。
 	// 顺序不可调换 —— 上面那行靠 run log 的 Queueing/Processing 反查待释放集合，
@@ -1377,16 +1381,15 @@ func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity
 //
 // legacy 实验直接返回：它们从不预占额度，调用释放只是无谓的 Redis 往返。
 //
-// 全程 best-effort：单个 item 释放失败只告警，不让实验收敛失败 ——
-// 实验不收敛（用户看到"取消了但状态不变"）比额度泄漏严重得多。
-// 但这里的 Warn 必须留：**目前没有任何对账会兜住释放失败的这条 reservation**。
+// 尝试所有 item 并返回累计错误。标准整 run 终止持有冻结来源，释放失败时
+// 保留 admission 和未完成标记以便重放；其他存量调用保留 best-effort。
 func (e *ExptMangerImpl) releaseCentralQuotaForIncompleteItems(
 	ctx context.Context,
 	expt *entity.Experiment,
 	exptRunID *int64,
 	status entity.ExptStatus,
-) {
-	e.releaseCentralQuotaForRun(ctx, expt, exptRunID,
+) error {
+	return e.releaseCentralQuotaForRun(ctx, expt, exptRunID,
 		fmt.Sprintf("experiment reached terminal status=%d with incomplete items", int32(status)), "expt complete")
 }
 
@@ -1404,18 +1407,18 @@ func (e *ExptMangerImpl) releaseCentralQuotaForRun(
 	exptRunID *int64,
 	reason string,
 	occasion string,
-) {
+) error {
 	if e.centralGuard == nil || expt == nil {
-		return
+		return nil
 	}
 	if !entity.IsCentralDispatch(expt.ExptDispatchMode) {
-		return
+		return nil
 	}
 	if expt.SchedulerScope == "" {
 		// enforce 却无 Scope：数据异常，无法确定去哪本账释放。宁可不释放也不猜一本 ——
 		// 猜错会归还别人的额度，那比不归还更糟（会导致超发）。
 		logs.CtxError(ctx, "[CentralReservation] enforce experiment without scheduler_scope on %s, skip release, expt_id: %v", occasion, expt.ID)
-		return
+		return nil
 	}
 
 	// exptRunID 为 nil 时回落 LatestRunID：账本 key 是 (run_id, item_id)，run 号错了就找不到
@@ -1426,7 +1429,7 @@ func (e *ExptMangerImpl) releaseCentralQuotaForRun(
 	}
 	if runID == 0 {
 		logs.CtxError(ctx, "[CentralReservation] cannot resolve expt_run_id on %s, skip release, expt_id: %v", occasion, expt.ID)
-		return
+		return nil
 	}
 
 	// ★ 待释放集合按 **item run log 的 status** 查，不能用未完成 turn 反推。
@@ -1448,7 +1451,7 @@ func (e *ExptMangerImpl) releaseCentralQuotaForRun(
 	// 三条路都不接 ⇒ 永久泄漏。
 	var observations []*repo.ExptDispatchObservation
 	var err error
-	if data, ok := ctx.Value(completeDataKey{}).(*completeData); ok && len(data.sources) > 0 {
+	if data, ok := ctx.Value(completeDataKey{}).(*completeData); ok && data.sources != nil {
 		for _, source := range data.sources {
 			observations = append(observations, &repo.ExptDispatchObservation{ItemID: source.Current.ItemID, RequestID: source.Current.RequestID})
 		}
@@ -1459,25 +1462,28 @@ func (e *ExptMangerImpl) releaseCentralQuotaForRun(
 		// 查不到就不猜：宁可这次不释放（留给对账/人工），也不能凭空构造 item 列表。
 		logs.CtxError(ctx, "[CentralReservation] scan incomplete items fail on %s, skip release, expt_id: %v, expt_run_id: %v, err: %v",
 			occasion, expt.ID, runID, err)
-		return
+		return err
 	}
 	if len(observations) == 0 {
-		return
+		return nil
 	}
 
 	failed := 0
+	var releaseErrors []error
 	relCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
 	defer cancel()
 	for _, observation := range observations {
 		itemID := observation.ItemID
 		if err := e.centralGuard.Release(relCtx, expt.SchedulerScope, runID, itemID, observation.RequestID, reason); err != nil {
 			failed++
+			releaseErrors = append(releaseErrors, err)
 			logs.CtxWarn(ctx, "[CentralReservation] release quota fail on %s, scope: %v, expt_run_id: %v, item_id: %v, err: %v",
 				occasion, expt.SchedulerScope, runID, itemID, err)
 		}
 	}
 	logs.CtxInfo(ctx, "[CentralReservation] quota released for incomplete items on %s, scope: %v, expt_id: %v, expt_run_id: %v, items: %v, failed: %v, reason: %v",
 		occasion, expt.SchedulerScope, expt.ID, runID, len(observations), failed, reason)
+	return errors.Join(releaseErrors...)
 }
 
 func (e *ExptMangerImpl) incompleteItemObservationsForRelease(ctx context.Context, exptID, runID, spaceID int64) ([]*repo.ExptDispatchObservation, error) {
