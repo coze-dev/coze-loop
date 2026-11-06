@@ -920,16 +920,13 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventLock(next RecordEvalEndPoint) 
 			return errno.WrapMQRetryErr(err)
 		}
 		if !locked {
-			// Legacy contract (bbab72c4^): a duplicate delivery that loses the item
-			// mutex is ACKed with a Warn. The holder is either another execution of
-			// this same item (the event is redundant) or a non-execution holder that
-			// only runs after the source left Queueing (publication/filter/termination)
-			// or holds the item while terminating the run. Producers publish item
-			// events only after releasing this key (see submitCurrentItem and
-			// handleCurrentEventErr), so an unstarted dispatch can never be dropped
-			// here: keeping the old ACK avoids broker retry storms without losing work.
-			logs.CtxWarn(ctx, "ExptRecordEvalConsumer.HandleEventLock found locked item eval event: %v. Abort event", json.Jsonify(event))
-			return nil
+			// Losing the item mutex is not evidence that this delivery has no work
+			// left. The holder can be the producer's second projection lock, an
+			// independent filter refresh, a publication, or another execution. Only
+			// a complete primary-source observation may turn the delivery into an
+			// ACK; everything still pending or resumable must stay retryable.
+			logs.CtxWarn(ctx, "ExptRecordEvalConsumer.HandleEventLock found locked item eval event, verify source before ack: %v", json.Jsonify(event))
+			return e.handleItemLockBusy(ctx, event)
 		}
 		defer func() {
 			cancel()
@@ -946,6 +943,94 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventLock(next RecordEvalEndPoint) 
 		}
 		return err
 	}
+}
+
+// handleItemLockBusy decides whether a delivery that lost the item mutex may be
+// ACKed. The decision is intentionally conservative: the delivery is retried
+// unless the primary source proves that it is complete, expired, or no longer
+// current. A missing/unstable observation, an unfinished Queueing/Processing
+// source, or a resume source that cannot be validated all keep the native
+// broker retry so a message is never dropped merely because some other holder
+// owns the lock.
+//
+// Why this cannot double-run ordinary work: losing the lock means another
+// holder is already responsible for this item. If that holder is an execution,
+// the retry re-enters HandleCurrentSource after the execution finishes; the
+// current source no longer Matches (Matches rejects finished statuses), so the
+// retry is ACKed without invoking the item again. If the holder was only a
+// producer/filter/publication guard, the retry runs the still-pending work as
+// soon as the guard releases.
+func (e *ExptItemEventEvalServiceImpl) handleItemLockBusy(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+	busy := errno.NewMQRetryErr("item execution lock busy")
+	port, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo)
+	if !ok {
+		// Without a current-source reader there is no proof of completion.
+		return busy
+	}
+	observedCtx, cancel := context.WithTimeout(contexts.WithCtxWriteDB(ctx), time.Second)
+	defer cancel()
+	current, err := e.exptItemResultRepo.GetCurrentRequest(observedCtx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
+	if err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if err := observedCtx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	// A missing row can be an admission that has not committed yet; an unstable
+	// observation cannot be used as proof either.
+	if current == nil || current.ObservationUnstable {
+		return busy
+	}
+	if event.RetryTimes < 0 {
+		return errno.NewMQRetryErr("invalid busy event retry count")
+	}
+	if current.RunID == event.ExptRunID && current.RequestID == event.RequestID {
+		if current.Mode != event.ExptRunMode {
+			return errno.NewMQRetryErr("invalid busy event source")
+		}
+		// Only a finished source can make an ordinary (non-resume) delivery
+		// redundant. Queueing/Processing work is still pending, and any resume
+		// callback must reach HandleCurrentSource before it can be judged.
+		if !entity.IsItemRunFinished(current.Status) && event.ResumeSource == nil {
+			return busy
+		}
+	}
+	frozen, err := port.GetCurrentItemRunSource(observedCtx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
+	if err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if err := observedCtx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if frozen == nil {
+		return busy
+	}
+	if frozen.Current.RunID != event.ExptRunID || frozen.Current.RequestID != event.RequestID {
+		// The event refers to a request that is no longer current: it is safe to
+		// drop, because executing it could only mutate a superseded source.
+		return nil
+	}
+	if frozen.Current.Mode != event.ExptRunMode {
+		return errno.NewMQRetryErr("busy event source mode changed")
+	}
+	observedCtx = context.WithValue(observedCtx, currentItemSourceKey{}, &currentItemExecution{Source: frozen})
+	valid, err := e.validateResumeSource(observedCtx, event, &frozen.Current)
+	if err != nil {
+		return err
+	}
+	if err := observedCtx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if !valid {
+		// validateResumeSource reports false without an error only for a
+		// well-formed callback whose original invocation is no longer current.
+		return nil
+	}
+	if entity.IsItemRunFinished(frozen.Current.Status) &&
+		(frozen.Current.ResultState == entity.ExptItemResultStateLogged || frozen.Current.ResultState == entity.ExptItemResultStateResulted) {
+		return nil
+	}
+	return busy
 }
 
 func (e *ExptItemEventEvalServiceImpl) HandleEventExec(next RecordEvalEndPoint) RecordEvalEndPoint {
