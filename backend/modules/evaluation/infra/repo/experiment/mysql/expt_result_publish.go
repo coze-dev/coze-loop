@@ -150,7 +150,7 @@ func (r *ExptResultPublishDAOImpl) CommitItemResult(ctx context.Context, publica
 		turns := map[int64]*entity.ExptTurnResult{}
 		turnIDs := make([]int64, 0, len(publication.Turns))
 		for _, turn := range publication.Turns {
-			if turn == nil || turn.SpaceID != c.SpaceID || turn.ExptID != c.ExptID || turn.ExptRunID != c.RunID || turn.ItemID != c.ItemID || turn.ItemVersionID != c.ItemVersionID {
+			if turn == nil || turn.SpaceID != c.SpaceID || turn.ExptID != c.ExptID || turn.ExptRunID != c.RunID || turn.ItemID != c.ItemID || (turn.ItemVersionID != c.ItemVersionID && turn.ItemVersionID != 0) {
 				return fmt.Errorf("foreign publication turn")
 			}
 			log := actual.Source.Turns[turn.TurnID]
@@ -226,7 +226,7 @@ func (r *ExptResultPublishDAOImpl) CommitItemResult(ctx context.Context, publica
 		}
 		for _, turn := range publication.Turns {
 			fields := map[string]any{"status": turn.Status, "target_result_id": turn.TargetResultID, "trace_id": turn.TraceID, "log_id": turn.LogID, "err_msg": []byte(turn.ErrMsg), "weighted_score": turn.WeightedScore, "expt_run_id": c.RunID}
-			written := tx.Model(&model.ExptTurnResult{}).Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?", turn.ID, c.SpaceID, c.ExptID, canonicalRuns[turn.ID], c.ItemID, c.ItemVersionID).Updates(fields)
+			written := tx.Model(&model.ExptTurnResult{}).Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id IN (?,0)", turn.ID, c.SpaceID, c.ExptID, canonicalRuns[turn.ID], c.ItemID, c.ItemVersionID).Updates(fields)
 			if written.Error != nil {
 				return written.Error
 			}
@@ -235,7 +235,7 @@ func (r *ExptResultPublishDAOImpl) CommitItemResult(ctx context.Context, publica
 					return fmt.Errorf("publication canonical turn update missed")
 				}
 				var persisted model.ExptTurnResult
-				err := tx.Select("id").Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?", turn.ID, c.SpaceID, c.ExptID, canonicalRuns[turn.ID], c.ItemID, c.ItemVersionID).Take(&persisted).Error
+				err := tx.Select("id").Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id IN (?,0)", turn.ID, c.SpaceID, c.ExptID, canonicalRuns[turn.ID], c.ItemID, c.ItemVersionID).Take(&persisted).Error
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					return fmt.Errorf("publication canonical turn update missed")
 				}

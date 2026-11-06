@@ -318,14 +318,14 @@ func (dao *exptItemResultDAOImpl) StoreCurrentTurnRunResult(ctx context.Context,
 			return nil
 		}
 		old := actual.Turns[result.TurnID]
-		if old == nil || result.ID != old.ID || result.SpaceID != source.Current.SpaceID || result.ExptID != source.Current.ExptID || result.ExptRunID != source.Current.RunID || result.ItemID != source.Current.ItemID || result.ItemVersionID != source.Current.ItemVersionID {
+		if old == nil || result.ID != old.ID || result.SpaceID != source.Current.SpaceID || result.ExptID != source.Current.ExptID || result.ExptRunID != source.Current.RunID || result.ItemID != source.Current.ItemID || (result.ItemVersionID != source.Current.ItemVersionID && result.ItemVersionID != old.ItemVersionID) {
 			return fmt.Errorf("foreign execution turn result")
 		}
 		if old.Status == entity.TurnRunState_Success || old.Status == entity.TurnRunState_Terminal {
 			return nil
 		}
 		fields := map[string]any{"status": po.Status, "trace_id": po.TraceID, "log_id": po.LogID, "target_result_id": po.TargetResultID, "evaluator_result_ids": gptr.Indirect(po.EvaluatorResultIds), "err_msg": gptr.Indirect(po.ErrMsg), "ext": po.Ext}
-		written := tx.Model(&model.ExptTurnResultRunLog{}).Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?", old.ID, source.Current.SpaceID, source.Current.ExptID, source.Current.RunID, source.Current.ItemID, source.Current.ItemVersionID).Updates(fields)
+		written := tx.Model(&model.ExptTurnResultRunLog{}).Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?", old.ID, source.Current.SpaceID, source.Current.ExptID, source.Current.RunID, source.Current.ItemID, old.ItemVersionID).Updates(fields)
 		if written.Error != nil {
 			return written.Error
 		}
@@ -424,9 +424,13 @@ func (dao *exptItemResultDAOImpl) CompleteCurrentItemRun(ctx context.Context, so
 			}
 			fields["result_state"] = int32(result)
 		}
-		scope := "space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?"
-		args := []any{c.SpaceID, c.ExptID, c.RunID, c.ItemID, c.ItemVersionID}
-		if err := tx.Model(&model.ExptItemResultRunLog{}).Where(scope, args...).Updates(fields).Error; err != nil {
+		var itemLog model.ExptItemResultRunLog
+		if err := tx.Select("item_version_id").Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", c.SpaceID, c.ExptID, c.RunID, c.ItemID).Take(&itemLog).Error; err != nil {
+			return err
+		}
+		scope := "space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?"
+		args := []any{c.SpaceID, c.ExptID, c.RunID, c.ItemID}
+		if err := tx.Model(&model.ExptItemResultRunLog{}).Where(scope, args...).Where("item_version_id=?", itemLog.ItemVersionID).Updates(fields).Error; err != nil {
 			return err
 		}
 		if !write.RetryOnly {
@@ -442,12 +446,12 @@ func (dao *exptItemResultDAOImpl) CompleteCurrentItemRun(ctx context.Context, so
 				if !write.Yield {
 					turnFields["err_msg"] = write.TurnError(turnState)
 				}
-				if err := tx.Model(&model.ExptTurnResultRunLog{}).Where(scope, args...).Where("status NOT IN ?", []int32{int32(entity.TurnRunState_Success), int32(entity.TurnRunState_Terminal)}).Updates(turnFields).Error; err != nil {
+				if err := tx.Model(&model.ExptTurnResultRunLog{}).Where(scope, args...).Where("item_version_id IN ?", []int64{c.ItemVersionID, 0}).Where("status NOT IN ?", []int32{int32(entity.TurnRunState_Success), int32(entity.TurnRunState_Terminal)}).Updates(turnFields).Error; err != nil {
 					return err
 				}
 			}
 			if write.Yield {
-				if err := tx.Model(&model.ExptTurnResult{}).Where(scope, args...).Where("status NOT IN ?", []int32{int32(entity.TurnRunState_Success), int32(entity.TurnRunState_Terminal)}).Updates(map[string]any{"status": int32(entity.TurnRunState_Queueing)}).Error; err != nil {
+				if err := tx.Model(&model.ExptTurnResult{}).Where(scope, args...).Where("item_version_id IN ?", []int64{c.ItemVersionID, 0}).Where("status NOT IN ?", []int32{int32(entity.TurnRunState_Success), int32(entity.TurnRunState_Terminal)}).Updates(map[string]any{"status": int32(entity.TurnRunState_Queueing)}).Error; err != nil {
 					return err
 				}
 			}
@@ -460,7 +464,7 @@ func (dao *exptItemResultDAOImpl) CompleteCurrentItemRun(ctx context.Context, so
 			if next != entity.ItemRunState_Terminal {
 				canonicalFields["err_msg"] = write.ErrMsg
 			}
-			if err := tx.Model(&model.ExptItemResult{}).Where(scope, args...).Updates(canonicalFields).Error; err != nil {
+			if err := tx.Model(&model.ExptItemResult{}).Where(scope, args...).Where("item_version_id=?", c.ItemVersionID).Updates(canonicalFields).Error; err != nil {
 				return err
 			}
 			if prior != next {
