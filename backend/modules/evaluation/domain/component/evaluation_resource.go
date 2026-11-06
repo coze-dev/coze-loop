@@ -19,8 +19,8 @@ type ICentralItemDispatcher interface {
 // ICentralItemExecution validates the immutable ItemRun handshake, matching Task and Held Allocation under the Item mutex.
 type ICentralItemExecution interface {
 	ConfirmItemRunning(ctx context.Context, expt *entity.Experiment, item *entity.ExptItemResultRunLog) (bool, error)
-	// PrepareItemResources initializes the frozen topology only after authorization, in the original Item execution chain.
-	PrepareItemResources(ctx context.Context, eiec *entity.ExptItemEvalCtx) error
+	// PrepareItemResources returns a context derived from ctx carrying the granted plan for the original execution chain; nil is invalid.
+	PrepareItemResources(ctx context.Context, eiec *entity.ExptItemEvalCtx) (context.Context, error)
 }
 
 // ICentralItemLifecycle is a best-effort notification after durable business state, not a second state machine.

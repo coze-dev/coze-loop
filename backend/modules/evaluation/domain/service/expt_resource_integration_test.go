@@ -20,8 +20,9 @@ import (
 
 type resourceItemStore struct {
 	repo.IExptItemResultRepo
-	run      *entity.ExptItemResultRunLog
-	writeErr error
+	run          *entity.ExptItemResultRunLog
+	writeErr     error
+	writeContext context.Context
 }
 
 func (s *resourceItemStore) GetItemRunLog(context.Context, int64, int64, int64, int64) (*entity.ExptItemResultRunLog, error) {
@@ -54,6 +55,7 @@ type resourceGuard struct {
 	confirmationErr error
 	finalized       []*entity.ExptItemResultRunLog
 	prepareErr      error
+	prepareContext  func(context.Context) context.Context
 }
 
 func (g *resourceGuard) ConfirmRunning(context.Context, string, int64, int64) (bool, error) {
@@ -65,8 +67,14 @@ func (g *resourceGuard) ConfirmItemRunning(_ context.Context, _ *entity.Experime
 	}
 	return g.ready, g.confirmationErr
 }
-func (g *resourceGuard) PrepareItemResources(context.Context, *entity.ExptItemEvalCtx) error {
-	return g.prepareErr
+func (g *resourceGuard) PrepareItemResources(ctx context.Context, _ *entity.ExptItemEvalCtx) (context.Context, error) {
+	if g.prepareErr != nil {
+		return nil, g.prepareErr
+	}
+	if g.prepareContext != nil {
+		return g.prepareContext(ctx), nil
+	}
+	return ctx, nil
 }
 func (g *resourceGuard) OnItemTerminal(ctx context.Context, item *entity.ExptItemResultRunLog) error {
 	deadline, ok := ctx.Deadline()
@@ -111,7 +119,8 @@ func (b *resourceBroker) PublishExptRecordEvalEvent(_ context.Context, event *en
 	b.event = event
 	return b.err
 }
-func (s *resourceItemStore) UpdateItemRunLog(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
+func (s *resourceItemStore) UpdateItemRunLog(ctx context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
+	s.writeContext = ctx
 	if s.writeErr != nil {
 		return s.writeErr
 	}
@@ -250,6 +259,55 @@ func TestResourceItemTerminalNotificationDoesNotRollbackBusinessState(t *testing
 	require.Len(t, guard.finalized, 1)
 	require.Equal(t, int32(entity.ItemRunState_Fail), guard.finalized[0].Status)
 	require.Equal(t, int32(entity.ItemRunState_Fail), item.run.Status)
+}
+
+type resourceGrantContextKey struct{}
+type resourceEvalSetItems struct{ EvaluationSetItemService }
+
+func (resourceEvalSetItems) BatchGetEvaluationSetItems(context.Context, *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
+	return []*entity.EvaluationSetItem{{ID: 4}}, nil
+}
+
+type resourceEvalTurnStore struct{ repo.IExptTurnResultRepo }
+
+func (resourceEvalTurnStore) GetItemTurnRunLogs(context.Context, int64, int64, int64, int64) ([]*entity.ExptTurnResultRunLog, error) {
+	return []*entity.ExptTurnResultRunLog{{ID: 50, TurnID: 5}}, nil
+}
+func resourceExecutionFixture() (*ExptItemEventEvalServiceImpl, *resourceItemStore, *resourceGuard, *entity.ExptItemEvalEvent, context.Context) {
+	svc, items, guard, event, ctx := resourceFixture()
+	event.ExptRunMode = entity.EvaluationModeSubmit
+	items.run.Status = int32(entity.ItemRunState_Processing)
+	svc.manager = resourceManager{expt: &entity.Experiment{ID: 1, SpaceID: 3, EvalSet: &entity.EvaluationSet{ID: 7, EvaluationSetVersion: &entity.EvaluationSetVersion{ID: 8, EvaluationSetID: 7}}}}
+	svc.evaluationSetItemService = resourceEvalSetItems{}
+	svc.exptTurnResultRepo = resourceEvalTurnStore{}
+	svc.configer = resourceConfig{}
+	svc.endpoints = svc.HandleEventExec(func(context.Context, *entity.ExptItemEvalEvent) error { return nil })
+	return svc, items, guard, event, ctx
+}
+func TestResourceGrantedContextReachesOriginalItemEvaluation(t *testing.T) {
+	svc, items, guard, event, ctx := resourceExecutionFixture()
+	guard.prepareContext = func(ctx context.Context) context.Context {
+		return context.WithValue(ctx, resourceGrantContextKey{}, "granted-plan")
+	}
+	require.NoError(t, svc.Eval(ctx, event))
+	require.NotNil(t, items.writeContext)
+	require.Equal(t, "granted-plan", items.writeContext.Value(resourceGrantContextKey{}), "original Item Eval must persist through the returned authorization context")
+}
+
+func TestResourceNilGrantedContextFailsClosedBeforeItemEvaluation(t *testing.T) {
+	svc, items, guard, event, ctx := resourceExecutionFixture()
+	guard.prepareContext = func(context.Context) context.Context { return nil }
+	require.ErrorIs(t, svc.Eval(ctx, event), errCentralItemAdmission)
+	require.Nil(t, items.writeContext, "nil authorization context must not enter the original Item Eval")
+	require.Equal(t, int32(entity.ItemRunState_Processing), items.run.Status)
+}
+func TestResourceLegacyEvaluationKeepsOriginalContext(t *testing.T) {
+	svc, items, _, event, _ := resourceExecutionFixture()
+	svc.centralGuard = component.NewNoopCentralReservationGuard()
+	ctx := context.WithValue(context.Background(), resourceGrantContextKey{}, "original-context")
+	require.NoError(t, svc.Eval(ctx, event))
+	require.NotNil(t, items.writeContext)
+	require.Equal(t, "original-context", items.writeContext.Value(resourceGrantContextKey{}))
 }
 
 func TestResourceItemReservedWithoutReadyCannotStart(t *testing.T) {
