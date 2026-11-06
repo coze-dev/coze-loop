@@ -88,13 +88,8 @@ func testRunningRetryMySQLApplicationAdmission(t *testing.T, mode entity.ExptRun
 	// same-run 准入不再读取开关；显式 expected_run_id 时必须直接进入当前 run。
 	lwt.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), expt).Return(false).AnyTimes()
 	auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	// 4 次加锁：首次受理时 run exec lock + 被受理 item 的 eval lock；
-	// 之后两次重复请求（含开关门禁删除后新增的第三次调用）各自再取一次 run exec lock，
-	// 因此重复请求的拒绝原因只可能是队列/run 状态，而不是 disabled。
-	lockCalls := 4
-	if mode == entity.EvaluationModeRetryItems {
-		lockCalls += 2
-	}
+	// 首次、两次重复请求和补范围请求分别获取 run/item 锁。
+	lockCalls := 6
 	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), 5*time.Second, 5*time.Minute).DoAndReturn(func(ctx context.Context, _ string, _ time.Duration, _ time.Duration) (bool, context.Context, func(), error) {
 		c, cancel := context.WithCancel(ctx)
 		return true, c, cancel, nil
@@ -141,7 +136,7 @@ func testRunningRetryMySQLApplicationAdmission(t *testing.T, mode entity.ExptRun
 	require.NoError(t, err)
 	require.Zero(t, third.GetAcceptedCount())
 	require.Equal(t, "queueing", third.RejectedItems[0].GetReason())
-	if mode == entity.EvaluationModeRetryItems {
+	{
 		outsideItem := base + 112
 		require.NoError(t, conn.Create(&model.ExptItemResult{ID: base + 112, SpaceID: space, ExptID: expt, ExptRunID: run, ItemID: outsideItem, ItemVersionID: base + 91, Status: 3, Ext: gptr.Of([]byte(`{"business":"keep"}`))}).Error)
 		require.NoError(t, conn.Create(&model.ExptItemResultRunLog{ID: base + 113, SpaceID: space, ExptID: expt, ExptRunID: run, ItemID: outsideItem, ItemVersionID: base + 91, Status: 3, ResultState: gptr.Of(int32(1))}).Error)
@@ -153,11 +148,15 @@ func testRunningRetryMySQLApplicationAdmission(t *testing.T, mode entity.ExptRun
 		require.NoError(t, conn.Model(&model.ExptRunLog{}).Where("id=?", run).Update("fail_cnt", 2).Error)
 		outsideResp, retryErr := app.RetryExperiment(context.Background(), outsideReq)
 		require.NoError(t, retryErr)
-		require.Equal(t, int32(1), outsideResp.GetAcceptedCount(), "an accepted item must be merged into the RetryItems run scope")
+		require.Equal(t, int32(1), outsideResp.GetAcceptedCount())
 		require.NoError(t, conn.First(&runLog, "id=?", run).Error)
 		var chunks []entity.ExptRunLogItems
 		require.NoError(t, json.Unmarshal(*runLog.ItemIds, &chunks))
-		require.ElementsMatch(t, []int64{item, outsideItem}, (&entity.ExptRunLog{ItemIds: chunks}).GetItemIDs())
+		wantItems := []int64{item}
+		if mode == entity.EvaluationModeRetryItems {
+			wantItems = append(wantItems, outsideItem)
+		}
+		require.ElementsMatch(t, wantItems, (&entity.ExptRunLog{ItemIds: chunks}).GetItemIDs())
 		var requeued model.ExptItemResult
 		require.NoError(t, conn.First(&requeued, "id=?", base+112).Error)
 		require.Zero(t, requeued.Status)

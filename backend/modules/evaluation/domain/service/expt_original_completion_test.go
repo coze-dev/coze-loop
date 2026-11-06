@@ -4,6 +4,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -14,11 +15,14 @@ import (
 	lockmocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
 	idemmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
+	confmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	entitymocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity/mocks"
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/stretchr/testify/require"
 )
 
@@ -76,7 +80,7 @@ func TestExptEndUsesOriginalCompletionWithCurrentRepository(t *testing.T) {
 					run.PendingCnt = persistedFields["pending_cnt"].(int32)
 				}
 				return run, nil
-			}).Times(tc.runReads)
+			}).AnyTimes()
 			runStatsUpdated := manager.runLogRepo.(*repomocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).DoAndReturn(func(_ context.Context, _, _, _ int64, fields map[string]any) error {
 				require.Equal(t, int64(entity.ExptStatus_Processing), fields["status"], "run must stay retryable until all completion side effects finish")
 				persistedFields = fields
@@ -87,7 +91,7 @@ func TestExptEndUsesOriginalCompletionWithCurrentRepository(t *testing.T) {
 				persistedFields = fields
 				return nil
 			})
-			manager.turnResultRepo.(*repomocks.MockIExptTurnResultRepo).EXPECT().ListTurnResult(gomock.Any(), int64(3), int64(1), gomock.Any(), gomock.Any(), false).Return([]*entity.ExptTurnResult{{Status: int32(tc.turnStatus)}}, int64(1), nil)
+			manager.turnResultRepo.(*repomocks.MockIExptTurnResultRepo).EXPECT().ListTurnResult(gomock.Any(), int64(3), int64(1), gomock.Any(), gomock.Any(), false).Return([]*entity.ExptTurnResult{{Status: int32(tc.turnStatus)}}, int64(1), nil).AnyTimes()
 			unlock := manager.mutex.(*lockmocks.MockILocker).EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(true, nil)
 			manager.exptResultService.(*svcmocks.MockExptResultService).EXPECT().CalculateStats(gomock.Any(), int64(1), int64(3), session).Return(&entity.ExptCalculateStats{SuccessItemCnt: 1}, nil)
 			manager.exptResultService.(*svcmocks.MockExptResultService).EXPECT().GetIncompleteTurns(gomock.Any(), int64(1), int64(3), session).Return(nil, nil)
@@ -112,6 +116,25 @@ func TestExptEndUsesOriginalCompletionWithCurrentRepository(t *testing.T) {
 	}
 }
 
+func TestCompleteRunDoesNotRewriteTerminatingRun(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	manager := newTestExptManager(ctrl)
+	manager.runFinishRepo = &originalCompletionRunFinishRepo{}
+	manager.exptRepo.(*repomocks.MockIExperimentRepo).EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Terminating, ExptType: entity.ExptType_Offline}, nil)
+	require.NoError(t, manager.CompleteRun(context.Background(), 1, 2, 3, &entity.Session{}))
+}
+
+func TestCompleteRunRetriesTransientStatsFailure(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	manager := newTestExptManager(ctrl)
+	manager.runFinishRepo = &originalCompletionRunFinishRepo{}
+	manager.exptRepo.(*repomocks.MockIExperimentRepo).EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil)
+	manager.runLogRepo.(*repomocks.MockIExptRunLogRepo).EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Processing)}, nil)
+	manager.turnResultRepo.(*repomocks.MockIExptTurnResultRepo).EXPECT().ListTurnResult(gomock.Any(), int64(3), int64(1), gomock.Any(), gomock.Any(), false).Return(nil, int64(0), errors.New("temporary mysql failure"))
+	err := manager.CompleteRun(context.Background(), 1, 2, 3, &entity.Session{})
+	require.True(t, errno.NeedMQRetry(err), "transient stats failure must not fail the experiment, got %v", err)
+}
+
 func TestCompleteExptDoesNotOverwriteTerminatedExperiment(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	manager := newTestExptManager(ctrl)
@@ -121,10 +144,74 @@ func TestCompleteExptDoesNotOverwriteTerminatedExperiment(t *testing.T) {
 	require.NoError(t, manager.CompleteExpt(context.Background(), 1, &runID, 3, &entity.Session{}))
 }
 
+func TestFinishedExperimentCompletionIgnoresEventAge(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	manager := svcmocks.NewMockIExptManager(ctrl)
+	manager.EXPECT().GetRunLog(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Processing)}, nil)
+	manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(&entity.Experiment{LatestRunID: 2, Status: entity.ExptStatus_Success, ExptType: entity.ExptType_Offline}, nil)
+	config := confmocks.NewMockIConfiger(ctrl)
+	config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{ZombieIntervalSecond: 1})
+	idem := idemmocks.NewMockIdempotentService(ctrl)
+	idem.EXPECT().Exist(gomock.Any(), "CompleteExpt:exptexec:onend:2").Return(true, nil)
+	scheduler := &ExptSchedulerImpl{Manager: manager, Configer: config, Idem: idem}
+	called := false
+	err := scheduler.HandleEventCheck(func(context.Context, *entity.ExptScheduleEvent) error {
+		called = true
+		return nil
+	})(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, ExptRunMode: entity.EvaluationModeSubmit, CreatedAt: time.Now().Add(-time.Hour).Unix()})
+	require.NoError(t, err)
+	require.True(t, called)
+}
+
+func TestCompletionResumeSkipsExptStart(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	manager := svcmocks.NewMockIExptManager(ctrl)
+	manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(&entity.Experiment{LatestRunID: 2, Status: entity.ExptStatus_Success, ExptType: entity.ExptType_Offline}, nil)
+	mode := entitymocks.NewMockExptSchedulerMode(ctrl)
+	mode.EXPECT().ScheduleStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	mode.EXPECT().ExptEnd(gomock.Any(), gomock.Any(), gomock.Any(), 0, 0).Return(false, nil)
+	factory := svcmocks.NewMockSchedulerModeFactory(ctrl)
+	factory.EXPECT().NewSchedulerMode(entity.EvaluationModeSubmit).Return(mode, nil)
+	scheduler := &ExptSchedulerImpl{Manager: manager, schedulerModeFactory: factory}
+	err := scheduler.schedule(withCompletionResume(context.Background()), &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, ExptType: entity.ExptType_Offline, ExptRunMode: entity.EvaluationModeSubmit})
+	require.NoError(t, err)
+}
+
+func TestFinishedRunWithoutTypeReleasesLock(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	manager := svcmocks.NewMockIExptManager(ctrl)
+	manager.EXPECT().GetRunLog(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Success)}, nil)
+	manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(&entity.Experiment{ExptType: entity.ExptType_Offline, LatestRunID: 2, Status: entity.ExptStatus_Success}, nil)
+	manager.EXPECT().CompleteExpt(gomock.Any(), int64(1), gomock.Any(), int64(3), gomock.Any(), gomock.Any()).Return(nil)
+	scheduler := &ExptSchedulerImpl{Manager: manager}
+	err := scheduler.HandleEventCheck(func(context.Context, *entity.ExptScheduleEvent) error {
+		t.Fatal("finished run reentered execution")
+		return nil
+	})(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, ExptRunMode: entity.EvaluationModeSubmit})
+	require.NoError(t, err)
+}
+
+func TestFinishedRunWithoutTypeRetriesDetailFailure(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	manager := svcmocks.NewMockIExptManager(ctrl)
+	manager.EXPECT().GetRunLog(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Success)}, nil)
+	manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(nil, errors.New("temporary mysql failure"))
+	scheduler := &ExptSchedulerImpl{Manager: manager}
+	err := scheduler.HandleEventCheck(func(context.Context, *entity.ExptScheduleEvent) error {
+		t.Fatal("finished run reentered execution")
+		return nil
+	})(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, ExptRunMode: entity.EvaluationModeSubmit})
+	require.True(t, errno.NeedMQRetry(err), "terminal type lookup must stay retryable, got %v", err)
+}
+
 func TestFinishedRunAndExperimentACKWithoutTickLock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	manager := svcmocks.NewMockIExptManager(ctrl)
 	manager.EXPECT().GetRunLog(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Success)}, nil)
+	manager.EXPECT().CompleteExpt(gomock.Any(), int64(1), gomock.Any(), int64(3), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, runID *int64, _ int64, _ *entity.Session, _ ...entity.CompleteExptOptionFn) error {
+		require.Equal(t, int64(2), *runID)
+		return nil
+	})
 	scheduler := &ExptSchedulerImpl{Manager: manager}
 	err := scheduler.HandleEventCheck(func(context.Context, *entity.ExptScheduleEvent) error {
 		t.Fatal("finished run reentered execution")

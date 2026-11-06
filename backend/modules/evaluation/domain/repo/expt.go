@@ -29,6 +29,12 @@ type IExperimentRepo interface {
 	GetEvaluatorRefByExptIDs(ctx context.Context, exptID []int64, spaceID int64) ([]*entity.ExptEvaluatorRef, error)
 }
 
+// IExptCurrentRunCompletionRepo persists a terminal experiment state only while
+// the expected run is still current. Legacy repositories may keep Update.
+type IExptCurrentRunCompletionRepo interface {
+	UpdateIfLatestRun(ctx context.Context, expt *entity.Experiment, expectedRunID int64) (bool, error)
+}
+
 //go:generate mockgen -destination=mocks/expt_scheduler_queue.go -package=mocks . IExperimentSchedulerQueueRepo
 
 // IExperimentSchedulerQueueRepo 中心调度的候选实验扫描，单方法窄接口。
@@ -56,6 +62,10 @@ type IExptStatsRepo interface {
 	UpdateByExptID(ctx context.Context, exptID, spaceID int64, stats *entity.ExptStats) error
 	ArithOperateCount(ctx context.Context, exptID, spaceID int64, cntArithOp *entity.StatsCntArithOp) error
 	Save(ctx context.Context, stats *entity.ExptStats) error
+}
+
+type IExptCurrentRunStatsRepo interface {
+	UpdateByExptIDIfLatestRun(ctx context.Context, exptID, spaceID int64, stats *entity.ExptStats, expectedRunID int64) (bool, error)
 }
 
 type IExptItemResultRepo interface {

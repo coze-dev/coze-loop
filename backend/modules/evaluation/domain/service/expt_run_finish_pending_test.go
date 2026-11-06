@@ -17,6 +17,7 @@ import (
 	confmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	exptrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
@@ -229,6 +230,42 @@ func TestRunFinishPendingRealInitializers(t *testing.T) {
 			require.Equal(t, before, p.f.snapshot())
 		})
 	}
+}
+
+func TestCurrentRunCompletionCASRealMySQL(t *testing.T) {
+	p := newPendingRunFixture(t, entity.EvaluationModeSubmit)
+	current, ok := p.manager.exptRepo.(repo.IExptCurrentRunCompletionRepo)
+	require.True(t, ok)
+	ctx := context.Background()
+	endAt := time.Now().Truncate(time.Second)
+	for i := 0; i < 2; i++ {
+		applied, err := current.UpdateIfLatestRun(ctx, &entity.Experiment{ID: p.f.expt, SpaceID: p.f.space, Status: entity.ExptStatus_Success, EndAt: &endAt}, p.f.run)
+		require.NoError(t, err)
+		require.True(t, applied, "current-run write and idempotent rewrite must both succeed")
+	}
+	replacement := p.f.run + 1
+	currentStats, ok := p.manager.statsRepo.(repo.IExptCurrentRunStatsRepo)
+	require.True(t, ok)
+	statsApplied, err := currentStats.UpdateByExptIDIfLatestRun(ctx, p.f.expt, p.f.space, &entity.ExptStats{SuccessItemCnt: 1}, p.f.run)
+	require.NoError(t, err)
+	require.True(t, statsApplied)
+	require.NoError(t, p.f.conn.Model(&model.Experiment{}).Where("space_id=? AND id=?", p.f.space, p.f.expt).Updates(map[string]any{"latest_run_id": replacement, "status": int64(entity.ExptStatus_Processing)}).Error)
+	later := endAt.Add(time.Hour)
+	applied, err := current.UpdateIfLatestRun(ctx, &entity.Experiment{ID: p.f.expt, SpaceID: p.f.space, Status: entity.ExptStatus_Failed, EndAt: &later}, p.f.run)
+	require.NoError(t, err)
+	require.False(t, applied, "a stale run must not overwrite the replacement")
+	statsApplied, err = currentStats.UpdateByExptIDIfLatestRun(ctx, p.f.expt, p.f.space, &entity.ExptStats{SuccessItemCnt: 99}, p.f.run)
+	require.NoError(t, err)
+	require.False(t, statsApplied, "stale run stats must not overwrite the replacement")
+	stats, err := p.manager.statsRepo.Get(ctx, p.f.expt, p.f.space)
+	require.NoError(t, err)
+	require.Equal(t, int32(1), stats.SuccessItemCnt)
+	got, err := p.manager.exptRepo.GetByID(ctx, p.f.expt, p.f.space)
+	require.NoError(t, err)
+	require.Equal(t, replacement, got.LatestRunID)
+	require.Equal(t, entity.ExptStatus_Processing, got.Status)
+	require.NotNil(t, got.EndAt)
+	require.Equal(t, endAt.Unix(), got.EndAt.Unix())
 }
 
 func TestOriginalCompletionRealMissingStatsDoesNotFinish(t *testing.T) {

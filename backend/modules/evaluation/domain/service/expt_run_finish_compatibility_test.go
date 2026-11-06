@@ -30,6 +30,7 @@ func TestFinishedScheduleEventDoesNotReplayNaturalFinish(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			manager := svcmocks.NewMockIExptManager(ctrl)
 			manager.EXPECT().GetRunLog(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Success)}, nil)
+			manager.EXPECT().CompleteExpt(gomock.Any(), int64(1), gomock.Any(), int64(3), gomock.Any(), gomock.Any()).Return(nil)
 			probe := &checkFinishProbe{IExptManager: manager, result: &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishAlreadyFinished}}
 			switch kind {
 			case "pending":
