@@ -117,7 +117,8 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 	if isTurnAsyncResume(etec, false) || isTurnAsyncResume(etec, true) {
 		return tr, nil
 	}
-	if isCentralResourceExecution(ctx) && tr == nil && etec.Event.RetryTimes > 0 {
+	// An earlier Processing claim without a recorded attempt is not permission to replay bootstrap side effects.
+	if isCentralResourceExecution(ctx) && tr == nil && ctx.Value(centralResourceFirstStartKey{}) != true {
 		return nil, fmt.Errorf("%w: previous target attempt unavailable", errCentralItemAdmission)
 	}
 	if isCentralResourceExecution(ctx) && tr != nil {

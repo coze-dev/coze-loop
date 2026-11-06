@@ -391,6 +391,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			if !started.Started && strictStart {
 				return nil
 			}
+			if started.Started && strictStart {
+				ctx = context.WithValue(ctx, centralResourceFirstStartKey{}, true)
+			}
 			if started.Started && e.resultSvc != nil {
 				if err := refreshFilterWithHeldItemLock(ctx, e.resultSvc, event.SpaceID, event.ExptID, event.EvalSetItemID); err != nil {
 					logs.CtxWarn(ctx, "[CentralReservation] refresh committed Processing filter failed, expt_id: %v, item_id: %v: %v", event.ExptID, event.EvalSetItemID, err)

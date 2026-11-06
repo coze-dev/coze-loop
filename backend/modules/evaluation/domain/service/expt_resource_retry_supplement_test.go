@@ -74,6 +74,14 @@ func (s *resourceItemStore) AuthorizeItemRetry(_ context.Context, _, _, _, _ int
 	s.run.ErrMsg = errMsg
 	return true, nil
 }
+func TestSupplementInterruptedInitialClaimDoesNotBlindlyCreate(t *testing.T) {
+	svc, items, _, target, etec, ctx := supplementExecutionFixture()
+	items.run.Status = int32(entity.ItemRunState_Processing)
+	require.ErrorIs(t, svc.Eval(ctx, etec.Event), errCentralItemAdmission)
+	require.Equal(t, 0, target.starts)
+	require.Equal(t, int32(entity.ItemRunState_Processing), items.run.Status)
+}
+
 func TestSupplementUnknownPreviousAttemptDoesNotBlindlyCreate(t *testing.T) {
 	svc, items, _, target, etec, ctx := supplementExecutionFixture()
 	items.run.Status = int32(entity.ItemRunState_Processing)
