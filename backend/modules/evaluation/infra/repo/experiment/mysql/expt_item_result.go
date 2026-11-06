@@ -243,6 +243,9 @@ func (dao *exptItemResultDAOImpl) MGetItemTurnResults(ctx context.Context, space
 		return nil, nil
 	}
 	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	q := query.Use(db).ExptTurnResult
 	found, err := q.WithContext(ctx).Where(q.SpaceID.Eq(spaceID), q.ExptID.Eq(exptID), q.ItemID.In(itemIDs...)).Find()
 	if err != nil {
