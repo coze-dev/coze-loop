@@ -1862,6 +1862,15 @@ func (e *experimentApplication) initSandboxTask(ctx context.Context, scene strin
 }
 
 func initSandboxTasks(ctx context.Context, adapter rpc.ISandboxSchedulerAdapter, scene string, exptID int64, concurrency sandboxTaskConcurrency, workspaceID int64, tenant rpc.SandboxTenant) error {
+	if policy, ok := adapter.(component.ICentralSandboxTaskPolicy); ok {
+		deferInit, err := policy.DeferSandboxTaskInit(ctx, exptID, workspaceID)
+		if err != nil {
+			return err
+		}
+		if deferInit {
+			return nil
+		}
+	}
 	return initSandboxTasksByTaskID(ctx, adapter, scene, strconv.FormatInt(exptID, 10), concurrency, workspaceID, tenant)
 }
 

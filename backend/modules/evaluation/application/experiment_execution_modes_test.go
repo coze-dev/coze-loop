@@ -97,6 +97,37 @@ func TestARMReinitCreatesBothTasks(t *testing.T) {
 	assert.Equal(t, entity.SandboxCountModeArmMacVMPlusSandbox, expt.Target.EvalTargetVersion.SandboxAgent.SandboxCountMode)
 }
 
+type deferredSandboxAdapter struct {
+	rpc.ISandboxSchedulerAdapter
+	initialized bool
+	err         error
+}
+
+func (a *deferredSandboxAdapter) DeferSandboxTaskInit(context.Context, int64, int64) (bool, error) {
+	return true, a.err
+}
+func (a *deferredSandboxAdapter) Init(context.Context, *rpc.SandboxInitRequest) (*rpc.SandboxInitResponse, error) {
+	a.initialized = true
+	return &rpc.SandboxInitResponse{}, nil
+}
+func TestResourceSubmitDoesNotInitializeSandboxBeforeBudget(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	auth := rm.NewMockIAuthProvider(ctrl)
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	mgr := sm.NewMockIExptManager(ctrl)
+	expt := executionModeExperiment(entity.SandboxCountModeWindowsPlusSandbox)
+	expt.Target.EvalTargetType = entity.EvalTargetTypeSandboxAgent
+	expt.ExptDispatchMode = entity.ExptDispatchModeEnforce
+	mgr.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), gomock.Any()).Return(expt, nil)
+	ids := im.NewMockIIDGenerator(ctrl)
+	ids.EXPECT().GenID(gomock.Any()).Return(int64(0), errors.New("run entry reached"))
+	adapter := &deferredSandboxAdapter{}
+	app := &experimentApplication{auth: auth, manager: mgr, idgen: ids, sandboxSchedulerAdapter: adapter}
+	_, err := app.SubmitExperiment(context.Background(), &ep.SubmitExperimentRequest{WorkspaceID: 123, Name: gptr.Of("central"), TargetFieldMapping: &de.TargetFieldMapping{}, CreateEvalTargetParam: &et.CreateEvalTargetParam{EvalTargetType: gptr.Of(dt.EvalTargetType_SandboxAgent)}})
+	assert.ErrorContains(t, err, "run entry reached")
+	assert.False(t, adapter.initialized, "Resolve/Submit must not allocate physical Sandbox resources")
+}
+
 func TestSubmitWindowsInitializesResourcesBeforeRun(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	auth := rm.NewMockIAuthProvider(ctrl)

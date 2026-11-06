@@ -32,6 +32,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+var errCentralItemAdmission = errors.New("central item admission unavailable")
+
 type ExptItemEventEvalServiceImpl struct {
 	endpoints                RecordEvalEndPoint
 	manager                  IExptManager
@@ -154,6 +156,7 @@ func NewExptRecordEvalService(
 
 func (e *ExptItemEventEvalServiceImpl) Eval(ctx context.Context, event *entity.ExptItemEvalEvent) error {
 	ctx = ctxcache.Init(ctx)
+	defer notifyCentralItemTerminal(ctx, e.centralGuard, e.exptItemResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
 
 	if err := e.endpoints(ctx, event); err != nil {
 		logs.CtxError(ctx, "[ExptTurnEval] expt record eval fail, event: %v, err: %v", json.Jsonify(event), err)
@@ -311,17 +314,42 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			return e.HandleCurrentSource(e.HandleCentralReservation(next))(ctx, event)
 		}
 		event = event.Clone()
-		ok, err := guard.ConfirmRunning(ctx, expt.SchedulerScope, event.ExptRunID, event.EvalSetItemID, event.RequestID)
-		if err != nil {
-			// 账本暂时不可用：返回错误让 MQ 重试，而不是丢弃 —— item 已被预占，
-			// 丢弃会让它停在 Queueing 直到 reservation 超时清理，白等一轮。
-			return err
-		}
-		if !ok {
-			// reservation 不存在：迟到消息、账本已重建、或已被释放。本条消息一律不执行，
-			// 但**必须先修正 run log 投影**，否则 item 会停在 Processing 占着并发槽位。
-			e.requeueOrphanedItemOnReservationAbsent(ctx, event)
-			return nil
+		strictStart := false
+		if execution, ok := guard.(component.ICentralItemExecution); ok {
+			if e.exptItemResultRepo == nil || e.dispatchRepo == nil {
+				return fmt.Errorf("%w: item repositories not wired", errCentralItemAdmission)
+			}
+			item, err := e.exptItemResultRepo.GetItemRunLog(contexts.WithCtxWriteDB(ctx), event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)
+			if err != nil {
+				return fmt.Errorf("%w: %w", errCentralItemAdmission, err)
+			}
+			if item == nil || item.ID <= 0 || item.SpaceID != event.SpaceID || item.ExptID != event.ExptID || item.ExptRunID != event.ExptRunID || item.ItemID != event.EvalSetItemID {
+				return fmt.Errorf("%w: item identity mismatch", errCentralItemAdmission)
+			}
+			state := entity.ItemRunState(item.Status)
+			if entity.IsItemRunFinished(state) {
+				return nil
+			}
+			strictStart = state == entity.ItemRunState_Queueing && item.QuotaReservationState.IsQuotaReserved()
+			if !strictStart && state != entity.ItemRunState_Processing {
+				return nil
+			}
+			allowed, err := execution.ConfirmItemRunning(ctx, expt, item)
+			if err != nil {
+				return fmt.Errorf("%w: %w", errCentralItemAdmission, err)
+			}
+			if !allowed {
+				return nil
+			}
+		} else {
+			ok, err := guard.ConfirmRunning(ctx, expt.SchedulerScope, event.ExptRunID, event.EvalSetItemID, event.RequestID)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				e.requeueOrphanedItemOnReservationAbsent(ctx, event)
+				return nil
+			}
 		}
 
 		// The DAO commits canonical/turn/log/stats together. Only a current
@@ -329,9 +357,15 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 		if e.dispatchRepo != nil {
 			started, err := e.dispatchRepo.StartReservedItem(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.RequestID)
 			if err != nil {
+				if _, ok := guard.(component.ICentralItemExecution); ok {
+					return fmt.Errorf("%w: %w", errCentralItemAdmission, err)
+				}
 				return err
 			}
 			if !started.CurrentRequest {
+				return nil
+			}
+			if !started.Started && strictStart {
 				return nil
 			}
 			if started.Started && e.resultSvc != nil {
@@ -482,6 +516,9 @@ func (e *ExptItemEventEvalServiceImpl) releaseQuotaIfItemTerminal(
 	if execution := executionSource(ctx); execution != nil && execution.QuotaReleased {
 		return
 	}
+	if _, resourceProtocol := guard.(component.ICentralItemLifecycle); resourceProtocol {
+		return
+	}
 	if guard == nil || e.dispatchRepo == nil {
 		return
 	}
@@ -616,6 +653,10 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 			return nil
 		}
 
+		if errors.Is(nextErr, errCentralItemAdmission) {
+			return nextErr
+		}
+
 		// A failed snapshot read must not turn successful source stages into empty failed runlogs.
 		if event.ExptRunMode == entity.EvaluationModeFailRetry && errors.Is(nextErr, errRetryStartDependencyFailure) {
 			return nextErr
@@ -644,7 +685,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 
 		if needRetry {
 			// 让位降权改造: 开关按 expt_run_id 固化在 event.Ext(§9.3.1), 运行中不现读配置; 旧事件无该键 → 缺省关闭。
-			if event.Ext[entity.RetryYieldExtKey] == "true" {
+			_, resourceProtocol := e.centralGuard.(component.ICentralItemExecution)
+			_, centralAdmitted := event.CtxCentralAdmittedExpt(ctx)
+			if event.Ext[entity.RetryYieldExtKey] == "true" && !(resourceProtocol && centralAdmitted) {
 				// ★ 让位分支(替换原 MQ 重投): 把行从 Processing 退回 Queueing、retry_times+1, 让出并发名额,
 				// 重试改由调度器 scanToSubmit 唯一驱动。updated_at 由 DB 的 ON UPDATE CURRENT_TIMESTAMP 随本次
 				// UPDATE 刷新 → 下次重新提交后单行超时兜底按次尝试独立计时。
@@ -669,7 +712,11 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 		// 落 Fail, 但在 eval() 里 BuildExptRecordEvalCtx 等前置阶段就失败时压根没走到那里(eiec 未构建),
 		// item 停在进入执行时写的 Processing 上, 表现为"报错了却永久卡 processing、实验永不收敛"。
 		// 此处按 CompleteItemRun 同样的字段兜底(status=Fail + err_msg + result_state=Logged), 幂等可重复写。
-		e.completeItemRunOnUnretriableErr(ctx, event, nextErr)
+		if persistErr := e.completeItemRunOnUnretriableErr(ctx, event, nextErr); persistErr != nil {
+			if _, ok := e.centralGuard.(component.ICentralItemExecution); ok {
+				return persistErr
+			}
+		}
 
 		// ★ 顺序不能反：必须先落 Fail 再释放。
 		// 落 Fail 让 item 不再计入并发占用，此时归还额度才是守恒的；反过来先释放，
@@ -701,6 +748,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 // best-effort：释放失败只告警。让"额度归还失败"阻断终态收口会把额度泄漏升级成实验不收敛。
 func (e *ExptItemEventEvalServiceImpl) releaseCentralQuotaOutsideGate(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error, reasonPrefix string) {
 	if execution := executionSource(ctx); execution != nil && execution.QuotaReleased {
+		return
+	}
+	if _, resourceProtocol := e.centralGuard.(component.ICentralItemLifecycle); resourceProtocol {
 		return
 	}
 	if event == nil || evalErr == nil || e.centralGuard == nil {
@@ -750,24 +800,26 @@ func quotaReleaseSourceEvent(ctx context.Context, event *entity.ExptItemEvalEven
 // turn run log 缺失报 "found null turn log result" → 重试 5min 后整实验被判 Failed(其余 item 全中断)。
 // 僵尸清理路径(handleZombies)正是成对做 UpdateItemRunLog + CreateOrUpdateItemsTurnRunLogStatus,
 // 此处与之对齐; 缺这一步会把"单 item 失败"放大成"整实验失败", 比原先卡 Processing 更糟。
-func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) {
+func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) error {
 	if event == nil || evalErr == nil || e.exptItemResultRepo == nil {
-		return
+		return nil
 	}
+	var persistErr error
 
 	if err := ctx.Err(); err != nil {
-		return
+		return err
 	}
 	if port, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); ok {
 		source, err := sourceForExecution(ctx, port, event)
 		if err != nil {
 			logs.CtxWarn(ctx, "unretriable error source unavailable: %v", err)
-			return
+			return err
 		}
 		if _, err := port.CompleteCurrentItemRun(ctx, source, &entity.ExptCurrentItemRunWrite{Status: entity.ItemRunState_Fail, ErrMsg: []byte(errno.SerializeErr(evalErr)), RetryTimes: int32(event.RetryTimes), FailPendingTurns: true}); err != nil {
 			logs.CtxWarn(ctx, "unretriable error storage: %v", err)
+			return err
 		}
-		return
+		return nil
 	}
 
 	persistCtx, cancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
@@ -782,6 +834,7 @@ func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx conte
 			"err_msg":      errno.SerializeErr(evalErr),
 			"result_state": int32(entity.ExptItemResultStateLogged),
 		}, event.SpaceID); err != nil {
+		persistErr = err
 		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr update item run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
 	}
@@ -792,12 +845,13 @@ func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx conte
 		[]int64{event.EvalSetItemID}, map[string]any{
 			"result_state": int32(entity.ExptItemResultStateLogged),
 		}, event.SpaceID); err != nil {
+		persistErr = errors.Join(persistErr, err)
 		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr update item run log result_state fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
 	}
 
 	if e.exptTurnResultRepo == nil {
-		return
+		return persistErr
 	}
 	// turn run log 必须与 item run log 成对（见方法头注释）。item 已 Terminal 时 turn 也要写 Terminal，
 	// 否则 turn 落 Fail 会被 RecordItemRunLogs 回抄到 turn result，读侧出现「item 已终止 / turn 失败」的自相矛盾。
@@ -811,9 +865,11 @@ func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx conte
 	}
 	if err := e.exptTurnResultRepo.CreateOrUpdateItemsTurnRunLogStatus(persistCtx, event.SpaceID, event.ExptID, event.ExptRunID,
 		[]int64{event.EvalSetItemID}, turnState); err != nil {
+		persistErr = errors.Join(persistErr, err)
 		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr create/update turn run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
 	}
+	return persistErr
 }
 
 // yieldItemRunForRetry 让位分支: 判定需重试时把行从 Processing 退回 Queueing 并递增持久 retry_times,
@@ -1081,6 +1137,14 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 	if execution := executionSource(ctx); execution != nil && execution.Source != nil && len(execution.Source.Turns) == 0 && event.RequestID == "" {
 		for id, log := range eiec.GetExistTurnResultLogs() {
 			execution.Source.Turns[id] = log
+		}
+	}
+
+	if _, admitted := event.CtxCentralAdmittedExpt(ctx); admitted {
+		if execution, ok := e.centralGuard.(component.ICentralItemExecution); ok {
+			if err := execution.PrepareItemResources(ctx, eiec); err != nil {
+				return err
+			}
 		}
 	}
 

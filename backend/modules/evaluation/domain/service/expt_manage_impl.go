@@ -1404,7 +1404,24 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	// defaultPriority 未申报优先级时的缺省值。0 表示"没有意见"，由
 	// NormalizeExptPriorityLevelWithDefault 回落到 entity.DefaultExptPriorityLevel。
 	var defaultPriority int32
-	if entity.ShouldEnforceByTriggerAndType(triggerType, req.ExptType) {
+	if policy, resourceProtocol := e.centralAdmissionPolicy.(component.ICentralEvaluationPolicy); resourceProtocol {
+		if !entity.ShouldEnforceByTrigger(triggerType) && tuple.Target != nil && tuple.Target.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
+			decision, err := policy.SelectEvaluationScheduling(ctx, component.CentralAdmissionSubject{
+				SpaceID: req.WorkspaceID, TargetType: tuple.Target.EvalTargetType.ConfigName(), TargetID: tuple.Target.ID,
+			})
+			if err != nil {
+				return nil, err
+			}
+			if decision.Admitted {
+				schedulerScope, err = e.resolveSchedulerScope(ctx, req.WorkspaceID)
+				if err != nil {
+					return nil, err
+				}
+				dispatchMode = entity.ExptDispatchModeEnforce
+				defaultPriority = decision.DefaultPriority
+			}
+		}
+	} else if entity.ShouldEnforceByTriggerAndType(triggerType, req.ExptType) {
 		// 灰度收窄闸。先判 policy 再校验向量：policy 不放行时该实验走 legacy，
 		// 此时缺向量是正常的（EvalX 对未纳管空间也可能不传），不该报错。
 		decision, err := e.allowCentralScheduling(ctx, req.WorkspaceID, tuple, expectedQuota)

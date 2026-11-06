@@ -172,6 +172,46 @@ func TestExptMangerImpl_CheckName(t *testing.T) {
 	}
 }
 
+type resourceCreationPolicy struct {
+	component.ICentralAdmissionPolicy
+	err error
+}
+
+func (p resourceCreationPolicy) SelectEvaluationScheduling(context.Context, component.CentralAdmissionSubject) (component.CentralAdmissionDecision, error) {
+	return component.CentralAdmissionDecision{Admitted: true}, p.err
+}
+
+type resourceScopeProvider struct{}
+
+func (resourceScopeProvider) ResolveSchedulerScope(context.Context, int64) (string, error) {
+	return testScope, nil
+}
+
+func TestResourceCreateSandboxFreezesModeWithoutLegacyQuota(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mgr := newTestExptManager(ctrl)
+	mgr.centralAdmissionPolicy = resourceCreationPolicy{}
+	mgr.centralScopeProvider = resourceScopeProvider{}
+	any := gomock.Any()
+	mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).EXPECT().CreateEvalTarget(any, any, any, any, any, any).Return(int64(100), int64(101), nil).AnyTimes()
+	mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).EXPECT().GetEvalTargetVersion(any, any, any, any).Return(&entity.EvalTarget{ID: 100, SpaceID: 1, EvalTargetType: entity.EvalTargetTypeSandboxAgent, EvalTargetVersion: &entity.EvalTargetVersion{ID: 101, SpaceID: 1, EvalTargetType: entity.EvalTargetTypeSandboxAgent}}, nil).AnyTimes()
+	mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).EXPECT().GetEvaluationSetVersion(any, any, any, any, any).Return(&entity.EvaluationSetVersion{ID: 3, SpaceID: 1, ItemCount: 1, EvaluationSetSchema: &entity.EvaluationSetSchema{}}, &entity.EvaluationSet{ID: 2, SpaceID: 1}, nil).AnyTimes()
+	mgr.idgenerator.(*idgenMocks.MockIIDGenerator).EXPECT().GenMultiIDs(any, 2).Return([]int64{1, 2}, nil).AnyTimes()
+	mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().CreateStats(any, any, any).Return(nil).AnyTimes()
+	mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().InsertExptTurnResultFilterKeyMappings(any, any).Return(nil).AnyTimes()
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Create(any, any, any).Return(nil).AnyTimes()
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByName(any, any, any).Return(nil, false, nil).AnyTimes()
+	mgr.lwt.(*lwtMocks.MockILatestWriteTracker).EXPECT().SetWriteFlag(any, any, any).AnyTimes()
+	mgr.audit.(*auditMocks.MockIAuditService).EXPECT().Audit(any, any).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil).AnyTimes()
+	mgr.benefitService.(*benefitMocks.MockIBenefitService).EXPECT().CheckAndDeductEvalBenefit(any, any).Return(&benefit.CheckAndDeductEvalBenefitResult{IsFreeEvaluate: gptr.Of(true)}, nil).AnyTimes()
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Update(any, any).Return(nil).AnyTimes()
+	req := &entity.CreateExptParam{WorkspaceID: 1, Name: "central-sandbox", EvalSetID: 2, EvalSetVersionID: 3, ExptType: entity.ExptType_Offline, ExptConf: &entity.EvaluationConfiguration{ConnectorConf: entity.Connector{TargetConf: &entity.TargetConf{TargetVersionID: 101, IngressConf: &entity.TargetIngressConf{EvalSetAdapter: &entity.FieldAdapter{}}}}}, CreateEvalTargetParam: &entity.CreateEvalTargetParam{EvalTargetType: gptr.Of(entity.EvalTargetTypeSandboxAgent), SourceTargetID: gptr.Of("100"), SourceTargetVersion: gptr.Of("v1")}}
+	created, err := mgr.CreateExpt(context.Background(), req, &entity.Session{UserID: "1"})
+	require.NoError(t, err)
+	require.Equal(t, entity.ExptDispatchModeEnforce, created.ExptDispatchMode)
+	require.Equal(t, testScope, created.SchedulerScope)
+}
+
 func TestExptMangerImpl_CreateExpt(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

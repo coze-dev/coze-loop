@@ -568,6 +568,14 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		}
 	}
 
+	dispatcher, resourceProtocol := e.centralGuard.(component.ICentralItemDispatcher)
+	dispatchByCentral := entity.IsCentralDispatch(exptDetail.ExptDispatchMode)
+	if dispatchByCentral && resourceProtocol {
+		if err := dispatcher.ReplayPendingItems(ctx, event, exptDetail); err != nil {
+			return fmt.Errorf("%w: replay pending items: %w", errRetryStartDependencyFailure, err)
+		}
+	}
+
 	toSubmit, incomplete, complete, err := mode.ScanEvalItems(ctx, event, exptDetail)
 	if err != nil {
 		return err
@@ -588,6 +596,9 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	logs.CtxInfo(ctx, "expt scheduler scan item, to_submit: %v, incomplete: %v, complete: %v",
 		entity.ExptEvalItems(toSubmit).GetItemIDs(), entity.ExptEvalItems(incomplete).GetItemIDs(), entity.ExptEvalItems(complete).GetItemIDs())
 
+	for _, item := range complete {
+		notifyCentralItemTerminal(ctx, e.centralGuard, e.ExptItemResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, item.ItemID)
+	}
 	if err = e.recordEvalItemRunLogs(ctx, event, complete, mode, exptDetail); err != nil {
 		return err
 	}
@@ -604,18 +615,22 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	//
 	// 为什么必须丢弃而不是"让它也派"：旧链路按实验自己的配置并发补 item，既不看全局优先级
 	// 也不经额度账本，两个驱动并存会直接超发。
-	dispatchByCentral := entity.IsCentralDispatch(exptDetail.ExptDispatchMode)
+	submitted := len(toSubmit)
 	if dispatchByCentral {
-		if len(toSubmit) > 0 {
-			logs.CtxInfo(ctx, "[CentralDispatch] legacy tick suppressed %d to-submit item(s) for enforce experiment, expt_id: %v, expt_run_id: %v",
-				len(toSubmit), event.ExptID, event.ExptRunID)
+		if resourceProtocol {
+			submitted, err = dispatcher.SubmitItems(ctx, event, exptDetail, toSubmit)
+			if err != nil {
+				return fmt.Errorf("%w: submit items: %w", errRetryStartDependencyFailure, err)
+			}
+		} else {
+			toSubmit = nil
+			submitted = 0
 		}
-		toSubmit = nil
 	} else if err = e.handleToSubmits(ctx, event, toSubmit); err != nil {
 		return err
 	}
 
-	nextTick, err := mode.ExptEnd(ctx, event, exptDetail, len(toSubmit), len(incomplete))
+	nextTick, err := mode.ExptEnd(ctx, event, exptDetail, submitted, len(incomplete))
 	if err != nil {
 		if _, current := e.Manager.(IExptNaturalRunFinisher); current && errno.NeedMQRetry(err) &&
 			event.ExptType == entity.ExptType_Offline && exptDetail.ExptType == entity.ExptType_Offline &&
@@ -1004,6 +1019,10 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 		return nil, nil, err
 	}
 
+	if _, resourceProtocol := e.centralGuard.(component.ICentralItemLifecycle); resourceProtocol {
+		e.releaseCentralQuotaForItems(ctx, expt, event.ExptRunID, zombieItemIDs, "item zombie timeout")
+	}
+
 	// 主表 expt_item_result 只补 err_msg，供 MGetExperimentResult 构造 ItemSystemInfo 时读取。
 	// **不**预写 status=Fail: RecordItemRunLogs 里 statsCntOp 会读当前 items_result.Status
 	// 做「-1」，若这里预写 Fail，Processing 的减项就丢了，实验 stats 上 Processing 永远归不了零。
@@ -1251,6 +1270,9 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 	}, event.SpaceID); err != nil {
 		return nil, nil, err
 	}
+	if _, resourceProtocol := e.centralGuard.(component.ICentralItemLifecycle); resourceProtocol {
+		e.releaseCentralQuotaForItems(ctx, expt, event.ExptRunID, terminatedItemIDs, "sandbox terminated before report")
+	}
 	if err := e.ExptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, terminatedItemIDs, map[string]any{
 		"err_msg": errBytes,
 	}); err != nil {
@@ -1496,6 +1518,12 @@ func (e *ExptSchedulerImpl) releaseCentralQuotaForItems(ctx context.Context, exp
 		return
 	}
 	if !entity.IsCentralDispatch(expt.ExptDispatchMode) {
+		return
+	}
+	if _, resourceProtocol := e.centralGuard.(component.ICentralItemLifecycle); resourceProtocol {
+		for _, itemID := range itemIDs {
+			notifyCentralItemTerminal(ctx, e.centralGuard, e.ExptItemResultRepo, expt.SpaceID, expt.ID, exptRunID, itemID)
+		}
 		return
 	}
 	if expt.SchedulerScope == "" {
