@@ -178,6 +178,14 @@ func (m *MetricApplication) GetDrillDownValues(ctx context.Context, req *metric.
 		metricName = entity.MetricNameFeedbackCountByKeyPie
 	case metric2.DrillDownValueTypeFeedbackSource:
 		metricName = entity.MetricNameFeedbackCountBySourcePie
+	case metric2.DrillDownValueTypeFluxUser:
+		metricName = "flux_user_count_pie"
+	case metric2.DrillDownValueTypeFluxAgent:
+		metricName = "flux_agent_count_pie"
+	case metric2.DrillDownValueTypeFluxModelName:
+		metricName = "flux_model_name_count_pie"
+	case metric2.DrillDownValueTypeFluxProjectName:
+		metricName = "flux_project_name_count_pie"
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid drill_down_value_type"))
 	}
