@@ -639,7 +639,11 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
-	nextTick, err := mode.ExptEnd(ctx, event, exptDetail, submitted, len(incomplete))
+	// Submission can terminalize candidates after the complete scan; archive them on the next tick.
+	nextTick := dispatchByCentral && resourceProtocol && len(toSubmit) > 0 && submitted == 0 && len(incomplete) == 0
+	if !nextTick {
+		nextTick, err = mode.ExptEnd(ctx, event, exptDetail, submitted, len(incomplete))
+	}
 	if err != nil {
 		if _, current := e.Manager.(IExptNaturalRunFinisher); current && errno.NeedMQRetry(err) &&
 			event.ExptType == entity.ExptType_Offline && exptDetail.ExptType == entity.ExptType_Offline &&
