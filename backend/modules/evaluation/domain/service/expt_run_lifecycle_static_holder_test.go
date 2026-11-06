@@ -46,10 +46,11 @@ func staticHolderExperiment(id, space, run int64, status entity.ExptStatus, endA
 	return &entity.Experiment{ID: id, SpaceID: space, ExptType: entity.ExptType_Offline, LatestRunID: run, Status: status, EndAt: endAt}
 }
 
-// 事故 B/C：静态 "evaluation" holder 无法解析年龄，finish/termination 清理
-// 会一直 MQ retry 到 36h 自然过期。终态且 latest-run 校验通过、且不可变的
-// 终态 EndAt 已过 5m 宽限时，必须按 value CAS 接管。
-func TestRunFinishCleanupMigratesStaticLegacyLifecycleHolder(t *testing.T) {
+// 评审反例后的保守语义：固定 "evaluation" holder 没有 acquisition token，旧
+// LogRun 可以在上一 run 释放后以同值被下一个 run 重新取得；终态 EndAt 与同值
+// CAS 都不能证明当前 owner 属于本 run。因此 finish/termination 清理不得删除它，
+// 必须保持 MQRetry，让 AlreadyFinished 重放在租约自然到期后恢复。
+func TestRunFinishCleanupKeepsStaticLegacyLifecycleHolder(t *testing.T) {
 	for _, kind := range []string{"natural", "kill"} {
 		t.Run(kind, func(t *testing.T) {
 			factory, server := finishRealLockerFactory(t)
@@ -60,14 +61,7 @@ func TestRunFinishCleanupMigratesStaticLegacyLifecycleHolder(t *testing.T) {
 			current := staticHolderExperiment(1, 3, 2, entity.ExptStatus_Success, &endAt)
 			experiments := repomocks.NewMockIExperimentRepo(ctrl)
 			experiments.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(current, nil).AnyTimes()
-			quota := repomocks.NewMockQuotaRepo(ctrl)
-			quota.EXPECT().CreateOrUpdate(gomock.Any(), int64(3), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, mutate func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
-				_, _, err := mutate(&entity.QuotaSpaceExpt{})
-				return err
-			})
-			idem := idemmocks.NewMockIdempotentService(ctrl)
-			idem.EXPECT().Exist(gomock.Any(), "finish-cleanup:1:2").Return(true, nil)
-			manager := &ExptMangerImpl{manualRetryLocker: factory, exptRepo: experiments, quotaRepo: quota, idem: idem}
+			manager := &ExptMangerImpl{manualRetryLocker: factory, exptRepo: experiments}
 			event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Session: &entity.Session{}}
 			var err error
 			if kind == "natural" {
@@ -75,9 +69,10 @@ func TestRunFinishCleanupMigratesStaticLegacyLifecycleHolder(t *testing.T) {
 			} else {
 				err = manager.cleanupTerminatedRun(context.Background(), event, current, nil, &entity.CompleteExptOption{NoCompleteItemTurn: true})
 			}
-			require.NoError(t, err, "static legacy holder must not block cleanup until the 36h TTL")
-			_, err = server.Get(key)
-			require.Error(t, err, "cleanup must release the migrated lifecycle lock")
+			require.True(t, errno.NeedMQRetry(err), "cleanup must stay replayable instead of deleting an unowned holder")
+			owner, getErr := server.Get(key)
+			require.NoError(t, getErr, "unproven static holder must be retained")
+			require.Equal(t, legacyStaticHolderValue, owner)
 		})
 	}
 }
@@ -166,8 +161,9 @@ func TestRunFinishCleanupKeepsStaticLegacyHolderWhenTerminalTimeUnproven(t *test
 	}
 }
 
-// 事故 B 的另一条入口：CompleteRun 的 currentRunCleanup 也必须复用同一迁移。
-func TestCompleteRunCleanupMigratesStaticLegacyLifecycleHolder(t *testing.T) {
+// 事故 B 的另一条入口：CompleteRun 的 currentRunCleanup 也不得删除无法证明
+// 归属的固定 holder；必须先返回 MQRetry，等租约到期后由重放恢复。
+func TestCompleteRunCleanupKeepsStaticLegacyLifecycleHolder(t *testing.T) {
 	factory, server := finishRealLockerFactory(t)
 	key := "expt_run_mutex_lock:7"
 	seedLegacyStaticLifecycleHolder(t, server, key, 10*time.Minute)
@@ -176,31 +172,17 @@ func TestCompleteRunCleanupMigratesStaticLegacyLifecycleHolder(t *testing.T) {
 	current := staticHolderExperiment(7, 9, 8, entity.ExptStatus_Success, &endAt)
 	experiments := repomocks.NewMockIExperimentRepo(ctrl)
 	experiments.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(current, nil).AnyTimes()
-	runs := repomocks.NewMockIExptRunLogRepo(ctrl)
-	runs.EXPECT().Get(gomock.Any(), int64(7), int64(8)).Return(&entity.ExptRunLog{ID: 8, ExptID: 7, ExptRunID: 8, SpaceID: 9, Status: int64(entity.ExptStatus_Success)}, nil)
-	runs.EXPECT().Update(gomock.Any(), int64(7), int64(8), int64(9), gomock.Any()).Return(nil)
-	turns := repomocks.NewMockIExptTurnResultRepo(ctrl)
-	turns.EXPECT().ListTurnResult(gomock.Any(), int64(9), int64(7), nil, gomock.Any(), false).Return(nil, int64(0), nil)
-	quota := repomocks.NewMockQuotaRepo(ctrl)
-	released := false
-	quota.EXPECT().CreateOrUpdate(gomock.Any(), int64(9), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, mutate func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
-		next, changed, err := mutate(&entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{7: time.Now().Unix()}})
-		released = changed && next != nil
-		return err
-	})
 	manager := &ExptMangerImpl{
 		runFinishRepo:     &finishRepoProbe{},
 		mutex:             factory(),
 		manualRetryLocker: factory,
 		exptRepo:          experiments,
-		runLogRepo:        runs,
-		turnResultRepo:    turns,
-		quotaRepo:         quota,
 	}
-	require.NoError(t, manager.CompleteRun(context.Background(), 7, 8, 9, &entity.Session{}, entity.WithStatus(entity.ExptStatus_Success)))
-	require.True(t, released, "cleanup must reach quota release instead of retrying for the 36h TTL")
-	_, err := server.Get(key)
-	require.Error(t, err, "migrated holder must be released")
+	err := manager.CompleteRun(context.Background(), 7, 8, 9, &entity.Session{}, entity.WithStatus(entity.ExptStatus_Success))
+	require.True(t, errno.NeedMQRetry(err))
+	owner, getErr := server.Get(key)
+	require.NoError(t, getErr, "static holder must be kept")
+	require.Equal(t, legacyStaticHolderValue, owner)
 }
 
 // 数字 runID（其他 run 的 admission lease）与新 cleanup lease 都不能被迁移误删。
@@ -322,10 +304,29 @@ func TestStaticLegacyHolderRealRedisAndMySQL(t *testing.T) {
 		quotaRepo:         quota,
 		idem:              idem,
 	}
+	// 把 36h 租约推到尾巴上模拟自然到期；不删除 holder、不依赖 EndAt 版本。
+	require.NoError(t, raw.PExpire(ctx, key, 600*time.Millisecond).Err())
+	err = manager.cleanupNaturallyFinishedRun(ctx, &entity.ExptScheduleEvent{ExptID: expt, ExptRunID: run, SpaceID: space, Session: &entity.Session{}}, stored)
+	require.True(t, errno.NeedMQRetry(err), "unowned fixed holder must keep cleanup replayable")
+	require.False(t, quotaReleased)
+	holder, getErr := raw.Get(ctx, key).Result()
+	require.NoError(t, getErr)
+	require.Equal(t, legacyStaticHolderValue, holder, "unproven static holder must be kept")
+
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		n, existsErr := raw.Exists(ctx, key).Result()
+		require.NoError(t, existsErr)
+		if n == 0 {
+			break
+		}
+		require.False(t, time.Now().After(deadline), "static holder did not expire")
+		time.Sleep(100 * time.Millisecond)
+	}
 	require.NoError(t, manager.cleanupNaturallyFinishedRun(ctx, &entity.ExptScheduleEvent{ExptID: expt, ExptRunID: run, SpaceID: space, Session: &entity.Session{}}, stored))
-	require.True(t, quotaReleased, "terminal EndAt evidence must let cleanup reach quota release")
+	require.True(t, quotaReleased, "replay after natural expiry must recover the finish cleanup")
 	exists, err := raw.Exists(ctx, key).Result()
 	require.NoError(t, err)
-	require.Zero(t, exists, "migrated static holder must be released")
-	t.Log("REAL_REDIS_MYSQL_STATIC_HOLDER_CLEANUP_EXECUTED")
+	require.Zero(t, exists, "cleanup lease must be released after recovery")
+	t.Log("REAL_REDIS_MYSQL_STATIC_HOLDER_KEPT_THEN_EXPIRY_RECOVERY_EXECUTED")
 }

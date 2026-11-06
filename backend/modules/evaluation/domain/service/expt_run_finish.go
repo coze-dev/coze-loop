@@ -134,26 +134,10 @@ func legacyLifecycleHolderAcquiredAt(holder string) (time.Time, bool) {
 	return id.Time(), true
 }
 
-// staticLifecycleHolderMigrationEligible decides whether the fixed "evaluation"
-// holder may be taken over. The legacy LogRun wrote it once, before its run
-// reached a terminal state, and never renewed or reassigned it; the run's
-// immutable terminal EndAt is therefore the only provable age evidence.
-// A missing, future-dated or too recent EndAt never proves the grace period, so
-// the lock is kept. The remaining TTL is deliberately NOT consulted: if the
-// zombie interval was raised after the write (e.g. 1h -> 36h), TTL arithmetic
-// would overestimate the holder age and take over a lock written seconds ago.
-func staticLifecycleHolderMigrationEligible(current *entity.Experiment, now time.Time) bool {
-	if current == nil || current.EndAt == nil {
-		return false
-	}
-	// EndAt in the future (clock skew or corrupt row) yields a negative age and
-	// stays conservative.
-	return now.Sub(*current.EndAt) >= LegacyLifecycleMigrationGrace
-}
-
 // releasePreviousLifecycleHolder migrates a pre-upgrade random holder only when
 // the current run is already terminal. Numeric holders belong to another run,
-// and prefixed holders belong to a live new cleanup lease; neither is migrated.
+// prefixed holders belong to a live new cleanup lease, and the fixed legacy
+// "evaluation" holder carries no acquisition token at all; none are migrated.
 func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, locker lock.ILocker, key string, event *entity.ExptScheduleEvent) error {
 	if event == nil {
 		return errno.NewMQRetryErr("legacy lifecycle event missing")
@@ -181,19 +165,24 @@ func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, loc
 		logs.CtxWarn(ctx, "[ExptLifecycle] legacy holder has no expiry or TTL is unavailable; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
 		return nil
 	}
-	isStatic := holder == legacyStaticLifecycleHolder
-	var acquiredAt time.Time
-	if !isStatic {
-		var provable bool
-		acquiredAt, provable = legacyLifecycleHolderAcquiredAt(holder)
-		if !provable {
-			// 不认识的老 holder 格式：无法证明获取时间，宁可等自然过期也不删。
-			logs.CtxWarn(ctx, "[ExptLifecycle] legacy holder age unverifiable; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
-			return nil
-		}
-		if time.Since(acquiredAt) < LegacyLifecycleMigrationGrace {
-			return nil
-		}
+	if holder == legacyStaticLifecycleHolder {
+		// 固定的旧 "evaluation" holder 没有 acquisition token：旧 LogRun 在上一
+		// 个 run 的 holder 被释放后会以完全相同的 value 为下一个 run 重新 SETNX。
+		// 终态 EndAt 只证明上一个 run 结束了多久，不证明当前 Redis owner 属于
+		// 它；同值 CAS 也无法识别 R1/R2 换代。R2 可能已经 SETNX 但仍停在
+		// Create/LatestRunID 之前，此时删除就是抹掉它已取得的排他保护。无法证明
+		// 归属就不能删除，只能保留并让 AlreadyFinished 重放等到租约自然到期。
+		logs.CtxWarn(ctx, "[ExptLifecycle] fixed legacy holder has no ownership token; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
+		return nil
+	}
+	acquiredAt, provable := legacyLifecycleHolderAcquiredAt(holder)
+	if !provable {
+		// 不认识的老 holder 格式：无法证明获取时间，宁可等自然过期也不删。
+		logs.CtxWarn(ctx, "[ExptLifecycle] legacy holder age unverifiable; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
+		return nil
+	}
+	if time.Since(acquiredAt) < LegacyLifecycleMigrationGrace {
+		return nil
 	}
 	if e.exptRepo == nil {
 		return errno.NewMQRetryErr("legacy lifecycle ownership repository missing")
@@ -203,10 +192,6 @@ func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, loc
 		return err
 	}
 	if current == nil || current.LatestRunID != event.ExptRunID || !entity.IsExptFinished(current.Status) {
-		return nil
-	}
-	if isStatic && !staticLifecycleHolderMigrationEligible(current, time.Now()) {
-		logs.CtxWarn(ctx, "[ExptLifecycle] static legacy holder terminal time unproven; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
 		return nil
 	}
 	released, err = locker.UnlockWithValue(ctx, key, holder)
