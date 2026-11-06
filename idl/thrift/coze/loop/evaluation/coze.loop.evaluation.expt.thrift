@@ -79,6 +79,9 @@ struct CreateExperimentRequest {
 
     100: optional map<string, string> ext (api.body = 'ext')
 
+    // 沙箱运行环境变量：key 明文，value 由商业层加密落库；开源仓只做存储搬运
+    101: optional map<string, string> runner_envs (api.body = 'runner_envs')
+
     200: optional common.Session session
 
     255: optional base.Base Base
@@ -147,6 +150,9 @@ struct SubmitExperimentRequest {
     81: optional common.SharedResourceOption target_shared_option (api.body = 'target_shared_option')     // 评测对象来源空间
 
     100: optional map<string, string> ext (api.body = 'ext')
+
+    // 沙箱运行环境变量：key 明文，value 由商业层加密落库；开源仓只做存储搬运
+    101: optional map<string, string> runner_envs (api.body = 'runner_envs')
 
     // 实验分组 key 默认为实验 id；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）
     // 引用分组实验 id：填写时校验其为当前空间内的实验 id

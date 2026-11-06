@@ -1844,6 +1844,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		TriggerType:             gptr.Of(openAPITriggerType(req.GetTriggerType())),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.GetExt(),
+		RunnerEnvs:              req.GetRunnerEnvs(),
 		// ★ 透传分流依据: OpenAPI 字符串枚举 → kitex enum, 供下游平台层统一以 source_type 分流。
 		EvalSetSourceType: gptr.Of(srcType),
 		// ★ 透传引用分组实验 id: 命中当前空间实验则复用其 group key(归入同一分组); 缺省则以实验 id 兜底。
@@ -2094,7 +2095,13 @@ func (e *EvalOpenAPIApplication) ListExperimentsOApi(ctx context.Context, req *o
 
 	outExpts := make([]*experiment.Experiment, 0, len(resp.GetExperiments()))
 	for _, ex := range resp.GetExperiments() {
-		outExpts = append(outExpts, experiment_convertor.DomainExperimentDTO2OpenAPI(ex))
+		out := experiment_convertor.DomainExperimentDTO2OpenAPI(ex)
+		if out != nil {
+			// runner_envs values are credentials. Collection endpoints never return
+			// this field; only submit/detail may expose its masked shape.
+			out.RunnerEnvs = nil
+		}
+		outExpts = append(outExpts, out)
 	}
 
 	var total *int64
@@ -2158,7 +2165,13 @@ func (e *EvalOpenAPIApplication) GetExperimentIDsByGroupOApi(ctx context.Context
 	// 跨两套 Experiment 模型（domain / domain_openapi）枚举编号刻意不同，只能过既有转换函数，禁止手写字段赋值。
 	outExpts := make([]*experiment.Experiment, 0, len(resp.GetExperiments()))
 	for _, ex := range resp.GetExperiments() {
-		outExpts = append(outExpts, experiment_convertor.DomainExperimentDTO2OpenAPI(ex))
+		out := experiment_convertor.DomainExperimentDTO2OpenAPI(ex)
+		if out != nil {
+			// runner_envs values are credentials. Collection endpoints never return
+			// this field; only submit/detail may expose its masked shape.
+			out.RunnerEnvs = nil
+		}
+		outExpts = append(outExpts, out)
 	}
 
 	var total *int64

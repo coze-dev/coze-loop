@@ -2865,6 +2865,7 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 			buildReq: func() *openapi.SubmitExperimentOApiRequest {
 				req := buildBaseReq()
 				req.RefGroupExperimentID = gptr.Of(int64(6001))
+				req.RunnerEnvs = map[string]string{"OPENAI_API_KEY": "sk-test"}
 				return req
 			},
 			setup: func(req *openapi.SubmitExperimentOApiRequest, auth *rpcmocks.MockIAuthProvider, manager *servicemocks.MockIExptManager, versionSvc *servicemocks.MockEvaluationSetVersionService, evaluatorSvc *servicemocks.MockEvaluatorService, fakeApp *fakeExperimentApp) {
@@ -2880,7 +2881,10 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 					},
 				}
 				evaluatorSvc.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluatorVersionRequest{})).Return([]*entity.Evaluator{evaluator}, int64(1), nil)
-				fakeApp.submitResp = &exptpb.SubmitExperimentResponse{Experiment: &domainexpt.Experiment{ID: gptr.Of(int64(8892))}}
+				fakeApp.submitResp = &exptpb.SubmitExperimentResponse{Experiment: &domainexpt.Experiment{
+					ID:         gptr.Of(int64(8892)),
+					RunnerEnvs: map[string]string{"OPENAI_API_KEY": "***"},
+				}}
 			},
 		},
 		{
@@ -2972,6 +2976,7 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 				if assert.NotNil(t, resp) && assert.NotNil(t, resp.Data) {
 					assert.NotNil(t, resp.Data.Experiment)
 					assert.Equal(t, fakeApp.submitResp.Experiment.GetID(), resp.Data.Experiment.GetID())
+					assert.Equal(t, fakeApp.submitResp.Experiment.GetRunnerEnvs(), resp.Data.Experiment.GetRunnerEnvs())
 				}
 				if assert.NotNil(t, fakeApp.lastReq) {
 					assert.Equal(t, workspaceID, fakeApp.lastReq.GetWorkspaceID())
@@ -2979,6 +2984,7 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 					assert.Equal(t, evaluatorVersionID, fakeApp.lastReq.EvaluatorVersionIds[0])
 					// ref_group_experiment_id 透传: 显式传入时应原样透传给内部 SubmitExperimentRequest。
 					assert.Equal(t, req.RefGroupExperimentID, fakeApp.lastReq.RefGroupExperimentID)
+					assert.Equal(t, req.GetRunnerEnvs(), fakeApp.lastReq.GetRunnerEnvs())
 				}
 			}
 
@@ -7915,6 +7921,7 @@ func TestEvalOpenAPIApplication_ListExperimentsOApi(t *testing.T) {
 							ID:               gptr.Of(int64(42)),
 							EvalSetID:        &evalSetID,
 							EvalSetVersionID: &boundVersionID,
+							RunnerEnvs:       map[string]string{"APP_KEY": "ciphertext"},
 							EvalSet: &domainEvalSet.EvaluationSet{
 								ID:            &evalSetID,
 								LatestVersion: gptr.Of("v3"),
@@ -7943,6 +7950,7 @@ func TestEvalOpenAPIApplication_ListExperimentsOApi(t *testing.T) {
 				assert.Equal(t, int64(200), resp.Data.Experiments[0].EvalSet.CurrentVersion.GetID())
 				assert.Equal(t, "v2", resp.Data.Experiments[0].EvalSet.CurrentVersion.GetVersion())
 				assert.Equal(t, "v3", resp.Data.Experiments[0].EvalSet.GetLatestVersion())
+				assert.Nil(t, resp.Data.Experiments[0].RunnerEnvs, "列表接口不得返回 runner_envs")
 			},
 			checkReq: func(t *testing.T, req *exptpb.ListExperimentsRequest) {
 				require.NotNil(t, req)
@@ -8150,8 +8158,8 @@ func TestEvalOpenAPIApplication_GetExperimentIDsByGroupOApi(t *testing.T) {
 				fakeApp.groupIDsResp = &exptpb.GetExperimentIDsByGroupResponse{
 					ExptIds: []int64{11, 12},
 					Experiments: []*domainexpt.Experiment{
-						{ID: gptr.Of(int64(11)), Name: gptr.Of("e11"), ExperimentGroupKey: gptr.Of("g1")},
-						{ID: gptr.Of(int64(12)), Name: gptr.Of("e12"), ExperimentGroupKey: gptr.Of("g1")},
+						{ID: gptr.Of(int64(11)), Name: gptr.Of("e11"), ExperimentGroupKey: gptr.Of("g1"), RunnerEnvs: map[string]string{"APP_KEY": "ciphertext"}},
+						{ID: gptr.Of(int64(12)), Name: gptr.Of("e12"), ExperimentGroupKey: gptr.Of("g1"), RunnerEnvs: map[string]string{"SUBJECT_ID": "ciphertext"}},
 					},
 					Total: &total,
 				}
@@ -8168,6 +8176,7 @@ func TestEvalOpenAPIApplication_GetExperimentIDsByGroupOApi(t *testing.T) {
 				for _, ex := range resp.Data.Experiments {
 					require.NotNil(t, ex)
 					assert.Equal(t, "g1", ex.GetExperimentGroupKey())
+					assert.Nil(t, ex.RunnerEnvs, "分组列表接口不得返回 runner_envs")
 					// 轻量视图：内部面 MGetBasicByID 走 PO2DO(po, nil)，不 join 三元组，
 					// 转换后这些详情字段必须为空；同时 BaseInfo 里不带用户昵称（无用户 RPC）。
 					assert.Nil(t, ex.EvalSet, "轻量视图不得含评测集详情")

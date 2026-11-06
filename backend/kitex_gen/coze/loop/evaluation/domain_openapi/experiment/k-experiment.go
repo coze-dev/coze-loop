@@ -6878,6 +6878,20 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 121:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField121(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField100(buf[offset:])
@@ -7396,6 +7410,38 @@ func (p *Experiment) FastReadField120(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField121(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		var _val string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	p.RunnerEnvs = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewBaseInfo()
@@ -7448,6 +7494,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField117(buf[offset:], w)
 		offset += p.fastWriteField118(buf[offset:], w)
 		offset += p.fastWriteField119(buf[offset:], w)
+		offset += p.fastWriteField121(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -7490,6 +7537,7 @@ func (p *Experiment) BLength() int {
 		l += p.field118Length()
 		l += p.field119Length()
 		l += p.field120Length()
+		l += p.field121Length()
 		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -7821,6 +7869,23 @@ func (p *Experiment) fastWriteField120(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *Experiment) fastWriteField121(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRunnerEnvs() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 121)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.RunnerEnvs {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRING, length)
+	}
+	return offset
+}
+
 func (p *Experiment) fastWriteField100(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBaseInfo() {
@@ -8143,6 +8208,21 @@ func (p *Experiment) field120Length() int {
 	return l
 }
 
+func (p *Experiment) field121Length() int {
+	l := 0
+	if p.IsSetRunnerEnvs() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.RunnerEnvs {
+			_, _ = k, v
+
+			l += thrift.Binary.StringLengthNocopy(k)
+			l += thrift.Binary.StringLengthNocopy(v)
+		}
+	}
+	return l
+}
+
 func (p *Experiment) field100Length() int {
 	l := 0
 	if p.IsSetBaseInfo() {
@@ -8413,6 +8493,23 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 	if src.LatestRunID != nil {
 		tmp := *src.LatestRunID
 		p.LatestRunID = &tmp
+	}
+
+	if src.RunnerEnvs != nil {
+		p.RunnerEnvs = make(map[string]string, len(src.RunnerEnvs))
+		for key, val := range src.RunnerEnvs {
+			var _key string
+			if key != "" {
+				_key = kutils.StringDeepCopy(key)
+			}
+
+			var _val string
+			if val != "" {
+				_val = kutils.StringDeepCopy(val)
+			}
+
+			p.RunnerEnvs[_key] = _val
+		}
 	}
 
 	var _baseInfo *common.BaseInfo

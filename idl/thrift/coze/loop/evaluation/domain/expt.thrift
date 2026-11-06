@@ -274,6 +274,9 @@ struct Experiment {
     119: optional VerificationConfig verification_config
     120: optional i64 latest_run_id (api.js_conv='true', go.tag='json:"latest_run_id,omitempty"')
 
+    // 沙箱运行环境变量回显：key 明文，value 由商业层掩码；开源仓原样带出
+    121: optional map<string, string> runner_envs
+
     // 注: scheduler_scope **刻意不进读视图**。它是不透明调度域 ID (形如 fornax_cn_prod),
     // 对调用方没有可用语义却泄露部署拓扑; 业务代码本就不允许解析该字符串, 回显只会诱使
     // 调用方依赖这个不稳定契约。内部运维需要时直接查 experiment.scheduler_scope 列。
