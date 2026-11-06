@@ -71,6 +71,9 @@ func (a *Ability) ValidAbility() error {
 				return errors.Errorf("multi modal Image is true but ability multi modal ability image is nil")
 			}
 		}
+		if a.AbilityMultiModal.Video && a.AbilityMultiModal.AbilityVideo == nil {
+			return errors.Errorf("multi modal video is true but ability multi modal ability video is nil")
+		}
 	}
 	return nil
 }
@@ -112,6 +115,13 @@ func (m *Model) SupportImageBinary() (bool, int64, int64) {
 	}
 	return m.Ability.AbilityMultiModal.AbilityImage.BinaryEnabled,
 		m.Ability.AbilityMultiModal.AbilityImage.MaxImageCount, m.Ability.AbilityMultiModal.AbilityImage.MaxImageSize
+}
+
+func (m *Model) SupportVideoInput() bool {
+	if m == nil || m.Ability == nil || m.Ability.AbilityMultiModal == nil {
+		return false
+	}
+	return m.Ability.AbilityMultiModal.Video && m.Ability.AbilityMultiModal.AbilityVideo != nil
 }
 
 func (m *Model) SupportFunctionCall() bool {
@@ -181,6 +191,8 @@ func (a *Ability) GetAbilityEnums() []AbilityEnum {
 type AbilityMultiModal struct {
 	Image        bool          `json:"image" yaml:"image" mapstructure:"image"`
 	AbilityImage *AbilityImage `json:"ability_image" yaml:"ability_image" mapstructure:"ability_image"`
+	Video        bool          `json:"video" yaml:"video" mapstructure:"video"`
+	AbilityVideo *AbilityVideo `json:"ability_video" yaml:"ability_video" mapstructure:"ability_video"`
 }
 
 type AbilityImage struct {
@@ -189,6 +201,13 @@ type AbilityImage struct {
 	MaxImageSize  int64 `json:"max_image_size" yaml:"max_image_size" mapstructure:"max_image_size"`
 	MaxImageCount int64 `json:"max_image_count" yaml:"max_image_count" mapstructure:"max_image_count"`
 }
+
+type AbilityVideo struct {
+	MaxVideoSizeInMB      int32         `json:"max_video_size_in_mb" yaml:"max_video_size_in_mb" mapstructure:"max_video_size_in_mb"`
+	SupportedVideoFormats []VideoFormat `json:"supported_video_formats" yaml:"supported_video_formats" mapstructure:"supported_video_formats"`
+}
+
+type VideoFormat string
 
 type ProtocolConfig struct {
 	BaseURL                string                  `json:"base_url" yaml:"base_url" mapstructure:"base_url"`
