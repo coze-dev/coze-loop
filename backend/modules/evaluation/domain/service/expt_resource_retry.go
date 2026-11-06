@@ -21,6 +21,7 @@ import (
 const centralItemRetryRecordKey = "__central_item_retry_times"
 
 type centralResourceExecutionKey struct{}
+type centralResourceFirstStartKey struct{}
 
 func isCentralResourceExecution(ctx context.Context) bool {
 	active, _ := ctx.Value(centralResourceExecutionKey{}).(bool)

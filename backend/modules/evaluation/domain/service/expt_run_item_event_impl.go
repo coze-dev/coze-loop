@@ -397,6 +397,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			if !started && strictStart {
 				return nil
 			}
+			if started && strictStart {
+				ctx = context.WithValue(ctx, centralResourceFirstStartKey{}, true)
+			}
 			if !started {
 				logs.CtxInfo(ctx, "[CentralReservation] run log projection not claimed (duplicate delivery or repaired), continue, expt_run_id: %v, item_id: %v",
 					event.ExptRunID, event.EvalSetItemID)
