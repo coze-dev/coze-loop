@@ -501,7 +501,7 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 		return etec, nil
 	}
 	recordCtx := ctx
-	if eiec.Event.ExptRunMode == entity.EvaluationModeFailRetry {
+	if eiec.Event.ExptRunMode == entity.EvaluationModeFailRetry || isCentralResourceExecution(ctx) {
 		recordCtx = contexts.WithCtxWriteDB(ctx)
 	}
 

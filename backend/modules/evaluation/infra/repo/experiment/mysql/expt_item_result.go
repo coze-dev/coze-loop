@@ -66,6 +66,10 @@ type IExptItemResultDAO interface {
 	MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, error)
 }
 
+type IExptItemRetryDAO interface {
+	AuthorizeItemRetry(ctx context.Context, spaceID, exptID, exptRunID, itemID int64, expectedRetryTimes int32, errMsg []byte) (bool, error)
+}
+
 type IExptItemCancellationDAO interface {
 	ScanItemRunLogsForCancellation(ctx context.Context, spaceID, exptID int64, exptRunID *int64, itemIDs []int64, cursor, limit int64) ([]*model.ExptItemResultRunLog, int64, error)
 	UpdateItemRunLogIfNonterminal(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, fields map[string]any, spaceID int64) error
@@ -458,6 +462,13 @@ func (dao *exptItemResultDAOImpl) SetTerminalQuotaReservationState(ctx context.C
 		logs.CtxWarn(ctx, "[TerminationRecovery] terminal quota reservation projection updated, expt_id: %v, expt_run_id: %v, item_id: %v, request_id: %v, state: %v", exptID, exptRunID, itemID, expectedRequestID, state)
 	}
 	return changed, nil
+}
+
+func (dao *exptItemResultDAOImpl) AuthorizeItemRetry(ctx context.Context, spaceID, exptID, exptRunID, itemID int64, expectedRetryTimes int32, errMsg []byte) (bool, error) {
+	q := query.Use(dao.provider.NewSession(ctx).Clauses(dbresolver.Write)).ExptItemResultRunLog
+	info, err := q.WithContext(ctx).Where(q.SpaceID.Eq(spaceID), q.ExptID.Eq(exptID), q.ExptRunID.Eq(exptRunID), q.ItemID.Eq(itemID),
+		q.Status.Eq(int32(entity.ItemRunState_Processing)), q.RetryTimes.Eq(expectedRetryTimes)).UpdateColumns(map[string]any{"retry_times": expectedRetryTimes + 1, "err_msg": errMsg})
+	return info.RowsAffected == 1, err
 }
 
 func (dao *exptItemResultDAOImpl) UpdateItemRunLogIfNonterminal(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, fields map[string]any, spaceID int64) error {

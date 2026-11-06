@@ -159,6 +159,14 @@ func (e ExptItemResultRepoImpl) SetTerminalQuotaReservationState(ctx context.Con
 	return changed, nil
 }
 
+func (e ExptItemResultRepoImpl) AuthorizeItemRetry(ctx context.Context, spaceID, exptID, exptRunID, itemID int64, expectedRetryTimes int32, errMsg []byte) (bool, error) {
+	dao, ok := e.exptItemResultDAO.(mysql.IExptItemRetryDAO)
+	if !ok {
+		return false, errorx.New("item retry DAO not wired")
+	}
+	return dao.AuthorizeItemRetry(ctx, spaceID, exptID, exptRunID, itemID, expectedRetryTimes, errMsg)
+}
+
 func (e ExptItemResultRepoImpl) UpdateItemRunLogIfNonterminal(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, fields map[string]any, spaceID int64) error {
 	dao, ok := e.exptItemResultDAO.(mysql.IExptItemCancellationDAO)
 	if !ok {

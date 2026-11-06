@@ -118,6 +118,11 @@ type IExptItemResultRepo interface {
 	MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64) ([]*entity.ExptItemResultRunLog, error)
 }
 
+// IExptItemRetryRepo authorizes the next MQ retry without yielding the Processing slot.
+type IExptItemRetryRepo interface {
+	AuthorizeItemRetry(ctx context.Context, spaceID, exptID, exptRunID, itemID int64, expectedRetryTimes int32, errMsg []byte) (bool, error)
+}
+
 // IExptItemCancellationRepo extends the Item repository for primary, all-run cancellation without changing legacy implementations.
 type IExptItemCancellationRepo interface {
 	ScanItemRunLogsForCancellation(ctx context.Context, spaceID, exptID int64, exptRunID *int64, itemIDs []int64, cursor, limit int64) ([]*entity.ExptItemResultRunLog, int64, error)
