@@ -324,98 +324,183 @@ func (p *currentRetryCombinationFixture) rejectOldSource(t *testing.T, old *enti
 	require.Equal(t, before, f.snapshot())
 }
 
+// Read the committed storage before controlled completion can skip Success.
+// Expected references come from the real prepare plan, including valid target
+// and evaluator stages retained by FailRetry; they are not cleared wholesale.
+func (p *currentRetryCombinationFixture) assertRequeuedTurns(t *testing.T, item *entity.PreparedRetryItem, mode entity.ExptRunMode) {
+	t.Helper()
+	current := p.f.source()
+	require.Len(t, current.CanonicalTurns, len(item.Turns))
+	require.Len(t, current.Turns, len(item.Turns))
+	canonical := make(map[int64]*entity.ExptTurnResult, len(current.CanonicalTurns))
+	for _, turn := range current.CanonicalTurns {
+		canonical[turn.TurnID] = turn
+	}
+	var expectedRefIDs, actualRefIDs []int64
+	for _, prepared := range item.Turns {
+		before := prepared.SourceTurn
+		turn, log := canonical[before.TurnID], current.Turns[before.TurnID]
+		require.NotNil(t, turn)
+		require.NotNil(t, log)
+		require.Equal(t, before.ID, turn.ID)
+		require.Equal(t, p.f.run, turn.ExptRunID)
+		require.Equal(t, p.f.run, log.ExptRunID)
+		expectedState := entity.TurnRunState_Queueing
+		expectedResults := prepared.EvaluatorResults
+		if mode == entity.EvaluationModeRetryItems {
+			require.False(t, prepared.PreserveSuccess, "manual item retry must rerun every prepared turn")
+			require.Zero(t, prepared.TargetResultID)
+			require.Empty(t, prepared.KeepRefIDs)
+			require.True(t, entity.SameCurrentEvaluatorRefs(prepared.EvaluatorResults, nil))
+		} else {
+			require.Equal(t, before.Status == int32(entity.TurnRunState_Success), prepared.PreserveSuccess)
+		}
+		if prepared.PreserveSuccess {
+			expectedState = entity.TurnRunState_Success
+			require.Equal(t, before.TargetResultID, turn.TargetResultID)
+			require.Equal(t, before.WeightedScore, turn.WeightedScore)
+			if prepared.CurrentRunLog != nil {
+				expectedResults = prepared.CurrentRunLog.EvaluatorResultIds
+			}
+		} else {
+			require.Nil(t, turn.WeightedScore)
+			require.Empty(t, turn.ErrMsg)
+			require.Empty(t, log.ErrMsg)
+		}
+		require.Equal(t, int32(expectedState), turn.Status, "canonical turn reset must be correct before the helper runs")
+		require.Equal(t, expectedState, log.Status, "run-log turn reset must be correct before the helper runs")
+		require.Equal(t, prepared.TargetResultID, turn.TargetResultID)
+		require.Equal(t, prepared.TargetResultID, log.TargetResultID)
+		require.True(t, entity.SameCurrentEvaluatorRefs(expectedResults, log.EvaluatorResultIds), "run-log references must match the prepared retry contract")
+		expectedRefIDs = append(expectedRefIDs, prepared.KeepRefIDs...)
+	}
+	for _, ref := range current.CurrentRefs {
+		actualRefIDs = append(actualRefIDs, ref.ID)
+	}
+	require.ElementsMatch(t, expectedRefIDs, actualRefIDs, "stored references must retain only the prepared IDs")
+	t.Logf("COMBINATIONS_TURN_RESET mode=%d turns=%d preserved_refs=%d committed_storage_checked=true", mode, len(item.Turns), len(actualRefIDs))
+}
+
 func TestCurrentRetryCombinationsParentModesAndContinuousRequests(t *testing.T) {
 	for _, parent := range []entity.ExptRunMode{entity.EvaluationModeFailRetry, entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems} {
 		for _, requestMode := range []entity.ExptRunMode{entity.EvaluationModeRetryItems, entity.EvaluationModeFailRetry} {
 			t.Run(fmt.Sprintf("parent%d/request%d", parent, requestMode), func(t *testing.T) {
-				p := newCurrentRetryCombinationFixture(t, parent)
-				f := p.f
-				initialStatus := entity.ItemRunState_Success
+				nextMode := entity.EvaluationModeFailRetry
 				if requestMode == entity.EvaluationModeFailRetry {
-					initialStatus = entity.ItemRunState_Fail
+					nextMode = entity.EvaluationModeRetryItems
 				}
-				publication := p.completeAndPublish(t, f.item, initialStatus)
-				originalChunks := p.identity(t).ItemIds
-				otherItems, err := f.itemRepo().BatchGet(context.Background(), f.space, f.expt, p.items[1:])
-				require.NoError(t, err)
-				old := f.source()
-				req := p.request(requestMode)
-				frozen, err := p.manager.prepareTerminalCandidatesAndReusableRefs(context.Background(), p.expt, f.run, req.Mode, req.ItemIDs, nil)
-				require.NoError(t, err)
-				require.Len(t, frozen.Items, 1)
-				receipt, err := p.manager.RetryInCurrentRun(context.Background(), req)
-				require.NoError(t, err)
-				require.Equal(t, int32(1), receipt.AcceptedCount)
-				require.Equal(t, f.run, receipt.RunID)
-				p.awaitReleased(t)
-				q1 := f.source().Current
-				require.NotEmpty(t, q1.RequestID)
-				require.NotEqual(t, old.Current.RequestID, q1.RequestID)
-				require.Equal(t, req.Mode, q1.Mode)
-				require.Equal(t, entity.ItemRunState_Queueing, q1.Status)
-				require.Equal(t, originalChunks, p.identity(t).ItemIds)
-				// The same frozen terminal source loses to Q1, both before Start
-				// and after Start. A new request ID cannot bypass the SQL gate.
-				for _, stage := range []string{"queueing", "processing"} {
-					before := f.snapshot()
-					stale := &entity.RequeueTerminalItemsRequest{SpaceID: f.space, ExptID: f.expt, RunID: f.run, RequestID: "old-snapshot-" + stage, Mode: requestMode, Items: frozen.Items, SnapshotAtMS: frozen.SnapshotAtMS}
-					duplicate, err := p.manager.manualRetryRepo.RequeueTerminalItems(context.Background(), stale)
-					require.NoError(t, err)
-					require.Zero(t, duplicate.AcceptedCount)
-					require.NotEmpty(t, duplicate.RejectedItems)
-					duplicate, err = p.manager.RetryInCurrentRun(context.Background(), p.request(entity.EvaluationModeRetryItems))
-					require.NoError(t, err)
-					require.Zero(t, duplicate.AcceptedCount)
-					require.Equal(t, stage, duplicate.RejectedItems[0].Reason)
-					p.awaitReleased(t)
-					require.Equal(t, before, f.snapshot())
-					if stage == "queueing" {
-						if parent == entity.EvaluationModeRetryItems {
-							staleTick := *p.event
-							staleTick.ExecEvalSetItemIDs = append([]int64(nil), p.items[1:]...)
-							require.NoError(t, p.mode.ScheduleStart(context.Background(), &staleTick, p.expt))
-							require.Equal(t, p.items, staleTick.ExecEvalSetItemIDs)
-							require.Equal(t, before, f.snapshot(), "old RetryItems snapshot must not reset materialized Q1")
-						}
-						toSubmit, incomplete, _, err := p.mode.ScanEvalItems(context.Background(), p.event, p.expt)
-						require.NoError(t, err)
-						found := false
-						for _, item := range toSubmit {
-							if item.ItemID == f.item {
-								found = true
-								require.Equal(t, q1.RequestID, item.RequestID)
-								require.Equal(t, requestMode, item.Mode)
-							}
-						}
-						require.True(t, found, "the real parent mode's next scan must see Q1")
-						require.Contains(t, entity.ExptEvalItems(incomplete).GetItemIDs(), p.items[1])
-						p.start(t, f.item)
-					}
-				}
-				p.rejectOldSource(t, old, publication)
-				nextMode, nextStatus := entity.EvaluationModeFailRetry, entity.ItemRunState_Fail
-				if requestMode == entity.EvaluationModeFailRetry {
-					nextMode, nextStatus = entity.EvaluationModeRetryItems, entity.ItemRunState_Success
-				}
-				publication = p.completeAndPublish(t, f.item, nextStatus)
-				old = f.source()
-				receipt, err = p.manager.RetryInCurrentRun(context.Background(), p.request(nextMode))
-				require.NoError(t, err)
-				require.Equal(t, int32(1), receipt.AcceptedCount, "Resulted Q1 permits a legitimate Q2")
-				p.awaitReleased(t)
-				q2 := f.source().Current
-				require.NotEqual(t, q1.RequestID, q2.RequestID)
-				require.Equal(t, nextMode, q2.Mode)
-				require.Equal(t, originalChunks, p.identity(t).ItemIds)
-				p.start(t, f.item)
-				p.rejectOldSource(t, old, publication)
-				afterOthers, err := f.itemRepo().BatchGet(context.Background(), f.space, f.expt, p.items[1:])
-				require.NoError(t, err)
-				require.Equal(t, otherItems, afterOthers, "A retries must not mutate B/C/D canonical state")
-				t.Logf("COMBINATIONS_REAL_MYSQL parent=%d Q1_mode=%d Q2_mode=%d run_and_chunks_preserved=true old_source_noop=true old_reservation_release=0", parent, requestMode, nextMode)
+				runCurrentRetryCombination(t, parent, requestMode, nextMode)
 			})
 		}
 	}
+}
+
+func TestCurrentRetryCombinationsContinuousSameMode(t *testing.T) {
+	for _, mode := range []entity.ExptRunMode{entity.EvaluationModeRetryItems, entity.EvaluationModeFailRetry} {
+		t.Run(fmt.Sprintf("parent%d/mode%d", mode, mode), func(t *testing.T) {
+			runCurrentRetryCombination(t, mode, mode, mode)
+		})
+	}
+}
+
+func runCurrentRetryCombination(t *testing.T, parent, requestMode, nextMode entity.ExptRunMode) {
+	t.Helper()
+	p := newCurrentRetryCombinationFixture(t, parent)
+	f := p.f
+	initialStatus := entity.ItemRunState_Success
+	if requestMode == entity.EvaluationModeFailRetry {
+		initialStatus = entity.ItemRunState_Fail
+	}
+	publication := p.completeAndPublish(t, f.item, initialStatus)
+	originalChunks := p.identity(t).ItemIds
+	otherItems, err := f.itemRepo().BatchGet(context.Background(), f.space, f.expt, p.items[1:])
+	require.NoError(t, err)
+	old := f.source()
+	req := p.request(requestMode)
+	frozen, err := p.manager.prepareTerminalCandidatesAndReusableRefs(context.Background(), p.expt, f.run, req.Mode, req.ItemIDs, nil)
+	require.NoError(t, err)
+	require.Len(t, frozen.Items, 1)
+	receipt, err := p.manager.RetryInCurrentRun(context.Background(), req)
+	require.NoError(t, err)
+	require.Equal(t, int32(1), receipt.AcceptedCount)
+	require.Equal(t, f.run, receipt.RunID)
+	p.awaitReleased(t)
+	q1 := f.source().Current
+	require.NotEmpty(t, q1.RequestID)
+	require.NotEqual(t, old.Current.RequestID, q1.RequestID)
+	require.Equal(t, req.Mode, q1.Mode)
+	require.Equal(t, entity.ItemRunState_Queueing, q1.Status)
+	p.assertRequeuedTurns(t, frozen.Items[0], requestMode)
+	require.Equal(t, originalChunks, p.identity(t).ItemIds)
+	// The same frozen terminal source loses to Q1, both before Start
+	// and after Start. A new request ID cannot bypass the SQL gate.
+	for _, stage := range []string{"queueing", "processing"} {
+		before := f.snapshot()
+		stale := &entity.RequeueTerminalItemsRequest{SpaceID: f.space, ExptID: f.expt, RunID: f.run, RequestID: "old-snapshot-" + stage, Mode: requestMode, Items: frozen.Items, SnapshotAtMS: frozen.SnapshotAtMS}
+		duplicate, err := p.manager.manualRetryRepo.RequeueTerminalItems(context.Background(), stale)
+		require.NoError(t, err)
+		require.Zero(t, duplicate.AcceptedCount)
+		require.NotEmpty(t, duplicate.RejectedItems)
+		duplicate, err = p.manager.RetryInCurrentRun(context.Background(), p.request(entity.EvaluationModeRetryItems))
+		require.NoError(t, err)
+		require.Zero(t, duplicate.AcceptedCount)
+		require.Equal(t, stage, duplicate.RejectedItems[0].Reason)
+		p.awaitReleased(t)
+		require.Equal(t, before, f.snapshot())
+		if stage == "queueing" {
+			if parent == entity.EvaluationModeRetryItems {
+				staleTick := *p.event
+				staleTick.ExecEvalSetItemIDs = append([]int64(nil), p.items[1:]...)
+				require.NoError(t, p.mode.ScheduleStart(context.Background(), &staleTick, p.expt))
+				require.Equal(t, p.items, staleTick.ExecEvalSetItemIDs)
+				require.Equal(t, before, f.snapshot(), "old RetryItems snapshot must not reset materialized Q1")
+			}
+			toSubmit, incomplete, _, err := p.mode.ScanEvalItems(context.Background(), p.event, p.expt)
+			require.NoError(t, err)
+			found := false
+			for _, item := range toSubmit {
+				if item.ItemID == f.item {
+					found = true
+					require.Equal(t, q1.RequestID, item.RequestID)
+					require.Equal(t, requestMode, item.Mode)
+				}
+			}
+			require.True(t, found, "the real parent mode's next scan must see Q1")
+			require.Contains(t, entity.ExptEvalItems(incomplete).GetItemIDs(), p.items[1])
+			p.start(t, f.item)
+		}
+	}
+	p.rejectOldSource(t, old, publication)
+	nextStatus := entity.ItemRunState_Success
+	if nextMode == entity.EvaluationModeFailRetry {
+		nextStatus = entity.ItemRunState_Fail
+	}
+	publication = p.completeAndPublish(t, f.item, nextStatus)
+	old = f.source()
+	nextRequest := p.request(nextMode)
+	nextPlan, err := p.manager.prepareTerminalCandidatesAndReusableRefs(context.Background(), p.expt, f.run, nextMode, nextRequest.ItemIDs, nil)
+	require.NoError(t, err)
+	require.Len(t, nextPlan.Items, 1)
+	receipt, err = p.manager.RetryInCurrentRun(context.Background(), nextRequest)
+	require.NoError(t, err)
+	require.Equal(t, int32(1), receipt.AcceptedCount, "Resulted Q1 permits a legitimate Q2")
+	p.awaitReleased(t)
+	q2 := f.source().Current
+	require.NotEqual(t, q1.RequestID, q2.RequestID)
+	require.Equal(t, nextMode, q2.Mode)
+	require.Equal(t, entity.ItemRunState_Queueing, q2.Status)
+	p.assertRequeuedTurns(t, nextPlan.Items[0], nextMode)
+	if nextMode == requestMode {
+		require.NotEmpty(t, old.Current.RequestID, "the stale Q1 source must have a real nonempty RequestID")
+		require.Equal(t, old.Current.Mode, q2.Mode, "same-mode isolation must reject the stale RequestID")
+	}
+	require.Equal(t, originalChunks, p.identity(t).ItemIds)
+	p.start(t, f.item)
+	p.rejectOldSource(t, old, publication)
+	afterOthers, err := f.itemRepo().BatchGet(context.Background(), f.space, f.expt, p.items[1:])
+	require.NoError(t, err)
+	require.Equal(t, otherItems, afterOthers, "A retries must not mutate B/C/D canonical state")
+	t.Logf("COMBINATIONS_REAL_MYSQL parent=%d Q1_mode=%d Q2_mode=%d run_and_chunks_preserved=true old_source_noop=true old_reservation_release=0", parent, requestMode, nextMode)
 }
 
 func TestCurrentRetryCombinationsCompletionOrdering(t *testing.T) {
