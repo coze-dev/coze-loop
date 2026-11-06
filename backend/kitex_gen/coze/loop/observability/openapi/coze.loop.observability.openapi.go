@@ -20,8 +20,9 @@ import (
 )
 
 type IngestTracesRequest struct {
-	Spans []*span.InputSpan `thrift:"spans,1,optional" frugal:"1,optional,list<span.InputSpan>" form:"spans" json:"spans,omitempty"`
-	Base  *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	Spans       []*span.InputSpan `thrift:"spans,1,optional" frugal:"1,optional,list<span.InputSpan>" form:"spans" json:"spans,omitempty"`
+	WorkspaceID *string           `thrift:"workspace_id,2,optional" frugal:"2,optional,string" header:"cozeloop-workspace-id" json:"workspace_id,omitempty"`
+	Base        *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewIngestTracesRequest() *IngestTracesRequest {
@@ -43,6 +44,18 @@ func (p *IngestTracesRequest) GetSpans() (v []*span.InputSpan) {
 	return p.Spans
 }
 
+var IngestTracesRequest_WorkspaceID_DEFAULT string
+
+func (p *IngestTracesRequest) GetWorkspaceID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return IngestTracesRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
 var IngestTracesRequest_Base_DEFAULT *base.Base
 
 func (p *IngestTracesRequest) GetBase() (v *base.Base) {
@@ -57,17 +70,25 @@ func (p *IngestTracesRequest) GetBase() (v *base.Base) {
 func (p *IngestTracesRequest) SetSpans(val []*span.InputSpan) {
 	p.Spans = val
 }
+func (p *IngestTracesRequest) SetWorkspaceID(val *string) {
+	p.WorkspaceID = val
+}
 func (p *IngestTracesRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
 var fieldIDToName_IngestTracesRequest = map[int16]string{
 	1:   "spans",
+	2:   "workspace_id",
 	255: "Base",
 }
 
 func (p *IngestTracesRequest) IsSetSpans() bool {
 	return p.Spans != nil
+}
+
+func (p *IngestTracesRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
 }
 
 func (p *IngestTracesRequest) IsSetBase() bool {
@@ -95,6 +116,14 @@ func (p *IngestTracesRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -160,6 +189,17 @@ func (p *IngestTracesRequest) ReadField1(iprot thrift.TProtocol) error {
 	p.Spans = _field
 	return nil
 }
+func (p *IngestTracesRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
 func (p *IngestTracesRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -177,6 +217,10 @@ func (p *IngestTracesRequest) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -227,6 +271,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *IngestTracesRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 func (p *IngestTracesRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -263,6 +325,9 @@ func (p *IngestTracesRequest) DeepEqual(ano *IngestTracesRequest) bool {
 	if !p.Field1DeepEqual(ano.Spans) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.WorkspaceID) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -279,6 +344,18 @@ func (p *IngestTracesRequest) Field1DeepEqual(src []*span.InputSpan) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *IngestTracesRequest) Field2DeepEqual(src *string) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.WorkspaceID, *src) != 0 {
+		return false
 	}
 	return true
 }

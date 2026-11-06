@@ -119,7 +119,7 @@ func TestOpenAPIApplication_unpackOtelSpace(t *testing.T) {
 				},
 				workspace: func(ctrl *gomock.Controller) *workspacemocks.MockIWorkSpaceProvider {
 					m := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-					m.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), gomock.Any()).Return("mocked")
+					m.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), "", gomock.Any()).Return("mocked")
 					return m
 				},
 			},
