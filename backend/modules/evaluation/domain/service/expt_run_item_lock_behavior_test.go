@@ -18,6 +18,7 @@ import (
 	infraredis "github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
 
 func itemLockBehaviorRedis(t *testing.T) infraredis.Cmdable {
@@ -39,8 +40,9 @@ func itemLockBehaviorRedis(t *testing.T) infraredis.Cmdable {
 	return client
 }
 
-// The legacy contract: a duplicate delivery that loses the item mutex is ACKed,
-// the holder keeps executing, and no extra event is published.
+// A duplicate delivery that loses the item mutex must not start a second run.
+// Without a primary-source reader it also has no proof of completion, so the
+// consumer keeps the native broker retry instead of silently ACKing work.
 func TestItemLockBusyKeepsSingleRunOnRealLock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	publisher := eventmocks.NewMockExptEventPublisher(ctrl) // no publish on the duplicate
@@ -78,7 +80,7 @@ func TestItemLockBusyKeepsSingleRunOnRealLock(t *testing.T) {
 	}
 
 	// Duplicate delivery while the first execution still holds the lock.
-	require.NoError(t, handler(context.Background(), event), "busy must stay the legacy Warn+ACK")
+	require.True(t, errno.NeedMQRetry(handler(context.Background(), event)), "busy must stay retryable when completion cannot be proven")
 	require.Equal(t, int32(1), runs.Load(), "duplicate must not start a second run")
 
 	close(release)
