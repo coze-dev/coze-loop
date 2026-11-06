@@ -159,6 +159,30 @@ func (e ExptItemResultRepoImpl) SetTerminalQuotaReservationState(ctx context.Con
 	return changed, nil
 }
 
+func (e ExptItemResultRepoImpl) UpdateItemRunLogIfNonterminal(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, fields map[string]any, spaceID int64) error {
+	dao, ok := e.exptItemResultDAO.(mysql.IExptItemCancellationDAO)
+	if !ok {
+		return errorx.New("item cancellation DAO not wired")
+	}
+	return dao.UpdateItemRunLogIfNonterminal(ctx, exptID, exptRunID, itemIDs, fields, spaceID)
+}
+
+func (e ExptItemResultRepoImpl) ScanItemRunLogsForCancellation(ctx context.Context, spaceID, exptID int64, exptRunID *int64, itemIDs []int64, cursor, limit int64) ([]*entity.ExptItemResultRunLog, int64, error) {
+	dao, ok := e.exptItemResultDAO.(mysql.IExptItemCancellationDAO)
+	if !ok {
+		return nil, 0, errorx.New("item cancellation DAO not wired")
+	}
+	rows, next, err := dao.ScanItemRunLogsForCancellation(ctx, spaceID, exptID, exptRunID, itemIDs, cursor, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+	items := make([]*entity.ExptItemResultRunLog, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, convert.NewExptItemResultRunLogConverter().PO2DO(row))
+	}
+	return items, next, nil
+}
+
 func (e ExptItemResultRepoImpl) ScanItemResults(ctx context.Context, exptID, cursor, limit int64, status []int32, spaceID int64) (results []*entity.ExptItemResult, ncursor int64, err error) {
 	pos, ncursor, err := e.exptItemResultDAO.ScanItemResults(ctx, exptID, cursor, limit, status, spaceID)
 	if err != nil {

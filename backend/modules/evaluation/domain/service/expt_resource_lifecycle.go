@@ -14,7 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-func notifyCentralItemTerminal(ctx context.Context, guard component.ICentralReservationGuard, items repo.IExptItemResultRepo, spaceID, exptID, runID, itemID int64) {
+func notifyCentralItemTerminal(ctx context.Context, guard component.ICentralReservationGuard, items repo.IExptItemResultRepo, spaceID, exptID, runID, itemID int64, stoppedAndStartPrevented ...bool) {
 	lifecycle, ok := guard.(component.ICentralItemLifecycle)
 	if !ok || items == nil {
 		return
@@ -30,6 +30,10 @@ func notifyCentralItemTerminal(ctx context.Context, guard component.ICentralRese
 		return
 	}
 	if item.ID <= 0 || item.SpaceID != spaceID || item.ExptID != exptID || item.ExptRunID != runID || item.ItemID != itemID {
+		return
+	}
+	// Terminal is a start barrier, not evidence that a running Sandbox has stopped.
+	if entity.ItemRunState(item.Status) == entity.ItemRunState_Terminal && (len(stoppedAndStartPrevented) == 0 || !stoppedAndStartPrevented[0]) {
 		return
 	}
 	if err := lifecycle.OnItemTerminal(callbackCtx, item); err != nil {

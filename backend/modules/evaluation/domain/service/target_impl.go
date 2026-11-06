@@ -1038,6 +1038,9 @@ func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskI
 	}
 	// 先剥离取消信号再交给 goroutine: 见上"为什么重试要挂在 WithoutCancel 的 ctx 上"。
 	destroyCtx := context.WithoutCancel(ctx)
+	if len(waitForDestroy) > 1 && waitForDestroy[0] && waitForDestroy[1] {
+		destroyCtx = ctx
+	}
 	for t, ids := range byTask {
 		t, ids := t, ids
 		if len(waitForDestroy) > 0 && waitForDestroy[0] {
@@ -1097,6 +1100,7 @@ func (e *EvalTargetServiceImpl) destroySandboxExtraExecute(ctx context.Context, 
 // 其余场景（如手动取消）不下发 EndCmd。
 func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx context.Context, spaceID int64, recordIDs []int64, errCode int32, errMessage string, zombieTimeout bool, waitForDestroy ...bool) error {
 	wait := len(waitForDestroy) > 0 && waitForDestroy[0]
+	strictStop := wait && len(waitForDestroy) > 1 && waitForDestroy[1]
 	if len(recordIDs) == 0 {
 		return nil
 	}
@@ -1104,6 +1108,19 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 	if err != nil {
 		logs.CtxWarn(ctx, "[SandboxDestroy] batch get eval target records fail, space_id=%d, err=%v", spaceID, err)
 		return err
+	}
+	if strictStop {
+		found := make(map[int64]bool, len(records))
+		for _, record := range records {
+			if record != nil && record.SpaceID == spaceID && record.TargetVersionID > 0 {
+				found[record.ID] = true
+			}
+		}
+		for _, id := range recordIDs {
+			if !found[id] {
+				return fmt.Errorf("sandbox stop record unavailable: %d", id)
+			}
+		}
 	}
 
 	versionIDSet := make(map[int64]struct{})
@@ -1134,6 +1151,16 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 			sandboxVersionIDs[v.EvalTargetVersion.ID] = struct{}{}
 		}
 	}
+	if strictStop {
+		for _, record := range records {
+			if record == nil {
+				return fmt.Errorf("sandbox stop record missing")
+			}
+			if _, ok := sandboxVersionIDs[record.TargetVersionID]; !ok {
+				return fmt.Errorf("sandbox stop target version unavailable: %d", record.TargetVersionID)
+			}
+		}
+	}
 	if len(sandboxVersionIDs) == 0 {
 		return nil
 	}
@@ -1146,7 +1173,7 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 		if _, ok := sandboxVersionIDs[r.TargetVersionID]; !ok {
 			continue
 		}
-		if gptr.Indirect(r.Status) != entity.EvalTargetRunStatusAsyncInvoking {
+		if gptr.Indirect(r.Status) != entity.EvalTargetRunStatusAsyncInvoking && !strictStop {
 			continue
 		}
 		// ⚠️ 必须在下面用 failOutput 覆盖 EvalTargetOutputData 之前取，否则 ext 里
@@ -1172,14 +1199,14 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 				if id == extraExecuteID {
 					continue
 				}
-				if err := e.destroySandboxExecute(ctx, taskID, schedulerSpaceID, r.SpaceID, []string{id}, zombieTimeout, wait); err != nil {
+				if err := e.destroySandboxExecute(ctx, taskID, schedulerSpaceID, r.SpaceID, []string{id}, zombieTimeout, wait, strictStop); err != nil {
 					return err
 				}
 			}
 			// 双沙箱：额外销毁从沙箱 execute，语义对齐 destroySandboxExecuteIfNeeded (success 分支)。
 			// 从沙箱 zombieTimeout 恒为 false，不需要下发 SandboxAgent EndCmd（EndCmd 只对主沙箱有意义）。
 			if extraExecuteID != "" {
-				if err := e.destroySandboxExtraExecute(ctx, taskID, schedulerSpaceID, r.SpaceID, extraExecuteID, wait); err != nil {
+				if err := e.destroySandboxExtraExecute(ctx, taskID, schedulerSpaceID, r.SpaceID, extraExecuteID, wait, strictStop); err != nil {
 					return err
 				}
 			}
@@ -1189,6 +1216,9 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 			if err := destroy(); err != nil {
 				return err
 			}
+		}
+		if strictStop && gptr.Indirect(r.Status) != entity.EvalTargetRunStatusAsyncInvoking {
+			continue
 		}
 		failOutput := &entity.EvalTargetOutputData{
 			EvalTargetRunError: &entity.EvalTargetRunError{

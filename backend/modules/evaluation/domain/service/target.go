@@ -37,7 +37,7 @@ type IEvalTargetService interface {
 	// 并以 best-effort 方式触发沙箱 Execute 销毁。非 SandboxAgent / 非 AsyncInvoking 的 record 会被忽略。
 	// errCode 用于写入 EvalTargetRunError，区分 zombie timeout / 手动取消等场景。
 	// zombieTimeout=true 时，Destroy 会带上 SandboxAgent 收尾命令 EndCmd（expt_id/invoke_id 由内部拼接）。
-	// waitForDestroy 仅供删除前等待现有重试结果；默认仍在后台销毁。
+	// waitForDestroy[0] 等待销毁；中心取消传 [true, true]，重试所有已记录 attempt 的停止且保留既有终态。
 	TerminateAsyncRecordsAndDestroySandbox(ctx context.Context, spaceID int64, recordIDs []int64, errCode int32, errMessage string, zombieTimeout bool, waitForDestroy ...bool) error
 	// CheckSandboxTerminated 查询 SandboxAgent 类型 record 关联的沙箱 execute 是否已提前进入终态（Failed/Canceled）。
 	// 沙箱状态查询失败（含开源 stub 的 "not implement"）会在内部 warn 并跳过该 record，不向外抛错。

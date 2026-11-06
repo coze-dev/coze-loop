@@ -3448,6 +3448,20 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ZombieTimeoutFlag(t *testin
 
 // TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox_ZombieTimeoutFlag
 // 校验 zombieTimeout=true 会透传到 Destroy 请求
+func TestResourceStrictStopRetriesFailedSandboxAttempts(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	records := repomocks.NewMockIEvalTargetRepo(ctrl)
+	scheduler := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+	runs := repomocks.NewMockIExptRunLogRepo(ctrl)
+	svc := &EvalTargetServiceImpl{evalTargetRepo: records, sandboxSchedulerAdapter: scheduler, exptRunLogRepo: runs, sandboxDestroyRetryBudget: time.Nanosecond}
+	stopErr := errors.New("physical sandbox still running")
+	records.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).Return([]*entity.EvalTargetRecord{{ID: 10, SpaceID: 1, TargetVersionID: 20, ExperimentRunID: 50, Status: gptr.Of(entity.EvalTargetRunStatusFail)}}, nil)
+	records.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).Return([]*entity.EvalTarget{{EvalTargetType: entity.EvalTargetTypeSandboxAgent, EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent}}}, nil)
+	runs.EXPECT().Get(gomock.Any(), int64(0), int64(50)).Return(&entity.ExptRunLog{ExptID: 999}, nil).AnyTimes()
+	scheduler.EXPECT().Destroy(gomock.Any(), gomock.Any()).Return(nil, stopErr).AnyTimes()
+	require.ErrorIs(t, svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "cancel", false, true, true), stopErr)
+}
+
 func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox_ZombieTimeoutFlag(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
