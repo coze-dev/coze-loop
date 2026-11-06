@@ -1521,7 +1521,7 @@ func (e *exptBaseExec) exptEnd(ctx context.Context, event *entity.ExptScheduleEv
 		return nil
 	}
 
-	if event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun && expt.ExptType != entity.ExptType_Online {
+	if event.ExptRunMode != entity.EvaluationModeAppend && expt.ExptType != entity.ExptType_Online {
 		if calibration, ok := e.resultSvc.(ExptManualRetryFilterService); ok {
 			ready, err := reconcileManualRetryFilterBeforeFinish(ctx, calibration, event.SpaceID, event.ExptID, event.ExptRunID)
 			if err != nil {
@@ -1535,7 +1535,7 @@ func (e *exptBaseExec) exptEnd(ctx context.Context, event *entity.ExptScheduleEv
 		}
 	}
 
-	if event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun && expt.ExptType != entity.ExptType_Online {
+	if event.ExptRunMode != entity.EvaluationModeAppend && expt.ExptType != entity.ExptType_Online {
 		if finish, ok := e.Manager.(IExptNaturalRunFinisher); ok {
 			result, err := finish.FinishCurrentRunWithHeldTickLock(ctx, event)
 			if err != nil {

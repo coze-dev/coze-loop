@@ -215,7 +215,7 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 				}
 			}
 			logs.CtxInfo(ctx, "ExptSchedulerConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-			if entity.IsExptFinished(status) && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun {
+			if entity.IsExptFinished(status) && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
 				if finish, ok := e.Manager.(IExptNaturalRunFinisher); ok {
 					result, err := finish.FinishCurrentRun(ctx, event)
 					if err != nil {
@@ -558,7 +558,7 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		if _, current := e.Manager.(IExptNaturalRunFinisher); current && errno.NeedMQRetry(err) &&
 			event.ExptType == entity.ExptType_Offline && exptDetail.ExptType == entity.ExptType_Offline &&
 			exptDetail.LatestRunID == event.ExptRunID &&
-			event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun {
+			event.ExptRunMode != entity.EvaluationModeAppend {
 			if ctxErr := ctx.Err(); ctxErr != nil {
 				return errno.WrapMQRetryErr(ctxErr)
 			}
