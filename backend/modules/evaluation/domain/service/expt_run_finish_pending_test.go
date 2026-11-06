@@ -16,6 +16,7 @@ import (
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	confmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	exptrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
@@ -92,6 +93,7 @@ func newPendingRunFixture(t *testing.T, initMode entity.ExptRunMode) *pendingRun
 	metric.EXPECT().EmitExptExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Do(func(int64, int64, int64, time.Time) { notifications.Add(1) }).AnyTimes()
 	cleanupResult := &finishCalibrationTestResult{ExptResultService: svcmocks.NewMockExptResultService(ctrl), ready: true}
 	cleanupResult.ExptResultService.(*svcmocks.MockExptResultService).EXPECT().GetIncompleteTurns(gomock.Any(), f.expt, f.space, gomock.Any()).Return(nil, nil).AnyTimes()
+	cleanupResult.ExptResultService.(*svcmocks.MockExptResultService).EXPECT().CalculateStats(gomock.Any(), f.expt, f.space, gomock.Any()).Return(&entity.ExptCalculateStats{SuccessItemCnt: 1}, nil).AnyTimes()
 	cleanupResult.ExptResultService.(*svcmocks.MockExptResultService).EXPECT().UpsertExptTurnResultFilter(gomock.Any(), f.space, f.expt, gomock.Any()).DoAndReturn(func(ctx context.Context, _, _ int64, ids []int64) error {
 		var rows []model.ExptItemResult
 		require.NoError(t, f.conn.WithContext(ctx).Where("space_id=? AND item_id IN ?", f.space, ids).Find(&rows).Error)
@@ -100,7 +102,11 @@ func newPendingRunFixture(t *testing.T, initMode entity.ExptRunMode) *pendingRun
 		}
 		return nil
 	}).AnyTimes()
-	manager := &ExptMangerImpl{configer: config, mutex: factory(), manualRetryLocker: factory, runLogRepo: runs, exptRepo: experiments, itemResultRepo: f.itemRepo(), itemRefRepo: exptrepo.NewExptItemRefRepo(exptmysql.NewExptItemRefDAO(f.provider)), turnResultRepo: f.turnRepo(), statsRepo: stats, runFinishRepo: exptrepo.NewExptRunFinishRepo(f.provider), manualRetryRepo: exptrepo.NewExptManualRetryRepo(f.provider, ids), mtr: metric, idgenerator: ids, idem: idem, centralGuard: component.NewNoopCentralReservationGuard(), currentRunWaker: component.NewNoopCurrentRunSchedulerWaker(), quotaRepo: quota, exptResultService: cleanupResult}
+	aggr := svcmocks.NewMockExptAggrResultService(ctrl)
+	aggr.EXPECT().PublishExptAggrResultEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	publisher.EXPECT().PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	manager := &ExptMangerImpl{configer: config, mutex: factory(), manualRetryLocker: factory, runLogRepo: runs, exptRepo: experiments, itemResultRepo: f.itemRepo(), itemRefRepo: exptrepo.NewExptItemRefRepo(exptmysql.NewExptItemRefDAO(f.provider)), turnResultRepo: f.turnRepo(), statsRepo: stats, runFinishRepo: exptrepo.NewExptRunFinishRepo(f.provider), manualRetryRepo: exptrepo.NewExptManualRetryRepo(f.provider, ids), mtr: metric, idgenerator: ids, idem: idem, centralGuard: component.NewNoopCentralReservationGuard(), currentRunWaker: component.NewNoopCurrentRunSchedulerWaker(), quotaRepo: quota, exptResultService: cleanupResult, exptAggrResultService: aggr, publisher: publisher}
 	session := &entity.Session{UserID: "pending-run-test"}
 	if initMode == entity.EvaluationModeRetryItems {
 		run, joined, err := manager.LogRetryItemsRun(ctx, f.expt, initMode, f.space, []int64{f.item}, session)
@@ -225,6 +231,25 @@ func TestRunFinishPendingRealInitializers(t *testing.T) {
 	}
 }
 
+func TestOriginalCompletionRealMissingStatsDoesNotFinish(t *testing.T) {
+	p := newPendingRunFixture(t, entity.EvaluationModeSubmit)
+	p.publishSuccess(t, false)
+	ctx := context.Background()
+	require.NoError(t, p.manager.CompleteRun(ctx, p.f.expt, p.f.run, p.f.space, p.event.Session))
+	require.NoError(t, p.f.conn.Exec("DELETE FROM expt_stats WHERE space_id=? AND expt_id=?", p.f.space, p.f.expt).Error)
+	runID := p.f.run
+	err := p.manager.CompleteExpt(ctx, p.f.expt, &runID, p.f.space, p.event.Session)
+	require.True(t, errno.NeedMQRetry(err), "a zero-row stats update must stay retryable, got %v", err)
+	current, getErr := p.manager.exptRepo.GetByID(ctx, p.f.expt, p.f.space)
+	require.NoError(t, getErr)
+	require.Equal(t, entity.ExptStatus_Processing, current.Status)
+	run, getErr := p.manager.runLogRepo.Get(ctx, p.f.expt, p.f.run)
+	require.NoError(t, getErr)
+	require.Equal(t, int64(entity.ExptStatus_Processing), run.Status)
+	require.Zero(t, p.resources.Load())
+	require.Zero(t, p.notifications.Load())
+}
+
 func TestRunFinishPendingRealAdmissionPublicationAndFourModes(t *testing.T) {
 	for _, mode := range []entity.ExptRunMode{entity.EvaluationModeSubmit, entity.EvaluationModeFailRetry, entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems} {
 		t.Run(fmt.Sprint(mode), func(t *testing.T) {
@@ -273,9 +298,9 @@ func TestRunFinishPendingRealAdmissionPublicationAndFourModes(t *testing.T) {
 				t.Fatal("duplicate finished event reentered execution")
 				return nil
 			})(context.Background(), &event))
-			require.Equal(t, int32(1), p.notifications.Load(), "real idem must suppress normal AlreadyFinished duplicates")
-			require.Equal(t, int32(2), p.resources.Load(), "resource cleanup still replays after notification marker")
-			require.Equal(t, after, f.snapshot(), "AlreadyFinished cannot recalculate stats or endAt")
+			require.Equal(t, int32(1), p.notifications.Load(), "real idem must suppress normal completion duplicates")
+			require.Equal(t, int32(1), p.resources.Load(), "terminal replay has no additional resource cleanup")
+			require.Equal(t, after, f.snapshot(), "terminal replay cannot recalculate stats or endAt")
 			again, err := p.manager.RetryInCurrentRun(context.Background(), req)
 			require.ErrorContains(t, err, "run_finished")
 			require.Nil(t, again)
@@ -287,22 +312,4 @@ func TestRunFinishPendingRealAdmissionPublicationAndFourModes(t *testing.T) {
 			require.Equal(t, after, f.snapshot())
 		})
 	}
-}
-
-func TestRunFinishPendingRealHalfTerminalCheckRetries(t *testing.T) {
-	p := newPendingRunFixture(t, entity.EvaluationModeSubmit)
-	p.publishSuccess(t, false)
-	f := p.f
-	// Reproduce the old split CompleteRun/CompleteExpt half-state explicitly.
-	require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(entity.ExptStatus_Success)).Error)
-	before := f.snapshot()
-	scheduler := &ExptSchedulerImpl{Manager: p.manager}
-	err := scheduler.HandleEventCheck(func(context.Context, *entity.ExptScheduleEvent) error {
-		t.Fatal("half-terminal event entered execution")
-		return nil
-	})(context.Background(), p.event)
-	require.True(t, errno.NeedMQRetry(err))
-	require.Equal(t, before, f.snapshot())
-	require.Zero(t, p.resources.Load())
-	require.Zero(t, p.notifications.Load())
 }

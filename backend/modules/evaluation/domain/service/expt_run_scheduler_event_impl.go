@@ -215,25 +215,6 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 				}
 			}
 			logs.CtxInfo(ctx, "ExptSchedulerConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-			if entity.IsExptFinished(status) && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun {
-				if finish, ok := e.Manager.(IExptNaturalRunFinisher); ok {
-					result, err := finish.FinishCurrentRun(ctx, event)
-					if err != nil {
-						return errno.WrapMQRetryErr(err)
-					}
-					if result == nil {
-						return errno.NewMQRetryErr("finish returned no disposition")
-					}
-					switch result.Disposition {
-					case entity.ExptRunFinishFinished, entity.ExptRunFinishAlreadyFinished, entity.ExptRunFinishNonCurrent:
-						return nil
-					case entity.ExptRunFinishPending:
-						return errno.NewMQRetryErr("current run finish pending")
-					default:
-						return errno.NewMQRetryErr("invalid finish disposition")
-					}
-				}
-			}
 			return nil
 		}
 

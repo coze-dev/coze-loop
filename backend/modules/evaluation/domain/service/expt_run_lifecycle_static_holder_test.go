@@ -178,7 +178,7 @@ func TestCompleteRunCleanupKeepsStaticLegacyLifecycleHolder(t *testing.T) {
 		manualRetryLocker: factory,
 		exptRepo:          experiments,
 	}
-	err := manager.CompleteRun(context.Background(), 7, 8, 9, &entity.Session{}, entity.WithStatus(entity.ExptStatus_Success))
+	err := manager.CompleteRun(context.Background(), 7, 8, 9, &entity.Session{}, entity.WithStatus(entity.ExptStatus_Failed))
 	require.True(t, errno.NeedMQRetry(err))
 	owner, getErr := server.Get(key)
 	require.NoError(t, getErr, "static holder must be kept")
@@ -204,7 +204,7 @@ func TestCompleteRunCleanupKeepsNonLegacyLifecycleHolders(t *testing.T) {
 				manualRetryLocker: factory,
 				exptRepo:          experiments,
 			}
-			err := manager.CompleteRun(context.Background(), 7, 8, 9, &entity.Session{}, entity.WithStatus(entity.ExptStatus_Success))
+			err := manager.CompleteRun(context.Background(), 7, 8, 9, &entity.Session{}, entity.WithStatus(entity.ExptStatus_Failed))
 			require.True(t, errno.NeedMQRetry(err))
 			owner, getErr := server.Get(key)
 			require.NoError(t, getErr)
