@@ -130,7 +130,7 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 		}
 		// 与 buildExptTurnEvalCtx 的 History 赋值同源：非 manual retry 上下文不下发 history，
 		// 也就不为本轮多做一次大字段回捞（loadTargetHistoryOutput）或累积中间态。
-		feedHistory := entity.HasManualRetryContext(etec.Ext)
+		feedHistory := etec.Event.RequestID != ""
 		if existing := etec.GetExistTurnResultRunLog(turn.ID); existing != nil && existing.Status == entity.TurnRunState_Success && !etec.Event.IgnoreExistedTargetResult() {
 			target := etec.ExptTurnRunResult.GetTargetResult()
 			if existing.TargetResultID > 0 && target == nil {
@@ -452,7 +452,7 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 			Turn:              turn,
 			ExptTurnRunResult: &entity.ExptTurnRunResult{},
 			// History 默认不下发（与 bbab72c4^ 语义一致）；只有 manual retry 上下文才在
-			// ext 合并完成后赋值，见下方 HasManualRetryContext 判断。
+			// ext 合并完成后赋值，见下方 RequestID 判断。
 		}
 	)
 	etec.Ext = make(map[string]string)
@@ -493,7 +493,7 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 	// 只能从落库的 target 记录恢复，target 输入需要它才是同一段会话）。
 	// 普通 submit / fail-retry 保持旧路径语义（History 恒 nil）：本 MR 之前 history 从未真正下发，
 	// 若对普通执行一起打开，同一 run 跨越发布版本会出现前段无 history、后段有 history 的输入漂移。
-	if entity.HasManualRetryContext(etec.Ext) {
+	if etec.Event.RequestID != "" {
 		etec.History = history
 	}
 

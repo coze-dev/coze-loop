@@ -295,6 +295,41 @@ func TestRunningRetryTurnResume_SuccessTurnOnlyFeedsHistory(t *testing.T) {
 	}
 }
 
+func TestRunningRetryHistoryOutput_ManualRequestIDSurvivesCanonicalExtReadFailure(t *testing.T) {
+	f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, 0, 20)
+	f.item.Event.RequestID = "RQ1"
+	f.item.Event.Ext = nil
+	items := repomocks.NewMockIExptItemResultRepo(gomock.NewController(t))
+	items.EXPECT().GetItemRunLog(gomock.Any(), int64(1), int64(103), int64(10), int64(3)).Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Processing)}, nil).AnyTimes()
+	items.EXPECT().BatchGet(gomock.Any(), int64(3), int64(1), []int64{10}).Return(nil, errors.New("canonical ext read failed")).AnyTimes()
+	f.items = items
+	f.executor.ItemResultRepo = items
+
+	first := f.item.ExistItemEvalResult.TurnResultRunLogs[0]
+	first.Status = entity.TurnRunState_Success
+	first.TargetResultID = 201
+	first.EvaluatorResultIds = &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{{VersionID: 401, RecordID: 301}, {VersionID: 402, RecordID: 302}}}
+	f.target.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(201)).Return(resumeTarget(201, 0), nil)
+	f.records.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{301, 302}, false, false).Return([]*entity.EvaluatorRecord{resumeEvaluator(301, 401, 0, ""), resumeEvaluator(302, 402, 0, "")}, nil)
+	f.benefit.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil).Times(2)
+	f.target.EXPECT().ExecuteTarget(gomock.Any(), int64(3), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, _ int64, _ int64, exec *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
+		require.Equal(t, int64(20), exec.TurnID)
+		require.Len(t, input.HistoryMessages, 1, "a validated manual request must not lose history when the secondary ext read fails")
+		assert.Equal(t, "previous answer", input.HistoryMessages[0].Content.GetText())
+		return resumeTarget(202, 20), nil
+	})
+	f.evaluator.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil).Times(2)
+	f.evaluator.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+		require.Equal(t, int64(20), r.TurnID)
+		return resumeEvaluator(1000+r.EvaluatorVersionID, r.EvaluatorVersionID, 20, ""), nil
+	}).Times(2)
+	f.turns.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+
+	abort, err := f.executor.EvalTurns(ctxcache.Init(context.Background()), f.item)
+	require.NoError(t, err)
+	assert.False(t, abort)
+}
+
 func TestRunningRetryTurnResume_ManualRetryExtNeverReachesActors(t *testing.T) {
 	for _, multi := range []bool{false, true} {
 		t.Run(map[bool]string{false: "legacy", true: "alias"}[multi], func(t *testing.T) {
@@ -716,6 +751,7 @@ func TestRunningRetryHistoryOutput_ShortNontextAndTargetFreeRemainCompatible(t *
 // 即使上一轮 target 输出被存储裁剪成 preview，也不能为下一轮回捞大字段或下发 HistoryMessages。
 func TestRunningRetryHistoryOutput_FreshSubmitKeepsLegacyNoHistory(t *testing.T) {
 	f := newTurnResumeFixture(t, entity.EvaluationModeSubmit, 0, 20)
+	f.item.Event.RequestID = ""
 	// ExecuteTarget persists before returning; storage mutates the returned
 	// Content to a preview. Ordinary execution must neither reload it nor pass it on.
 	f.item.Expt.EvalConf.ConnectorConf.EvaluatorsConf = nil
@@ -742,6 +778,7 @@ func TestRunningRetryHistoryOutput_FreshSubmitKeepsLegacyNoHistory(t *testing.T)
 // 既不做大字段回捞，也不把前序 target 输出作为 history 下发。
 func TestRunningRetryHistoryOutput_NonManualResumeKeepsLegacyNoHistory(t *testing.T) {
 	f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, 0, 20)
+	f.item.Event.RequestID = ""
 	f.item.Expt.EvalConf.ConnectorConf.EvaluatorsConf = nil
 	first := f.item.ExistItemEvalResult.TurnResultRunLogs[0]
 	first.Status = entity.TurnRunState_Success
