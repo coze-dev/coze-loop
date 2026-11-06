@@ -6,6 +6,7 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/bytedance/gg/gptr"
@@ -60,6 +61,7 @@ type IExptItemResultDAO interface {
 	// UpdateItemRunLogIfNotTerminal 与 UpdateItemRunLog 相同，但 WHERE 追加 status <> Terminal，
 	// 用一条原子 UPDATE 保证「Terminal 是吸收态」，替代「先 SELECT 判定再写」的非原子实现。
 	UpdateItemRunLogIfNotTerminal(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64, opts ...db.Option) error
+	SetTerminalQuotaReservationState(ctx context.Context, spaceID, exptID, exptRunID, itemID int64, expectedRequestID string, state entity.QuotaReservationState, opts ...db.Option) (bool, error)
 	GetItemRunLog(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, opts ...db.Option) (*model.ExptItemResultRunLog, error)
 	MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, error)
 }
@@ -241,6 +243,9 @@ func (dao *exptItemResultDAOImpl) MGetItemTurnResults(ctx context.Context, space
 		return nil, nil
 	}
 	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	q := query.Use(db).ExptTurnResult
 	found, err := q.WithContext(ctx).Where(q.SpaceID.Eq(spaceID), q.ExptID.Eq(exptID), q.ItemID.In(itemIDs...)).Find()
 	if err != nil {
@@ -352,6 +357,99 @@ func (dao *exptItemResultDAOImpl) UpdateItemRunLogIfNotTerminal(ctx context.Cont
 		logs.CtxInfo(ctx, "[ExptItemTerminate] UpdateItemRunLogIfNotTerminal skipped by terminal absorbing state, expt_id: %v, expt_run_id: %v, item_ids: %v", exptID, exptRunID, itemID)
 	}
 	return nil
+}
+
+// SetTerminalQuotaReservationState 以请求身份为条件，CAS 更新**终态行**的额度预占投影。
+//
+// 它只服务于终止路径的资源对账，两个方向共用一套原子判定：
+//   - Reserved：终止时资源释放失败，给终态行打上「仍欠一次释放」的持久标记。
+//     运行中被终止的 item 投影本来是 none、账本里的 reservation 却还在，只靠投影
+//     无从发现；标记让它变成调度拍可扫描的状态。
+//   - None：调度拍确认账本已不再持有该 item 后清除标记。不清理的话，
+//     ScanEvalItems 会把「终态 + reserved」同时算成 incomplete 与 complete，
+//     run 因 incomplete>0 永久 nextTick（B1），还永久吃掉一个并发名额。
+//
+// 三个条件缺一不可，它们是「不误删别人的 reservation」的全部保证：
+//  1. canonical.expt_run_id == runID：换 run 后旧 run 的调用直接不命中；
+//  2. canonical.ext 里的 manual retry 请求号与 expectedRequestID 逐字相等：
+//     新 manual attempt 会换请求号，旧观测不能顺手把新预占改掉；
+//  3. run log 必须已终态，且 CAS 带旧值：Queueing/Processing 的投影归 dispatch 的
+//     Claim/Reset/Start 管，越过它们改写会放掉仍在队列/执行中的真实预占。
+//
+// 行已不是本次观测的身份时返回 (false, nil)：调用方把它当作「无需处理」，不是错误。
+func (dao *exptItemResultDAOImpl) SetTerminalQuotaReservationState(ctx context.Context, spaceID, exptID, exptRunID, itemID int64, expectedRequestID string, state entity.QuotaReservationState, opts ...db.Option) (bool, error) {
+	if state != entity.QuotaReservationStateNone && state != entity.QuotaReservationStateReserved {
+		return false, fmt.Errorf("invalid terminal quota reservation state")
+	}
+	changed := false
+	err := dao.provider.Transaction(ctx, func(tx *gorm.DB) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		// Canonical before run log, matching every execution/termination writer.
+		var canonical model.ExptItemResult
+		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("space_id=? AND expt_id=? AND item_id=? AND deleted_at IS NULL", spaceID, exptID, itemID).
+			Take(&canonical).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if canonical.ExptRunID != exptRunID {
+			return nil
+		}
+		ext, err := entity.ParseExptItemResultExt(gptr.Indirect(canonical.Ext))
+		if err != nil {
+			return err
+		}
+		manual, err := entity.ParseManualRetryContext(ext)
+		if err != nil {
+			return err
+		}
+		request := ""
+		if manual != nil {
+			if manual.RunID != exptRunID {
+				return nil
+			}
+			request = manual.RequestID
+		}
+		if request != expectedRequestID {
+			return nil
+		}
+		var log model.ExptItemResultRunLog
+		err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND deleted_at IS NULL", spaceID, exptID, exptRunID, itemID).
+			Take(&log).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if !entity.IsItemRunFinished(entity.ItemRunState(log.Status)) {
+			return nil
+		}
+		if log.QuotaReservationState == int32(state) {
+			return nil
+		}
+		result := tx.Model(&model.ExptItemResultRunLog{}).
+			Where("id=? AND status=? AND quota_reservation_state=?", log.ID, log.Status, log.QuotaReservationState).
+			Update("quota_reservation_state", int32(state))
+		if result.Error != nil {
+			return result.Error
+		}
+		changed = result.RowsAffected == 1
+		return nil
+	}, db.WithMaster())
+	if err != nil {
+		return false, errorx.Wrapf(err, "ExptItemResultRepo.SetTerminalQuotaReservationState failed, expt_id: %v, run_id: %v, item_id: %v", exptID, exptRunID, itemID)
+	}
+	if changed {
+		logs.CtxWarn(ctx, "[TerminationRecovery] terminal quota reservation projection updated, expt_id: %v, expt_run_id: %v, item_id: %v, request_id: %v, state: %v", exptID, exptRunID, itemID, expectedRequestID, state)
+	}
+	return changed, nil
 }
 
 func (dao *exptItemResultDAOImpl) ScanItemResults(ctx context.Context, exptID, cursor, limit int64, status []int32, spaceID int64, opts ...db.Option) (results []*model.ExptItemResult, ncursor int64, err error) {

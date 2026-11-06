@@ -15,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	looplogs "github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -66,7 +67,7 @@ func readItemResultPublishSourceWithLocks(tx *gorm.DB, space, expt, run, item in
 	}
 	if err == nil {
 		if ref.ItemVersionID != canonical.ItemVersionID {
-			return nil, fmt.Errorf("publication frozen item version mismatch")
+			return nil, inconsistentCurrentSource("publication frozen item version mismatch")
 		}
 		result.ItemRef = convert.NewExptItemRefConvertor().PO2DO(&ref)
 		result.ItemConfigJSON = append([]byte(nil), gptr.Indirect(ref.ItemConfig)...)
@@ -76,7 +77,7 @@ func readItemResultPublishSourceWithLocks(tx *gorm.DB, space, expt, run, item in
 				return nil, err
 			}
 			if string(result.ItemConfigJSON) == "null" {
-				return nil, fmt.Errorf("publication frozen item configuration null")
+				return nil, inconsistentCurrentSource("publication frozen item configuration null")
 			}
 			result.ItemRef.ItemConfig = &config
 		}
@@ -149,7 +150,7 @@ func (r *ExptResultPublishDAOImpl) CommitItemResult(ctx context.Context, publica
 		turns := map[int64]*entity.ExptTurnResult{}
 		turnIDs := make([]int64, 0, len(publication.Turns))
 		for _, turn := range publication.Turns {
-			if turn == nil || turn.SpaceID != c.SpaceID || turn.ExptID != c.ExptID || turn.ExptRunID != c.RunID || turn.ItemID != c.ItemID || turn.ItemVersionID != c.ItemVersionID {
+			if turn == nil || turn.SpaceID != c.SpaceID || turn.ExptID != c.ExptID || turn.ExptRunID != c.RunID || turn.ItemID != c.ItemID || (turn.ItemVersionID != c.ItemVersionID && turn.ItemVersionID != 0) {
 				return fmt.Errorf("foreign publication turn")
 			}
 			log := actual.Source.Turns[turn.TurnID]
@@ -225,7 +226,7 @@ func (r *ExptResultPublishDAOImpl) CommitItemResult(ctx context.Context, publica
 		}
 		for _, turn := range publication.Turns {
 			fields := map[string]any{"status": turn.Status, "target_result_id": turn.TargetResultID, "trace_id": turn.TraceID, "log_id": turn.LogID, "err_msg": []byte(turn.ErrMsg), "weighted_score": turn.WeightedScore, "expt_run_id": c.RunID}
-			written := tx.Model(&model.ExptTurnResult{}).Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?", turn.ID, c.SpaceID, c.ExptID, canonicalRuns[turn.ID], c.ItemID, c.ItemVersionID).Updates(fields)
+			written := tx.Model(&model.ExptTurnResult{}).Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id IN (?,0)", turn.ID, c.SpaceID, c.ExptID, canonicalRuns[turn.ID], c.ItemID, c.ItemVersionID).Updates(fields)
 			if written.Error != nil {
 				return written.Error
 			}
@@ -234,7 +235,7 @@ func (r *ExptResultPublishDAOImpl) CommitItemResult(ctx context.Context, publica
 					return fmt.Errorf("publication canonical turn update missed")
 				}
 				var persisted model.ExptTurnResult
-				err := tx.Select("id").Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?", turn.ID, c.SpaceID, c.ExptID, canonicalRuns[turn.ID], c.ItemID, c.ItemVersionID).Take(&persisted).Error
+				err := tx.Select("id").Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id IN (?,0)", turn.ID, c.SpaceID, c.ExptID, canonicalRuns[turn.ID], c.ItemID, c.ItemVersionID).Take(&persisted).Error
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					return fmt.Errorf("publication canonical turn update missed")
 				}
@@ -260,7 +261,11 @@ func (r *ExptResultPublishDAOImpl) CommitItemResult(ctx context.Context, publica
 			if from == "" || to == "" {
 				return fmt.Errorf("publication stats source invalid")
 			}
-			if err := tx.Model(&model.ExptStats{}).Where("id=? AND space_id=? AND expt_id=?", stats.ID, c.SpaceID, c.ExptID).Updates(map[string]any{from: gorm.Expr(from + "-1"), to: gorm.Expr(to + "+1")}).Error; err != nil {
+			if fromCnt := publicationStatsCount(&stats, from); fromCnt <= 0 {
+				// legacy 迁移可能已漂移；canonical 状态 CAS 仍保证不会双跑。
+				looplogs.CtxWarn(ctx, "legacy publication stats drift: space_id=%d expt_id=%d item_id=%d from=%s to=%s %s=%d", c.SpaceID, c.ExptID, c.ItemID, from, to, from, fromCnt)
+			}
+			if err := tx.Model(&model.ExptStats{}).Where("id=? AND space_id=? AND expt_id=?", stats.ID, c.SpaceID, c.ExptID).Updates(map[string]any{from: gorm.Expr("GREATEST(" + from + " - 1, 0)"), to: gorm.Expr(to + " + 1")}).Error; err != nil {
 				return err
 			}
 		}
@@ -268,6 +273,23 @@ func (r *ExptResultPublishDAOImpl) CommitItemResult(ctx context.Context, publica
 		return ctx.Err()
 	}, db.WithMaster())
 	return applied && err == nil, err
+}
+
+func publicationStatsCount(stats *model.ExptStats, column string) int32 {
+	switch column {
+	case "pending_cnt":
+		return stats.PendingCnt
+	case "processing_cnt":
+		return stats.ProcessingCnt
+	case "success_cnt":
+		return stats.SuccessCnt
+	case "fail_cnt":
+		return stats.FailCnt
+	case "terminated_cnt":
+		return stats.TerminatedCnt
+	default:
+		return 0
+	}
 }
 
 func publicationRefKey(turn, version int64, alias, key string) string {

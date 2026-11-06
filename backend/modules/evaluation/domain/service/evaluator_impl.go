@@ -1109,7 +1109,8 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 		return e.failAsyncEvaluatorRecord(ctx, recordDO, err)
 	}
 
-	asyncRunExt, traceID, err := evaluatorSourceService.AsyncRun(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, resourceSpaceID, invokeID)
+	providerCtx := contexts.WithCtxExptSpaceID(ctx, request.SpaceID)
+	asyncRunExt, traceID, err := evaluatorSourceService.AsyncRun(providerCtx, evaluatorDO, request.InputData, request.EvaluatorRunConf, resourceSpaceID, invokeID)
 	if err != nil {
 		logs.CtxError(ctx, "[AsyncRunEvaluator] AsyncRun fail, invokeID: %d, err: %v", invokeID, err)
 		return e.failAsyncEvaluatorRecord(ctx, recordDO, err)
@@ -1244,7 +1245,8 @@ func (e *EvaluatorServiceImpl) AsyncDebugEvaluator(ctx context.Context, request 
 	}
 	if err == nil {
 		var ext map[string]string
-		ext, record.TraceID, err = source.AsyncDebug(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
+		providerCtx := contexts.WithCtxExptSpaceID(ctx, request.SpaceID)
+		ext, record.TraceID, err = source.AsyncDebug(providerCtx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
 		record.EvaluatorOutputData.Ext = ext
 		if record.TraceID != "" || len(ext) > 0 {
 			// Trace metadata remains useful on dispatch errors; it must not replace the original error.

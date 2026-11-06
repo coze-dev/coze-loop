@@ -42,11 +42,8 @@ func executionSource(ctx context.Context) *currentItemExecution {
 func (e *ExptItemEventEvalServiceImpl) validateResumeSource(ctx context.Context, event *entity.ExptItemEvalEvent, current *entity.ExptItemCurrentRequest) (bool, error) {
 	source := event.ResumeSource
 	if source == nil {
-		if event.AsyncReportTrigger || event.AsyncEvaluatorReportTrigger {
-			// A legacy event has no invoke ID. Only an original AsyncCtx keyed by an
-			// explicit identity can recover it; the latest turn record is not identity.
-			return false, errno.NewMQRetryErr("legacy async event lacks original recoverable invocation identity")
-		}
+		// 旧异步事件没有 ResumeSource：按老路径继续执行，不能判成可重试错误，
+		// 否则历史回调会被无限重投、把消费失败率打爆。
 		return true, nil
 	}
 	if source.RecordID <= 0 || source.TurnID < 0 || source.InvokeID != strconv.FormatInt(source.RecordID, 10) || source.Kind != "target" && source.Kind != "evaluator" {
@@ -82,7 +79,11 @@ func (e *ExptItemEventEvalServiceImpl) validateResumeSource(ctx context.Context,
 	if turn == nil {
 		return false, errno.NewMQRetryErr("original source turn missing")
 	}
-	if turn.SpaceID != event.SpaceID || turn.ExptID != event.ExptID || turn.ExptRunID != event.ExptRunID || turn.ItemID != event.EvalSetItemID || turn.ItemVersionID != current.ItemVersionID {
+	if turn.SpaceID != event.SpaceID || turn.ExptID != event.ExptID || turn.ExptRunID != event.ExptRunID || turn.ItemID != event.EvalSetItemID {
+		return false, errno.NewMQRetryErr("foreign or incomplete source turn")
+	}
+	// 旧 run log 的 item_version_id 是 0：老数据跳过版本比较，非 0 仍必须一致。
+	if turn.ItemVersionID != 0 && turn.ItemVersionID != current.ItemVersionID {
 		return false, errno.NewMQRetryErr("foreign or incomplete source turn")
 	}
 	if turn.Status < entity.TurnRunState_Queueing || turn.Status > entity.TurnRunState_Terminal {
@@ -104,7 +105,10 @@ func (e *ExptItemEventEvalServiceImpl) validateResumeSource(ctx context.Context,
 			if detail == nil {
 				return false, errno.NewMQRetryErr("original target resource source missing")
 			}
-			targetSpace = resolveLoadSpaceID(event.SpaceID, detail.TargetSpaceID)
+			targetSpace, err = e.resumeTargetSpace(ctx, event, detail)
+			if err != nil {
+				return false, err
+			}
 		}
 		record, err := e.evaTargetService.GetRecordByID(contexts.WithCtxWriteDB(ctx), targetSpace, source.RecordID)
 		if err != nil {
@@ -167,6 +171,26 @@ func (e *ExptItemEventEvalServiceImpl) validateResumeSource(ctx context.Context,
 		}
 	}
 	return record.Alias == "" && refs.EvalVerIDToResID[record.EvaluatorVersionID] == record.ID, nil
+}
+
+// resumeTargetSpace aligns resume validation with execution and publication:
+// multi-set rows freeze their own target source space in expt_item_ref.item_config,
+// so reading the original record with the experiment-level space misses it.
+// The event space stays the record (callback workspace) space; only the target
+// record lookup space is derived per row.
+func (e *ExptItemEventEvalServiceImpl) resumeTargetSpace(ctx context.Context, event *entity.ExptItemEvalEvent, detail *entity.Experiment) (int64, error) {
+	targetSpace := resolveLoadSpaceID(event.SpaceID, detail.TargetSpaceID)
+	if detail.EvalSetSourceType != entity.ExptEvalSetSourceType_MultiSetConfig || e.exptItemRefRepo == nil {
+		return targetSpace, nil
+	}
+	ref, err := e.exptItemRefRepo.GetByExptIDAndItemID(contexts.WithCtxWriteDB(ctx), event.SpaceID, event.ExptID, event.EvalSetItemID)
+	if err != nil {
+		return 0, errno.WrapMQRetryErr(err)
+	}
+	if ref != nil && ref.ItemConfig != nil && ref.ItemConfig.TargetSourceSpaceID > 0 {
+		targetSpace = resolveLoadSpaceID(event.SpaceID, ref.ItemConfig.TargetSourceSpaceID)
+	}
+	return targetSpace, nil
 }
 
 func sourceForExecution(ctx context.Context, port repo.IExptCurrentResultRepo, event *entity.ExptItemEvalEvent) (*entity.ExptCurrentItemRunSource, error) {
@@ -233,6 +257,8 @@ func (e *ExptItemEventEvalServiceImpl) handleCurrentEventErr(ctx context.Context
 		return errno.NewMQRetryErr("error item execution lock busy")
 	}
 	var debt bool
+	var retryEvent *entity.ExptItemEvalEvent
+	var retryInterval time.Duration
 	err = func() error {
 		defer cancel()
 		defer func() {
@@ -273,10 +299,10 @@ func (e *ExptItemEventEvalServiceImpl) handleCurrentEventErr(ctx context.Context
 		conf := e.configer.GetErrRetryConf(lockCtx, event.SpaceID, evalErr)
 		maxRetry := conf.GetRetryTimes()
 		if event.MaxRetryTimes > 0 {
+			// Run-frozen budget wins; only an absent event budget falls back to
+			// the experiment configuration (whose pointer may have changed later).
 			maxRetry = event.MaxRetryTimes
-		}
-		// The frozen pointer distinguishes an explicit zero from an absent budget.
-		if expt != nil && expt.EvalConf != nil && expt.EvalConf.ItemRetryNum != nil {
+		} else if expt != nil && expt.EvalConf != nil && expt.EvalConf.ItemRetryNum != nil {
 			maxRetry = *expt.EvalConf.ItemRetryNum
 		}
 		retry := event.RetryTimes < maxRetry && !event.CtxForceNoRetry(ctx)
@@ -319,13 +345,22 @@ func (e *ExptItemEventEvalServiceImpl) handleCurrentEventErr(ctx context.Context
 			event.AsyncReportTrigger = false
 			event.AsyncEvaluatorReportTrigger = false
 			event.ResumeSource = nil
-			return e.publisher.PublishExptRecordEvalEvent(lockCtx, event, gptr.Of(conf.GetRetryInterval()), nil)
+			// Publish after this lock is released. Publishing while holding the item
+			// key made the retry message race its own holder: the consumer could see
+			// "busy", ACK the legacy way, and the retry would be lost (the row is
+			// already Fail and no scheduler tick redispatch it).
+			retryEvent = event
+			retryInterval = conf.GetRetryInterval()
+			return nil
 		}
 		e.releaseCentralQuotaOutsideGate(lockCtx, event, evalErr, "item unretriable pre-exec failure")
 		return nil
 	}()
 	if err != nil {
 		return err
+	}
+	if retryEvent != nil {
+		return e.publisher.PublishExptRecordEvalEvent(ctx, retryEvent, gptr.Of(retryInterval), nil)
 	}
 	if debt {
 		if terminate, ok := e.manager.(IExptCurrentRunTerminator); ok {
@@ -469,7 +504,45 @@ func (e *ExptSchedulerImpl) handleCurrentZombies(ctx context.Context, event *ent
 	return alives, zombies, nil
 }
 
+// sweepTargetSpaces mirrors execution's per-row target space so the sandbox
+// sweep inspects the records that this item actually wrote (multi-set rows may
+// live in a different space than the experiment-level TargetSpaceID).
+func (e *ExptSchedulerImpl) sweepTargetSpaces(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, items []*entity.ExptEvalItem) (map[int64]int64, error) {
+	defaultSpace := event.SpaceID
+	multiSet := false
+	if expt != nil {
+		defaultSpace = resolveLoadSpaceID(event.SpaceID, expt.TargetSpaceID)
+		multiSet = expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig
+	}
+	spaces := make(map[int64]int64, len(items))
+	itemIDs := make([]int64, 0, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		spaces[item.ItemID] = defaultSpace
+		itemIDs = append(itemIDs, item.ItemID)
+	}
+	if !multiSet || e.exptItemRefRepo == nil || len(itemIDs) == 0 {
+		return spaces, nil
+	}
+	refs, err := e.exptItemRefRepo.MGetByExptIDAndItemIDs(ctx, event.SpaceID, event.ExptID, itemIDs)
+	if err != nil {
+		return nil, errno.WrapMQRetryErr(err)
+	}
+	for _, ref := range refs {
+		if ref != nil && ref.ItemConfig != nil && ref.ItemConfig.TargetSourceSpaceID > 0 {
+			spaces[ref.ItemID] = resolveLoadSpaceID(event.SpaceID, ref.ItemConfig.TargetSourceSpaceID)
+		}
+	}
+	return spaces, nil
+}
+
 func (e *ExptSchedulerImpl) sweepCurrentSandboxItems(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, expt *entity.Experiment) (alives, terminated []*entity.ExptEvalItem, err error) {
+	targetSpaces, err := e.sweepTargetSpaces(ctx, event, expt, items)
+	if err != nil {
+		return nil, nil, err
+	}
 	for _, item := range items {
 		if item == nil || item.State != entity.ItemRunState_Processing {
 			alives = append(alives, item)
@@ -490,7 +563,7 @@ func (e *ExptSchedulerImpl) sweepCurrentSandboxItems(ctx context.Context, event 
 			if len(ids) == 0 {
 				return false, nil
 			}
-			space := resolveLoadSpaceID(event.SpaceID, expt.TargetSpaceID)
+			space := targetSpaces[item.ItemID]
 			stopped, status := e.evalTargetService.CheckSandboxTerminated(lockCtx, space, ids)
 			if len(stopped) == 0 {
 				return false, nil

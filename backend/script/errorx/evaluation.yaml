@@ -741,12 +741,6 @@ error_code:
     description: same-run manual retry retry_busy
     no_affect_stability: true
 
-  - name: ManualRetryDisabled
-    code: 4106
-    message: running retry disabled
-    description: same-run manual retry running retry disabled
-    no_affect_stability: true
-
   - name: ManualRetryIdentityRequired
     code: 4107
     message: identity_required

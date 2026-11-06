@@ -807,44 +807,82 @@ func (e *ExptSchedulerImpl) submitCurrentItem(ctx context.Context, event *entity
 	if !locked {
 		return nil
 	}
-	defer func() {
-		cancel()
-		if _, err := mutex.Unlock(key); err != nil {
-			logs.CtxWarn(ctx, "unlock producer item: %v", err)
+	var itemEvent *entity.ExptItemEvalEvent
+	var interval time.Duration
+	err = func() error {
+		defer cancel()
+		defer func() {
+			if _, err := mutex.Unlock(key); err != nil {
+				logs.CtxWarn(ctx, "unlock producer item: %v", err)
+			}
+		}()
+		source, err := e.ExptItemResultRepo.GetCurrentRequest(lockCtx, event.SpaceID, event.ExptID, event.ExptRunID, candidate.ItemID)
+		if err != nil {
+			return err
 		}
+		if !source.Matches(event.ExptRunID, candidate.RequestID) || source.Status != entity.ItemRunState_Queueing {
+			return nil
+		}
+		if source.Mode == entity.EvaluationModeUnknown {
+			return fmt.Errorf("current item mode unavailable")
+		}
+		itemEvent = &entity.ExptItemEvalEvent{RequestID: source.RequestID, SpaceID: event.SpaceID, ExptID: event.ExptID, ExptRunID: event.ExptRunID, ExptRunMode: source.Mode, EvalSetItemID: source.ItemID, CreateAt: time.Now().Unix(), RetryTimes: int(source.RetryTimes), MaxRetryTimes: event.ItemRetryTimes, Ext: maps.Clone(event.Ext)}
+		if event.Session != nil {
+			session := *event.Session
+			itemEvent.Session = &session
+		}
+		interval = e.Configer.GetExptExecConf(lockCtx, event.SpaceID).GetExptItemEvalConf().GetInterval()
+		return lockCtx.Err()
 	}()
-	source, err := e.ExptItemResultRepo.GetCurrentRequest(lockCtx, event.SpaceID, event.ExptID, event.ExptRunID, candidate.ItemID)
+	if err != nil || itemEvent == nil {
+		return err
+	}
+	// Publish only after releasing the item key. The consumer takes the same key;
+	// publishing under it handed the freshly dispatched message a holder that is
+	// not an execution, so the legacy Warn+ACK path would drop an unstarted item
+	// (it would stay Processing until the zombie sweep). Publishing after release
+	// restores the old producer ordering: once the message is visible, no producer
+	// lease can make the consumer see "busy" for work that has not started.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := e.Publisher.BatchPublishExptRecordEvalEvent(ctx, []*entity.ExptItemEvalEvent{itemEvent}, gptr.Of(interval)); err != nil {
+		return err
+	}
+	// Source-conditional projection under a fresh holder. If a fast consumer
+	// already advanced the row, the CAS returns false and there is nothing to do.
+	// The factory must hand out a new holder: cancelling the first lease lets its
+	// renew goroutine DEL the key asynchronously, and re-locking with the same
+	// holder could have that stale unlock delete the new lease.
+	projectionMutex := mutex
+	if e.itemLocker != nil {
+		if fresh := e.itemLocker(); fresh != nil {
+			projectionMutex = fresh
+		}
+	}
+	locked, lockCtx, cancel, err = projectionMutex.LockWithRenew(ctx, key, 5*time.Second, 5*time.Minute)
 	if err != nil {
 		return err
 	}
-	if !source.Matches(event.ExptRunID, candidate.RequestID) || source.Status != entity.ItemRunState_Queueing {
+	if !locked {
 		return nil
 	}
-	if source.Mode == entity.EvaluationModeUnknown {
-		return fmt.Errorf("current item mode unavailable")
-	}
-	itemEvent := &entity.ExptItemEvalEvent{RequestID: source.RequestID, SpaceID: event.SpaceID, ExptID: event.ExptID, ExptRunID: event.ExptRunID, ExptRunMode: source.Mode, EvalSetItemID: source.ItemID, CreateAt: time.Now().Unix(), RetryTimes: int(source.RetryTimes), MaxRetryTimes: event.ItemRetryTimes, Ext: maps.Clone(event.Ext)}
-	if event.Session != nil {
-		session := *event.Session
-		itemEvent.Session = &session
-	}
-	interval := e.Configer.GetExptExecConf(lockCtx, event.SpaceID).GetExptItemEvalConf().GetInterval()
-	if err := lockCtx.Err(); err != nil {
-		return err
-	}
-	if err := e.Publisher.BatchPublishExptRecordEvalEvent(lockCtx, []*entity.ExptItemEvalEvent{itemEvent}, gptr.Of(interval)); err != nil {
-		return err
-	}
-	changed, err := e.ExptItemResultRepo.MarkProcessingIfCurrent(lockCtx, event.SpaceID, event.ExptID, event.ExptRunID, source.ItemID, source.RequestID)
+	defer func() {
+		cancel()
+		if _, err := projectionMutex.Unlock(key); err != nil {
+			logs.CtxWarn(ctx, "unlock producer item: %v", err)
+		}
+	}()
+	changed, err := e.ExptItemResultRepo.MarkProcessingIfCurrent(lockCtx, event.SpaceID, event.ExptID, event.ExptRunID, itemEvent.EvalSetItemID, itemEvent.RequestID)
 	if err != nil {
 		return err
 	}
 	if changed {
 		if e.Metric != nil {
-			e.Metric.EmitItemExecEval(event.SpaceID, int64(source.Mode), 1)
+			e.Metric.EmitItemExecEval(event.SpaceID, int64(itemEvent.ExptRunMode), 1)
 		}
 		if e.ResultSvc != nil {
-			if err := refreshFilterWithHeldItemLock(lockCtx, e.ResultSvc, event.SpaceID, event.ExptID, source.ItemID); err != nil {
+			if err := refreshFilterWithHeldItemLock(lockCtx, e.ResultSvc, event.SpaceID, event.ExptID, itemEvent.EvalSetItemID); err != nil {
 				logs.CtxWarn(ctx, "refresh dispatched item projection: %v", err)
 			}
 		}

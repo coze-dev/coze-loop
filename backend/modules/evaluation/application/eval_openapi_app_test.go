@@ -7109,7 +7109,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 			},
 		},
 		{
-			name: "conflicting terminal callback does not republish or redispatch",
+			name: "conflicting terminal callback republishes recovery but does not redispatch external callback",
 			req: &openapi.ReportEvaluatorInvokeResultRequest{
 				WorkspaceID: gptr.Of(workspaceID),
 				InvokeID:    gptr.Of(invokeID),
@@ -7124,7 +7124,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					Event: event, ResumeReady: true, EvaluatorVersionID: 9, CallbackURL: "https://cb.example.com/hook",
 				}, nil)
 				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(entity.ReportEvaluatorResultConflict, nil)
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				dispatcher.EXPECT().Dispatch(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 		},

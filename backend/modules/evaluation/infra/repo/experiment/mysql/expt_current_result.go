@@ -17,7 +17,44 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	looplogs "github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
+
+// currentSourceInconsistentError marks a deterministic inconsistency in one
+// item's frozen snapshot (its item row, canonical turns, turn run logs or
+// frozen publication references). Scans isolate just that item; execution and
+// publication still fail closed on the same error.
+//
+// Run lifecycle/configuration observations (missing or invalid run status,
+// invalid run mode) and execution-state observations (unknown run log status,
+// invalid item result state) deliberately stay untyped: they describe the run
+// or the caller, not one item's snapshot, and must keep failing the whole scan.
+type currentSourceInconsistentError struct{ message string }
+
+func (e *currentSourceInconsistentError) Error() string { return e.message }
+
+func inconsistentCurrentSource(format string, args ...any) error {
+	return &currentSourceInconsistentError{message: fmt.Sprintf(format, args...)}
+}
+
+func isCurrentSourceInconsistent(err error) bool {
+	var target *currentSourceInconsistentError
+	return errors.As(err, &target)
+}
+
+// itemVersionConflict reports a row version that contradicts the authoritative
+// item version. Zero means "legacy/unversioned" in every result table and is
+// only readable as a legacy item too: an unversioned item cannot vouch for a
+// foreign non-zero turn/log version, so that still fails closed.
+func itemVersionConflict(itemVersion, rowVersion int64) bool {
+	return rowVersion != 0 && rowVersion != itemVersion
+}
+
+// versionPairConflict reports two optional versions that disagree. Both sides
+// carry no authority over the other, so a legacy zero simply means "unknown".
+func versionPairConflict(a, b int64) bool {
+	return a != 0 && b != 0 && a != b
+}
 
 func (dao *exptItemResultDAOImpl) GetCurrentItemRunSource(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptCurrentItemRunSource, error) {
 	var result *entity.ExptCurrentItemRunSource
@@ -68,7 +105,7 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 	request := ""
 	if manual != nil {
 		if manual.RunID != runID {
-			return nil, fmt.Errorf("manual current source run mismatch")
+			return nil, inconsistentCurrentSource("manual current source run mismatch")
 		}
 		request = manual.RequestID
 	}
@@ -101,12 +138,20 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 	if err := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", spaceID, exptID, runID, itemID).Take(&log).Error; err != nil {
 		return nil, err
 	}
-	if item.ItemVersionID != log.ItemVersionID || log.RetryTimes < 0 || !validCurrentItemStatus(entity.ItemRunState(item.Status)) || !validCurrentItemStatus(entity.ItemRunState(log.Status)) || log.ResultState == nil || *log.ResultState < 0 || *log.ResultState > int32(entity.ExptItemResultStateLogged) {
-		return nil, fmt.Errorf("damaged current item source")
+	if itemVersionConflict(item.ItemVersionID, log.ItemVersionID) || log.RetryTimes < 0 || !validCurrentItemStatus(entity.ItemRunState(item.Status)) || !validCurrentItemStatus(entity.ItemRunState(log.Status)) || log.ResultState == nil || *log.ResultState < 0 || *log.ResultState > int32(entity.ExptItemResultStateLogged) {
+		return nil, inconsistentCurrentSource("damaged current item source")
 	}
 	source := &entity.ExptCurrentItemRunSource{Current: entity.ExptItemCurrentRequest{SpaceID: spaceID, ExptID: exptID, RunID: runID, ItemID: itemID, ItemVersionID: item.ItemVersionID, RequestID: request, Mode: mode, Status: entity.ItemRunState(log.Status), ResultState: entity.ExptItemResultState(*log.ResultState), RetryTimes: log.RetryTimes, UpdatedAt: gptr.Of(log.UpdatedAt)}, Turns: map[int64]*entity.ExptTurnResultRunLog{}}
 	if entity.IsItemRunFinished(entity.ItemRunState(item.Status)) && item.Status != log.Status {
 		source.Current.Status = entity.ItemRunState(item.Status)
+	}
+	var logs []model.ExptTurnResultRunLog
+	if err := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", spaceID, exptID, runID, itemID).Order("id ASC").Find(&logs).Error; err != nil {
+		return nil, err
+	}
+	logTurns := make(map[int64]struct{}, len(logs))
+	for index := range logs {
+		logTurns[logs[index].TurnID] = struct{}{}
 	}
 	var canonical []model.ExptTurnResult
 	canonicalQuery := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND item_id=?", spaceID, exptID, itemID)
@@ -117,18 +162,28 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 	if err := canonicalQuery.Order("id ASC").Find(&canonical).Error; err != nil {
 		return nil, err
 	}
-	var logs []model.ExptTurnResultRunLog
-	if err := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", spaceID, exptID, runID, itemID).Order("id ASC").Find(&logs).Error; err != nil {
-		return nil, err
-	}
 	canonicalIDs := make([]int64, 0, len(canonical))
 	byTurn := map[int64]model.ExptTurnResult{}
 	for _, turn := range canonical {
-		if turn.ItemVersionID != item.ItemVersionID || turn.TurnID < 0 {
-			return nil, fmt.Errorf("damaged canonical turn source")
+		// Legacy rows are written with item_version_id=0 in every table. A
+		// non-zero turn version must match the authoritative item version; an
+		// unversioned item cannot vouch for one.
+		if itemVersionConflict(item.ItemVersionID, turn.ItemVersionID) || turn.TurnID < 0 {
+			return nil, inconsistentCurrentSource("damaged canonical turn source")
 		}
-		if turn.ExptRunID != runID && (mode != entity.EvaluationModeFailRetry || entity.TurnRunState(turn.Status) != entity.TurnRunState_Success) {
-			continue
+		if turn.ExptRunID != runID {
+			if mode != entity.EvaluationModeFailRetry {
+				continue
+			}
+			_, retriedNow := logTurns[turn.TurnID]
+			// Successful history legitimately stays in its old run. A retried
+			// turn may still carry the old canonical row until the reset lands,
+			// which is legal only when the current run already owns its turn log.
+			// Without that log the frozen turn would silently disappear from
+			// execution/publication, so isolate instead of dropping it.
+			if entity.TurnRunState(turn.Status) != entity.TurnRunState_Success && !retriedNow {
+				return nil, inconsistentCurrentSource("frozen canonical turn has no current run log")
+			}
 		}
 		byTurn[turn.TurnID] = turn
 		canonicalIDs = append(canonicalIDs, turn.ID)
@@ -137,21 +192,40 @@ func readItemRunSource(tx *gorm.DB, spaceID, exptID, runID, itemID int64, public
 	for index := range logs {
 		log := &logs[index]
 		turn, ok := byTurn[log.TurnID]
-		if !ok || log.ItemVersionID != turn.ItemVersionID || log.TurnID < 0 || log.Status < int32(entity.TurnRunState_Queueing) || log.Status > int32(entity.TurnRunState_Terminal) {
-			return nil, fmt.Errorf("damaged current turn source")
+		if !ok || log.TurnID < 0 || log.Status < int32(entity.TurnRunState_Queueing) || log.Status > int32(entity.TurnRunState_Terminal) {
+			return nil, inconsistentCurrentSource("damaged current turn source")
+		}
+		if itemVersionConflict(item.ItemVersionID, log.ItemVersionID) {
+			return nil, inconsistentCurrentSource("damaged current turn source")
+		}
+		if versionPairConflict(log.ItemVersionID, turn.ItemVersionID) {
+			return nil, inconsistentCurrentSource("damaged current turn source")
 		}
 		converted, err := convert.NewExptTurnResultRunLogConvertor().PO2DO(log)
 		if err != nil {
 			return nil, err
 		}
 		if err := validateCurrentEvaluatorRefs(converted.EvaluatorResultIds); err != nil {
-			return nil, err
+			// Stored evaluator references are part of this turn's frozen snapshot:
+			// isolate the item instead of failing the whole run scan. The write
+			// path still validates incoming references with the plain error.
+			return nil, inconsistentCurrentSource("damaged current evaluator references: %v", err)
 		}
 		source.Turns[log.TurnID] = converted
 	}
-	// A failed first turn need not execute all later turns, but every frozen turn log exists.
-	if manual != nil && (len(canonical) != len(logs) || len(canonical) == 0) {
-		return nil, fmt.Errorf("current frozen turn logs incomplete")
+	// A failed first turn need not execute all later turns, but every frozen
+	// canonical turn must own exactly one current-run log. Counting the filtered
+	// snapshot alone would let a skipped frozen turn disappear silently, so check
+	// both the row count and every canonical turn identity.
+	if manual != nil {
+		if len(canonical) == 0 || len(canonical) != len(logs) {
+			return nil, inconsistentCurrentSource("current frozen turn logs incomplete")
+		}
+		for _, turn := range canonical {
+			if _, ok := logTurns[turn.TurnID]; !ok {
+				return nil, inconsistentCurrentSource("current frozen turn log missing")
+			}
+		}
 	}
 	var refs []model.ExptTurnEvaluatorResultRef
 	if err := tx.Clauses(locks...).Where("space_id=? AND expt_id=? AND expt_turn_result_id IN ?", spaceID, exptID, canonicalIDs).Order("id ASC").Find(&refs).Error; err != nil {
@@ -244,14 +318,14 @@ func (dao *exptItemResultDAOImpl) StoreCurrentTurnRunResult(ctx context.Context,
 			return nil
 		}
 		old := actual.Turns[result.TurnID]
-		if old == nil || result.ID != old.ID || result.SpaceID != source.Current.SpaceID || result.ExptID != source.Current.ExptID || result.ExptRunID != source.Current.RunID || result.ItemID != source.Current.ItemID || result.ItemVersionID != source.Current.ItemVersionID {
+		if old == nil || result.ID != old.ID || result.SpaceID != source.Current.SpaceID || result.ExptID != source.Current.ExptID || result.ExptRunID != source.Current.RunID || result.ItemID != source.Current.ItemID || (result.ItemVersionID != source.Current.ItemVersionID && result.ItemVersionID != old.ItemVersionID) {
 			return fmt.Errorf("foreign execution turn result")
 		}
 		if old.Status == entity.TurnRunState_Success || old.Status == entity.TurnRunState_Terminal {
 			return nil
 		}
 		fields := map[string]any{"status": po.Status, "trace_id": po.TraceID, "log_id": po.LogID, "target_result_id": po.TargetResultID, "evaluator_result_ids": gptr.Indirect(po.EvaluatorResultIds), "err_msg": gptr.Indirect(po.ErrMsg), "ext": po.Ext}
-		written := tx.Model(&model.ExptTurnResultRunLog{}).Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?", old.ID, source.Current.SpaceID, source.Current.ExptID, source.Current.RunID, source.Current.ItemID, source.Current.ItemVersionID).Updates(fields)
+		written := tx.Model(&model.ExptTurnResultRunLog{}).Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?", old.ID, source.Current.SpaceID, source.Current.ExptID, source.Current.RunID, source.Current.ItemID, old.ItemVersionID).Updates(fields)
 		if written.Error != nil {
 			return written.Error
 		}
@@ -350,9 +424,13 @@ func (dao *exptItemResultDAOImpl) CompleteCurrentItemRun(ctx context.Context, so
 			}
 			fields["result_state"] = int32(result)
 		}
-		scope := "space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?"
-		args := []any{c.SpaceID, c.ExptID, c.RunID, c.ItemID, c.ItemVersionID}
-		if err := tx.Model(&model.ExptItemResultRunLog{}).Where(scope, args...).Updates(fields).Error; err != nil {
+		var itemLog model.ExptItemResultRunLog
+		if err := tx.Select("item_version_id").Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", c.SpaceID, c.ExptID, c.RunID, c.ItemID).Take(&itemLog).Error; err != nil {
+			return err
+		}
+		scope := "space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?"
+		args := []any{c.SpaceID, c.ExptID, c.RunID, c.ItemID}
+		if err := tx.Model(&model.ExptItemResultRunLog{}).Where(scope, args...).Where("item_version_id=?", itemLog.ItemVersionID).Updates(fields).Error; err != nil {
 			return err
 		}
 		if !write.RetryOnly {
@@ -368,12 +446,12 @@ func (dao *exptItemResultDAOImpl) CompleteCurrentItemRun(ctx context.Context, so
 				if !write.Yield {
 					turnFields["err_msg"] = write.TurnError(turnState)
 				}
-				if err := tx.Model(&model.ExptTurnResultRunLog{}).Where(scope, args...).Where("status NOT IN ?", []int32{int32(entity.TurnRunState_Success), int32(entity.TurnRunState_Terminal)}).Updates(turnFields).Error; err != nil {
+				if err := tx.Model(&model.ExptTurnResultRunLog{}).Where(scope, args...).Where("item_version_id IN ?", []int64{c.ItemVersionID, 0}).Where("status NOT IN ?", []int32{int32(entity.TurnRunState_Success), int32(entity.TurnRunState_Terminal)}).Updates(turnFields).Error; err != nil {
 					return err
 				}
 			}
 			if write.Yield {
-				if err := tx.Model(&model.ExptTurnResult{}).Where(scope, args...).Where("status NOT IN ?", []int32{int32(entity.TurnRunState_Success), int32(entity.TurnRunState_Terminal)}).Updates(map[string]any{"status": int32(entity.TurnRunState_Queueing)}).Error; err != nil {
+				if err := tx.Model(&model.ExptTurnResult{}).Where(scope, args...).Where("item_version_id IN ?", []int64{c.ItemVersionID, 0}).Where("status NOT IN ?", []int32{int32(entity.TurnRunState_Success), int32(entity.TurnRunState_Terminal)}).Updates(map[string]any{"status": int32(entity.TurnRunState_Queueing)}).Error; err != nil {
 					return err
 				}
 			}
@@ -386,7 +464,7 @@ func (dao *exptItemResultDAOImpl) CompleteCurrentItemRun(ctx context.Context, so
 			if next != entity.ItemRunState_Terminal {
 				canonicalFields["err_msg"] = write.ErrMsg
 			}
-			if err := tx.Model(&model.ExptItemResult{}).Where(scope, args...).Updates(canonicalFields).Error; err != nil {
+			if err := tx.Model(&model.ExptItemResult{}).Where(scope, args...).Where("item_version_id=?", c.ItemVersionID).Updates(canonicalFields).Error; err != nil {
 				return err
 			}
 			if prior != next {
@@ -399,7 +477,13 @@ func (dao *exptItemResultDAOImpl) CompleteCurrentItemRun(ctx context.Context, so
 				if from == "" || to == "" {
 					return fmt.Errorf("invalid completion stats source")
 				}
-				if err := tx.Model(&model.ExptStats{}).Where("id=? AND space_id=? AND expt_id=?", stats.ID, c.SpaceID, c.ExptID).Updates(map[string]any{from: gorm.Expr(from + "-1"), to: gorm.Expr(to + "+1")}).Error; err != nil {
+				// 旧链路计数可能漂移（见 b0b19095）：条目状态与 expt_stats 不再一一对应时，
+				// 这里的 -1 会把计数写成负数并外播到 progress/webhook。状态 CAS 仍是防双跑闸门，
+				// 计数只 clamp + 告警，最终由 CompleteExpt 的全量重算兜底。
+				if prior == entity.ItemRunState_Queueing && stats.PendingCnt <= 0 || prior == entity.ItemRunState_Processing && stats.ProcessingCnt <= 0 {
+					looplogs.CtxWarn(ctx, "legacy completion stats drift: space_id=%d expt_id=%d item_id=%d prior=%d pending_cnt=%d processing_cnt=%d", c.SpaceID, c.ExptID, c.ItemID, prior, stats.PendingCnt, stats.ProcessingCnt)
+				}
+				if err := tx.Model(&model.ExptStats{}).Where("id=? AND space_id=? AND expt_id=?", stats.ID, c.SpaceID, c.ExptID).Updates(map[string]any{from: gorm.Expr(fmt.Sprintf("GREATEST(%s - 1, 0)", from)), to: gorm.Expr(fmt.Sprintf("GREATEST(%s + 1, 0)", to))}).Error; err != nil {
 					return err
 				}
 			}

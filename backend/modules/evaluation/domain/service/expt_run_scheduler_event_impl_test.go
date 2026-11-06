@@ -405,8 +405,8 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 				},
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) { // Modification: add ctrl parameter
-				f.mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, args.ctx, func() {}, nil)
-				f.mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+				f.mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, args.ctx, func() {}, nil).Times(2)
+				f.mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).Times(2)
 				f.exptItemResultRepo.EXPECT().GetCurrentRequest(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, int64(3)).Return(&entity.ExptItemCurrentRequest{RunID: args.event.ExptRunID, ItemID: 3, Status: entity.ItemRunState_Queueing, Mode: entity.EvaluationModeSubmit}, nil)
 				f.exptItemResultRepo.EXPECT().MarkProcessingIfCurrent(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, int64(3), "").Return(true, nil)
 				f.exptTurnResultRepo.EXPECT().UpdateTurnResultsWithItemIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -2913,8 +2913,8 @@ func TestExptSchedulerImpl_handleToSubmits_BackfillRetryTimes(t *testing.T) {
 	resultSvc := svcmocks.NewMockExptResultService(ctrl)
 
 	mutex := lockmocks.NewMockILocker(ctrl)
-	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil).Times(2)
-	mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).Times(2)
+	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil).Times(4)
+	mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).Times(4)
 	svc := &ExptSchedulerImpl{
 		itemLocker:         func() lock.ILocker { return mutex },
 		ExptItemResultRepo: itemRepo,

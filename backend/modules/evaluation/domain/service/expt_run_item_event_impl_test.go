@@ -371,7 +371,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventLock(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Acquire lock failed - already occupied",
+			name: "Acquire lock failed - busy without source proof retries",
 			prepare: func() {
 				mockMutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(false, nil, nil, nil)
