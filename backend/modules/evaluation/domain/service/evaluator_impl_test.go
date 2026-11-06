@@ -3334,7 +3334,10 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator(t *testing.T) {
 				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(999), nil)
 				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
 				mockEvaluatorSourceService.EXPECT().AsyncRun(gomock.Any(), agentEvaluatorDO, req.InputData, req.EvaluatorRunConf, req.SpaceID, int64(999)).
-					Return(map[string]string{"async": "1"}, "trace-1", nil)
+					DoAndReturn(func(providerCtx context.Context, _ *entity.Evaluator, _ *entity.EvaluatorInputData, _ *entity.EvaluatorRunConfig, _, _ int64) (map[string]string, string, error) {
+						assert.Equal(t, req.SpaceID, contexts.CtxExptSpaceID(providerCtx))
+						return map[string]string{"async": "1"}, "trace-1", nil
+					})
 				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(_ context.Context, record *entity.EvaluatorRecord) error {
 						assert.Equal(t, int64(999), record.ID)
@@ -3405,6 +3408,97 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator(t *testing.T) {
 	}
 }
 
+func TestEvaluatorServiceImpl_AsyncRunEvaluator_ExptSpace(t *testing.T) {
+	t.Parallel()
+
+	const resourceSpaceID int64 = 111
+	for _, tc := range []struct {
+		name        string
+		exptSpaceID int64
+	}{
+		{name: "same space", exptSpaceID: resourceSpaceID},
+		{name: "shared evaluator", exptSpaceID: 222},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			evaluatorRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+			limiter := repomocks.NewMockRateLimiter(ctrl)
+			plainLimiter := repomocks.NewMockIPlainRateLimiter(ctrl)
+			idGenerator := idgenmocks.NewMockIIDGenerator(ctrl)
+			recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+			source := mocks.NewMockEvaluatorSourceService(ctrl)
+			evaluatorDO := &entity.Evaluator{
+				ID:            100,
+				SpaceID:       resourceSpaceID,
+				EvaluatorType: entity.EvaluatorTypeAgent,
+				AgentEvaluatorVersion: &entity.AgentEvaluatorVersion{
+					ID: 101, EvaluatorID: 100, SpaceID: resourceSpaceID,
+				},
+			}
+			req := &entity.AsyncRunEvaluatorRequest{
+				SpaceID:            tc.exptSpaceID,
+				EvaluatorVersionID: 101,
+				ExperimentID:       901,
+				InputData: &entity.EvaluatorInputData{
+					Ext: map[string]string{"caller_space_id": "333"},
+				},
+				Ext: map[string]string{"note": "keep"},
+			}
+			if tc.exptSpaceID != resourceSpaceID {
+				req.SharedOption = &entity.SharedResourceOption{
+					IsShared: true, SourceSpaceID: gptr.Of(resourceSpaceID),
+				}
+			}
+			parentCtx := contexts.WithCtxExptSpaceID(contexts.WithCtxWriteDB(context.Background()), 999)
+			evaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
+				Return([]*entity.Evaluator{evaluatorDO}, nil)
+			limiter.EXPECT().AllowInvoke(gomock.Any(), tc.exptSpaceID).Return(true)
+			if tc.exptSpaceID != resourceSpaceID {
+				limiter.EXPECT().AllowInvoke(gomock.Any(), resourceSpaceID).Return(true)
+			}
+			plainLimiter.EXPECT().AllowInvokeWithKeyLimit(gomock.Any(), "async_run_evaluator:100", gomock.Any()).Return(true)
+			idGenerator.EXPECT().GenID(gomock.Any()).Return(int64(456), nil)
+			gomock.InOrder(
+				recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, record *entity.EvaluatorRecord) error {
+						assert.Equal(t, resourceSpaceID, record.SpaceID)
+						assert.Equal(t, req.ExperimentID, record.ExperimentID)
+						assert.Equal(t, "keep", record.Ext["note"])
+						if tc.exptSpaceID != resourceSpaceID {
+							assert.Equal(t, "222", record.Ext[consts.EvaluatorRecordExtKeyCallerSpaceID])
+						}
+						return nil
+					}),
+				asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:456", gomock.Any()).Return(nil),
+				source.EXPECT().AsyncRun(gomock.Any(), evaluatorDO, req.InputData, req.EvaluatorRunConf, resourceSpaceID, int64(456)).
+					DoAndReturn(func(providerCtx context.Context, _ *entity.Evaluator, input *entity.EvaluatorInputData, _ *entity.EvaluatorRunConfig, _, _ int64) (map[string]string, string, error) {
+						assert.Equal(t, tc.exptSpaceID, contexts.CtxExptSpaceID(providerCtx))
+						assert.True(t, contexts.CtxWriteDB(providerCtx))
+						assert.Same(t, req.InputData, input)
+						assert.Equal(t, "333", input.Ext["caller_space_id"])
+						return map[string]string{"async": "1"}, "trace-1", nil
+					}),
+				recordRepo.EXPECT().UpdateEvaluatorRecordAsyncDispatch(gomock.Any(), int64(456), resourceSpaceID, "trace-1", gomock.Any()).Return(nil),
+			)
+
+			svc := &EvaluatorServiceImpl{
+				evaluatorRepo: evaluatorRepo, limiter: limiter, plainRateLimiter: plainLimiter,
+				idgen: idGenerator, evaluatorRecordRepo: recordRepo, evalAsyncRepo: asyncRepo,
+				evaluatorSourceServices: map[entity.EvaluatorType]EvaluatorSourceService{
+					entity.EvaluatorTypeAgent: source,
+				},
+			}
+			record, err := svc.AsyncRunEvaluator(parentCtx, req)
+			require.NoError(t, err)
+			require.NotNil(t, record)
+			assert.Equal(t, resourceSpaceID, record.SpaceID)
+			assert.Equal(t, int64(999), contexts.CtxExptSpaceID(parentCtx))
+			assert.Equal(t, map[string]string{"note": "keep"}, req.Ext)
+		})
+	}
+}
+
 func TestEvaluatorServiceImpl_AsyncDebugEvaluator(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -3455,7 +3549,10 @@ func TestEvaluatorServiceImpl_AsyncDebugEvaluator(t *testing.T) {
 				mockLimiter.EXPECT().AllowInvoke(gomock.Any(), int64(2)).Return(true)
 				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(888), nil)
 				mockEvaluatorSourceService.EXPECT().AsyncDebug(gomock.Any(), agentEvaluatorDO, gomock.Any(), gomock.Any(), int64(2), int64(888)).
-					Return(map[string]string{"d": "1"}, "trace-d", nil)
+					DoAndReturn(func(providerCtx context.Context, _ *entity.Evaluator, _ *entity.EvaluatorInputData, _ *entity.EvaluatorRunConfig, _, _ int64) (map[string]string, string, error) {
+						assert.Equal(t, int64(2), contexts.CtxExptSpaceID(providerCtx))
+						return map[string]string{"d": "1"}, "trace-d", nil
+					})
 				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:888", gomock.Any()).DoAndReturn(func(_ context.Context, _ string, actx *entity.EvalAsyncCtx) error {
 					assert.Equal(t, int64(101), actx.EvaluatorVersionID)
 					assert.Nil(t, actx.Event)
