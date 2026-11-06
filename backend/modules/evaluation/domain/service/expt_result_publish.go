@@ -275,7 +275,7 @@ func (e *ExptResultServiceImpl) PublishPreparedItemResult(ctx context.Context, p
 	return applied, nil
 }
 
-func (e *ExptSchedulerImpl) recordCurrentItemResults(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, mode entity.ExptSchedulerMode, expt *entity.Experiment, service ExptResultPublicationService) error {
+func (e *ExptSchedulerImpl) recordCurrentItemResults(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, mode entity.ExptSchedulerMode, expt *entity.Experiment, service ExptResultPublicationService) (retErr error) {
 	if err := ctx.Err(); err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
@@ -285,6 +285,25 @@ func (e *ExptSchedulerImpl) recordCurrentItemResults(ctx context.Context, event 
 		itemMeta, itemVer = e.resolveItemCompleteMeta(ctx, event, items, expt)
 	}
 	appliedItems := []int64{}
+	defer func() {
+		if len(appliedItems) == 0 {
+			return
+		}
+		// Committed items are no longer scanned as Logged, even if a later item fails.
+		refreshErr := ctx.Err()
+		if refreshErr == nil {
+			refreshErr = e.ResultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, appliedItems)
+		}
+		repairCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+		defer cancel()
+		repairErr := completeFilterRefresh(repairCtx, e.Publisher, event.SpaceID, event.ExptID, appliedItems, refreshErr)
+		if ctxErr := ctx.Err(); ctxErr != nil && !errors.Is(retErr, ctxErr) {
+			retErr = errors.Join(retErr, ctxErr)
+		}
+		if retErr != nil || repairErr != nil {
+			retErr = errno.WrapMQRetryErr(errors.Join(retErr, repairErr))
+		}
+	}()
 	for _, item := range items {
 		if item == nil {
 			return errno.NewMQRetryErr("nil scanned publication item")
@@ -344,14 +363,7 @@ func (e *ExptSchedulerImpl) recordCurrentItemResults(ctx context.Context, event 
 			logs.CtxError(ctx, "publish online result after commit: %v", err)
 		}
 	}
-	if len(appliedItems) == 0 {
-		return nil
-	}
-	if err := ctx.Err(); err != nil {
-		return errno.WrapMQRetryErr(err)
-	}
-	refreshErr := e.ResultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, appliedItems)
-	return completeFilterRefresh(ctx, e.Publisher, event.SpaceID, event.ExptID, appliedItems, refreshErr)
+	return nil
 }
 
 func publishFilterAuto(ctx context.Context, publisher events.ExptEventPublisher, spaceID, exptID int64, itemIDs []int64) error {
