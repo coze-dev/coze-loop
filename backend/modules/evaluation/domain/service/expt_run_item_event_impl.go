@@ -353,6 +353,15 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			if !allowed {
 				return nil
 			}
+			ctx = context.WithValue(ctx, centralResourceExecutionKey{}, true)
+			if !event.AsyncReportTrigger && !event.AsyncEvaluatorReportTrigger {
+				if event.RetryTimes > int(item.RetryTimes) {
+					return nil
+				}
+				if event.RetryTimes < int(item.RetryTimes) {
+					return e.publishCentralRetry(ctx, event, item)
+				}
+			}
 		} else {
 			ok, err := guard.ConfirmRunning(ctx, expt.SchedulerScope, event.ExptRunID, event.EvalSetItemID)
 			if err != nil {
@@ -762,6 +771,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 			return nil
 		}
 
+		if errors.Is(nextErr, errCentralRetryPublication) {
+			return nextErr
+		}
 		if errors.Is(nextErr, errCentralItemAdmission) {
 			return nextErr
 		}
@@ -796,6 +808,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 			// 让位降权改造: 开关按 expt_run_id 固化在 event.Ext(§9.3.1), 运行中不现读配置; 旧事件无该键 → 缺省关闭。
 			_, resourceProtocol := e.centralGuard.(component.ICentralItemExecution)
 			_, centralAdmitted := event.CtxCentralAdmittedExpt(ctx)
+			if resourceProtocol && centralAdmitted {
+				return e.authorizeCentralRetry(ctx, event, nextErr)
+			}
 			if event.Ext[entity.RetryYieldExtKey] == "true" && !(resourceProtocol && centralAdmitted) {
 				// ★ 让位分支(替换原 MQ 重投): 把行从 Processing 退回 Queueing、retry_times+1, 让出并发名额,
 				// 重试改由调度器 scanToSubmit 唯一驱动。updated_at 由 DB 的 ON UPDATE CURRENT_TIMESTAMP 随本次
@@ -1234,7 +1249,7 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 }
 
 func (e *ExptItemEventEvalServiceImpl) GetExistExptRecordEvalResult(ctx context.Context, event *entity.ExptItemEvalEvent) (*entity.ExptItemEvalResult, error) {
-	if event.ExptRunMode == entity.EvaluationModeFailRetry {
+	if event.ExptRunMode == entity.EvaluationModeFailRetry || isCentralResourceExecution(ctx) {
 		ctx = contexts.WithCtxWriteDB(ctx)
 	}
 	turnRunLogs, err := e.exptTurnResultRepo.GetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)

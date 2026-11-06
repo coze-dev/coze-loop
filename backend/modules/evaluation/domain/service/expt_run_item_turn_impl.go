@@ -117,6 +117,21 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 		etec.Event.WithCtxTargetCalled(ctx)
 		return tr, nil
 	}
+	if isCentralResourceExecution(ctx) && tr == nil && etec.Event.RetryTimes > 0 {
+		return nil, fmt.Errorf("%w: previous target attempt unavailable", errCentralItemAdmission)
+	}
+	if isCentralResourceExecution(ctx) && tr != nil {
+		if gptr.Indirect(tr.Status) == entity.EvalTargetRunStatusAsyncInvoking {
+			return tr, nil
+		}
+		if attempt, err := strconv.Atoi(tr.Ext[centralItemRetryRecordKey]); err == nil && attempt >= 0 {
+			if etec.Event.RetryTimes <= attempt {
+				return tr, nil
+			}
+		} else if gptr.Indirect(tr.Status) != entity.EvalTargetRunStatusSuccess {
+			return nil, fmt.Errorf("%w: target retry identity unavailable", errCentralItemAdmission)
+		}
+	}
 	if tr != nil && gptr.Indirect(tr.Status) == entity.EvalTargetRunStatusSuccess && !etec.Event.IgnoreExistedTargetResult() {
 		logs.CtxInfo(ctx, "CallTarget return with existed target record, record_id: %v", tr.ID)
 		return tr, nil
@@ -288,6 +303,12 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	}
 
 	ext := gmap.Clone(etec.Ext)
+	if isCentralResourceExecution(ctx) {
+		if ext == nil {
+			ext = make(map[string]string)
+		}
+		ext[centralItemRetryRecordKey] = strconv.Itoa(etec.Event.RetryTimes)
+	}
 	if targetConf.IngressConf != nil && targetConf.IngressConf.CustomConf != nil {
 		for _, fc := range targetConf.IngressConf.CustomConf.FieldConfs {
 			if fc.FieldName == consts.FieldAdapterBuiltinFieldNameRuntimeParam {

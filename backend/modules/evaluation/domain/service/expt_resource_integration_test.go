@@ -89,7 +89,7 @@ func (g *resourceGuard) OnItemTerminal(ctx context.Context, item *entity.ExptIte
 func resourceFixture() (*ExptItemEventEvalServiceImpl, *resourceItemStore, *resourceGuard, *entity.ExptItemEvalEvent, context.Context) {
 	item := &resourceItemStore{run: &entity.ExptItemResultRunLog{ID: 41, SpaceID: 3, ExptID: 1, ExptRunID: 2, ItemID: 4, Status: int32(entity.ItemRunState_Queueing), QuotaReservationState: entity.QuotaReservationStateReserved}}
 	guard := &resourceGuard{}
-	svc := &ExptItemEventEvalServiceImpl{centralGuard: guard, exptItemResultRepo: item, dispatchRepo: &resourceDispatchStore{item: item}, experimentRepo: &cancellationExptStore{expt: &entity.Experiment{ID: 1, SpaceID: 3, Status: entity.ExptStatus_Processing, ExptDispatchMode: entity.ExptDispatchModeEnforce, SchedulerScope: testScope}}}
+	svc := &ExptItemEventEvalServiceImpl{centralGuard: guard, exptItemResultRepo: item, dispatchRepo: &resourceDispatchStore{item: item}, mutex: cancellationMutex{}, experimentRepo: &cancellationExptStore{expt: &entity.Experiment{ID: 1, SpaceID: 3, Status: entity.ExptStatus_Processing, ExptDispatchMode: entity.ExptDispatchModeEnforce, SchedulerScope: testScope}}}
 	event := &entity.ExptItemEvalEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2, EvalSetItemID: 4}
 	ctx := ctxcache.Init(context.Background())
 	event.WithCtxCentralAdmittedExpt(ctx, &entity.Experiment{ID: 1, SpaceID: 3, ExptDispatchMode: entity.ExptDispatchModeEnforce, SchedulerScope: testScope})
@@ -130,6 +130,9 @@ func (s *resourceItemStore) UpdateItemRunLog(ctx context.Context, _, _ int64, _ 
 	return nil
 }
 func (s *resourceItemStore) UpdateItemRunLogIfNotTerminal(ctx context.Context, expt, run int64, ids []int64, fields map[string]any, space int64) error {
+	if entity.ItemRunState(s.run.Status) == entity.ItemRunState_Terminal {
+		return nil
+	}
 	return s.UpdateItemRunLog(ctx, expt, run, ids, fields, space)
 }
 func (s *resourceItemStore) UpdateItemsResult(context.Context, int64, int64, []int64, map[string]any) error {
