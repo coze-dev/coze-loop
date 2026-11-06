@@ -369,7 +369,12 @@ func (e *ExptMangerImpl) refreshTerminatedRunFilters(ctx context.Context, event 
 	return nil
 }
 
-func (e *ExptMangerImpl) cleanupCurrentUnscheduledRun(ctx context.Context, expt, run, space int64, cause error, ordinaryAdmission ...bool) (err error) {
+func (e *ExptMangerImpl) cleanupCurrentUnscheduledRun(ctx context.Context, expt, run, space int64, cause error, ordinaryAdmission ...bool) error {
+	// Pre-MQ failures have no confirmed successful space quota reservation.
+	return e.cleanupCurrentUnscheduledRunWithQuota(ctx, expt, run, space, cause, false, ordinaryAdmission...)
+}
+
+func (e *ExptMangerImpl) cleanupCurrentUnscheduledRunWithQuota(ctx context.Context, expt, run, space int64, cause error, quotaReserved bool, ordinaryAdmission ...bool) (err error) {
 	if run <= 0 {
 		return fmt.Errorf("invalid cleanup run")
 	}
@@ -377,7 +382,7 @@ func (e *ExptMangerImpl) cleanupCurrentUnscheduledRun(ctx context.Context, expt,
 	capturedNumeric := len(ordinaryAdmission) > 0 && !ordinaryAdmission[0]
 	primaryReadFailed := false
 	ordinaryReleaseAllowed := false
-	releaseAdmission := true
+	releaseAdmission := !quotaReserved
 	defer func() {
 		if !releaseAdmission {
 			return
@@ -444,7 +449,19 @@ func (e *ExptMangerImpl) cleanupCurrentUnscheduledRun(ctx context.Context, expt,
 			if runLog.Status != int64(entity.ExptStatus_Pending) {
 				return nil
 			}
-			return e.runLogRepo.Update(ctx, expt, run, space, map[string]any{"status": int64(entity.ExptStatus_Failed), "status_message": []byte(cause.Error())})
+			if quotaReserved {
+				// CompleteRun-only compensation follows a successful prepareRun.
+				// Release before marking the run terminal so a release error leaves
+				// Pending and admission intact for the scheduler to retry this path.
+				if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(ctx, expt, space, &entity.Session{}); err != nil {
+					return errno.WrapMQRetryErr(err)
+				}
+			}
+			if err := e.runLogRepo.Update(ctx, expt, run, space, map[string]any{"status": int64(entity.ExptStatus_Failed), "status_message": []byte(cause.Error())}); err != nil {
+				return err
+			}
+			releaseAdmission = true
+			return nil
 		}
 		terminate = true
 		releaseAdmission = false // termination retains and releases lifecycle itself

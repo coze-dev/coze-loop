@@ -720,7 +720,7 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 					return err
 				}
 				if logged != nil && logged.Status == int64(entity.ExptStatus_Pending) {
-					return e.cleanupCurrentUnscheduledRun(ctx, exptID, exptRunID, spaceID, fmt.Errorf("run setup did not start"))
+					return e.cleanupCurrentUnscheduledRunWithQuota(ctx, exptID, exptRunID, spaceID, fmt.Errorf("run setup did not start"), true)
 				}
 			}
 			opt := &entity.CompleteExptOption{}
