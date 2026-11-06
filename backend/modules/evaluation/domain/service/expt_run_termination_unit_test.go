@@ -600,9 +600,6 @@ func TestCleanupTerminatedRunUnit(t *testing.T) {
 		idem.EXPECT().Exist(gomock.Any(), "finish-cleanup:1:2").Return(false, errors.New("idem"))
 		m := d.manager()
 		m.idem = idem
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(expt(), nil)
 		require.Error(t, m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{NoCompleteItemTurn: true}))
 	})
 	t.Run("already_notified", func(t *testing.T) {
@@ -611,9 +608,6 @@ func TestCleanupTerminatedRunUnit(t *testing.T) {
 		idem.EXPECT().Exist(gomock.Any(), "finish-cleanup:1:2").Return(true, nil)
 		m := d.manager()
 		m.idem = idem
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(expt(), nil)
 		require.NoError(t, m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{NoCompleteItemTurn: true}))
 	})
 	t.Run("success", func(t *testing.T) {
@@ -640,18 +634,21 @@ func TestCleanupCancelledTerminationResourcesUnit(t *testing.T) {
 	t.Run("lock_error", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
+		d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(false, nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil, nil, errors.New("lock"))
 		require.True(t, errno.NeedMQRetry(m.cleanupCancelledTerminationResources(context.Background(), event, frozen, nil)))
 	})
 	t.Run("owner_unavailable", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
+		d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(false, nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
 		require.True(t, errno.NeedMQRetry(m.cleanupCancelledTerminationResources(context.Background(), event, frozen, nil)))
 	})
 	t.Run("release_error", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
+		d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(false, nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(frozen, nil)
 		require.Error(t, m.cleanupCancelledTerminationResources(context.Background(), event, frozen, []*entity.ExptCurrentItemRunSource{nil}))
@@ -659,6 +656,7 @@ func TestCleanupCancelledTerminationResourcesUnit(t *testing.T) {
 	t.Run("cancelled_returns_retry", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
+		d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(false, nil)
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
@@ -668,6 +666,7 @@ func TestCleanupCancelledTerminationResourcesUnit(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
+		d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(false, nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(frozen, nil)
 		// The trailing unwrap always reports a retryable envelope, preserving replay.
@@ -1114,9 +1113,8 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		ctx, cancel := context.WithCancel(context.Background())
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).Times(2)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, ctx, func() {}, nil).Times(2)
-		d.locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).DoAndReturn(func(context.Context, int64, int64) (*entity.Experiment, error) {
 			cancel()
 			return nil, errors.New("read")
@@ -1127,9 +1125,8 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		ctx, cancel := context.WithCancel(context.Background())
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).Times(2)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, ctx, func() {}, nil).Times(2)
-		d.locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
 		current := expt()
 		current.ExptDispatchMode = entity.ExptDispatchModeEnforce
 		current.SchedulerScope = "scope"
@@ -1221,7 +1218,6 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil, nil, errors.New("second lock"))
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil)

@@ -138,7 +138,7 @@ func TestFilterRefreshFinishedReplayBeforeNotificationMarker(t *testing.T) {
 			require.Equal(t, before, f.snapshot(), "replay cannot rewrite stats, end time or logs")
 			previous := attempts
 			require.NoError(t, scheduler.HandleEventCheck(func(context.Context, *entity.ExptScheduleEvent) error { return nil })(context.Background(), event))
-			require.Greater(t, attempts, previous, "notification marker must not skip filter calibration")
+			require.Equal(t, previous, attempts, "completed cleanup replay must not repeat filter calibration")
 			require.Equal(t, before, f.snapshot())
 		})
 	}

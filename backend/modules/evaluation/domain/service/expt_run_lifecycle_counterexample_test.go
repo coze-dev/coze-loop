@@ -32,14 +32,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
 
-// 评审候选 2 的真实 Redis + MySQL 反例。
-//
-// 归属不变量：
-//  1. 旧 LogRun 写入的固定 "evaluation" holder 不携带 acquisition token，
-//     相同 value 的 CAS 无法区分“R1 遗留”与“R2 刚取得”。
-//  2. 因此 R1 终态 EndAt 只能证明 R1 结束多久，不能证明当前 Redis owner 是 R1；
-//     任何缺失归属证明的路径都不得删除 holder。
-//  3. R1 清理必须保持可重放（MQRetry），不能为了不误删而把 AlreadyFinished 全 ACK。
+// Real Redis + MySQL coverage for a completed A replay while B is paused
+// between ordinary SETNX and SQL Create. The completed cleanup marker is known
+// in these cases. A without that marker and B with an indistinguishable fixed
+// holder remain an explicit limitation of the restored legacy protocol.
 
 type lifecycleBlockingRunLogRepo struct {
 	repo.IExptRunLogRepo
@@ -191,9 +187,8 @@ func lifecycleReplayR1(ctx context.Context, manager *ExptMangerImpl, f *lifecycl
 	})
 }
 
-// RED（88d77a30）：R1 的旧 EndAt 让我们按 value CAS 删掉 R2 刚 SETNX 的
-// "evaluation"。GREEN：静态 holder 不做无归属证明的删除，R1 清理保持 MQRetry，
-// R2 恢复后照常 Create 并推进 LatestRunID。
+// A has finished cleanup. Its late tick must ACK before touching B's newly
+// acquired ordinary holder or shared quota, even while SQL still shows A.
 func TestLifecycleStaticHolderDoesNotEvictConcurrentLegacyRun(t *testing.T) {
 	f := newLifecycleCounterexampleFixture(t)
 	f.seedFinishedR1()
@@ -233,7 +228,7 @@ func TestLifecycleStaticHolderDoesNotEvictConcurrentLegacyRun(t *testing.T) {
 	owner, err = f.raw.Get(f.ctx, f.key).Result()
 	require.NoError(t, err, "R2 lifecycle holder must survive R1 AlreadyFinished replay")
 	require.Equal(t, legacyStaticHolderValue, owner)
-	require.True(t, errno.NeedMQRetry(replayErr), "R1 cleanup must stay replayable while R2 owns the lease")
+	require.NoError(t, replayErr, "completed R1 replay must exit before touching R2 admission")
 	require.Zero(t, f.quota.calls.Load(), "R1 cleanup must not release shared quota while R2 owns the lease")
 	require.Equal(t, f.r1, f.latestRunID())
 
@@ -256,9 +251,8 @@ func TestLifecycleStaticHolderDoesNotEvictConcurrentLegacyRun(t *testing.T) {
 	require.Equal(t, legacyStaticHolderValue, owner, "non-current R1 replay must leave R2's holder untouched")
 }
 
-// 干净的同 run 旧静态 holder（无 R2 竞争）：修复后不删 holder，但 AlreadyFinished
-// 仍持续可重放；holder 自然到期后重放即可完成清理，证明没有放弃 finish 恢复。
-func TestStaticSameRunCleanupRecoversAfterLeaseExpiry(t *testing.T) {
+// A completed receipt also suppresses repeats after a same-value lease expires.
+func TestCompletedStaticRunReplayDoesNotReleaseAgainAfterLeaseExpiry(t *testing.T) {
 	f := newLifecycleCounterexampleFixture(t)
 	f.seedFinishedR1()
 	require.NoError(t, f.raw.Set(f.ctx, f.key, legacyStaticHolderValue, 700*time.Millisecond).Err())
@@ -269,7 +263,7 @@ func TestStaticSameRunCleanupRecoversAfterLeaseExpiry(t *testing.T) {
 	})
 	require.NotNil(t, result)
 	require.Equal(t, entity.ExptRunFinishAlreadyFinished, result.Disposition)
-	require.True(t, errno.NeedMQRetry(err), "terminal R1 replay must stay retryable while the holder is unowned")
+	require.NoError(t, err, "completed R1 replay must not repeat resource cleanup")
 	require.Zero(t, f.quota.calls.Load())
 	owner, getErr := f.raw.Get(f.ctx, f.key).Result()
 	require.NoError(t, getErr)
@@ -287,8 +281,8 @@ func TestStaticSameRunCleanupRecoversAfterLeaseExpiry(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	require.NoError(t, lifecycleReplayR1(f.ctx, manager, f), "replay must recover after the lease expires")
-	require.EqualValues(t, 1, f.quota.calls.Load(), "recovered replay must release the finished run's quota")
+	require.NoError(t, lifecycleReplayR1(f.ctx, manager, f), "completed replay must remain a no-op after lease expiry")
+	require.Zero(t, f.quota.calls.Load(), "completed cleanup must not release shared quota again")
 }
 
 // 真实中间件上的并发重放：多个 R1 消费者同时到达，仍不得删除 R2 刚取得的 holder。

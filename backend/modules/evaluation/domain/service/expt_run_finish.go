@@ -4,9 +4,11 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rs/xid"
@@ -204,33 +206,98 @@ func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, loc
 	return nil
 }
 
+// acquireFinishedRunLifecycle retains the admission key through cleanup. The
+// caller must recheck primary LatestRunID/terminal status before side effects.
+// A nil release means SQL already confirms a replacement; the caller exits.
+// Ordinary evaluation and existing numeric runs finish under their original
+// holder; only an absent/legacy random key needs the existing cleanup lease.
+// The fixed ordinary value intentionally retains the old protocol's guarantee:
+// TTL expiry or an old force-unlock followed by same-value SETNX cannot be fenced.
+func (e *ExptMangerImpl) acquireFinishedRunLifecycle(ctx context.Context, event *entity.ExptScheduleEvent) (context.Context, func() error, func(), error) {
+	if e.manualRetryLocker == nil {
+		return nil, nil, nil, errno.NewMQRetryErr("finish lifecycle locker missing")
+	}
+	locker := e.manualRetryLocker()
+	if locker == nil {
+		return nil, nil, nil, errno.NewMQRetryErr("finish lifecycle locker missing")
+	}
+	key := e.makeExptMutexLockKey(event.ExptID)
+	if reader, ok := locker.(lifecycleLockValueReader); ok {
+		holder, exists, err := reader.GetLifecycleLockValue(ctx, key)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if exists && (holder == legacyStaticLifecycleHolder || holder == strconv.FormatInt(event.ExptRunID, 10)) {
+			release := func() error {
+				releaseCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
+				defer cancel()
+				_, err := locker.UnlockWithValue(releaseCtx, key, holder)
+				return err
+			}
+			return ctx, release, func() {}, nil
+		}
+		if exists && e.exptRepo != nil {
+			current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), event.ExptID, event.SpaceID)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			if current != nil && current.LatestRunID != event.ExptRunID {
+				return ctx, nil, nil, nil
+			}
+		}
+	}
+	// Keep the prior compatibility handling for old random holders and lockers
+	// without a value reader; numeric replacement holders are never migrated.
+	if err := e.releasePreviousLifecycleHolder(ctx, locker, key, event); err != nil {
+		return nil, nil, nil, err
+	}
+	locked, leaseCtx, cancel, err := locker.LockWithRenew(ctx, key, 5*time.Second, 5*time.Minute)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if !locked {
+		return nil, nil, nil, errno.NewMQRetryErr("finish lifecycle owner unavailable")
+	}
+	stop := sync.OnceFunc(cancel)
+	return leaseCtx, func() error { stop(); return nil }, stop, nil
+}
+
+func (e *ExptMangerImpl) finishedRunCleanupSeen(ctx context.Context, event *entity.ExptScheduleEvent) (bool, error) {
+	if e.idem == nil {
+		return false, nil
+	}
+	return e.idem.Exist(ctx, fmt.Sprintf("finish-cleanup:%d:%d", event.ExptID, event.ExptRunID))
+}
+
 func (e *ExptMangerImpl) cleanupNaturallyFinishedRun(ctx context.Context, event *entity.ExptScheduleEvent, finished *entity.Experiment) error {
 	if finished == nil {
 		return fmt.Errorf("finished experiment missing")
 	}
-	if e.manualRetryLocker == nil {
-		return fmt.Errorf("finish lifecycle locker missing")
+	if e.idem == nil {
+		return errno.NewMQRetryErr("finish notification idempotency service missing")
 	}
-	locker := e.manualRetryLocker()
-	if locker == nil {
-		return fmt.Errorf("finish lifecycle locker missing")
-	}
-	key := e.makeExptMutexLockKey(event.ExptID)
-	// Remove only this run's original value, then acquire the same lifecycle key.
-	// A pre-upgrade random holder is migrated by value only after terminal ownership checks.
-	if err := e.releasePreviousLifecycleHolder(ctx, locker, key, event); err != nil {
-		return err
-	}
-	locked, cleanupCtx, cancel, err := locker.LockWithRenew(ctx, key, 5*time.Second, 5*time.Minute)
+	// A completed replay exits before touching a subsequent same-value admission
+	// or its shared run quota, including the next LogRun's pre-SQL window.
+	seen, err := e.finishedRunCleanupSeen(ctx, event)
 	if err != nil {
 		return err
 	}
-	if !locked {
-		return errno.NewMQRetryErr("finish lifecycle owner unavailable; legacy random holders require expiry")
+	if seen {
+		return nil
+	}
+	cleanupCtx, release, cancel, err := e.acquireFinishedRunLifecycle(ctx, event)
+	if err != nil {
+		return err
+	}
+	if release == nil {
+		return nil
 	}
 	defer cancel()
 	if err := cleanupCtx.Err(); err != nil {
 		return err
+	}
+	if e.exptRepo == nil {
+		return errno.NewMQRetryErr("finish cleanup repository missing")
 	}
 	current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(cleanupCtx), event.ExptID, event.SpaceID)
 	if err != nil {
@@ -274,19 +341,9 @@ func (e *ExptMangerImpl) cleanupNaturallyFinishedRun(ctx context.Context, event 
 		return err
 	}
 
-	// Resources above remain replayable. Only the completed notification segment
-	// is deduplicated, under the same lifecycle lease that serializes retries.
-	if e.idem == nil {
-		return errno.NewMQRetryErr("finish notification idempotency service missing")
-	}
+	// Mark the whole successful cleanup before releasing admission. Errors leave
+	// the original holder in place so resources and notifications remain replayable.
 	notificationKey := fmt.Sprintf("finish-cleanup:%d:%d", event.ExptID, event.ExptRunID)
-	seen, err := e.idem.Exist(cleanupCtx, notificationKey)
-	if err != nil {
-		return err
-	}
-	if seen {
-		return cleanupCtx.Err()
-	}
 
 	if current.ExptTemplateMeta != nil && current.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
 		if err := e.templateManager.UpdateExptInfo(cleanupCtx, current.ExptTemplateMeta.ID, event.SpaceID, event.ExptID, current.Status, 0, nil); err != nil {
@@ -323,11 +380,22 @@ func (e *ExptMangerImpl) cleanupNaturallyFinishedRun(ctx context.Context, event 
 	if err := cleanupCtx.Err(); err != nil {
 		return err
 	}
-	duration := 3 * time.Minute
-	if e.configer != nil {
-		duration = time.Duration(e.configer.GetExptExecConf(cleanupCtx, event.SpaceID).GetZombieIntervalSecond()) * time.Second * 2
-	}
+	duration := e.finishedRunCleanupTTL(cleanupCtx, event.SpaceID)
 	// A crash or Set failure after RPC success can replay this segment; the key
 	// bounds normal duplicates, it does not provide distributed exactly-once.
-	return e.idem.Set(cleanupCtx, notificationKey, duration)
+	if err := e.idem.Set(cleanupCtx, notificationKey, duration); err != nil {
+		return err
+	}
+	if err := release(); err != nil {
+		// A failed release must not turn a remaining admission into an ACK-only leak.
+		return errors.Join(err, e.idem.Del(context.WithoutCancel(ctx), notificationKey))
+	}
+	return nil
+}
+
+func (e *ExptMangerImpl) finishedRunCleanupTTL(ctx context.Context, space int64) time.Duration {
+	if e.configer == nil {
+		return 3 * time.Minute
+	}
+	return time.Duration(e.configer.GetExptExecConf(ctx, space).GetZombieIntervalSecond()) * time.Second * 2
 }

@@ -151,7 +151,7 @@ func TestCancelSetupOldRunCannotChangeReplacement(t *testing.T) {
 	f, m, _, ownsLock := newCancelSetupFixture(t)
 	session := &entity.Session{UserID: "setup"}
 	require.NoError(t, m.LogRun(context.Background(), f.expt, f.run, entity.EvaluationModeSubmit, f.space, nil, session))
-	released, err := m.mutex.UnlockWithValue(context.Background(), m.makeExptMutexLockKey(f.expt), fmt.Sprint(f.run))
+	released, err := m.mutex.Unlock(m.makeExptMutexLockKey(f.expt))
 	require.NoError(t, err)
 	require.True(t, released)
 	require.NoError(t, m.LogRun(context.Background(), f.expt, f.run+100, entity.EvaluationModeSubmit, f.space, nil, session))

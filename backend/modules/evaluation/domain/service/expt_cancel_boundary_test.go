@@ -151,6 +151,14 @@ type cancelHookLocker struct {
 	hook func(string)
 }
 
+func (l *cancelHookLocker) GetLifecycleLockValue(ctx context.Context, key string) (string, bool, error) {
+	return l.ILocker.(lifecycleLockValueReader).GetLifecycleLockValue(ctx, key)
+}
+
+func (l *cancelHookLocker) GetLifecycleLockTTL(ctx context.Context, key string) (time.Duration, bool, error) {
+	return l.ILocker.(lifecycleLockValueReader).GetLifecycleLockTTL(ctx, key)
+}
+
 func (l *cancelHookLocker) LockWithRenew(ctx context.Context, key string, ttl, hold time.Duration) (bool, context.Context, func(), error) {
 	if l.hook != nil {
 		l.hook(key)
@@ -309,8 +317,9 @@ func TestNewRunRealInitializersAndResetClearOnlyManualExt(t *testing.T) {
 			require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(entity.ExptStatus_Success)).Error)
 			require.NoError(t, f.conn.Model(&model.Experiment{}).Where("space_id=?", f.space).Updates(map[string]any{"status": int32(entity.ExptStatus_Success), "end_at": time.Now()}).Error)
 			oldLog := f.snapshot()["expt_run_log"]
-			_, err := p.manager.mutex.UnlockWithValue(context.Background(), p.manager.makeExptMutexLockKey(f.expt), fmt.Sprint(f.run))
+			released, err := p.manager.mutex.Unlock(p.manager.makeExptMutexLockKey(f.expt))
 			require.NoError(t, err)
+			require.True(t, released)
 			next := f.run + 100
 			ctrl := gomock.NewController(t)
 			ids := idmocks.NewMockIIDGenerator(ctrl)
@@ -405,8 +414,9 @@ func TestRunCancelR2LifecycleOwnerPreventsAnyCleanup(t *testing.T) {
 	f := p.f
 	finished := *p.expt
 	finished.Status = entity.ExptStatus_Terminated
-	_, err := p.manager.mutex.UnlockWithValue(context.Background(), p.manager.makeExptMutexLockKey(f.expt), fmt.Sprint(f.run))
+	released, err := p.manager.mutex.Unlock(p.manager.makeExptMutexLockKey(f.expt))
 	require.NoError(t, err)
+	require.True(t, released)
 	replacement := p.factory()
 	locked, _, err := replacement.BackoffLockWithValue(context.Background(), p.manager.makeExptMutexLockKey(f.expt), fmt.Sprint(f.run+100), time.Minute, time.Millisecond)
 	require.NoError(t, err)
@@ -429,8 +439,9 @@ func TestNewRunResetReleasesOriginalTerminalManualQuotaBeforeMigration(t *testin
 	guard := &fakeGuard{}
 	p.manager.centralGuard = guard
 	require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(entity.ExptStatus_Terminated)).Error)
-	_, err := p.manager.mutex.UnlockWithValue(context.Background(), p.manager.makeExptMutexLockKey(f.expt), fmt.Sprint(f.run))
+	released, err := p.manager.mutex.Unlock(p.manager.makeExptMutexLockKey(f.expt))
 	require.NoError(t, err)
+	require.True(t, released)
 	metric := metricsmocks.NewMockExptMetric(gomock.NewController(t))
 	metric.EXPECT().EmitExptExecRun(f.space, int64(entity.EvaluationModeRetryAll))
 	p.manager.mtr = metric
@@ -452,8 +463,9 @@ func TestNewRunReleasesResidualTerminalQuota(t *testing.T) {
 	}
 	guard := &fakeGuard{}
 	p.manager.centralGuard = guard
-	_, err := p.manager.mutex.UnlockWithValue(context.Background(), p.manager.makeExptMutexLockKey(f.expt), fmt.Sprint(f.run))
+	released, err := p.manager.mutex.Unlock(p.manager.makeExptMutexLockKey(f.expt))
 	require.NoError(t, err)
+	require.True(t, released)
 	metric := metricsmocks.NewMockExptMetric(gomock.NewController(t))
 	metric.EXPECT().EmitExptExecRun(f.space, int64(entity.EvaluationModeRetryAll))
 	p.manager.mtr = metric

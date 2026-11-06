@@ -173,7 +173,11 @@ func TestRunFinishCleanupNotificationGateAndFailureOrder(t *testing.T) {
 			require.Equal(t, 1, calls["metric"])
 			require.Equal(t, 1, calls["sandbox_metric"])
 			require.True(t, idem.seen)
-			require.GreaterOrEqual(t, resources, 2, "resource retries must not be skipped by notification marker")
+			wantResources := 2
+			if fault == "none" || fault == "idem_read" {
+				wantResources = 1
+			}
+			require.Equal(t, wantResources, resources, "only incomplete cleanup may replay resource release")
 			require.Greater(t, idem.ttl, time.Hour)
 		})
 	}
@@ -207,14 +211,12 @@ func TestRunFinishCleanupMissingIdemFailsClosed(t *testing.T) {
 	factory, _ := finishRealLockerFactory(t)
 	expt := &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Success, EndAt: gptr.Of(time.Now())}
 	expts := repomocks.NewMockIExperimentRepo(ctrl)
-	expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(expt, nil)
 	quota := repomocks.NewMockQuotaRepo(ctrl)
-	quota.EXPECT().CreateOrUpdate(gomock.Any(), int64(3), gomock.Any(), gomock.Any()).Return(nil)
 	manager := &ExptMangerImpl{exptRepo: expts, quotaRepo: quota, manualRetryLocker: factory, publisher: eventmocks.NewMockExptEventPublisher(ctrl), mtr: metricsmocks.NewMockExptMetric(ctrl)}
 	require.True(t, errno.NeedMQRetry(manager.cleanupNaturallyFinishedRun(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, expt)))
 }
 
-func TestRunFinishCleanupMarkerDoesNotSkipResourceFailure(t *testing.T) {
+func TestRunFinishResourceFailureRemainsReplayableUntilCleanupMarked(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	factory, _ := finishRealLockerFactory(t)
 	expt := &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Success, EndAt: gptr.Of(time.Now())}
@@ -223,9 +225,13 @@ func TestRunFinishCleanupMarkerDoesNotSkipResourceFailure(t *testing.T) {
 	quota := repomocks.NewMockQuotaRepo(ctrl)
 	quota.EXPECT().CreateOrUpdate(gomock.Any(), int64(3), gomock.Any(), gomock.Any()).Return(errors.New("resource release unavailable"))
 	quota.EXPECT().CreateOrUpdate(gomock.Any(), int64(3), gomock.Any(), gomock.Any()).Return(nil)
-	manager := &ExptMangerImpl{exptRepo: expts, quotaRepo: quota, manualRetryLocker: factory, idem: &cleanupTestIdem{seen: true}, publisher: eventmocks.NewMockExptEventPublisher(ctrl), mtr: metricsmocks.NewMockExptMetric(ctrl)}
+	idem := &cleanupTestIdem{}
+	manager := &ExptMangerImpl{exptRepo: expts, quotaRepo: quota, manualRetryLocker: factory, idem: idem}
 	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
 	require.Error(t, manager.cleanupNaturallyFinishedRun(context.Background(), event, expt))
+	require.False(t, idem.seen, "resource failure cannot mark cleanup complete")
+	require.NoError(t, manager.cleanupNaturallyFinishedRun(context.Background(), event, expt))
+	require.True(t, idem.seen)
 	require.NoError(t, manager.cleanupNaturallyFinishedRun(context.Background(), event, expt))
 }
 
@@ -285,7 +291,7 @@ func TestRunFinishRealCommitNotificationFailureRetry(t *testing.T) {
 			require.Equal(t, entity.ExptRunFinishAlreadyFinished, result.Disposition)
 			require.Equal(t, calls, fmt.Sprint(counts))
 			require.Equal(t, int32(1), p.notifications.Load())
-			require.Equal(t, int32(3), p.resources.Load())
+			require.Equal(t, int32(2), p.resources.Load(), "completed replay must not release shared quota again")
 			require.Equal(t, snapshot, f.snapshot())
 		})
 	}

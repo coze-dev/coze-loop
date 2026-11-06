@@ -215,6 +215,15 @@ func (e *ExptMangerImpl) TerminateCurrentRun(ctx context.Context, expt, run, spa
 		if current.LatestRunID != run {
 			return nil
 		}
+		if entity.IsExptFinished(current.Status) {
+			seen, err := e.finishedRunCleanupSeen(ctx, &entity.ExptScheduleEvent{ExptID: expt, ExptRunID: run})
+			if err != nil {
+				return err
+			}
+			if seen {
+				return nil
+			}
+		}
 		if expected != nil {
 			s, err := port.GetTerminationItemSource(ctx, space, expt, run, expected.Current.ItemID)
 			if err != nil {
@@ -400,32 +409,31 @@ func (e *ExptMangerImpl) cleanupTerminatedRun(ctx context.Context, event *entity
 	if finished == nil || finished.ID != event.ExptID || finished.LatestRunID != event.ExptRunID {
 		return errno.NewMQRetryErr("termination cleanup frozen experiment missing")
 	}
-	locker := e.manualRetryLocker()
-	if locker == nil {
-		return errno.NewMQRetryErr("termination lifecycle locker missing")
-	}
-	key := e.makeExptMutexLockKey(event.ExptID)
-	if err := e.releasePreviousLifecycleHolder(resourceCtx, locker, key, event); err != nil {
-		return errno.WrapMQRetryErr(err)
-	}
 	if err := ctx.Err(); err != nil {
 		return e.cleanupCancelledTerminationResources(ctx, event, finished, sources)
 	}
-	locked, leaseCtx, cancel, err := locker.LockWithRenew(ctx, key, 5*time.Second, 5*time.Minute)
+	seen, err := e.finishedRunCleanupSeen(ctx, event)
+	if err != nil {
+		return err
+	}
+	if seen {
+		return nil
+	}
+	leaseCtx, release, cancel, err := e.acquireFinishedRunLifecycle(ctx, event)
 	if err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
-	if !locked {
-		return errno.NewMQRetryErr("termination lifecycle owner unavailable")
+	if release == nil {
+		return nil
 	}
 	defer cancel()
+	if e.exptRepo == nil {
+		return errno.NewMQRetryErr("termination cleanup repository missing")
+	}
 	current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(leaseCtx), event.ExptID, event.SpaceID)
 	if err != nil {
 		if ctx.Err() != nil {
 			cancel()
-			if _, unlockErr := locker.Unlock(key); unlockErr != nil {
-				return errno.WrapMQRetryErr(unlockErr)
-			}
 			return e.cleanupCancelledTerminationResources(ctx, event, finished, sources)
 		}
 		return errno.WrapMQRetryErr(err)
@@ -450,15 +458,17 @@ func (e *ExptMangerImpl) cleanupTerminatedRun(ctx context.Context, event *entity
 	if releaseErr != nil {
 		if ctx.Err() != nil {
 			cancel()
-			if _, unlockErr := locker.Unlock(key); unlockErr != nil {
-				return errno.WrapMQRetryErr(unlockErr)
-			}
 			return e.cleanupCancelledTerminationResources(ctx, event, current, sources)
 		}
 		return releaseErr
 	}
+	if len(debt) > 0 {
+		return errno.NewMQRetryErr("whole-run resource cleanup incomplete")
+	}
 	if err := ctx.Err(); err != nil {
-		return errno.WrapMQRetryErr(err)
+		// Resources have completed under the original admission; release it even
+		// when SQL/filter/notification work must retain cancellation.
+		return errors.Join(errno.WrapMQRetryErr(err), release())
 	}
 	opCtx, stop := context.WithCancel(ctx)
 	defer stop()
@@ -476,13 +486,6 @@ func (e *ExptMangerImpl) cleanupTerminatedRun(ctx context.Context, event *entity
 		return errno.NewMQRetryErr("termination notification idempotency service missing")
 	}
 	notificationKey := fmt.Sprintf("finish-cleanup:%d:%d", event.ExptID, event.ExptRunID)
-	seen, err := e.idem.Exist(opCtx, notificationKey)
-	if err != nil {
-		return err
-	}
-	if seen {
-		return nil
-	}
 	if current.ExptTemplateMeta != nil && current.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
 		if err := e.templateManager.UpdateExptInfo(opCtx, current.ExptTemplateMeta.ID, event.SpaceID, event.ExptID, current.Status, 0, nil); err != nil {
 			return err
@@ -513,27 +516,39 @@ func (e *ExptMangerImpl) cleanupTerminatedRun(ctx context.Context, event *entity
 	if err := opCtx.Err(); err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
-	return e.idem.Set(opCtx, notificationKey, 3*time.Minute)
+	if err := e.idem.Set(opCtx, notificationKey, e.finishedRunCleanupTTL(opCtx, event.SpaceID)); err != nil {
+		return err
+	}
+	if err := release(); err != nil {
+		return errors.Join(err, e.idem.Del(resourceCtx, notificationKey))
+	}
+	return nil
 }
 
 func (e *ExptMangerImpl) cleanupCancelledTerminationResources(ctx context.Context, event *entity.ExptScheduleEvent, frozen *entity.Experiment, sources []*entity.ExptCurrentItemRunSource) error {
 	// Cancellation permits only a primary ownership read and frozen resource IO.
-	// Scores and MQ retain ctx. A separate holder prevents the cancelled
-	// operation's asynchronous unlock from deleting this lease.
+	// Scores and MQ retain ctx. Keep the original admission until resource cleanup
+	// completes; an absent key uses the existing independent cleanup lease.
 	resourceCtx, stop := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
 	defer stop()
-	locker := e.manualRetryLocker()
-	if locker == nil {
-		return errno.NewMQRetryErr("termination resource locker missing")
+	seen, err := e.finishedRunCleanupSeen(resourceCtx, event)
+	if err != nil {
+		return err
 	}
-	locked, leaseCtx, cancel, err := locker.LockWithRenew(resourceCtx, e.makeExptMutexLockKey(event.ExptID), 5*time.Second, 8*time.Second)
+	if seen {
+		return nil
+	}
+	leaseCtx, release, cancel, err := e.acquireFinishedRunLifecycle(resourceCtx, event)
 	if err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
-	if !locked {
-		return errno.NewMQRetryErr("termination resource owner unavailable")
+	if release == nil {
+		return nil
 	}
 	defer cancel()
+	if e.exptRepo == nil {
+		return errno.NewMQRetryErr("termination resource repository missing")
+	}
 	current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(leaseCtx), event.ExptID, event.SpaceID)
 	if err != nil {
 		return errno.WrapMQRetryErr(err)
@@ -542,7 +557,10 @@ func (e *ExptMangerImpl) cleanupCancelledTerminationResources(ctx context.Contex
 		return errno.NewMQRetryErr("termination resource experiment missing")
 	}
 	if current.LatestRunID != event.ExptRunID {
-		return errno.WrapMQRetryErr(ctx.Err())
+		return nil
+	}
+	if !entity.IsExptFinished(current.Status) {
+		return errno.NewMQRetryErr("termination resource cleanup observed active run")
 	}
 	debt, releaseErr := e.releaseTerminationResourcesWithDebt(leaseCtx, frozen, event.ExptRunID, sources, true, event.Session)
 	if len(debt) > 0 {
@@ -552,7 +570,10 @@ func (e *ExptMangerImpl) cleanupCancelledTerminationResources(ctx context.Contex
 	if releaseErr != nil {
 		return releaseErr
 	}
-	return errno.WrapMQRetryErr(ctx.Err())
+	if len(debt) > 0 {
+		return errno.NewMQRetryErr("cancelled resource cleanup incomplete")
+	}
+	return errors.Join(errno.WrapMQRetryErr(ctx.Err()), release())
 }
 
 func (e *ExptMangerImpl) refreshTerminatedRunFilters(ctx context.Context, event *entity.ExptScheduleEvent, sources []*entity.ExptCurrentItemRunSource) error {
@@ -605,24 +626,53 @@ func (e *ExptMangerImpl) refreshTerminatedRunFilters(ctx context.Context, event 
 	return nil
 }
 
-func (e *ExptMangerImpl) cleanupCurrentUnscheduledRun(ctx context.Context, expt, run, space int64, cause error) (err error) {
+func (e *ExptMangerImpl) cleanupCurrentUnscheduledRun(ctx context.Context, expt, run, space int64, cause error, ordinaryAdmission ...bool) (err error) {
 	if run <= 0 {
 		return fmt.Errorf("invalid cleanup run")
 	}
-	// Always release the captured admission value, including read/write failures.
-	// Compare-and-delete cannot release a replacement run's lifecycle lock.
+	capturedOrdinary := len(ordinaryAdmission) > 0 && ordinaryAdmission[0]
+	capturedNumeric := len(ordinaryAdmission) > 0 && !ordinaryAdmission[0]
+	primaryReadFailed := false
+	ordinaryReleaseAllowed := false
+	releaseAdmission := true
 	defer func() {
+		if !releaseAdmission {
+			return
+		}
 		releaseCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
 		defer cancel()
-		_, releaseErr := e.mutex.UnlockWithValue(releaseCtx, e.makeExptMutexLockKey(expt), strconv.FormatInt(run, 10))
+		var releaseErr error
+		if capturedOrdinary {
+			_, releaseErr = e.mutex.Unlock(e.makeExptMutexLockKey(expt))
+		} else {
+			var released bool
+			released, releaseErr = e.mutex.UnlockWithValue(releaseCtx, e.makeExptMutexLockKey(expt), strconv.FormatInt(run, 10))
+			if releaseErr == nil && !released && !capturedNumeric && ordinaryReleaseAllowed && e.runLogRepo != nil {
+				logged, readErr := e.runLogRepo.Get(releaseCtx, expt, run)
+				releaseErr = readErr
+				if readErr == nil && logged != nil && entity.ExptRunMode(logged.Mode) != entity.EvaluationModeRetryItems {
+					_, releaseErr = e.mutex.Unlock(e.makeExptMutexLockKey(expt))
+				} else if readErr != nil && primaryReadFailed {
+					// Ordinary pre-MQ cleanup retains the legacy synchronous release
+					// guarantee when SQL is unavailable. RetryItems callers explicitly
+					// capture their numeric admission and never take this fallback.
+					_, unlockErr := e.mutex.Unlock(e.makeExptMutexLockKey(expt))
+					releaseErr = errors.Join(readErr, unlockErr)
+				}
+			}
+		}
 		err = errors.Join(err, releaseErr)
 	}()
-	stateCtx, cancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
+	stateCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
 	defer cancel()
 	terminate := false
 	err = e.withTerminationRunLock(stateCtx, expt, run, func(ctx context.Context) error {
 		current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), expt, space)
 		if err != nil {
+			// Synchronous pre-MQ cleanup may still identify the ordinary run from
+			// its captured run log. A confirmed replacement below never grants this.
+			ordinaryReleaseAllowed = true
+			primaryReadFailed = true
 			return err
 		}
 		if current == nil {
@@ -631,7 +681,9 @@ func (e *ExptMangerImpl) cleanupCurrentUnscheduledRun(ctx context.Context, expt,
 		if current.LatestRunID != run {
 			return nil
 		}
+		ordinaryReleaseAllowed = true
 		if current.ExptType == entity.ExptType_Online {
+			releaseAdmission = false // the synchronous legacy path owns its one release
 			e.cleanupLegacyUnscheduledRun(ctx, expt, run, space, cause)
 			return nil
 		}
@@ -657,6 +709,7 @@ func (e *ExptMangerImpl) cleanupCurrentUnscheduledRun(ctx context.Context, expt,
 			return e.runLogRepo.Update(ctx, expt, run, space, map[string]any{"status": int64(entity.ExptStatus_Failed), "status_message": []byte(cause.Error())})
 		}
 		terminate = true
+		releaseAdmission = false // termination retains and releases lifecycle itself
 		return nil
 	})
 	if err != nil || !terminate {

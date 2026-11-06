@@ -146,26 +146,25 @@ type finishCurrentItemRepo struct {
 
 func TestRunFinishManagerCleanupFailureReplaysAfterCommit(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	port := &finishRepoProbe{result: &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishFinished, Experiment: &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Success, EndAt: gptr.Of(time.Now())}}}
-	locker := lockmocks.NewMockILocker(ctrl)
-	var locks atomic.Int32
-	locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(false, nil).Times(2)
-	locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_mutex_lock:1", gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, _ string, _ time.Duration, _ time.Duration) (bool, context.Context, func(), error) {
-		if locks.Add(1) == 1 {
-			return false, ctx, func() {}, errors.New("Redis unavailable")
-		}
-		return true, ctx, func() {}, nil
-	}).Times(2)
+	factory, server := finishRealLockerFactory(t)
+	require.NoError(t, server.Set("expt_run_mutex_lock:1", "evaluation"))
+	finished := &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Success, EndAt: gptr.Of(time.Now())}
+	port := &finishRepoProbe{result: &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishFinished, Experiment: finished}}
 	expts := repomocks.NewMockIExperimentRepo(ctrl)
+	expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(finished, nil)
 	expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99, Status: entity.ExptStatus_Processing}, nil)
-	manager := &ExptMangerImpl{runFinishRepo: port, mutex: locker, exptRepo: expts, manualRetryLocker: func() lock.ILocker { return locker }}
+	quota := repomocks.NewMockQuotaRepo(ctrl)
+	quota.EXPECT().CreateOrUpdate(gomock.Any(), int64(3), gomock.Any(), gomock.Any()).Return(errors.New("quota unavailable"))
+	manager := &ExptMangerImpl{runFinishRepo: port, manualRetryLocker: factory, exptRepo: expts, quotaRepo: quota, idem: &cleanupTestIdem{}}
 	_, err := manager.FinishCurrentRunWithHeldTickLock(context.Background(), &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2})
 	require.True(t, errno.NeedMQRetry(err))
 	require.Equal(t, 1, port.calls)
+	require.True(t, server.Exists("expt_run_mutex_lock:1"), "failed effects retain admission")
 	port.result.Disposition = entity.ExptRunFinishAlreadyFinished
 	_, err = manager.FinishCurrentRunWithHeldTickLock(context.Background(), &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2})
 	require.NoError(t, err)
 	require.Equal(t, 2, port.calls)
+	require.True(t, server.Exists("expt_run_mutex_lock:1"), "confirmed replacement must keep its admission")
 }
 
 func TestRunFinishFinishedSchedulerEventReplaysCleanup(t *testing.T) {
@@ -182,12 +181,12 @@ func TestRunFinishFinishedSchedulerEventReplaysCleanup(t *testing.T) {
 	require.Equal(t, 1, manager.calls, "ACK swallowed failed postcommit cleanup retry")
 }
 
-func TestRunFinishLogRunBindsLifecycleOwnerToRunID(t *testing.T) {
+func TestRunFinishLogRunUsesInjectedLifecycleLocker(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	locker := lockmocks.NewMockILocker(ctrl)
 	config := componentmocks.NewMockIConfiger(ctrl)
 	config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{})
-	locker.EXPECT().BackoffLockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2", gomock.Any(), time.Second).Return(true, "2", nil)
+	locker.EXPECT().LockBackoff(gomock.Any(), "expt_run_mutex_lock:1", gomock.Any(), time.Second).Return(true, nil)
 	runs := repomocks.NewMockIExptRunLogRepo(ctrl)
 	runs.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 	expts := repomocks.NewMockIExperimentRepo(ctrl)
@@ -250,7 +249,8 @@ func TestRunFinishCleanupMigratesLegacyLifecycleHolder(t *testing.T) {
 				return err
 			})
 			idem := idemmocks.NewMockIdempotentService(ctrl)
-			idem.EXPECT().Exist(gomock.Any(), "finish-cleanup:1:2").Return(true, nil)
+			idem.EXPECT().Exist(gomock.Any(), "finish-cleanup:1:2").Return(false, nil)
+			idem.EXPECT().Set(gomock.Any(), "finish-cleanup:1:2", gomock.Any()).Return(nil)
 			manager := &ExptMangerImpl{manualRetryLocker: factory, exptRepo: experiments, quotaRepo: quota, idem: idem}
 			event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Session: &entity.Session{}}
 			var err error
@@ -466,7 +466,7 @@ func TestRunFinishCleanupLostLeaseStopsQuotaAndNotifications(t *testing.T) {
 		cancel()
 		return true, child, cancel, nil
 	})
-	manager := &ExptMangerImpl{manualRetryLocker: func() lock.ILocker { return locker }, quotaRepo: repomocks.NewMockQuotaRepo(ctrl), publisher: eventmocks.NewMockExptEventPublisher(ctrl), exptRepo: repomocks.NewMockIExperimentRepo(ctrl)}
+	manager := &ExptMangerImpl{idem: &cleanupTestIdem{}, manualRetryLocker: func() lock.ILocker { return locker }, quotaRepo: repomocks.NewMockQuotaRepo(ctrl), publisher: eventmocks.NewMockExptEventPublisher(ctrl), exptRepo: repomocks.NewMockIExperimentRepo(ctrl)}
 	require.Error(t, manager.cleanupNaturallyFinishedRun(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}, &entity.Experiment{ID: 1}))
 }
 

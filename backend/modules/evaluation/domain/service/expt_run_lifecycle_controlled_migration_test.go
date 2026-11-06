@@ -187,7 +187,7 @@ func TestControlledStaticHolderMigrationAfterDrain(t *testing.T) {
 			return mutateErr
 		}).Times(2)
 	idem := idemmocks.NewMockIdempotentService(ctrl)
-	idem.EXPECT().Exist(gomock.Any(), notificationKey).Return(false, nil).Times(1)
+	idem.EXPECT().Exist(gomock.Any(), notificationKey).Return(false, nil).Times(2)
 	idem.EXPECT().Set(gomock.Any(), notificationKey, gomock.Any()).Return(nil).Times(1)
 
 	manager := &ExptMangerImpl{

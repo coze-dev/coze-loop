@@ -6,7 +6,6 @@ package service
 import (
 	"context"
 	"errors"
-	"strconv"
 	"testing"
 	"time"
 
@@ -212,7 +211,7 @@ func TestRetryAllStartFailureTerminatesMutatedRun(t *testing.T) {
 				Update("status", int32(entity.TurnRunState_Success)).Error)
 			require.NoError(t, p.f.conn.Model(&model.ExptStats{}).Where("space_id=? AND expt_id=?", p.f.space, p.f.expt).
 				Updates(map[string]any{"pending_cnt": 0, "processing_cnt": 0, "success_cnt": 1, "fail_cnt": 0, "terminated_cnt": 0}).Error)
-			_, err := p.manager.mutex.UnlockWithValue(ctx, p.manager.makeExptMutexLockKey(p.f.expt), strconv.FormatInt(p.f.run, 10))
+			_, err := p.manager.mutex.Unlock(p.manager.makeExptMutexLockKey(p.f.expt))
 			require.NoError(t, err)
 
 			if tc.multiSet {
@@ -373,7 +372,7 @@ func TestRetryStartRedeliveryPreservesLoggedItems(t *testing.T) {
 				Update("status", int32(entity.TurnRunState_Success)).Error)
 			require.NoError(t, p.f.conn.Model(&model.ExptStats{}).Where("space_id=? AND expt_id=?", p.f.space, p.f.expt).
 				Updates(map[string]any{"pending_cnt": 0, "processing_cnt": 0, "success_cnt": 1, "fail_cnt": 0, "terminated_cnt": 0}).Error)
-			_, err := p.manager.mutex.UnlockWithValue(ctx, p.manager.makeExptMutexLockKey(p.f.expt), strconv.FormatInt(p.f.run, 10))
+			_, err := p.manager.mutex.Unlock(p.manager.makeExptMutexLockKey(p.f.expt))
 			require.NoError(t, err)
 
 			if tc.multiSet {
@@ -545,7 +544,7 @@ func TestRetryStartRedeliveryRechecksItemStateUnderLock(t *testing.T) {
 		Update("status", int32(entity.TurnRunState_Success)).Error)
 	require.NoError(t, p.f.conn.Model(&model.ExptStats{}).Where("space_id=? AND expt_id=?", p.f.space, p.f.expt).
 		Updates(map[string]any{"pending_cnt": 0, "processing_cnt": 0, "success_cnt": 1, "fail_cnt": 0, "terminated_cnt": 0}).Error)
-	_, err := p.manager.mutex.UnlockWithValue(ctx, p.manager.makeExptMutexLockKey(p.f.expt), strconv.FormatInt(p.f.run, 10))
+	_, err := p.manager.mutex.Unlock(p.manager.makeExptMutexLockKey(p.f.expt))
 	require.NoError(t, err)
 
 	runID := p.f.run + 100
@@ -635,7 +634,7 @@ func TestRetryStartResetAppliesStatsDeltaWithoutSnapshotOverwrite(t *testing.T) 
 		Update("status", int32(entity.TurnRunState_Success)).Error)
 	require.NoError(t, p.f.conn.Model(&model.ExptStats{}).Where("space_id=? AND expt_id=?", p.f.space, p.f.expt).
 		Updates(map[string]any{"pending_cnt": 0, "processing_cnt": 0, "success_cnt": 1, "fail_cnt": 0, "terminated_cnt": 0}).Error)
-	_, err := p.manager.mutex.UnlockWithValue(ctx, p.manager.makeExptMutexLockKey(p.f.expt), strconv.FormatInt(p.f.run, 10))
+	_, err := p.manager.mutex.Unlock(p.manager.makeExptMutexLockKey(p.f.expt))
 	require.NoError(t, err)
 
 	runID := p.f.run + 100
