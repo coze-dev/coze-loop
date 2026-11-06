@@ -137,43 +137,28 @@ func TestRunningRetryFilterSync_SaveACKAllowsFinishWithoutCKQuery(t *testing.T) 
 		{name: "stale", rows: []*entity.ExptTurnResultFilterEntity{{SpaceID: 3, ExptID: 1, ItemID: 10, ItemVersionID: 111, Status: entity.ItemRunState_Fail}}},
 		{name: "query_unavailable", err: errors.New("CK query unavailable")},
 	} {
-		for _, composition := range []bool{false, true} {
-			t.Run(fmt.Sprintf("%s/finish_composition=%t", tc.name, composition), func(t *testing.T) {
-				ctrl := gomock.NewController(t)
-				svc, filters := newFinishACKTestService(t, ctrl)
-				queries, saves := 0, 0
-				filters.EXPECT().GetByExptIDItemIDs(gomock.Any(), "3", "1", "2026-10-20", []string{"10"}).DoAndReturn(func(context.Context, string, string, string, []string) ([]*entity.ExptTurnResultFilterEntity, error) {
-					queries++
-					return tc.rows, tc.err
-				}).AnyTimes()
-				filters.EXPECT().Save(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rows []*entity.ExptTurnResultFilterEntity) error {
-					saves++
-					require.Len(t, rows, 1)
-					require.Equal(t, int64(10), rows[0].ItemID)
-					require.Equal(t, int64(222), rows[0].ItemVersionID)
-					require.Equal(t, entity.ItemRunState_Success, rows[0].Status)
-					return nil
-				})
-				if composition {
-					manager := &naturalFinishProbe{IExptManager: svcmocks.NewMockIExptManager(ctrl), disposition: entity.ExptRunFinishFinished}
-					idem := idemmocks.NewMockIdempotentService(ctrl)
-					idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
-					idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-					config := componentmocks.NewMockIConfiger(ctrl)
-					config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{}).AnyTimes()
-					base := &exptBaseExec{Manager: manager, idem: idem, configer: config, resultSvc: svc}
-					err := base.exptEnd(context.Background(), &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2, ExptRunMode: entity.EvaluationModeSubmit}, &entity.Experiment{ExptType: entity.ExptType_Offline})
-					require.NoError(t, err, "Save ACK must allow finish composition")
-					require.Equal(t, 1, manager.calls)
-				} else {
-					ready, err := svc.ReconcileManualRetryFilterBeforeFinish(context.Background(), 3, 1, 2)
-					require.NoError(t, err, "Save ACK must complete calibration")
-					require.True(t, ready)
-				}
-				require.Equal(t, 1, saves)
-				require.Zero(t, queries, "finish calibration must not query CK after Save ACK")
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			svc, filters := newFinishACKTestService(t, ctrl)
+			queries, saves := 0, 0
+			filters.EXPECT().GetByExptIDItemIDs(gomock.Any(), "3", "1", "2026-10-20", []string{"10"}).DoAndReturn(func(context.Context, string, string, string, []string) ([]*entity.ExptTurnResultFilterEntity, error) {
+				queries++
+				return tc.rows, tc.err
+			}).AnyTimes()
+			filters.EXPECT().Save(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rows []*entity.ExptTurnResultFilterEntity) error {
+				saves++
+				require.Len(t, rows, 1)
+				require.Equal(t, int64(10), rows[0].ItemID)
+				require.Equal(t, int64(222), rows[0].ItemVersionID)
+				require.Equal(t, entity.ItemRunState_Success, rows[0].Status)
+				return nil
 			})
-		}
+			ready, err := svc.ReconcileManualRetryFilterBeforeFinish(context.Background(), 3, 1, 2)
+			require.NoError(t, err, "Save ACK must complete calibration")
+			require.True(t, ready)
+			require.Equal(t, 1, saves)
+			require.Zero(t, queries, "finish calibration must not query CK after Save ACK")
+		})
 	}
 }
 

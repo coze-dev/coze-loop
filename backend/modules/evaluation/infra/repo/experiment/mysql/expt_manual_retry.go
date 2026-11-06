@@ -198,7 +198,7 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 		}
 		added := make([]int64, 0)
 		for _, item := range accepted {
-			if item.log == nil && !contained[item.item.ItemID] {
+			if !contained[item.item.ItemID] {
 				contained[item.item.ItemID] = true
 				added = append(added, item.item.ItemID)
 			}

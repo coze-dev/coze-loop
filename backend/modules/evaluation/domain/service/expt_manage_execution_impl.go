@@ -502,6 +502,7 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 	}
 
 	currentRunCleanup := false
+	deferRunLockRelease := false
 	if e.runFinishRepo != nil {
 		current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
 		if err != nil {
@@ -514,26 +515,19 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 			if current.LatestRunID != exptRunID {
 				return nil
 			}
-			// ExptStart 前的 retry 失败会留下“实验已终态、run 仍 Pending”，自然完成原语不接受这种部分终态。
-			if !entity.IsExptFinished(current.Status) {
-				opt := &entity.CompleteExptOption{}
-				for _, fn := range opts {
-					fn(opt)
-				}
-				if opt.Status == entity.ExptStatus_Terminated || opt.Status == entity.ExptStatus_Failed {
+			opt := &entity.CompleteExptOption{}
+			for _, fn := range opts {
+				fn(opt)
+			}
+			if opt.Status == entity.ExptStatus_Terminated || opt.Status == entity.ExptStatus_Failed {
+				if !entity.IsExptFinished(current.Status) {
 					_, err := e.TerminateCurrentRun(ctx, exptID, exptRunID, spaceID, session, nil, opts...)
 					return err
 				}
-				result, err := e.FinishCurrentRun(ctx, &entity.ExptScheduleEvent{ExptID: exptID, ExptRunID: exptRunID, SpaceID: spaceID, Session: session})
-				if err != nil {
-					return err
-				}
-				if result == nil || result.Disposition == entity.ExptRunFinishPending {
-					return errno.NewMQRetryErr("current run completion pending")
-				}
-				return nil
+				currentRunCleanup = true
+			} else {
+				deferRunLockRelease = true
 			}
-			currentRunCleanup = true
 		}
 	}
 	const idemKeyPrefix = "CompleteRun:"
@@ -618,6 +612,7 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 		return err
 	}
 
+	previousRunStatus := entity.ExptStatus(runLog.Status)
 	if err := e.calculateRunLogStats(ctx, exptID, exptRunID, runLog, spaceID, session); err != nil {
 		return err
 	}
@@ -631,7 +626,12 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 
 	logs.CtxInfo(ctx, "[ExptEval] CompleteRun, expt_id: %v, expt_run_id: %v, status: %v, msg: %v", exptID, exptRunID, runLog.Status, opt.StatusMessage)
 
-	if err := e.runLogRepo.Update(ctx, exptID, exptRunID, spaceID, runLogMutableFields(runLog)); err != nil {
+	fields := runLogMutableFields(runLog)
+	// Keep the run retryable until CompleteExpt has finished its side effects.
+	if deferRunLockRelease && !entity.IsExptFinished(previousRunStatus) {
+		fields["status"] = int64(entity.ExptStatus_Processing)
+	}
+	if err := e.runLogRepo.Update(ctx, exptID, exptRunID, spaceID, fields); err != nil {
 		return err
 	}
 	if currentRunCleanup {
@@ -639,7 +639,7 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 		if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(ctx, exptID, spaceID, session); err != nil {
 			return err
 		}
-	} else {
+	} else if !deferRunLockRelease {
 		if _, err := e.mutex.UnlockForce(ctx, e.makeExptMutexLockKey(exptID)); err != nil {
 			return err
 		}
@@ -652,6 +652,13 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 	}
 
 	return nil
+}
+
+func runStatusFromCounts(run *entity.ExptRunLog) entity.ExptStatus {
+	if run.PendingCnt > 0 || run.FailCnt > 0 {
+		return entity.ExptStatus_Failed
+	}
+	return entity.ExptStatus_Success
 }
 
 func runLogMutableFields(run *entity.ExptRunLog) map[string]any {
@@ -721,15 +728,25 @@ func (e *ExptMangerImpl) calculateRunLogStats(ctx context.Context, exptID, exptR
 	runLog.ProcessingCnt = int32(processingCnt)
 	runLog.TerminatedCnt = int32(terminatedCnt)
 
-	if runLog.PendingCnt > 0 || runLog.FailCnt > 0 {
-		runLog.Status = int64(entity.ExptStatus_Failed)
-	} else {
-		runLog.Status = int64(entity.ExptStatus_Success)
-	}
+	runLog.Status = int64(runStatusFromCounts(runLog))
 
 	logs.CtxInfo(ctx, "calculateRunLogStats done, expt_id: %v, scan turn cnt: %v, total: %v, run_log: %v, unsuccess_item_ids: %v", exptID, cnt, total, json.Jsonify(runLog))
 
 	return nil
+}
+
+func (e *ExptMangerImpl) currentRunCompletionOwned(ctx context.Context, exptID, exptRunID, spaceID int64) (bool, error) {
+	current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
+	if err != nil {
+		return false, errno.WrapMQRetryErr(err)
+	}
+	if current == nil {
+		return false, errno.NewMQRetryErr("complete experiment missing")
+	}
+	if current.LatestRunID != exptRunID {
+		return false, nil
+	}
+	return current.Status == entity.ExptStatus_Processing || current.Status == entity.ExptStatus_Success || current.Status == entity.ExptStatus_Failed, nil
 }
 
 func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRunID *int64, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
@@ -739,6 +756,8 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		}
 	}
 
+	releaseRunLock := false
+	currentExptFinished := false
 	if e.runFinishRepo != nil {
 		current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
 		if err != nil {
@@ -748,19 +767,27 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			return errno.NewMQRetryErr("complete experiment missing")
 		}
 		if current.ExptType == entity.ExptType_Offline {
-			if exptRunID == nil || *exptRunID <= 0 {
-				return errno.NewMQRetryErr("offline completion requires original run identity")
-			}
+			currentExptFinished = entity.IsExptFinished(current.Status)
 			opt := &entity.CompleteExptOption{}
 			for _, fn := range opts {
 				fn(opt)
 			}
 			if opt.Status == entity.ExptStatus_Terminated || opt.Status == entity.ExptStatus_Failed {
+				if exptRunID == nil || *exptRunID <= 0 {
+					return errno.NewMQRetryErr("offline completion requires original run identity")
+				}
 				_, err := e.TerminateCurrentRun(ctx, exptID, *exptRunID, spaceID, session, nil, opts...)
 				return err
 			}
-			_, err := e.FinishCurrentRun(ctx, &entity.ExptScheduleEvent{ExptID: exptID, ExptRunID: *exptRunID, SpaceID: spaceID, Session: session})
-			return err
+			if current.Status != entity.ExptStatus_Processing && current.Status != entity.ExptStatus_Success && current.Status != entity.ExptStatus_Failed {
+				return nil
+			}
+			if exptRunID != nil && *exptRunID > 0 {
+				if current.LatestRunID != *exptRunID {
+					return nil
+				}
+				releaseRunLock = true
+			}
 		}
 	}
 	const idemKeyPrefix = "CompleteExpt:"
@@ -778,7 +805,21 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		} else {
 			if exist {
 				logs.CtxInfo(ctx, "CompleteExpt SetNX with duplicate request, cid: %v", opt.CID)
-				return nil
+				if !releaseRunLock {
+					return nil
+				}
+				runLog, err := e.runLogRepo.Get(ctx, exptID, *exptRunID)
+				if err != nil {
+					return err
+				}
+				if currentExptFinished && runLog != nil && entity.IsExptFinished(entity.ExptStatus(runLog.Status)) {
+					if err := e.releasePreviousLifecycleHolder(ctx, e.mutex, e.makeExptMutexLockKey(exptID), &entity.ExptScheduleEvent{
+						ExptID: exptID, ExptRunID: *exptRunID, SpaceID: spaceID, Session: session,
+					}); err != nil {
+						return errno.WrapMQRetryErr(err)
+					}
+					return nil
+				}
 			}
 		}
 	}
@@ -804,15 +845,34 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	if err != nil {
 		return err
 	}
+	if releaseRunLock {
+		owned, err := e.currentRunCompletionOwned(ctx, exptID, *exptRunID, spaceID)
+		if err != nil {
+			return err
+		}
+		if !owned {
+			return nil
+		}
+	}
 
-	if err := e.statsRepo.UpdateByExptID(ctx, exptID, spaceID, &entity.ExptStats{
+	wantStats := &entity.ExptStats{
 		SuccessItemCnt:    int32(stats.SuccessItemCnt),
 		PendingItemCnt:    int32(stats.PendingItemCnt),
 		FailItemCnt:       int32(stats.FailItemCnt),
 		ProcessingItemCnt: int32(stats.ProcessingItemCnt),
 		TerminatedItemCnt: int32(stats.TerminatedItemCnt),
-	}); err != nil {
+	}
+	if err := e.statsRepo.UpdateByExptID(ctx, exptID, spaceID, wantStats); err != nil {
 		return err
+	}
+	if releaseRunLock {
+		persisted, err := e.statsRepo.Get(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if persisted == nil || persisted.SuccessItemCnt != wantStats.SuccessItemCnt || persisted.PendingItemCnt != wantStats.PendingItemCnt || persisted.FailItemCnt != wantStats.FailItemCnt || persisted.ProcessingItemCnt != wantStats.ProcessingItemCnt || persisted.TerminatedItemCnt != wantStats.TerminatedItemCnt {
+			return errno.NewMQRetryErr("completion stats verification failed")
+		}
 	}
 
 	status := opt.Status
@@ -825,6 +885,9 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		} else {
 			status = entity.ExptStatus_Success
 		}
+	}
+	if releaseRunLock && entity.IsExptFinished(got.Status) {
+		status = got.Status
 	}
 
 	// ★ 实验终态时，未跑完的 item 的中心调度额度必须在这里释放。
@@ -909,17 +972,38 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		}
 	}
 
+	if releaseRunLock {
+		owned, err := e.currentRunCompletionOwned(ctx, exptID, *exptRunID, spaceID)
+		if err != nil {
+			return err
+		}
+		if !owned {
+			return nil
+		}
+	}
 	exptDo := &entity.Experiment{
 		ID:      exptID,
 		SpaceID: spaceID,
 		Status:  status,
 		EndAt:   gptr.Of(time.Now()),
 	}
+	if releaseRunLock && got.EndAt != nil {
+		exptDo.EndAt = got.EndAt
+	}
 	if len(opt.StatusMessage) > 0 {
 		exptDo.StatusMessage = opt.StatusMessage
 	}
 	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
 		return err
+	}
+	if releaseRunLock {
+		owned, err := e.currentRunCompletionOwned(ctx, exptID, *exptRunID, spaceID)
+		if err != nil {
+			return err
+		}
+		if !owned {
+			return nil
+		}
 	}
 
 	e.notifyWorkflowPipelineOnExptFinished(ctx, got, spaceID, status)
@@ -933,8 +1017,26 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		}
 	}
 
+	if releaseRunLock {
+		owned, err := e.currentRunCompletionOwned(ctx, exptID, *exptRunID, spaceID)
+		if err != nil {
+			return err
+		}
+		if !owned {
+			return nil
+		}
+	}
 	if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(ctx, exptID, spaceID, session); err != nil {
 		return err
+	}
+	if releaseRunLock {
+		owned, err := e.currentRunCompletionOwned(ctx, exptID, *exptRunID, spaceID)
+		if err != nil {
+			return err
+		}
+		if !owned {
+			return nil
+		}
 	}
 
 	if len(opt.CID) > 0 {
@@ -950,15 +1052,27 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			CalculateMode: entity.CreateAllFields,
 		}, gptr.Of(time.Second*3)); err != nil {
 			logs.CtxError(ctx, "PublishExptAggrCalculateEvent fail, expt_id: %v, err: %v", exptID, err)
+			if releaseRunLock {
+				return errno.WrapMQRetryErr(err)
+			}
 		}
 	}
 
 	fromStatus := got.Status
+	if releaseRunLock {
+		fromStatus = entity.ExptStatus_Processing
+	}
 	got.Status = status
 	got.EndAt = exptDo.EndAt
 
-	if err = e.sendExptCompleteEvent(ctx, got, exptRunID, fromStatus); err != nil {
+	if releaseRunLock {
+		err = e.publishExptCompleteEvent(ctx, got, exptRunID, fromStatus)
+	} else {
+		err = e.sendExptCompleteEvent(ctx, got, exptRunID, fromStatus)
+	}
+	if err != nil {
 		logs.CtxWarn(ctx, "[ExptEval] AfterCompleteExpt failed, expt_id: %v, status: %v, error: %v", exptID, status, err)
+		return errno.WrapMQRetryErr(err)
 	}
 
 	e.mtr.EmitExptExecResult(spaceID, int64(got.ExptType), int64(status), gptr.Indirect(got.StartAt))
@@ -971,6 +1085,23 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 
 	logs.CtxInfo(ctx, "[ExptEval] CompleteExpt success, expt_id: %v, status: %v, stats: %v", exptID, status, json.Jsonify(stats))
 
+	if releaseRunLock {
+		runLog, err := e.runLogRepo.Get(ctx, exptID, *exptRunID)
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if runLog == nil {
+			return errno.NewMQRetryErr("completion run log missing")
+		}
+		if err := e.runLogRepo.Update(ctx, exptID, *exptRunID, spaceID, map[string]any{"status": int64(runStatusFromCounts(runLog))}); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if err := e.releasePreviousLifecycleHolder(ctx, e.mutex, e.makeExptMutexLockKey(exptID), &entity.ExptScheduleEvent{
+			ExptID: exptID, ExptRunID: *exptRunID, SpaceID: spaceID, Session: session,
+		}); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+	}
 	return nil
 }
 
@@ -1045,6 +1176,13 @@ func (e *ExptMangerImpl) notifyWorkflowPipelineOnExptFinished(ctx context.Contex
 }
 
 func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity.Experiment, exptRunID *int64, fromStatus entity.ExptStatus) error {
+	if err := e.publishExptCompleteEvent(ctx, expt, exptRunID, fromStatus); err != nil {
+		logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent failed after retry, expt_id: %v, err: %v", expt.ID, err)
+	}
+	return nil
+}
+
+func (e *ExptMangerImpl) publishExptCompleteEvent(ctx context.Context, expt *entity.Experiment, exptRunID *int64, fromStatus entity.ExptStatus) error {
 	if !entity.IsExptFinished(expt.Status) {
 		return nil
 	}
@@ -1068,7 +1206,7 @@ func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity
 	if err := backoff.RetryWithElapsedTime(ctx, 15*time.Second, func() error {
 		return e.publisher.PublishExptLifecycleEvent(ctx, event, gptr.Of(time.Second*3), idempotentKey)
 	}); err != nil {
-		logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent failed after retry, expt_id: %v, err: %v", expt.ID, err)
+		return err
 	}
 
 	return nil

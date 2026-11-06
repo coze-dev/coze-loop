@@ -29,7 +29,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	experimentmysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
 
 // 评审候选 2 的真实 Redis + MySQL 反例。
@@ -227,14 +226,14 @@ func TestLifecycleStaticHolderDoesNotEvictConcurrentLegacyRun(t *testing.T) {
 	require.NoError(t, f.conn.Raw("SELECT COUNT(*) FROM expt_run_log WHERE space_id=? AND expt_id=? AND expt_run_id=?", f.space, f.expt, f.r2).Scan(&r2Rows).Error)
 	require.Zero(t, r2Rows, "R2 must pause before its run log Create")
 
-	// 迟到的 R1 schedule：真实 HandleEventCheck -> AlreadyFinished -> cleanup。
+	// 迟到的 R1 schedule 只按终态 ACK，不再执行一段需要新锁的 cleanup。
 	replayErr := lifecycleReplayR1(f.ctx, f.currentManager(), f)
 
 	owner, err = f.raw.Get(f.ctx, f.key).Result()
-	require.NoError(t, err, "R2 lifecycle holder must survive R1 AlreadyFinished replay")
+	require.NoError(t, err, "R2 lifecycle holder must survive R1 terminal replay")
 	require.Equal(t, legacyStaticHolderValue, owner)
-	require.True(t, errno.NeedMQRetry(replayErr), "R1 cleanup must stay replayable while R2 owns the lease")
-	require.Zero(t, f.quota.calls.Load(), "R1 cleanup must not release shared quota while R2 owns the lease")
+	require.NoError(t, replayErr, "terminal replay has no new cleanup to retry")
+	require.Zero(t, f.quota.calls.Load(), "terminal replay must not release shared quota while R2 owns the lease")
 	require.Equal(t, f.r1, f.latestRunID())
 
 	// R2 恢复：真实 Create + LatestRunID 推进必须不受 R1 cleanup 影响。
@@ -256,39 +255,18 @@ func TestLifecycleStaticHolderDoesNotEvictConcurrentLegacyRun(t *testing.T) {
 	require.Equal(t, legacyStaticHolderValue, owner, "non-current R1 replay must leave R2's holder untouched")
 }
 
-// 干净的同 run 旧静态 holder（无 R2 竞争）：修复后不删 holder，但 AlreadyFinished
-// 仍持续可重放；holder 自然到期后重放即可完成清理，证明没有放弃 finish 恢复。
-func TestStaticSameRunCleanupRecoversAfterLeaseExpiry(t *testing.T) {
+// 终态消息不需要再取得旧 lifecycle holder，也不要求自然到期后补一段 cleanup。
+func TestFinishedRunReplayDoesNotRequireLifecycleLock(t *testing.T) {
 	f := newLifecycleCounterexampleFixture(t)
 	f.seedFinishedR1()
-	require.NoError(t, f.raw.Set(f.ctx, f.key, legacyStaticHolderValue, 700*time.Millisecond).Err())
+	require.NoError(t, f.raw.Set(f.ctx, f.key, legacyStaticHolderValue, 10*time.Minute).Err())
 
 	manager := f.currentManager()
-	result, err := manager.FinishCurrentRun(f.ctx, &entity.ExptScheduleEvent{
-		ExptID: f.expt, ExptRunID: f.r1, SpaceID: f.space, Session: &entity.Session{},
-	})
-	require.NotNil(t, result)
-	require.Equal(t, entity.ExptRunFinishAlreadyFinished, result.Disposition)
-	require.True(t, errno.NeedMQRetry(err), "terminal R1 replay must stay retryable while the holder is unowned")
+	require.NoError(t, lifecycleReplayR1(f.ctx, manager, f))
 	require.Zero(t, f.quota.calls.Load())
 	owner, getErr := f.raw.Get(f.ctx, f.key).Result()
 	require.NoError(t, getErr)
-	require.Equal(t, legacyStaticHolderValue, owner, "unproven static holder must be kept")
-
-	// 等租约自然到期（不删除 holder、不依赖 EndAt 版本）。
-	deadline := time.Now().Add(10 * time.Second)
-	for {
-		n, existsErr := f.raw.Exists(f.ctx, f.key).Result()
-		require.NoError(t, existsErr)
-		if n == 0 {
-			break
-		}
-		require.False(t, time.Now().After(deadline), "static holder did not expire")
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	require.NoError(t, lifecycleReplayR1(f.ctx, manager, f), "replay must recover after the lease expires")
-	require.EqualValues(t, 1, f.quota.calls.Load(), "recovered replay must release the finished run's quota")
+	require.Equal(t, legacyStaticHolderValue, owner, "terminal replay must leave the old holder untouched")
 }
 
 // 真实中间件上的并发重放：多个 R1 消费者同时到达，仍不得删除 R2 刚取得的 holder。
@@ -331,7 +309,7 @@ func TestLifecycleStaticHolderConcurrentReplayRace(t *testing.T) {
 	wg.Wait()
 	close(errs)
 	for err := range errs {
-		require.True(t, err == nil || errno.NeedMQRetry(err), "concurrent replay must not surface a hard error: %v", err)
+		require.NoError(t, err, "concurrent terminal replays must ACK without a new cleanup obligation")
 	}
 
 	owner, err := f.raw.Get(f.ctx, f.key).Result()
