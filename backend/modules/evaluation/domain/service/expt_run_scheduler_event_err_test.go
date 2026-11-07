@@ -794,3 +794,108 @@ func TestCompleteRunDelayedCleanupPreservesReplacementRun(t *testing.T) {
 	require.Equal(t, int64(9), expt.LatestRunID)
 	require.Equal(t, entity.ExptStatus_Success, expt.Status)
 }
+
+// A legacy message without ExptType must backfill the type from the primary experiment
+// before error handling, otherwise a started completion is rewritten as Failed.
+func TestHandleEventErrBackfillsLegacyExptTypeBeforeStartedCompletion(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	manager := svcmocks.NewMockIExptManager(ctrl)
+	exptRepo := repomocks.NewMockIExperimentRepo(ctrl)
+	idem := idemMocks.NewMockIdempotentService(ctrl)
+
+	backfillReads := 0
+	manager.EXPECT().GetDetail(gomock.Any(), int64(7), int64(9), gomock.Any()).
+		DoAndReturn(func(context.Context, int64, int64, *entity.Session, ...entity.GetExptTupleOptionFn) (*entity.Experiment, error) {
+			backfillReads++
+			return &entity.Experiment{ID: 7, SpaceID: 9, ExptType: entity.ExptType_Offline}, nil
+		}).AnyTimes()
+	exptRepo.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).
+		Return(&entity.Experiment{ID: 7, SpaceID: 9, Status: entity.ExptStatus_Success}, nil).AnyTimes()
+	idem.EXPECT().Exist(gomock.Any(), "CompleteExpt:exptexec:onend:8").Return(true, nil).AnyTimes()
+
+	completeRunCalls := 0
+	manager.EXPECT().CompleteRun(gomock.Any(), int64(7), int64(8), int64(9), gomock.Any(),
+		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(context.Context, int64, int64, int64, *entity.Session, ...entity.CompleteExptOptionFn) error {
+			completeRunCalls++
+			return nil
+		}).AnyTimes()
+
+	scheduler := &ExptSchedulerImpl{Manager: manager, ExptRepo: exptRepo, Idem: idem}
+	event := &entity.ExptScheduleEvent{
+		ExptID: 7, ExptRunID: 8, SpaceID: 9,
+		ExptType: 0, ExptRunMode: entity.EvaluationModeSubmit, Session: &entity.Session{},
+	}
+	err := scheduler.HandleEventErr(func(context.Context, *entity.ExptScheduleEvent) error {
+		return errors.New("completion recovery failed")
+	})(context.Background(), event)
+
+	require.Zero(t, completeRunCalls, "started completion must not be rewritten as Failed")
+	require.Equal(t, 1, backfillReads, "legacy ExptType must be backfilled from the primary experiment")
+	require.True(t, errno.NeedMQRetry(err), "started completion must stay retryable, got %v", err)
+}
+
+// A backfill read failure keeps the broker retry instead of falling through to termination.
+func TestHandleEventErrLegacyTypeBackfillFailureKeepsMQRetry(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	manager := svcmocks.NewMockIExptManager(ctrl)
+	exptRepo := repomocks.NewMockIExperimentRepo(ctrl)
+	idem := idemMocks.NewMockIdempotentService(ctrl)
+
+	manager.EXPECT().GetDetail(gomock.Any(), int64(7), int64(9), gomock.Any()).
+		Return(nil, errors.New("primary read unavailable")).Times(1)
+	exptRepo.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).
+		Return(&entity.Experiment{ID: 7, SpaceID: 9, Status: entity.ExptStatus_Success}, nil).AnyTimes()
+	completeRunCalls := 0
+	manager.EXPECT().CompleteRun(gomock.Any(), int64(7), int64(8), int64(9), gomock.Any(),
+		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(context.Context, int64, int64, int64, *entity.Session, ...entity.CompleteExptOptionFn) error {
+			completeRunCalls++
+			return nil
+		}).AnyTimes()
+
+	scheduler := &ExptSchedulerImpl{Manager: manager, ExptRepo: exptRepo, Idem: idem}
+	event := &entity.ExptScheduleEvent{
+		ExptID: 7, ExptRunID: 8, SpaceID: 9,
+		ExptType: 0, ExptRunMode: entity.EvaluationModeSubmit, Session: &entity.Session{},
+	}
+	err := scheduler.HandleEventErr(func(context.Context, *entity.ExptScheduleEvent) error {
+		return errors.New("completion recovery failed")
+	})(context.Background(), event)
+
+	require.Zero(t, completeRunCalls, "unreadable completion state must not rewrite the run as Failed")
+	require.True(t, errno.NeedMQRetry(err), "backfill read failure must stay broker-retryable, got %v", err)
+}
+
+// A genuinely new Pending run has no started completion marker and must still be failed.
+func TestHandleEventErrLegacyTypeBackfillKeepsPendingRunCleanup(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	manager := &terminateAwareManager{MockIExptManager: svcmocks.NewMockIExptManager(ctrl)}
+	exptRepo := repomocks.NewMockIExperimentRepo(ctrl)
+
+	manager.EXPECT().GetDetail(gomock.Any(), int64(7), int64(9), gomock.Any()).
+		Return(&entity.Experiment{ID: 7, SpaceID: 9, ExptType: entity.ExptType_Offline}, nil).Times(1)
+	exptRepo.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).
+		Return(&entity.Experiment{ID: 7, SpaceID: 9, Status: entity.ExptStatus_Processing}, nil).AnyTimes()
+	completeRunCalls := 0
+	manager.EXPECT().CompleteRun(gomock.Any(), int64(7), int64(8), int64(9), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(context.Context, int64, int64, int64, *entity.Session, ...entity.CompleteExptOptionFn) error {
+			completeRunCalls++
+			return nil
+		}).AnyTimes()
+	manager.EXPECT().CompleteExpt(gomock.Any(), int64(7), gomock.Any(), int64(9), gomock.Any(),
+		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+	scheduler := &ExptSchedulerImpl{Manager: manager, ExptRepo: exptRepo}
+	event := &entity.ExptScheduleEvent{
+		ExptID: 7, ExptRunID: 8, SpaceID: 9,
+		ExptType: 0, ExptRunMode: entity.EvaluationModeSubmit, Session: &entity.Session{},
+	}
+	err := scheduler.HandleEventErr(func(context.Context, *entity.ExptScheduleEvent) error {
+		return errors.New("list evaluation set items failed")
+	})(context.Background(), event)
+
+	require.NoError(t, err)
+	require.True(t, manager.terminated, "a new Pending run without a completion marker must still be failed")
+	require.Zero(t, completeRunCalls, "failure cleanup must go through current-run termination")
+}

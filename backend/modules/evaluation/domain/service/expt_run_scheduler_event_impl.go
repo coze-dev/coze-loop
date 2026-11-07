@@ -201,6 +201,23 @@ func (e *ExptSchedulerImpl) SysOps(next SchedulerEndPoint) SchedulerEndPoint {
 	}
 }
 
+// resolveEventExptType backfills ExptType=0 events from the primary experiment so legacy
+// schedule messages use the same Offline determination as newly produced events.
+func (e *ExptSchedulerImpl) resolveEventExptType(ctx context.Context, event *entity.ExptScheduleEvent) (entity.ExptType, error) {
+	exptType := event.ExptType
+	if exptType != 0 || event.ExptRunMode == entity.EvaluationModeAppend {
+		return exptType, nil
+	}
+	current, err := e.Manager.GetDetail(contexts.WithCtxWriteDB(ctx), event.ExptID, event.SpaceID, event.Session)
+	if err != nil {
+		return 0, errno.WrapMQRetryErr(err)
+	}
+	if current != nil {
+		exptType = current.ExptType
+	}
+	return exptType, nil
+}
+
 func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEndPoint {
 	return func(ctx context.Context, event *entity.ExptScheduleEvent) error {
 		runLog, err := e.Manager.GetRunLog(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session)
@@ -209,15 +226,9 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 		}
 
 		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
-			exptType := event.ExptType
-			if exptType == 0 && event.ExptRunMode != entity.EvaluationModeAppend {
-				current, err := e.Manager.GetDetail(contexts.WithCtxWriteDB(ctx), event.ExptID, event.SpaceID, event.Session)
-				if err != nil {
-					return errno.WrapMQRetryErr(err)
-				}
-				if current != nil {
-					exptType = current.ExptType
-				}
+			exptType, err := e.resolveEventExptType(ctx, event)
+			if err != nil {
+				return err
 			}
 			if exptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && (status == entity.ExptStatus_Terminated || status == entity.ExptStatus_Failed) {
 				if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok {
@@ -355,6 +366,11 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 
 		logs.CtxError(ctx, "[ExptEval] HandleEventErr found error: %v, event: %v", nextErr, json.Jsonify(event))
 
+		exptType, err := e.resolveEventExptType(ctx, event)
+		if err != nil {
+			return err
+		}
+
 		// 基础设施类错误（Redis抖动、MQ发送失败、context cancel等）：尝试用新ctx重新调度，不直接终止实验
 		if isSchedulerInfraError(nextErr) {
 			maxInfraRetry := 10
@@ -366,7 +382,7 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 				logs.CtxWarn(ctx, "[ExptEval] infra error detected, attempting reschedule (%d/%d), expt_id: %v, expt_run_id: %v, err: %v",
 					event.InfraErrorRetryTimes+1, maxInfraRetry, event.ExptID, event.ExptRunID, nextErr)
 
-				if _, current := e.Manager.(IExptCurrentRunTerminator); current && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+				if _, current := e.Manager.(IExptCurrentRunTerminator); current && exptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
 					if err := ctx.Err(); err != nil {
 						return errno.WrapMQRetryErr(err)
 					}
@@ -402,7 +418,7 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 				exptFinished = entity.IsExptFinished(current.Status)
 			}
 		}
-		if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok && !exptFinished && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+		if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok && !exptFinished && exptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
 			_, err := terminate.TerminateCurrentRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, nil, entity.WithStatus(entity.ExptStatus_Failed), entity.WithStatusMessage(userVisibleErrMsg(nextErr)))
 			return err
 		}
@@ -411,7 +427,7 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 
 		if exptFinished {
 			// A started completion owns the terminal outcome; recovery errors must not rewrite it as Failed.
-			if e.Idem != nil && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+			if e.Idem != nil && exptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
 				started, err := e.Idem.Exist(ctx, fmt.Sprintf("CompleteExpt:exptexec:onend:%d", event.ExptRunID))
 				if err != nil {
 					return errno.WrapMQRetryErr(err)

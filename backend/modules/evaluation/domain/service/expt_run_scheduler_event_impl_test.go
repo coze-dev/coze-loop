@@ -125,7 +125,7 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) { // Modification: add ctrl parameter
 				f.configer.EXPECT().GetSchedulerAbortCtrl(gomock.Any()).Return(&entity.SchedulerAbortCtrl{}).AnyTimes()
-				f.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), args.event.Session).Return(mockExpt, nil).Times(1)
+				f.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), args.event.Session).Return(mockExpt, nil).AnyTimes()
 				f.manager.EXPECT().GetRunLog(gomock.Any(), int64(1), int64(2), int64(3), args.event.Session).Return(&entity.ExptRunLog{}, nil).Times(1)
 				f.mutex.EXPECT().LockBackoffWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, args.ctx, func() {}, nil).Times(1)
 				f.mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
@@ -175,7 +175,7 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) { // Modification: add ctrl parameter
 				f.configer.EXPECT().GetSchedulerAbortCtrl(gomock.Any()).Return(&entity.SchedulerAbortCtrl{}).AnyTimes()
-				f.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), args.event.Session).Return(mockExpt, nil).Times(1)
+				f.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), args.event.Session).Return(mockExpt, nil).AnyTimes()
 				f.manager.EXPECT().GetRunLog(gomock.Any(), int64(1), int64(2), int64(3), args.event.Session).Return(&entity.ExptRunLog{}, nil).Times(1)
 				f.mutex.EXPECT().LockBackoffWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, args.ctx, func() {}, nil).Times(1)
 				f.mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
@@ -1752,6 +1752,9 @@ func TestExptSchedulerImpl_HandleEventErr(t *testing.T) {
 				manager:   svcmocks.NewMockIExptManager(ctrl),
 				publisher: eventmocks.NewMockExptEventPublisher(ctrl),
 			}
+			// Legacy events without ExptType are backfilled from the primary experiment.
+			f.manager.EXPECT().GetDetail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(&entity.Experiment{ExptType: entity.ExptType_Online}, nil).AnyTimes()
 			tt.prepareMock(f)
 
 			svc := &ExptSchedulerImpl{
