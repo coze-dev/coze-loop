@@ -325,7 +325,7 @@ func TestCancelCleanupLeaseCancelledCommitOnlyFrozenResources(t *testing.T) {
 	_, err := m.TerminateCurrentRun(ctx, f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
 	require.True(t, errno.NeedMQRetry(err))
 	require.Len(t, guard.completed, 1)
-	require.Equal(t, 3, queriesAfterCancel, "cancelled cleanup may only re-read run ownership before using frozen sources")
+	require.Equal(t, 2, queriesAfterCancel, "cancelled cleanup may only re-read run ownership before using frozen sources")
 	require.Empty(t, store.rows)
 	require.NoError(t, f.conn.Callback().Query().Remove("cleanup_ownership_sql_only"))
 	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run))
