@@ -470,8 +470,7 @@ func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID i
 	// （实验已不可查，`SchedulerScope` / `LatestRunID` 都拿不到了）。
 	// 反过来"先释放但删除失败"只是让一个仍存在的实验少占额度，下一拍调度会重新预占，无损。
 	//
-	// best-effort：释放失败只告警不阻断删除 —— 让"额度归还失败"挡住用户删实验，
-	// 是把一个后台问题升级成前台故障。
+	// 释放失败时保留实验，使调用方能重试并重新读取原始额度来源。
 	for _, expt := range expts {
 		if expt == nil {
 			continue
@@ -479,7 +478,9 @@ func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID i
 		if err := e.cancelSandboxBeforeDelete(ctx, expt, session); err != nil {
 			return err
 		}
-		e.releaseCentralQuotaForIncompleteItems(ctx, expt, nil, entity.ExptStatus_Terminated)
+		if err := e.releaseCentralQuotaForIncompleteItems(ctx, expt, nil, entity.ExptStatus_Terminated); err != nil {
+			return err
+		}
 	}
 
 	// 批量删除实验
@@ -1884,7 +1885,9 @@ func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, sess
 	if err := e.cancelSandboxBeforeDelete(ctx, expt, session); err != nil {
 		return err
 	}
-	e.releaseCentralQuotaForIncompleteItems(ctx, expt, nil, entity.ExptStatus_Terminated)
+	if err := e.releaseCentralQuotaForIncompleteItems(ctx, expt, nil, entity.ExptStatus_Terminated); err != nil {
+		return err
+	}
 
 	// 删除实验
 	if err := e.exptRepo.Delete(ctx, exptID, spaceID); err != nil {

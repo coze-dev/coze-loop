@@ -502,17 +502,19 @@ func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID 
 
 // The context carries the existing tick lease and the immutable SQL commit
 // result between the two standard Complete methods. It is not another run state.
-type completeTickKey struct{}
-type completeTickIdentity struct{ expt, run int64 }
-type completeCalibratedKey struct{}
-type completeDataKey struct{}
-type completeCaptureKey struct{}
-type completeExpectedSourceKey struct{}
-type completeData struct {
-	result  *entity.ExptRunFinishResult
-	sources []*entity.ExptCurrentItemRunSource
-	from    entity.ExptStatus
-}
+type (
+	completeTickKey           struct{}
+	completeTickIdentity      struct{ expt, run int64 }
+	completeCalibratedKey     struct{}
+	completeDataKey           struct{}
+	completeCaptureKey        struct{}
+	completeExpectedSourceKey struct{}
+	completeData              struct {
+		result  *entity.ExptRunFinishResult
+		sources []*entity.ExptCurrentItemRunSource
+		from    entity.ExptStatus
+	}
+)
 
 func withHeldCompleteTick(ctx context.Context, expt, run int64) context.Context {
 	return context.WithValue(ctx, completeTickKey{}, completeTickIdentity{expt, run})
@@ -1022,7 +1024,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	}
 
 	var stats *entity.ExptCalculateStats
-	status := opt.Status
+	var status entity.ExptStatus
 	if data != nil {
 		got = data.result.Experiment
 		status = got.Status
@@ -1382,7 +1384,7 @@ func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity
 // legacy 实验直接返回：它们从不预占额度，调用释放只是无谓的 Redis 往返。
 //
 // 尝试所有 item 并返回累计错误。标准整 run 终止持有冻结来源，释放失败时
-// 保留 admission 和未完成标记以便重放；其他存量调用保留 best-effort。
+// 保留 admission 和未完成标记以便重放；删除和重试调用同样向上传递错误。
 func (e *ExptMangerImpl) releaseCentralQuotaForIncompleteItems(
 	ctx context.Context,
 	expt *entity.Experiment,
@@ -1522,21 +1524,19 @@ func (e *ExptMangerImpl) incompleteItemObservationsForRelease(ctx context.Contex
 //
 // 调用点已在 mutex 保护内：拿到 expt 级锁才说明没有活着的 run 在跑，
 // 此时旧 run 的 Queueing/Processing 残留一定是不会再被执行的。
-func (e *ExptMangerImpl) releaseSupersededRunQuota(ctx context.Context, exptID, spaceID, newRunID int64, mode entity.ExptRunMode) {
+func (e *ExptMangerImpl) releaseSupersededRunQuota(ctx context.Context, exptID, spaceID, newRunID int64, mode entity.ExptRunMode) error {
 	if e.centralGuard == nil || !isRetryRunMode(mode) {
-		return
+		return nil
 	}
 	expt, err := e.exptRepo.GetByID(ctx, exptID, spaceID)
 	if err != nil || expt == nil {
-		// 查不到就不猜：宁可这次不释放（留给全量 recovery / 人工），也不能凭空构造 scope 或 run 号。
-		logs.CtxWarn(ctx, "[CentralReservation] load expt fail before retry, skip superseded release, expt_id: %v, err: %v", exptID, err)
-		return
+		return err
 	}
 	oldRunID := expt.LatestRunID
 	if oldRunID == 0 || oldRunID == newRunID {
-		return
+		return nil
 	}
-	e.releaseCentralQuotaForRun(ctx, expt, gptr.Of(oldRunID),
+	return e.releaseCentralQuotaForRun(ctx, expt, gptr.Of(oldRunID),
 		fmt.Sprintf("superseded by retry run=%d", newRunID), "retry")
 }
 
@@ -2289,7 +2289,9 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 			return err
 		}
 	} else {
-		e.releaseSupersededRunQuota(ctx, exptID, spaceID, exptRunID, mode)
+		if err := e.releaseSupersededRunQuota(ctx, exptID, spaceID, exptRunID, mode); err != nil {
+			return err
+		}
 	}
 
 	if err := e.runLogRepo.Create(ctx, rl); err != nil {
@@ -2376,7 +2378,9 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 				return 0, false, err
 			}
 		} else {
-			e.releaseSupersededRunQuota(ctx, exptID, spaceID, runID, mode)
+			if err := e.releaseSupersededRunQuota(ctx, exptID, spaceID, runID, mode); err != nil {
+				return 0, false, err
+			}
 		}
 
 		if err := e.runLogRepo.Create(ctx, rl); err != nil {

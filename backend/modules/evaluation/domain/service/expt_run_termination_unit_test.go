@@ -76,10 +76,10 @@ func (d *termUnitDeps) manager() *ExptMangerImpl {
 	return m
 }
 
-func (d *termUnitDeps) expectLock(locked bool, lockCtx context.Context) {
+func (d *termUnitDeps) expectLock(locked bool, _ context.Context) {
 	d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ string, _ any, _ any) (bool, context.Context, func(), error) {
-			return locked, lockCtx, func() {}, nil
+		DoAndReturn(func(ctx context.Context, _ string, _ any, _ any) (bool, context.Context, func(), error) {
+			return locked, ctx, func() {}, nil
 		}).AnyTimes()
 }
 
@@ -343,6 +343,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 	t.Run("lock_error", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil, nil, errors.New("lock"))
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
@@ -370,7 +371,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99, ExptType: entity.ExptType_Offline}, nil)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
 		require.NoError(t, err)
@@ -379,7 +380,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).Return(nil, errors.New("read"))
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, termUnitSource(9, entity.ItemRunState_Processing))
 		require.False(t, applied)
@@ -389,7 +390,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		changed := termUnitSource(9, entity.ItemRunState_Processing)
 		changed.Current.RequestID = "other"
 		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).Return(changed, nil)
@@ -401,7 +402,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(0), int64(500), int64(3)).Return(nil, int64(0), errors.New("scan"))
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
@@ -411,7 +412,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{nil}, int64(0), nil)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
@@ -421,7 +422,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(0), nil)
 		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
 		d.expectLock(true, context.Background())
@@ -435,7 +436,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		expected := termUnitSource(9, entity.ItemRunState_Processing)
 		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)

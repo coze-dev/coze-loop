@@ -60,6 +60,18 @@ func TestHandleEventErrFallsBackForFinishedExperiment(t *testing.T) {
 			exptRepo.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(&entity.Experiment{ID: 7, SpaceID: 9, Status: status}, nil)
 			if kind == "finished" {
 				manager.EXPECT().CompleteRun(gomock.Any(), int64(7), int64(8), int64(9), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			} else {
+				manager.EXPECT().CompleteExpt(gomock.Any(), int64(7), &event.ExptRunID, int64(9), gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, _ int64, _ *int64, _ int64, _ *entity.Session, opts ...entity.CompleteExptOptionFn) error {
+						option := &entity.CompleteExptOption{}
+						for _, fn := range opts {
+							fn(option)
+						}
+						require.Equal(t, entity.ExptStatus_Failed, option.Status)
+						require.Equal(t, "list evaluation set items failed", option.StatusMessage)
+						manager.terminated = true
+						return nil
+					})
 			}
 
 			handler := impl.HandleEventErr(func(context.Context, *entity.ExptScheduleEvent) error {
@@ -173,6 +185,17 @@ func (r *retryStartResetFailureRepo) ResetItemForRetry(ctx context.Context, spac
 	return applied, errors.New("save stats error")
 }
 
+func logSchedulerRetryFixtureRun(ctx context.Context, p *pendingRunFixture, mode entity.ExptRunMode) (int64, bool, error) {
+	if mode == entity.EvaluationModeRetryItems {
+		return p.manager.LogRetryItemsRun(ctx, p.f.expt, mode, p.f.space, []int64{p.f.item}, p.event.Session)
+	}
+	run, err := p.manager.idgenerator.GenID(ctx)
+	if err != nil {
+		return 0, false, err
+	}
+	return run, false, p.manager.LogRun(ctx, p.f.expt, run, mode, p.f.space, []int64{p.f.item}, p.event.Session)
+}
+
 func TestRetryAllStartFailureTerminatesMutatedRun(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
@@ -211,8 +234,7 @@ func TestRetryAllStartFailureTerminatesMutatedRun(t *testing.T) {
 				Update("status", int32(entity.TurnRunState_Success)).Error)
 			require.NoError(t, p.f.conn.Model(&model.ExptStats{}).Where("space_id=? AND expt_id=?", p.f.space, p.f.expt).
 				Updates(map[string]any{"pending_cnt": 0, "processing_cnt": 0, "success_cnt": 1, "fail_cnt": 0, "terminated_cnt": 0}).Error)
-			_, err := p.manager.mutex.Unlock(p.manager.makeExptMutexLockKey(p.f.expt))
-			require.NoError(t, err)
+			require.NoError(t, p.manager.CompleteRun(ctx, p.f.expt, p.f.run, p.f.space, p.event.Session))
 
 			if tc.multiSet {
 				p.expt.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
@@ -240,7 +262,7 @@ func TestRetryAllStartFailureTerminatesMutatedRun(t *testing.T) {
 			p.manager.idgenerator = ids
 			p.manager.mtr.(*metricsMocks.MockExptMetric).EXPECT().EmitExptExecRun(p.f.space, int64(mode)).Times(2)
 
-			runID, joined, err := p.manager.LogRetryItemsRun(ctx, p.f.expt, mode, p.f.space, []int64{p.f.item}, p.event.Session)
+			runID, joined, err := logSchedulerRetryFixtureRun(ctx, p, mode)
 			require.NoError(t, err)
 			require.False(t, joined)
 			require.Equal(t, p.f.run+100, runID)
@@ -303,7 +325,7 @@ func TestRetryAllStartFailureTerminatesMutatedRun(t *testing.T) {
 				Where("space_id=? AND expt_id=? AND expt_run_id=? AND status=?", p.f.space, p.f.expt, runID, int32(entity.ItemRunState_Queueing)).Count(&queueing).Error)
 			require.Zero(t, queueing)
 
-			newRunID, joined, err := p.manager.LogRetryItemsRun(ctx, p.f.expt, mode, p.f.space, []int64{p.f.item}, p.event.Session)
+			newRunID, joined, err := logSchedulerRetryFixtureRun(ctx, p, mode)
 			require.NoError(t, err)
 			require.False(t, joined)
 			require.Equal(t, runID+1, newRunID)
@@ -372,8 +394,7 @@ func TestRetryStartRedeliveryPreservesLoggedItems(t *testing.T) {
 				Update("status", int32(entity.TurnRunState_Success)).Error)
 			require.NoError(t, p.f.conn.Model(&model.ExptStats{}).Where("space_id=? AND expt_id=?", p.f.space, p.f.expt).
 				Updates(map[string]any{"pending_cnt": 0, "processing_cnt": 0, "success_cnt": 1, "fail_cnt": 0, "terminated_cnt": 0}).Error)
-			_, err := p.manager.mutex.Unlock(p.manager.makeExptMutexLockKey(p.f.expt))
-			require.NoError(t, err)
+			require.NoError(t, p.manager.CompleteRun(ctx, p.f.expt, p.f.run, p.f.space, p.event.Session))
 
 			if tc.multiSet {
 				p.expt.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
@@ -396,7 +417,7 @@ func TestRetryStartRedeliveryPreservesLoggedItems(t *testing.T) {
 			}).AnyTimes()
 			p.manager.idgenerator = ids
 			p.manager.mtr.(*metricsMocks.MockExptMetric).EXPECT().EmitExptExecRun(p.f.space, int64(mode)).Times(1)
-			createdRunID, joined, err := p.manager.LogRetryItemsRun(ctx, p.f.expt, mode, p.f.space, []int64{p.f.item}, p.event.Session)
+			createdRunID, joined, err := logSchedulerRetryFixtureRun(ctx, p, mode)
 			require.NoError(t, err)
 			require.False(t, joined)
 			require.Equal(t, runID, createdRunID)

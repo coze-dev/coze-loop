@@ -40,12 +40,15 @@ func completeCommittedFixture(m *ExptMangerImpl, ctx context.Context, event *ent
 	}
 	return m.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, options...)
 }
+
 func completeNaturalFixture(m *ExptMangerImpl, ctx context.Context, event *entity.ExptScheduleEvent, finished *entity.Experiment) error {
 	return completeCommittedFixture(m, ctx, event, finished, nil, nil)
 }
+
 func completeTerminationFixture(m *ExptMangerImpl, ctx context.Context, event *entity.ExptScheduleEvent, finished *entity.Experiment, sources []*entity.ExptCurrentItemRunSource, opt *entity.CompleteExptOption) error {
 	return completeCommittedFixture(m, ctx, event, finished, sources, opt)
 }
+
 func completeCancelledFixture(m *ExptMangerImpl, ctx context.Context, event *entity.ExptScheduleEvent, finished *entity.Experiment, sources []*entity.ExptCurrentItemRunSource) error {
 	return completeCommittedFixture(m, ctx, event, finished, sources, &entity.CompleteExptOption{NoCompleteItemTurn: true})
 }

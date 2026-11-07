@@ -31,6 +31,7 @@ type standardCompleteTickBarrier struct {
 func (b *standardCompleteTickBarrier) releaseFirst() {
 	b.firstOnce.Do(func() { close(b.firstProceed) })
 }
+
 func (b *standardCompleteTickBarrier) releaseSecond() {
 	b.secondOnce.Do(func() { close(b.secondProceed) })
 }

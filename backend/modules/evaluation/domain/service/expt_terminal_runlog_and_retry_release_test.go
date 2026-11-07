@@ -353,7 +353,7 @@ func TestReleaseSupersededRunQuota_Guards(t *testing.T) {
 	t.Run("guard 为 nil", func(t *testing.T) {
 		svc := &ExptMangerImpl{}
 		assert.NotPanics(t, func() {
-			svc.releaseSupersededRunQuota(context.Background(), 100, 7, 201, entity.EvaluationModeFailRetry)
+			require.NoError(t, svc.releaseSupersededRunQuota(context.Background(), 100, 7, 201, entity.EvaluationModeFailRetry))
 		})
 	})
 
@@ -364,7 +364,7 @@ func TestReleaseSupersededRunQuota_Guards(t *testing.T) {
 		exptRepo.EXPECT().GetByID(gomock.Any(), int64(100), int64(7)).Return(nil, assert.AnError)
 		guard := &fakeGuard{}
 		svc := &ExptMangerImpl{centralGuard: guard, exptRepo: exptRepo}
-		svc.releaseSupersededRunQuota(context.Background(), 100, 7, 201, entity.EvaluationModeFailRetry)
+		require.ErrorIs(t, svc.releaseSupersededRunQuota(context.Background(), 100, 7, 201, entity.EvaluationModeFailRetry), assert.AnError)
 		assert.Empty(t, guard.releases())
 	})
 
@@ -378,7 +378,7 @@ func TestReleaseSupersededRunQuota_Guards(t *testing.T) {
 		}, nil)
 		guard := &fakeGuard{}
 		svc := &ExptMangerImpl{centralGuard: guard, exptRepo: exptRepo}
-		svc.releaseSupersededRunQuota(context.Background(), 100, 7, 201, entity.EvaluationModeFailRetry)
+		require.NoError(t, svc.releaseSupersededRunQuota(context.Background(), 100, 7, 201, entity.EvaluationModeFailRetry))
 		assert.Empty(t, guard.releases(), "同号说明没有被顶替的旧 run，不该释放")
 	})
 }
