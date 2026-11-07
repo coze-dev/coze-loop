@@ -21,6 +21,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	mysqlmodel "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/redis/go-redis/v9"
 
 	idemmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
@@ -145,19 +146,29 @@ func (p *finishRepoProbe) FinishCurrentRun(context.Context, *entity.ExptRunFinis
 func TestRunFinishManagerCommitFailureAndPendingHaveZeroCleanup(t *testing.T) {
 	for _, fault := range []error{errors.New("commit failed"), nil} {
 		ctrl := gomock.NewController(t)
+		factory, server := finishRealLockerFactory(t)
 		port := &finishRepoProbe{err: fault, result: &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishPending}}
 		expts := repomocks.NewMockIExperimentRepo(ctrl)
-		expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline, Status: entity.ExptStatus_Processing}, nil).AnyTimes()
-		manager := &ExptMangerImpl{runFinishRepo: port, exptRepo: expts, mutex: lockmocks.NewMockILocker(ctrl)}
-		result, err := manager.FinishCurrentRunWithHeldTickLock(context.Background(), &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2})
+		expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline, Status: entity.ExptStatus_Processing}, nil).Times(2)
+		manager := &ExptMangerImpl{runFinishRepo: port, exptRepo: expts, mutex: lockmocks.NewMockILocker(ctrl), quotaRepo: repomocks.NewMockQuotaRepo(ctrl), manualRetryLocker: factory}
+		ctx, release, err := manager.completeTick(context.Background(), 1, 2)
+		require.NoError(t, err)
+		defer release()
+		require.True(t, server.Exists("expt_run_exec_lock:1:2"))
+		result, err := manager.FinishCurrentRunWithHeldTickLock(ctx, &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2})
 		if fault != nil {
 			require.Error(t, err)
+			require.ErrorIs(t, err, fault)
+			require.True(t, errno.NeedMQRetry(err))
 			require.Nil(t, result)
 		} else {
 			require.NoError(t, err)
 			require.Equal(t, entity.ExptRunFinishPending, result.Disposition)
 		}
 		require.Equal(t, 1, port.calls)
+		require.True(t, server.Exists("expt_run_exec_lock:1:2"), "held helper must retain the caller's actual tick")
+		t.Logf("HELD_FINISH_REACHED_REPO fault=%v calls=%d cleanup mocks forbid admission/quota release", fault, port.calls)
+		release()
 	}
 }
 
@@ -225,6 +236,7 @@ func TestRunFinishLogRunUsesInjectedLifecycleLocker(t *testing.T) {
 	runs := repomocks.NewMockIExptRunLogRepo(ctrl)
 	runs.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 	expts := repomocks.NewMockIExperimentRepo(ctrl)
+	expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, ExptType: entity.ExptType_Offline, Status: entity.ExptStatus_Pending}, nil)
 	expts.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 	metric := metricsmocks.NewMockExptMetric(ctrl)
 	metric.EXPECT().EmitExptExecRun(int64(3), int64(entity.EvaluationModeSubmit))
@@ -369,16 +381,32 @@ func TestRunFinishHeldHelperCancelledLeaseStopsSQL(t *testing.T) {
 // Numeric ownership on Submit must not broaden legacy live RetryItems join.
 func TestRunFinishNumericSubmitOwnerDoesNotAllowRetryItemsJoin(t *testing.T) {
 	ctrl := gomock.NewController(t)
+	factory, server := finishRealLockerFactory(t)
 	locker := lockmocks.NewMockILocker(ctrl)
 	config := componentmocks.NewMockIConfiger(ctrl)
 	ids := idgenmocks.NewMockIIDGenerator(ctrl)
 	config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{})
 	ids.EXPECT().GenID(gomock.Any()).Return(int64(99), nil)
-	locker.EXPECT().BackoffLockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "99", gomock.Any(), time.Second).Return(false, "2", nil)
-	locker.EXPECT().Exists(gomock.Any(), "expt_completing_mutex_lock:1:2").Return(false, nil).AnyTimes()
+	expts := repomocks.NewMockIExperimentRepo(ctrl)
+	expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline, Status: entity.ExptStatus_Processing}, nil).Times(2)
+	locker.EXPECT().BackoffLockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "99", gomock.Any(), time.Second).DoAndReturn(func(ctx context.Context, key, value string, _, _ time.Duration) (bool, string, error) {
+		held, ok := ctx.Value(completeTickKey{}).(completeTickIdentity)
+		require.True(t, ok)
+		require.Equal(t, completeTickIdentity{1, 2}, held)
+		require.NoError(t, ctx.Err())
+		require.True(t, server.Exists("expt_run_exec_lock:1:2"))
+		t.Logf("NUMERIC_ADMISSION_REACHED key=%s attempted=%s existing=2 predecessor_tick_held=true", key, value)
+		return false, "2", nil
+	})
 	runs := repomocks.NewMockIExptRunLogRepo(ctrl)
-	runs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{SpaceID: 3, ExptID: 1, ExptRunID: 2, Mode: int32(entity.EvaluationModeSubmit), Status: int64(entity.ExptStatus_Processing)}, nil).AnyTimes()
-	manager := &ExptMangerImpl{runFinishRepo: &finishRepoProbe{}, mutex: locker, configer: config, idgenerator: ids, runLogRepo: runs}
-	_, _, err := manager.LogRetryItemsRun(context.Background(), 1, entity.EvaluationModeRetryItems, 3, []int64{11}, &entity.Session{UserID: "test"})
+	runs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{SpaceID: 3, ExptID: 1, ExptRunID: 2, Mode: int32(entity.EvaluationModeSubmit), Status: int64(entity.ExptStatus_Processing)}, nil)
+	manager := &ExptMangerImpl{runFinishRepo: &finishRepoProbe{}, mutex: locker, configer: config, idgenerator: ids, runLogRepo: runs, exptRepo: expts, manualRetryLocker: factory}
+	run, joined, err := manager.LogRetryItemsRun(context.Background(), 1, entity.EvaluationModeRetryItems, 3, []int64{11}, &entity.Session{UserID: "test"})
 	require.Error(t, err)
+	status, ok := errorx.FromStatusError(err)
+	require.True(t, ok)
+	require.Equal(t, int32(errno.ExperimentRunningExistedCode), status.Code())
+	require.Zero(t, run)
+	require.False(t, joined)
+	t.Logf("NUMERIC_SUBMIT_JOIN_REJECTED existing_run=2 mode=%d code=%d", entity.EvaluationModeSubmit, status.Code())
 }
