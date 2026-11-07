@@ -39,6 +39,7 @@ func TestPromptDebugApplicationImpl_DebugStreaming(t *testing.T) {
 		benefitService   benefit.IBenefitService
 		auth             rpc.IAuthProvider
 		file             rpc.IFileProvider
+		debugLogSaved    <-chan struct{}
 	}
 	type args struct {
 		ctx    context.Context
@@ -262,8 +263,12 @@ func TestPromptDebugApplicationImpl_DebugStreaming(t *testing.T) {
 		{
 			name: "base64 convert error",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				saved := make(chan struct{})
 				mockDebugLogRepo := repomocks.NewMockIDebugLogRepo(ctrl)
-				mockDebugLogRepo.EXPECT().SaveDebugLog(gomock.Any(), gomock.Any()).Return(nil)
+				mockDebugLogRepo.EXPECT().SaveDebugLog(gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, *entity.DebugLog) error {
+					close(saved)
+					return nil
+				})
 				mockPromptSvc := servicemocks.NewMockIPromptService(ctrl)
 				mockPromptSvc.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptSvc.EXPECT().MCompleteMultiModalFileURL(gomock.Any(), gomock.Any(), nil).Return(nil)
@@ -304,6 +309,7 @@ func TestPromptDebugApplicationImpl_DebugStreaming(t *testing.T) {
 					benefitService:   mockBenefitSvc,
 					auth:             mockAuth,
 					file:             nil,
+					debugLogSaved:    saved,
 				}
 			},
 			args: args{
@@ -415,6 +421,13 @@ func TestPromptDebugApplicationImpl_DebugStreaming(t *testing.T) {
 			select { //nolint:staticcheck
 			case err := <-errCh:
 				unittest.AssertErrorEqual(t, tt.wantErr, err)
+			}
+			if ttFields.debugLogSaved != nil {
+				select {
+				case <-ttFields.debugLogSaved:
+				case <-time.After(5 * time.Second):
+					t.Fatal("debug log was not saved")
+				}
 			}
 		})
 	}
