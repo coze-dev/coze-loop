@@ -571,17 +571,21 @@ func TestCleanupCurrentUnscheduledRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
+		runLogs := repomocks.NewMockIExptRunLogRepo(d.ctrl)
+		runLogs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{Mode: int32(entity.EvaluationModeRetryItems)}, nil)
+		m.runLogRepo = runLogs
 		d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(true, nil)
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, errors.New("read"))
-		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
+		failure := errors.New("read")
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, failure)
+		require.ErrorIs(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")), failure)
 	})
 	t.Run("latest_run_finished", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
 		runLogs := repomocks.NewMockIExptRunLogRepo(d.ctrl)
-		runLogs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Success)}, nil)
+		runLogs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{Mode: int32(entity.EvaluationModeRetryItems), Status: int64(entity.ExptStatus_Success)}, nil).Times(2)
 		m.runLogRepo = runLogs
 		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 		d.expectLock(true, context.Background())
@@ -592,10 +596,11 @@ func TestCleanupCurrentUnscheduledRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		runLogs := repomocks.NewMockIExptRunLogRepo(d.ctrl)
 		runLogs.EXPECT().Update(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).Return(nil)
+		runLogs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{Mode: int32(entity.EvaluationModeRetryItems)}, nil)
 		m := d.manager()
 		m.mutex = d.locker
 		m.runLogRepo = runLogs
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+		d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(true, nil)
 		d.expectLock(true, context.Background())
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Online}, nil)
 		require.NoError(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
@@ -604,6 +609,9 @@ func TestCleanupCurrentUnscheduledRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
+		runLogs := repomocks.NewMockIExptRunLogRepo(d.ctrl)
+		runLogs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{Mode: int32(entity.EvaluationModeRetryItems)}, nil)
+		m.runLogRepo = runLogs
 		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 		d.expectLock(true, context.Background())
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Pending, ExptType: entity.ExptType_Offline}, nil)
@@ -617,10 +625,11 @@ func TestCleanupCurrentUnscheduledRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, errors.New("unlock"))
+		failure := errors.New("unlock")
+		d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(false, failure)
 		d.expectLock(true, context.Background())
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99}, nil)
-		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
+		require.ErrorIs(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause"), false), failure)
 	})
 }
 
@@ -878,7 +887,7 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(0), int64(500), int64(3)).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(5), nil)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(5), int64(500), int64(3)).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(5), nil)
 		_, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
@@ -888,7 +897,7 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(0), nil)
 		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(nil, errors.New("read"))
 		_, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
@@ -898,7 +907,7 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(0), nil)
 		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
 		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(nil, errors.New("commit"))
@@ -909,7 +918,7 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{Applied: true}, nil)
 		_, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
@@ -947,7 +956,7 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 		d.expectLock(true, context.Background())
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, nil)
-		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
+		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause"), false))
 	})
 	t.Run("unscheduled_pending_port_missing", func(t *testing.T) {
 		d := newTermUnitDeps(t)
@@ -955,7 +964,7 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 		d.expectLock(true, context.Background())
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Pending, ExptType: entity.ExptType_Offline}, nil)
-		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
+		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause"), false))
 	})
 	t.Run("unscheduled_processing_terminates", func(t *testing.T) {
 		d := newTermUnitDeps(t)
@@ -963,7 +972,7 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		m.mutex = d.locker
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil, nil, errors.New("second lock"))
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
 	})
 	t.Run("superseded_port_missing", func(t *testing.T) {

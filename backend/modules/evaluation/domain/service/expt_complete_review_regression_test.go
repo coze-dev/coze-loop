@@ -25,6 +25,10 @@ type completeReleaseFaultLocker struct {
 	calls int
 }
 
+func (l *completeReleaseFaultLocker) GetLifecycleLockValue(ctx context.Context, key string) (string, bool, error) {
+	return l.ILocker.(lifecycleLockValueReader).GetLifecycleLockValue(ctx, key)
+}
+
 // Only detail loading is narrowed to primary SQL. Both Complete calls and the
 // Append draining body remain production implementations.
 type completeOnlineDetailManager struct {
@@ -110,10 +114,13 @@ func (l *completeReleaseFaultLocker) Unlock(key string) (bool, error) {
 type completeReleaseFaultRunRepo struct {
 	repo.IExptRunLogRepo
 	fault error
+	reads int
 }
 
 func (r *completeReleaseFaultRunRepo) Get(ctx context.Context, expt, run int64) (*entity.ExptRunLog, error) {
-	if r.fault != nil {
+	r.reads++
+	// The admission fence reads first; the paired final release reads second.
+	if r.fault != nil && r.reads == 2 {
 		err := r.fault
 		r.fault = nil
 		return nil, err
@@ -138,6 +145,7 @@ func TestCompleteStandardAdmissionFailureRemainsReplayable(t *testing.T) {
 			key := p.manager.makeExptMutexLockKey(f.expt)
 			cid := fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run)
 			require.ErrorIs(t, p.manager.CompleteExpt(ctx, f.expt, &f.run, f.space, p.event.Session), failure)
+			require.Equal(t, int32(1), p.resources.Load(), "the fault must occur after resource cleanup, at final admission release")
 			before := f.snapshot()
 			run, err := p.manager.runLogRepo.Get(ctx, f.expt, f.run)
 			require.NoError(t, err)
