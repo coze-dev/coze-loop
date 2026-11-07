@@ -3121,10 +3121,9 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 	condBySet := make([]*entity.ItemSnapshotVersionCond, 0, len(pairs))
 	keywordCondBySet := make([]*entity.ItemSnapshotVersionCond, 0, len(pairs))
 	var (
-		firstErr              error
-		mappingResolved       bool
-		translatedCond        bool
-		translatedKeywordCond bool
+		firstErr        error
+		mappingResolved bool
+		translatedCond  bool
 	)
 	for idx, p := range pairs {
 		// ★ 跨空间共享: item snapshot field mapping 按 (space_id, version_id) 存在**评测集来源空间**下，
@@ -3154,7 +3153,9 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 		}
 
 		setCond, setCondFull := translateItemSnapshotCond(ctx, rawCond, mappingMap, isOnline, false)
-		setKeywordCond, setKeywordFull := translateItemSnapshotCond(ctx, rawKeywordCond, mappingMap, isOnline, true)
+		setKeywordCond, _ := translateItemSnapshotCond(ctx, rawKeywordCond, mappingMap, isOnline, true)
+		keywordMapped := len(setKeywordCond.BoolMapFilters)+len(setKeywordCond.FloatMapFilters)+
+			len(setKeywordCond.IntMapFilters)+len(setKeywordCond.StringMapFilters) > 0
 
 		// 主集那一组回填单值字段，兼容尚未 per-set 化的下游（开源 DAO 的 JOIN 路径、老调用方）。
 		if idx == 0 {
@@ -3167,13 +3168,10 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 			}
 		}
 
-		// setCondFull=false 表示该集缺其中某个字段：条件不能只应用一半（会放宽成"少筛一个条件"），
+		// 普通 AND 条件 setCondFull=false 表示该集缺字段，不能只应用一半，
 		// 该集直接不入组 → 贡献 0 条。
 		if hasCond && setCondFull {
 			translatedCond = true
-		}
-		if hasKeywordCond && setKeywordFull {
-			translatedKeywordCond = true
 		}
 		// 该组能否真的用于查快照表：离线必须有 version_id + 分区日期 sync_ck_date，
 		// 在线必须有 dataset_id。缺任何一样都不能拼成组 —— 拼了会得到 version_id='0'
@@ -3196,7 +3194,7 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 				Cond:             setCond,
 			})
 		}
-		if hasKeywordCond && setKeywordFull {
+		if hasKeywordCond && keywordMapped {
 			keywordCondBySet = append(keywordCondBySet, &entity.ItemSnapshotVersionCond{
 				EvalSetID:        p.EvalSetID,
 				EvalSetVersionID: p.EvalSetVersionID,
@@ -3220,8 +3218,8 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 	//
 	// 注意与「翻译出来了但该组不可查」区分：后者(version/分区日期缺失)不置 Unmatched，
 	// per-set 列表为空 → DAO 退回单值老路径，保住老数据的兜底能力，绝不静默返 0。
-	filter.ItemSnapshotCondUnmatched = (hasCond && !translatedCond) ||
-		(hasKeywordCond && !translatedKeywordCond)
+	// Keyword fields are OR branches; a missing input field cannot suppress the other branches.
+	filter.ItemSnapshotCondUnmatched = hasCond && !translatedCond
 	if filter.ItemSnapshotCondUnmatched {
 		logs.CtxWarn(ctx, "item snapshot filter matched no eval set, exptID: %v, hasCond: %v, hasKeywordCond: %v", baseExpt.ID, hasCond, hasKeywordCond)
 	}
