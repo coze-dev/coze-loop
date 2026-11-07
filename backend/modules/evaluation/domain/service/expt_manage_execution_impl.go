@@ -714,18 +714,22 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 			if current == nil {
 				return errno.NewMQRetryErr("complete run experiment missing")
 			}
+			opt := &entity.CompleteExptOption{}
+			for _, fn := range opts {
+				fn(opt)
+			}
 			if entity.IsExptFinished(current.Status) && current.LatestRunID == exptRunID && e.runLogRepo != nil {
 				logged, err := e.runLogRepo.Get(ctx, exptID, exptRunID)
 				if err != nil {
 					return err
 				}
 				if logged != nil && logged.Status == int64(entity.ExptStatus_Pending) {
-					return e.cleanupCurrentUnscheduledRunWithQuota(ctx, exptID, exptRunID, spaceID, fmt.Errorf("run setup did not start"), true)
+					cause := opt.StatusMessage
+					if cause == "" {
+						cause = "run setup did not start"
+					}
+					return e.cleanupCurrentUnscheduledRunWithQuota(ctx, exptID, exptRunID, spaceID, errors.New(cause), true)
 				}
-			}
-			opt := &entity.CompleteExptOption{}
-			for _, fn := range opts {
-				fn(opt)
 			}
 			data, err := e.commitCompleteData(ctx, current, exptRunID, opt)
 			if err != nil {
@@ -1104,7 +1108,10 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		}
 		_ = e.terminateSandboxExecutesForCancelledItems(resourceCtx, spaceID, got.TargetSpaceID, exptID, exptRunID, ids)
 	}
-	if !opt.NoCompleteItemTurn && data != nil && data.sources != nil && ctx.Err() == nil {
+	if !opt.NoCompleteItemTurn && data != nil && data.sources != nil {
+		if err := ctx.Err(); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
 		if err := e.refreshTerminatedRunFilters(ctx, &entity.ExptScheduleEvent{SpaceID: spaceID, ExptID: exptID, ExptRunID: *exptRunID}, data.sources); err != nil {
 			return err
 		}
@@ -1202,8 +1209,10 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			// Resource cleanup completed despite caller cancellation. Record the
 			// successful release so its error replay cannot release admission twice.
 			if e.idem != nil && opt.CID != "" {
-				if markErr := e.idem.Set(resourceCtx, idemKeyPrefix+opt.CID, 3*time.Minute); markErr != nil {
-					logs.CtxError(resourceCtx, "CompleteExpt SetNX fail, expt_id: %v, err: %v", exptID, markErr)
+				markCtx, stopMark := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+				defer stopMark()
+				if markErr := e.idem.Set(markCtx, idemKeyPrefix+opt.CID, 3*time.Minute); markErr != nil {
+					logs.CtxError(markCtx, "CompleteExpt SetNX fail, expt_id: %v, err: %v", exptID, markErr)
 				}
 			}
 			return errno.WrapMQRetryErr(err)
@@ -1266,8 +1275,14 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	// Done includes the paired admission release. A failed release must remain
 	// replayable; a seen CID must never perform another release.
 	if e.idem != nil && len(opt.CID) > 0 {
-		if err := e.idem.Set(resourceCtx, idemKeyPrefix+opt.CID, 3*time.Minute); err != nil {
-			logs.CtxError(resourceCtx, "CompleteExpt SetNX fail, expt_id: %v, err: %v", exptID, err)
+		markCtx := resourceCtx
+		stopMark := func() {}
+		if data != nil {
+			markCtx, stopMark = context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+		}
+		defer stopMark()
+		if err := e.idem.Set(markCtx, idemKeyPrefix+opt.CID, 3*time.Minute); err != nil {
+			logs.CtxError(markCtx, "CompleteExpt SetNX fail, expt_id: %v, err: %v", exptID, err)
 		}
 	}
 	return nil
