@@ -67,18 +67,9 @@ func TestV2QueryErrorsDoNotFallbackToUnfilteredRDS(t *testing.T) {
 				}
 				t.Logf("FILTER_FALLBACK_EVIDENCE %+v", record)
 				require.Equal(t, 1, queryCalls)
-				if target == entity.ExptFilterTargetV2 {
-					require.ErrorIs(t, err, fault)
-					require.Nil(t, result)
-					require.Zero(t, fallbackCalls)
-				} else {
-					require.NoError(t, err)
-					require.NotNil(t, result)
-					require.Equal(t, 1, fallbackCalls)
-					require.Empty(t, fallbackIDs)
-					require.Equal(t, int64(6), result.Total)
-					require.Empty(t, result.ItemResults)
-				}
+				require.ErrorIs(t, err, fault)
+				require.Nil(t, result)
+				require.Zero(t, fallbackCalls)
 			})
 		}
 	}

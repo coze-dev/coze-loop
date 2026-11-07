@@ -9401,7 +9401,7 @@ func TestExptResultBuilder_fillProcessingTargetResultID_RestoresZombieTargetResu
 
 // item_key 强筛选路径必须 fail-loud：校验 / mapping / CK 任一失败都直接返回错误，
 // 不能吞错后用空 itemIDs + 原分页回退 RDS（等于未筛选全量，且覆盖原始错误）。
-// 旧请求（无 item_key）保持既有容错回退策略。
+// 无 item_key 的有效筛选同样不能回退为未筛选结果。
 func TestExptResultServiceImpl_ListTurnResult_ItemKeyFailLoud(t *testing.T) {
 	now := time.Now()
 	itemKeyCond := &entity.ItemSnapshotFilter{
@@ -9468,7 +9468,7 @@ func TestExptResultServiceImpl_ListTurnResult_ItemKeyFailLoud(t *testing.T) {
 		assert.Contains(t, err.Error(), "mapping rpc error")
 	})
 
-	t.Run("旧请求（无 item_key）保持容错回退", func(t *testing.T) {
+	t.Run("旧请求（无 item_key）也返回筛选错误", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -9478,14 +9478,7 @@ func TestExptResultServiceImpl_ListTurnResult_ItemKeyFailLoud(t *testing.T) {
 		mockFilterRepo.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).
 			Return(nil, int64(0), errors.New("ck query timeout")).Times(1)
 		mockTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
-		// 回退路径：空 itemIDs + 原分页查 RDS
-		mockTurnResultRepo.EXPECT().ListTurnResultByItemIDs(gomock.Any(), int64(100), int64(1), gomock.Nil(), gomock.Any(), false).
-			Return([]*entity.ExptTurnResult{
-				{ID: 1, SpaceID: 100, ExptID: 1, ItemID: 10, TurnID: 20, Status: int32(entity.TurnRunState_Success)},
-			}, int64(1), nil).Times(1)
 		mockItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
-		mockItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(100), int64(1), gomock.Any()).
-			Return([]*entity.ExptItemResult{{ID: 1, ItemID: 10, SpaceID: 100, ExptID: 1, ItemIdx: 1}}, nil).Times(1)
 
 		svc := ExptResultServiceImpl{
 			Metric:                   mockMetric,
@@ -9498,8 +9491,8 @@ func TestExptResultServiceImpl_ListTurnResult_ItemKeyFailLoud(t *testing.T) {
 			SpaceID: 100, ExptID: 1,
 			ItemIDs: []*entity.FieldFilter{{Key: "item_id", Op: "=", Values: []any{"10"}}},
 		}), baseExpt)
-		require.NoError(t, err)
-		assert.Len(t, turnResults, 1)
-		assert.Equal(t, int64(1), total)
+		require.ErrorContains(t, err, "ck query timeout")
+		assert.Empty(t, turnResults)
+		assert.Zero(t, total)
 	})
 }

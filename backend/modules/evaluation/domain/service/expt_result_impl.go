@@ -898,25 +898,17 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 					})
 				}
 			}
-			// 如果errOccur为true，直接跳过后续filter流程，继续执行ListTurnResult
 			if errOccur {
-				// item_key 强筛选请求 fail-loud：继续走下去会用空 itemIDs + 原分页查 RDS，
-				// 等于未筛选全量，且覆盖原始错误
-				if filterAccelerator.HasItemKeyFilter() || (contexts.ExptFilterPlanFromContext(ctx) != nil && contexts.ExptFilterPlanFromContext(ctx).ReadTarget == entity.ExptFilterTargetV2) {
-					return nil, nil, 0, err
-				}
-			} else {
-				page = entity.Page{} // filter表查询后，后续无需再带分页条件
+				// Returning unfiltered rows would silently change the requested result set.
+				return nil, nil, 0, err
 			}
+			page = entity.Page{} // filter表查询后，后续无需再带分页条件
 		}
 
 		// 获取baseline 该分页的turn_result
 		turnResultDAOs, totalTurn, err = e.ExptTurnResultRepo.ListTurnResultByItemIDs(ctx, spaceID, baseExptID, itemIDs, page, gcond.If(expt.ExptType == entity.ExptType_Online, true, false))
 		if err != nil {
 			return nil, nil, 0, err
-		}
-		if errOccur {
-			total = totalTurn
 		}
 		if len(turnResultDAOs) == 0 {
 			return nil, nil, total, nil
@@ -1147,7 +1139,17 @@ func (e ExptResultServiceImpl) getColumnEvaluators(ctx context.Context, spaceID 
 		})
 	}
 	exptID2ColumnEvaluators := make(map[int64][]*entity.ColumnEvaluator)
+	type columnKey struct {
+		exptID, versionID int64
+		alias             string
+	}
+	seenColumns := make(map[columnKey]struct{}, len(evaluatorRef))
 	for _, ref := range evaluatorRef {
+		key := columnKey{exptID: ref.ExptID, versionID: ref.EvaluatorVersionID, alias: ref.Alias}
+		if _, seen := seenColumns[key]; seen {
+			continue
+		}
+		seenColumns[key] = struct{}{}
 		exptID := ref.ExptID
 		if exptID2ColumnEvaluators[exptID] == nil {
 			exptID2ColumnEvaluators[exptID] = make([]*entity.ColumnEvaluator, 0)
@@ -3100,8 +3102,8 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 		return nil
 	}
 	// map 类条件（评测集 schema 字段）需要 field_key → string_map/int_map/... 的映射，
-	// 对 mapping 是硬依赖：所有评测集都查不到就无法翻译条件，必须报错（让上游走 errOccur
-	// 降级到保留分页的普通查询），而不是静默返回 0 条。ItemKey 虽不做 subkey 映射，
+	// 对 mapping 是硬依赖：所有评测集都查不到就无法翻译条件，必须向上返回错误。
+	// ItemKey 虽不做 subkey 映射，
 	// 但离线查询必需的分区日期 sync_ck_date 同样来自该 RPC，依赖不变。
 	needMapping := hasCond || hasKeywordCond
 
