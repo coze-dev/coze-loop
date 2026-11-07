@@ -275,6 +275,16 @@ func TestRunCancelResourcesSurviveParentCancelAfterCommit(t *testing.T) {
 	port := p.manager.runFinishRepo
 	p.manager.runFinishRepo = &cancelAfterCommitPort{IExptRunFinishRepo: port, termination: port.(repo.IExptRunTerminationRepo), cancel: cancel}
 	released := &fakeGuard{}
+	quotaState := &entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{f.expt: time.Now().Unix()}}
+	quota := repomocks.NewMockQuotaRepo(gomock.NewController(t))
+	quota.EXPECT().CreateOrUpdate(gomock.Any(), f.space, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, update func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
+		next, _, err := update(quotaState)
+		require.NoError(t, err)
+		quotaState = next
+		p.resources.Add(1)
+		return err
+	}).Times(1)
+	p.manager.quotaRepo = quota
 	p.manager.centralGuard = &cancelResourceGuard{fakeGuard: released, check: func(ctx context.Context, observed string) {
 		require.NoError(t, ctx.Err())
 		require.Equal(t, token, observed)
@@ -285,11 +295,41 @@ func TestRunCancelResourcesSurviveParentCancelAfterCommit(t *testing.T) {
 	_, err := p.manager.TerminateCurrentRun(parent, f.expt, f.run, f.space, p.event.Session, nil, entity.NoAggrCalculate())
 	require.True(t, errno.NeedMQRetry(err))
 	require.Len(t, released.releases(), 1)
-	require.Equal(t, int32(1), p.resources.Load())
+	require.Zero(t, p.resources.Load(), "required filter recovery must precede shared quota release")
+	require.Contains(t, quotaState.ExptID2RunTime, f.expt)
 	require.Zero(t, p.notifications.Load())
 	var row model.Experiment
 	require.NoError(t, f.conn.Where("space_id=?", f.space).Take(&row).Error)
 	require.Equal(t, int32(entity.ExptStatus_Terminated), row.Status)
+	ctx := context.Background()
+	key := p.manager.makeExptMutexLockKey(f.expt)
+	admitted, err := p.manager.mutex.Exists(ctx, key)
+	require.NoError(t, err)
+	require.True(t, admitted)
+	cid := fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run)
+	marked, err := p.manager.idem.Exist(ctx, cid)
+	require.NoError(t, err)
+	require.False(t, marked)
+	before := f.snapshot()
+	p.manager.runFinishRepo = port
+	_, err = p.manager.TerminateCurrentRun(ctx, f.expt, f.run, f.space, p.event.Session, nil, entity.NoAggrCalculate())
+	require.NoError(t, err)
+	require.Equal(t, before, f.snapshot(), "recovery preserves the committed stats, logs and end time")
+	require.Equal(t, int32(1), p.resources.Load())
+	require.NotContains(t, quotaState.ExptID2RunTime, f.expt)
+	admitted, err = p.manager.mutex.Exists(ctx, key)
+	require.NoError(t, err)
+	require.False(t, admitted)
+	marked, err = p.manager.idem.Exist(ctx, cid)
+	require.NoError(t, err)
+	require.True(t, marked)
+	releaseCalls, notifications := len(released.releases()), p.notifications.Load()
+	_, err = p.manager.TerminateCurrentRun(ctx, f.expt, f.run, f.space, p.event.Session, nil, entity.NoAggrCalculate())
+	require.NoError(t, err)
+	require.Equal(t, before, f.snapshot())
+	require.Equal(t, int32(1), p.resources.Load())
+	require.Len(t, released.releases(), releaseCalls)
+	require.Equal(t, notifications, p.notifications.Load())
 }
 
 type cancelAfterCommitPort struct {

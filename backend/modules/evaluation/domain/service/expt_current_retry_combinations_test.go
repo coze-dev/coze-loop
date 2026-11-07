@@ -499,7 +499,7 @@ func runCurrentRetryCombination(t *testing.T, parent, requestMode, nextMode enti
 	p.rejectOldSource(t, old, publication)
 	afterOthers, err := f.itemRepo().BatchGet(context.Background(), f.space, f.expt, p.items[1:])
 	require.NoError(t, err)
-	require.Equal(t, otherItems, afterOthers, "A retries must not mutate B/C/D canonical state")
+	require.ElementsMatch(t, otherItems, afterOthers, "A retries must not mutate B/C/D canonical state")
 	t.Logf("COMBINATIONS_REAL_MYSQL parent=%d Q1_mode=%d Q2_mode=%d run_and_chunks_preserved=true old_source_noop=true old_reservation_release=0", parent, requestMode, nextMode)
 }
 
