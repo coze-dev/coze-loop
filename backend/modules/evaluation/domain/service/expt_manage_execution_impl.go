@@ -817,6 +817,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 
 	releaseRunLock := false
 	currentExptFinished := false
+	completionNotificationKey := fmt.Sprintf("finish-cleanup:%d:%d", exptID, gptr.Indirect(exptRunID))
 	if e.runFinishRepo != nil {
 		current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
 		if err != nil {
@@ -859,10 +860,21 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			return errno.NewMQRetryErr("completion run log missing")
 		}
 		if entity.IsExptFinished(entity.ExptStatus(runLog.Status)) {
-			if currentExptFinished {
-				if err := e.releaseCompletedRunLifecycleHolder(ctx, exptID, *exptRunID, spaceID, session); err != nil {
-					return errno.WrapMQRetryErr(err)
-				}
+			if !currentExptFinished {
+				return errno.NewMQRetryErr("run finished before experiment completion")
+			}
+			if e.idem == nil {
+				return errno.NewMQRetryErr("completion notification idempotency service missing")
+			}
+			cleaned, err := e.idem.Exist(ctx, completionNotificationKey)
+			if err != nil {
+				return errno.WrapMQRetryErr(err)
+			}
+			if !cleaned {
+				return errno.NewMQRetryErr("completion cleanup not finished")
+			}
+			if err := e.releaseCompletedRunLifecycleHolder(ctx, exptID, *exptRunID, spaceID, session); err != nil {
+				return errno.WrapMQRetryErr(err)
 			}
 			return nil
 		}
@@ -888,7 +900,6 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			}
 		}
 	}
-	completionNotificationKey := fmt.Sprintf("finish-cleanup:%d:%d", exptID, gptr.Indirect(exptRunID))
 	completionNotified := false
 	if releaseRunLock {
 		if e.idem == nil {

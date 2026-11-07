@@ -326,6 +326,7 @@ func TestCompleteExptDuplicateReleasesOnlyCurrentRunHolder(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newOriginalCompletionSideEffects(t)
 			f.idemExists = true
+			f.notificationSeen = true
 			now := time.Now()
 			f.expt.Status = entity.ExptStatus_Success
 			f.expt.EndAt = &now
@@ -363,6 +364,37 @@ func TestCompleteExptDuplicateReleasesOnlyCurrentRunHolder(t *testing.T) {
 			require.Zero(t, f.lifecycleEvents)
 		})
 	}
+}
+
+func TestCompleteExptRunTerminalBeforeExperimentRemainsRetryable(t *testing.T) {
+	f := newOriginalCompletionSideEffects(t)
+	f.run.Status = int64(entity.ExptStatus_Success)
+	runID := int64(2)
+	err := f.manager.CompleteExpt(context.Background(), 1, &runID, 3, &entity.Session{})
+	require.True(t, errno.NeedMQRetry(err), "a run committed before its experiment must not be acknowledged, got %v", err)
+	require.Zero(t, f.unlocks)
+	require.Zero(t, f.quotaReleases)
+	require.Zero(t, f.aggregateEvents)
+	require.Zero(t, f.lifecycleEvents)
+}
+
+func TestCompleteExptDuplicateWithoutCleanupMarkerDoesNotRelease(t *testing.T) {
+	f := newOriginalCompletionSideEffects(t)
+	f.expt.Status = entity.ExptStatus_Success
+	f.run.Status = int64(entity.ExptStatus_Success)
+	factory, server := finishRealLockerFactory(t)
+	f.manager.mutex = factory()
+	key := "expt_run_mutex_lock:1"
+	require.NoError(t, server.Set(key, "2"))
+	runID := int64(2)
+	err := f.manager.CompleteExpt(context.Background(), 1, &runID, 3, &entity.Session{})
+	require.True(t, errno.NeedMQRetry(err), "unproven cleanup must not be acknowledged, got %v", err)
+	owner, getErr := server.Get(key)
+	require.NoError(t, getErr)
+	require.Equal(t, "2", owner)
+	require.Zero(t, f.quotaReleases)
+	require.Zero(t, f.aggregateEvents)
+	require.Zero(t, f.lifecycleEvents)
 }
 
 func TestCompleteExptFailedOutcomeReleasesResources(t *testing.T) {

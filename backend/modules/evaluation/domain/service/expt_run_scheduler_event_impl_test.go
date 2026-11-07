@@ -593,7 +593,7 @@ func TestExptSchedulerImpl_HandleEventLock(t *testing.T) {
 			wantNil: false,
 		},
 		{
-			name: "Return nil directly if lock is not obtained",
+			name: "Lock busy schedules the next tick without calling next",
 			args: lockArgs{
 				event:   &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2},
 				locked:  false,
@@ -611,6 +611,13 @@ func TestExptSchedulerImpl_HandleEventLock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			unlockCalled := false
 			mutex.EXPECT().LockBackoffWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.args.locked, context.Background(), func() { unlockCalled = true }, tt.args.lockErr)
+			if !tt.args.locked && tt.args.lockErr == nil {
+				mode := entitymocks.NewMockExptSchedulerMode(ctrl)
+				factory := svcmocks.NewMockSchedulerModeFactory(ctrl)
+				factory.EXPECT().NewSchedulerMode(tt.args.event.ExptRunMode).Return(mode, nil)
+				mode.EXPECT().NextTick(gomock.Any(), tt.args.event, true).Return(nil)
+				svc.schedulerModeFactory = factory
+			}
 			if tt.args.locked && tt.args.lockErr == nil {
 				mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil)
 			}
