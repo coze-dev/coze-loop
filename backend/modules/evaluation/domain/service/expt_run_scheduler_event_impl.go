@@ -253,7 +253,7 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 					if e.Idem != nil {
 						started, err := e.Idem.Exist(ctx, fmt.Sprintf("CompleteExpt:exptexec:onend:%d", event.ExptRunID))
 						if err != nil {
-							return err
+							return errno.WrapMQRetryErr(err)
 						}
 						if started {
 							return next(withCompletionResume(ctx), event)
@@ -410,6 +410,16 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 		completeCID := fmt.Sprintf("exptexec:onerr:%d", event.ExptRunID)
 
 		if exptFinished {
+			// A started completion owns the terminal outcome; recovery errors must not rewrite it as Failed.
+			if e.Idem != nil && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+				started, err := e.Idem.Exist(ctx, fmt.Sprintf("CompleteExpt:exptexec:onend:%d", event.ExptRunID))
+				if err != nil {
+					return errno.WrapMQRetryErr(err)
+				}
+				if started {
+					return errno.WrapMQRetryErr(nextErr)
+				}
+			}
 			if err := e.Manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session,
 				entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2),
 				entity.WithStatus(entity.ExptStatus_Failed), entity.WithStatusMessage(userVisibleErrMsg(nextErr))); err != nil {

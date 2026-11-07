@@ -28,6 +28,7 @@ import (
 	exptrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	exptmysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
 
 type terminateAwareManager struct {
@@ -68,6 +69,39 @@ func TestHandleEventErrFallsBackForFinishedExperiment(t *testing.T) {
 			})
 			require.NoError(t, handler(context.Background(), event))
 			require.Equal(t, kind == "processing", manager.terminated)
+		})
+	}
+}
+
+func TestHandleEventErrRetriesStartedCompletion(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		started  bool
+		checkErr error
+	}{
+		{name: "completion already started", started: true},
+		{name: "completion marker read failed", checkErr: errors.New("temporary redis failure")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			manager := svcmocks.NewMockIExptManager(ctrl)
+			exptRepo := repomocks.NewMockIExperimentRepo(ctrl)
+			idem := idemMocks.NewMockIdempotentService(ctrl)
+			exptRepo.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(&entity.Experiment{ID: 7, SpaceID: 9, Status: entity.ExptStatus_Success}, nil)
+			idem.EXPECT().Exist(gomock.Any(), "CompleteExpt:exptexec:onend:8").Return(tc.started, tc.checkErr)
+			completeRunCalls := 0
+			manager.EXPECT().CompleteRun(gomock.Any(), int64(7), int64(8), int64(9), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				DoAndReturn(func(context.Context, int64, int64, int64, *entity.Session, ...entity.CompleteExptOptionFn) error {
+					completeRunCalls++
+					return nil
+				}).AnyTimes()
+			scheduler := &ExptSchedulerImpl{Manager: manager, ExptRepo: exptRepo, Idem: idem}
+			event := &entity.ExptScheduleEvent{ExptID: 7, ExptRunID: 8, SpaceID: 9, ExptType: entity.ExptType_Offline, ExptRunMode: entity.EvaluationModeSubmit, Session: &entity.Session{}}
+			err := scheduler.HandleEventErr(func(context.Context, *entity.ExptScheduleEvent) error {
+				return errors.New("temporary completion failure")
+			})(context.Background(), event)
+			require.True(t, errno.NeedMQRetry(err), "completion recovery must retry instead of failing the run, got %v", err)
+			require.Zero(t, completeRunCalls, "completion recovery must not rewrite the run as Failed")
 		})
 	}
 }
@@ -115,13 +149,14 @@ func TestHandleEventErrClosesPendingRetryOnFinishedExperiment(t *testing.T) {
 	manager.turnResultRepo.(*repomocks.MockIExptTurnResultRepo).EXPECT().
 		ListTurnResult(gomock.Any(), int64(9), int64(7), nil, gomock.Any(), false).
 		Return([]*entity.ExptTurnResult{}, int64(0), nil).AnyTimes()
+	manager.idem.(*idemMocks.MockIdempotentService).EXPECT().Exist(gomock.Any(), "CompleteExpt:exptexec:onend:8").Return(false, nil)
 	manager.idem.(*idemMocks.MockIdempotentService).EXPECT().Exist(gomock.Any(), "CompleteRun:exptexec:onerr:8").Return(false, nil).AnyTimes()
 	manager.idem.(*idemMocks.MockIdempotentService).EXPECT().Set(gomock.Any(), "CompleteRun:exptexec:onerr:8", 3*time.Minute).Return(nil).AnyTimes()
 	manager.idgenerator.(*idgenMocks.MockIIDGenerator).EXPECT().GenID(gomock.Any()).Return(int64(9), nil).AnyTimes()
 	manager.mtr.(*metricsMocks.MockExptMetric).EXPECT().EmitExptExecRun(int64(9), int64(entity.EvaluationModeRetryItems)).AnyTimes()
 
 	cause := errors.New("evaluation set item 999 does not exist")
-	scheduler := &ExptSchedulerImpl{Manager: manager, ExptRepo: manager.exptRepo}
+	scheduler := &ExptSchedulerImpl{Manager: manager, ExptRepo: manager.exptRepo, Idem: manager.idem}
 	event := &entity.ExptScheduleEvent{
 		ExptID: 7, ExptRunID: 8, SpaceID: 9,
 		ExptType: entity.ExptType_Offline, ExptRunMode: entity.EvaluationModeRetryAll,
