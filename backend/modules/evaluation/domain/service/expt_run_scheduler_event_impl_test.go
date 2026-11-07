@@ -702,6 +702,7 @@ func TestExptSchedulerImpl_HandleEventCheck(t *testing.T) {
 			},
 			preparemock: func() {
 				manager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Success)}, nil).Times(1)
+				manager.EXPECT().GetDetail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{ExptType: entity.ExptType_Online}, nil).Times(1)
 			},
 			wantErr: false,
 		},
@@ -719,6 +720,7 @@ func TestExptSchedulerImpl_HandleEventCheck(t *testing.T) {
 			},
 			preparemock: func() {
 				manager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Terminating)}, nil).Times(1)
+				manager.EXPECT().GetDetail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{ExptType: entity.ExptType_Online}, nil).Times(1)
 			},
 			wantErr: false,
 		},
@@ -736,6 +738,7 @@ func TestExptSchedulerImpl_HandleEventCheck(t *testing.T) {
 			},
 			preparemock: func() {
 				manager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Draining)}, nil).Times(1)
+				manager.EXPECT().GetDetail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{ExptType: entity.ExptType_Online}, nil).Times(1)
 			},
 			wantErr: false,
 		},
