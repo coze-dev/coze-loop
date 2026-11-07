@@ -344,7 +344,8 @@ func TestRunFinishNumericSubmitOwnerDoesNotAllowRetryItemsJoin(t *testing.T) {
 	config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{})
 	ids.EXPECT().GenID(gomock.Any()).Return(int64(99), nil)
 	locker.EXPECT().BackoffLockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "99", gomock.Any(), time.Second).Return(false, "2", nil)
-	locker.EXPECT().Exists(gomock.Any(), "expt_completing_mutex_lock:1:2").Return(false, nil).AnyTimes()
+	locker.EXPECT().Lock(gomock.Any(), "expt_completing_mutex_lock:1:2", 3*time.Minute).Return(true, nil)
+	locker.EXPECT().Unlock("expt_completing_mutex_lock:1:2").Return(true, nil)
 	runs := repomocks.NewMockIExptRunLogRepo(ctrl)
 	runs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{SpaceID: 3, ExptID: 1, ExptRunID: 2, Mode: int32(entity.EvaluationModeSubmit), Status: int64(entity.ExptStatus_Processing)}, nil).AnyTimes()
 	manager := &ExptMangerImpl{runFinishRepo: &finishRepoProbe{}, mutex: locker, configer: config, idgenerator: ids, runLogRepo: runs}

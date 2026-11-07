@@ -646,11 +646,24 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 	if deferRunLockRelease && !entity.IsExptFinished(previousRunStatus) {
 		fields["status"] = int64(entity.ExptStatus_Processing)
 	}
-	if err := e.runLogRepo.Update(ctx, exptID, exptRunID, spaceID, fields); err != nil {
+	applied := true
+	var updateErr error
+	updater, hasLatestRunUpdater := e.runLogRepo.(repo.IExptRunLogLatestRunUpdater)
+	if hasLatestRunUpdater && (deferRunLockRelease || currentRunCleanup) {
+		applied, updateErr = updater.UpdateIfLatestRun(ctx, exptID, exptRunID, spaceID, fields)
+	} else {
+		updateErr = e.runLogRepo.Update(ctx, exptID, exptRunID, spaceID, fields)
+	}
+	if updateErr != nil {
 		if deferRunLockRelease {
-			return errno.WrapMQRetryErr(err)
+			return errno.WrapMQRetryErr(updateErr)
 		}
-		return err
+		return updateErr
+	}
+	if !applied {
+		// A replacement run took over after the point ownership read; its rows
+		// must not be persisted into this run, and its holder must not be released.
+		return nil
 	}
 	if currentRunCleanup {
 		// The lifecycle lease blocks a replacement run until this run's quota is released.
@@ -1253,8 +1266,20 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		if err := e.calculateRunLogStats(ctx, exptID, *exptRunID, runLog, spaceID, session); err != nil {
 			return errno.WrapMQRetryErr(err)
 		}
-		if err := e.runLogRepo.Update(ctx, exptID, *exptRunID, spaceID, runLogMutableFields(runLog)); err != nil {
-			return errno.WrapMQRetryErr(err)
+		applied := true
+		var updateErr error
+		if updater, ok := e.runLogRepo.(repo.IExptRunLogLatestRunUpdater); ok {
+			applied, updateErr = updater.UpdateIfLatestRun(ctx, exptID, *exptRunID, spaceID, runLogMutableFields(runLog))
+		} else {
+			updateErr = e.runLogRepo.Update(ctx, exptID, *exptRunID, spaceID, runLogMutableFields(runLog))
+		}
+		if updateErr != nil {
+			return errno.WrapMQRetryErr(updateErr)
+		}
+		if !applied {
+			// A replacement run took over after the last ownership read; stop
+			// without writing its stats or releasing its lifecycle holder.
+			return nil
 		}
 		if err := e.releaseCompletedRunLifecycleHolder(ctx, exptID, *exptRunID, spaceID, session); err != nil {
 			return errno.WrapMQRetryErr(err)
@@ -2306,8 +2331,24 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 			logs.CtxInfo(ctx, "[ExptEval][RunLock] lock occupied [expt_id=%v holder=%s]", exptID, existedRunID)
 			return 0, false, errorx.NewByCode(errno.ExperimentRunningExistedCode)
 		}
+		// Hold the existing completing mutex across the run validation and the
+		// append, so a completion tick cannot snapshot item_ids between them.
+		completingLocked, lockErr := e.mutex.Lock(ctx, e.makeExptCompletingLockKey(exptID, runID), time.Minute*3)
+		if lockErr != nil {
+			return 0, false, lockErr
+		}
+		if !completingLocked {
+			return 0, false, errorx.NewByCode(errno.ExperimentIsCompletingCode)
+		}
+		// Defers see the assigned error return values; keep the joined run ID for unlock.
+		defer func(joinedRunID int64) {
+			_, _ = e.mutex.Unlock(e.makeExptCompletingLockKey(exptID, joinedRunID))
+		}(runID)
+
 		if e.runFinishRepo != nil {
-			existing, readErr := e.runLogRepo.Get(ctx, exptID, runID)
+			// Re-read from master after acquiring the mutex: a completion that
+			// finished before acquisition must reject this stale append.
+			existing, readErr := e.runLogRepo.Get(contexts.WithCtxWriteDB(ctx), exptID, runID)
 			if readErr != nil {
 				return 0, false, readErr
 			}
@@ -2316,14 +2357,6 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 			}
 		}
 		logs.CtxDebug(ctx, "[ExptEval][RunLock] joining existing run [expt_id=%v run_id=%v]", exptID, runID)
-
-		completing, err := e.ExistCompletingRunLock(ctx, exptID, runID, spaceID)
-		if err != nil {
-			return 0, false, err
-		}
-		if completing {
-			return 0, false, errorx.NewByCode(errno.ExperimentIsCompletingCode)
-		}
 
 		if err := e.runLogRepo.AppendRunItemIDs(ctx, exptID, runID, spaceID, itemIDs); err != nil {
 			return 0, false, err

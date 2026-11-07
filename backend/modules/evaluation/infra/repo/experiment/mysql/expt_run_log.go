@@ -31,6 +31,12 @@ type IExptRunLogDAO interface {
 	UpdateRunStats(ctx context.Context, exptID, exptRunID, spaceID int64, fields map[string]any, stats *model.ExptStats) error
 }
 
+// IExptRunLogLatestRunDAO is the narrow CAS write used by completion paths.
+// Kept separate from IExptRunLogDAO so existing implementations and mocks stay valid.
+type IExptRunLogLatestRunDAO interface {
+	UpdateIfLatestRun(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any, opts ...db.Option) (bool, error)
+}
+
 func (dao *ExptRunLogDAOImpl) UpdateRunStats(ctx context.Context, exptID, exptRunID, spaceID int64, fields map[string]any, stats *model.ExptStats) error {
 	return dao.provider.Transaction(ctx, func(tx *gorm.DB) error {
 		opts := []db.Option{db.WithTransaction(tx), db.WithMaster(), db.WithSelectForUpdate()}
@@ -142,4 +148,25 @@ func (dao *ExptRunLogDAOImpl) Update(ctx context.Context, exptID, exptRunID, spa
 	}
 	logs.CtxInfo(ctx, "update expt_run_log success, expt_id: %v, expt_run_id: %v, ufields: %v", exptID, exptRunID, ufields)
 	return nil
+}
+
+func (dao *ExptRunLogDAOImpl) UpdateIfLatestRun(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any, opts ...db.Option) (bool, error) {
+	owned := func(q *gorm.DB) *gorm.DB {
+		return q.Where("space_id = ? AND expt_id = ? AND expt_run_id = ?", spaceID, exptID, exptRunID).
+			Where("EXISTS (SELECT 1 FROM experiment WHERE id = ? AND space_id = ? AND latest_run_id = ?)", exptID, spaceID, exptRunID)
+	}
+	result := owned(dao.provider.NewSession(ctx, opts...).Model(&model.ExptRunLog{})).UpdateColumns(ufields)
+	if result.Error != nil {
+		return false, errorx.Wrapf(result.Error, "update expt_run_log if latest run fail, expt_id: %v, expt_run_id: %v, ufields: %v", exptID, exptRunID, ufields)
+	}
+	if result.RowsAffected > 0 {
+		return true, nil
+	}
+	// MySQL reports zero affected rows for an idempotent same-values rewrite.
+	// Distinguish that from a replacement run owning the experiment.
+	var count int64
+	if err := owned(dao.provider.NewSession(ctx, opts...).Clauses(dbresolver.Write).Model(&model.ExptRunLog{})).Count(&count).Error; err != nil {
+		return false, errorx.Wrapf(err, "verify expt_run_log latest run fail, expt_id: %v, expt_run_id: %v", exptID, exptRunID)
+	}
+	return count == 1, nil
 }

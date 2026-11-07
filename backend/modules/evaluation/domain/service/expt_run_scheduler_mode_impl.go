@@ -2388,7 +2388,7 @@ func (e *ExptRetryItemsExec) ExptEnd(ctx context.Context, event *entity.ExptSche
 
 	logs.CtxInfo(ctx, "[ExptEval] expt daemon finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 
-	got, err := e.exptRunLogRepo.Get(ctx, event.ExptID, event.ExptRunID)
+	got, err := e.exptRunLogRepo.Get(contexts.WithCtxWriteDB(ctx), event.ExptID, event.ExptRunID)
 	if err != nil {
 		return false, err
 	}

@@ -88,3 +88,16 @@ func (e *ExptRunLogImpl) Update(ctx context.Context, exptID, exptRunID, spaceID 
 	}
 	return nil
 }
+
+func (e *ExptRunLogImpl) UpdateIfLatestRun(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any) (bool, error) {
+	ufields["updated_at"] = time.Now()
+	updater, ok := e.exptRunLogDAO.(mysql.IExptRunLogLatestRunDAO)
+	if !ok {
+		// Legacy/mock DAO without the CAS capability: keep the unconditional write.
+		if err := e.exptRunLogDAO.Update(ctx, exptID, exptRunID, spaceID, ufields); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	return updater.UpdateIfLatestRun(ctx, exptID, exptRunID, spaceID, ufields)
+}
