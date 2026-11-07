@@ -460,8 +460,7 @@ func TestRunCancelR2LifecycleOwnerPreventsAnyCleanup(t *testing.T) {
 		{"retry_items_admission_before_create", entity.EvaluationModeSubmit, entity.EvaluationModeRetryItems, true},
 		{"ordinary_admission_before_create", entity.EvaluationModeRetryItems, entity.EvaluationModeRetryAll, true},
 		{"persisted_retry_items", entity.EvaluationModeSubmit, entity.EvaluationModeRetryItems, false},
-		// Equal ordinary holders are covered only after Latest=R2. Their
-		// pre-Create ABA window remains an accepted legacy protocol limit.
+		// Ordinary and numeric replacements retain the same prior-tick protection.
 		{"persisted_ordinary", entity.EvaluationModeSubmit, entity.EvaluationModeRetryAll, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -620,6 +619,41 @@ func runReplacementAdmissionFixture(t *testing.T, r1Mode, r2Mode entity.ExptRunM
 	require.True(t, released)
 	guard.releaseErr = nil
 
+	if pendingSetup && replayBeforeCreate {
+		// CompleteRun's Pending setup compensation must actually execute before
+		// R2 owns the previous tick. Once R2 enters Create, replay must retry.
+		before := f.snapshot()
+		callsBefore := p.resources.Load()
+		releasesBefore := guard.releases()
+		terminalBefore := append([]retryQuotaRelease(nil), guard.terminal.releases...)
+		oldRun, readErr := p.manager.runLogRepo.Get(ctx, f.expt, f.run)
+		require.NoError(t, readErr)
+		require.Equal(t, int64(entity.ExptStatus_Pending), oldRun.Status)
+		finished, readErr := p.manager.exptRepo.GetByID(ctx, f.expt, f.space)
+		require.NoError(t, readErr)
+		require.Equal(t, entity.ExptStatus_Success, finished.Status)
+		require.Equal(t, original.EndAt, finished.EndAt)
+		t.Logf("R15_PENDING_COMPENSATION_BEFORE run_status=%d experiment_status=%d end_at=%v", oldRun.Status, finished.Status, finished.EndAt)
+		require.NoError(t, complete(originalCID))
+		require.Greater(t, p.resources.Load(), callsBefore, "actual Pending compensation releases R1 space quota")
+		require.Empty(t, quotaState.ExptID2RunTime)
+		after := f.snapshot()
+		oldRun, readErr = p.manager.runLogRepo.Get(ctx, f.expt, f.run)
+		require.NoError(t, readErr)
+		require.Equal(t, int64(entity.ExptStatus_Failed), oldRun.Status)
+		for table, rows := range before {
+			if table != "expt_run_log" {
+				require.Equal(t, rows, after[table], "Pending compensation preserves experiment/source table %s", table)
+			}
+		}
+		unchangedSource, readErr := termination.GetTerminationItemSource(ctx, f.space, f.expt, f.run, f.item)
+		require.NoError(t, readErr)
+		require.Equal(t, source, unchangedSource)
+		require.Equal(t, releasesBefore, guard.releases())
+		require.Equal(t, terminalBefore, guard.terminal.releases)
+		t.Logf("R15_PENDING_COMPENSATION_AFTER run_status=%d experiment_status=%d END_AT_AND_SOURCE_UNCHANGED", oldRun.Status, original.Status)
+	}
+
 	r2 := f.run + 100
 	ids := idmocks.NewMockIIDGenerator(ctrl)
 	ids.EXPECT().GenID(gomock.Any()).Return(r2, nil).Times(1)
@@ -701,39 +735,20 @@ func runReplacementAdmissionFixture(t *testing.T, r1Mode, r2Mode entity.ExptRunM
 	if replayBeforeCreate {
 		before := f.snapshot()
 		callsBefore := p.resources.Load()
-		releasesBeforeCompensation := guard.releases()
-		terminalBeforeCompensation := append([]retryQuotaRelease(nil), guard.terminal.releases...)
+		releasesBefore := guard.releases()
+		terminalBefore := append([]retryQuotaRelease(nil), guard.terminal.releases...)
+		replayErr := complete(originalCID)
+		require.True(t, errno.NeedMQRetry(replayErr), "R2 owns the actual previous tick before Create; old cleanup must retry")
+		require.Equal(t, callsBefore, p.resources.Load(), "busy old completion cannot reach shared quota callbacks")
+		require.Equal(t, before, f.snapshot(), "busy replay preserves both run/source SQL")
+		require.Equal(t, releasesBefore, guard.releases())
+		require.Equal(t, terminalBefore, guard.terminal.releases)
 		if pendingSetup {
 			oldRun, readErr := p.manager.runLogRepo.Get(ctx, f.expt, f.run)
 			require.NoError(t, readErr)
-			require.Equal(t, int64(entity.ExptStatus_Pending), oldRun.Status, "R15 must enter Pending setup compensation")
-			finished, readErr := p.manager.exptRepo.GetByID(ctx, f.expt, f.space)
-			require.NoError(t, readErr)
-			require.Equal(t, entity.ExptStatus_Success, finished.Status)
-			require.Equal(t, original.EndAt, finished.EndAt)
-			t.Logf("R15_PENDING_COMPENSATION_BEFORE run_status=%d experiment_status=%d end_at=%v", oldRun.Status, finished.Status, finished.EndAt)
+			require.Equal(t, int64(entity.ExptStatus_Failed), oldRun.Status, "R15 already exercised Pending compensation before R2 admission")
 		}
-		require.NoError(t, complete(originalCID), "old cleanup may finish with a different admission owner")
-		require.Greater(t, p.resources.Load(), callsBefore, "valid R1 cleanup reaches the quota callback")
-		require.Empty(t, quotaState.ExptID2RunTime)
-		after := f.snapshot()
-		if pendingSetup {
-			oldRun, readErr := p.manager.runLogRepo.Get(ctx, f.expt, f.run)
-			require.NoError(t, readErr)
-			require.Equal(t, int64(entity.ExptStatus_Failed), oldRun.Status, "CompleteRun -> cleanupCurrentUnscheduledRunWithQuota closes only Pending R1")
-			for table, rows := range before {
-				if table != "expt_run_log" {
-					require.Equal(t, rows, after[table], "Pending compensation must preserve experiment and original source table %s", table)
-				}
-			}
-			require.Equal(t, before["experiment"], after["experiment"], "Success and EndAt must not be rewritten")
-			require.Equal(t, releasesBeforeCompensation, guard.releases(), "Pending setup compensation owns only the old space slot")
-			require.Equal(t, terminalBeforeCompensation, guard.terminal.releases)
-			t.Logf("R15_PENDING_COMPENSATION_AFTER run_status=%d experiment_status=%d END_AT_AND_SOURCE_UNCHANGED", oldRun.Status, original.Status)
-		} else {
-			require.Equal(t, before, after, "R1 terminal SQL and source remain consistent")
-		}
-		assertAdmission() // evaluation != numeric R2, or numeric R1 != evaluation.
+		assertAdmission()
 		assertOriginalReleases()
 	}
 

@@ -35,9 +35,7 @@ func TestLifecycleProtocolLogRunUsesInjectedEvaluation(t *testing.T) {
 			runs.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 			expts := repomocks.NewMockIExperimentRepo(ctrl)
 			expts.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
-			if isRetryRunMode(mode) {
-				expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3}, nil)
-			}
+			expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3}, nil).AnyTimes()
 			metric := metricsmocks.NewMockExptMetric(ctrl)
 			metric.EXPECT().EmitExptExecRun(int64(3), int64(mode))
 			mgr := &ExptMangerImpl{runFinishRepo: &finishRepoProbe{}, mutex: factory().WithHolder("evaluation"), configer: cfg, exptRepo: expts, runLogRepo: runs, mtr: metric}
@@ -64,7 +62,7 @@ func TestLifecycleProtocolEvaluationInitializationFailureReleases(t *testing.T) 
 	})
 	runs.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 	expts := repomocks.NewMockIExperimentRepo(ctrl)
-	expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3}, nil)
+	expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3}, nil).AnyTimes()
 	expts.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 	metric := metricsmocks.NewMockExptMetric(ctrl)
 	metric.EXPECT().EmitExptExecRun(int64(3), int64(entity.EvaluationModeSubmit)).Times(2)
@@ -171,7 +169,9 @@ func TestLifecycleProtocolRetryItemsNumericJoinPreserved(t *testing.T) {
 	runs := repomocks.NewMockIExptRunLogRepo(ctrl)
 	runs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{SpaceID: 3, ExptID: 1, ExptRunID: 2, Mode: int32(entity.EvaluationModeRetryItems), Status: int64(entity.ExptStatus_Processing)}, nil)
 	runs.EXPECT().AppendRunItemIDs(gomock.Any(), int64(1), int64(2), int64(3), []int64{11}).Return(nil)
-	mgr := &ExptMangerImpl{runFinishRepo: &finishRepoProbe{}, mutex: factory().WithHolder("evaluation"), configer: cfg, runLogRepo: runs, idgenerator: ids}
+	expts := repomocks.NewMockIExperimentRepo(ctrl)
+	expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3}, nil).AnyTimes()
+	mgr := &ExptMangerImpl{runFinishRepo: &finishRepoProbe{}, mutex: factory().WithHolder("evaluation"), configer: cfg, runLogRepo: runs, idgenerator: ids, exptRepo: expts}
 	run, joined, err := mgr.LogRetryItemsRun(context.Background(), 1, entity.EvaluationModeRetryItems, 3, []int64{11}, &entity.Session{})
 	require.NoError(t, err)
 	require.True(t, joined)

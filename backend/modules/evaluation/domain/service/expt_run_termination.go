@@ -383,15 +383,34 @@ func (e *ExptMangerImpl) cleanupCurrentUnscheduledRunWithQuota(ctx context.Conte
 	primaryReadFailed := false
 	ordinaryReleaseAllowed := false
 	releaseAdmission := !quotaReserved
+	cleanupCtx := context.WithoutCancel(ctx)
+	if _, held := ctx.Value(completeTickKey{}).(completeTickIdentity); held {
+		// New-run admission holds the previous run tick through compensation.
+		// Its actual lease loss must stop fixed admission/shared quota cleanup.
+		if _, owned := ctx.Value(completeTickOwnerKey{}).(context.Context); !owned {
+			return errno.NewMQRetryErr("admission cleanup tick owner missing")
+		}
+		linked, stop := bindCompleteTickOwner(ctx)
+		defer stop()
+		cleanupCtx = linked
+	}
 	defer func() {
 		if !releaseAdmission {
 			return
 		}
-		releaseCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
+		releaseCtx, cancel := context.WithTimeout(cleanupCtx, 2*time.Second)
 		defer cancel()
+		if releaseCtx.Err() != nil {
+			err = errors.Join(err, errno.WrapMQRetryErr(releaseCtx.Err()))
+			return
+		}
 		var releaseErr error
 		if capturedOrdinary {
-			_, releaseErr = e.mutex.Unlock(e.makeExptMutexLockKey(expt))
+			if _, held := ctx.Value(completeTickKey{}).(completeTickIdentity); held {
+				_, releaseErr = e.mutex.UnlockWithContext(releaseCtx, e.makeExptMutexLockKey(expt))
+			} else {
+				_, releaseErr = e.mutex.Unlock(e.makeExptMutexLockKey(expt))
+			}
 		} else if capturedNumeric {
 			_, releaseErr = e.mutex.UnlockWithValue(releaseCtx, e.makeExptMutexLockKey(expt), strconv.FormatInt(run, 10))
 		} else if ordinaryReleaseAllowed {
@@ -399,14 +418,18 @@ func (e *ExptMangerImpl) cleanupCurrentUnscheduledRunWithQuota(ctx context.Conte
 			if readErr == nil && logged != nil && entity.ExptRunMode(logged.Mode) == entity.EvaluationModeRetryItems {
 				_, releaseErr = e.mutex.UnlockWithValue(releaseCtx, e.makeExptMutexLockKey(expt), strconv.FormatInt(run, 10))
 			} else if readErr == nil || primaryReadFailed {
-				_, releaseErr = e.mutex.Unlock(e.makeExptMutexLockKey(expt))
+				if _, held := ctx.Value(completeTickKey{}).(completeTickIdentity); held {
+					_, releaseErr = e.mutex.UnlockWithContext(releaseCtx, e.makeExptMutexLockKey(expt))
+				} else {
+					_, releaseErr = e.mutex.Unlock(e.makeExptMutexLockKey(expt))
+				}
 			} else {
 				releaseErr = readErr
 			}
 		}
 		err = errors.Join(err, releaseErr)
 	}()
-	stateCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	stateCtx, cancel := context.WithTimeout(cleanupCtx, exptRunLogPersistTimeout)
 	defer cancel()
 	terminate := false
 	err = e.withTerminationRunLock(stateCtx, expt, run, func(ctx context.Context) error {
@@ -531,8 +554,14 @@ func (e *ExptMangerImpl) releaseCurrentSupersededRunQuota(ctx context.Context, e
 	}
 	// The new lifecycle holder excludes old run cleanup until migration completes.
 	for _, source := range sources {
-		releaseCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+		if err := ctx.Err(); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		releaseCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
 		err := e.centralGuard.Release(releaseCtx, current.SchedulerScope, run, source.Current.ItemID, source.Current.RequestID, "superseded run residual reservation")
+		if err == nil {
+			err = releaseCtx.Err()
+		}
 		cancel()
 		if err != nil {
 			return errno.WrapMQRetryErr(err)

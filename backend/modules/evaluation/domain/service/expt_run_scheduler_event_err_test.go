@@ -728,8 +728,7 @@ func TestCompleteRunDelayedCleanupPreservesReplacementRun(t *testing.T) {
 		{"retry_items_admission_before_create", entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems, true},
 		{"ordinary_admission_before_create", entity.EvaluationModeRetryItems, entity.EvaluationModeRetryAll, true},
 		{"persisted_retry_items", entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems, false},
-		// Equal ordinary holders are covered only after Latest=R2. Their
-		// pre-Create ABA window remains an accepted legacy protocol limit.
+		// Ordinary and numeric replacements retain the same prior-tick protection.
 		{"persisted_ordinary", entity.EvaluationModeRetryAll, entity.EvaluationModeRetryAll, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

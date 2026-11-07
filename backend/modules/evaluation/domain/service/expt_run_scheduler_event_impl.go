@@ -231,7 +231,14 @@ func (e *ExptSchedulerImpl) makeExptRunExecLockKey(exptID, exptRunID int64) stri
 func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEndPoint {
 	return func(ctx context.Context, event *entity.ExptScheduleEvent) error {
 		key := e.makeExptRunExecLockKey(event.ExptID, event.ExptRunID)
-		locked, ctx, cancel, err := e.Mutex.LockBackoffWithRenew(ctx, key, time.Second*5, time.Second*60*5)
+		mutex := e.Mutex
+		if event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && e.itemLocker != nil {
+			// Each short tick uses a fresh existing locker owner. The shared
+			// lifecycle locker retains evaluation; late Unlock cannot erase the
+			// next tick's owner after TTL/cancellation hands off this key.
+			mutex = e.itemLocker()
+		}
+		locked, ctx, cancel, err := mutex.LockBackoffWithRenew(ctx, key, time.Second*5, time.Second*60*5)
 		if err != nil {
 			return err
 		}
@@ -245,12 +252,12 @@ func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEnd
 
 		defer func() {
 			cancel()
-			if _, err := e.Mutex.Unlock(key); err != nil {
+			if _, err := mutex.Unlock(key); err != nil {
 				logs.CtxWarn(ctx, "failed to unlock key: %v, err: %v", key, err)
 			}
 		}()
 
-		return next(withHeldCompleteTick(ctx, event.ExptID, event.ExptRunID), event)
+		return next(withHeldCompleteTick(ctx, event.ExptID, event.ExptRunID, ctx), event)
 	}
 }
 

@@ -504,6 +504,7 @@ func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID 
 // result between the two standard Complete methods. It is not another run state.
 type (
 	completeTickKey           struct{}
+	completeTickOwnerKey      struct{}
 	completeTickIdentity      struct{ expt, run int64 }
 	completeCalibratedKey     struct{}
 	completeDataKey           struct{}
@@ -516,13 +517,45 @@ type (
 	}
 )
 
-func withHeldCompleteTick(ctx context.Context, expt, run int64) context.Context {
+func withHeldCompleteTick(ctx context.Context, expt, run int64, owners ...context.Context) context.Context {
+	owner := ctx
+	if len(owners) > 0 {
+		owner = owners[0]
+	} else if held, ok := ctx.Value(completeTickKey{}).(completeTickIdentity); ok && held == (completeTickIdentity{expt, run}) {
+		if original, ok := ctx.Value(completeTickOwnerKey{}).(context.Context); ok {
+			owner = original
+		}
+	}
+	ctx = context.WithValue(ctx, completeTickOwnerKey{}, owner)
 	return context.WithValue(ctx, completeTickKey{}, completeTickIdentity{expt, run})
+}
+
+// WithoutCancel keeps values, including the original lease context. A borrower
+// must remain cancelled when that owner stops, without cancelling the owner.
+func bindCompleteTickOwner(ctx context.Context) (context.Context, func()) {
+	owner, ok := ctx.Value(completeTickOwnerKey{}).(context.Context)
+	if !ok || owner.Done() == ctx.Done() {
+		return ctx, func() {}
+	}
+	linked, stop := context.WithCancel(ctx)
+	unregister := context.AfterFunc(owner, stop)
+	if owner.Err() != nil {
+		stop()
+	}
+	return linked, func() { unregister(); stop() }
 }
 
 func (e *ExptMangerImpl) completeTick(ctx context.Context, expt, run int64) (context.Context, func(), error) {
 	if identity, ok := ctx.Value(completeTickKey{}).(completeTickIdentity); ok && identity == (completeTickIdentity{expt, run}) {
-		return ctx, func() {}, ctx.Err()
+		owner, ok := ctx.Value(completeTickOwnerKey{}).(context.Context)
+		if !ok {
+			return nil, nil, errno.NewMQRetryErr("held completion tick owner missing")
+		}
+		if err := owner.Err(); err != nil {
+			return nil, nil, errno.WrapMQRetryErr(err)
+		}
+		linked, stop := bindCompleteTickOwner(ctx)
+		return linked, stop, linked.Err()
 	}
 	if e.manualRetryLocker == nil {
 		return nil, nil, errno.NewMQRetryErr("completion tick locker missing")
@@ -543,7 +576,7 @@ func (e *ExptMangerImpl) completeTick(ctx context.Context, expt, run int64) (con
 		cancel()
 		return nil, nil, errno.WrapMQRetryErr(err)
 	}
-	return withHeldCompleteTick(lockCtx, expt, run), cancel, nil
+	return withHeldCompleteTick(lockCtx, expt, run, lockCtx), cancel, nil
 }
 
 func captureCompleteResult(ctx context.Context, result *entity.ExptRunFinishResult) {
@@ -660,8 +693,11 @@ func (e *ExptMangerImpl) releaseCompleteAdmission(ctx context.Context, expt, run
 	if e.mutex == nil {
 		return errno.NewMQRetryErr("completion admission locker missing")
 	}
-	releaseCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
+	releaseCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
+	if err := releaseCtx.Err(); err != nil {
+		return err
+	}
 	if e.runLogRepo == nil {
 		return errno.NewMQRetryErr("completion run repository missing")
 	}
@@ -672,10 +708,13 @@ func (e *ExptMangerImpl) releaseCompleteAdmission(ctx context.Context, expt, run
 	if logged == nil {
 		return errno.NewMQRetryErr("completion run missing")
 	}
+	if err := releaseCtx.Err(); err != nil {
+		return err
+	}
 	if entity.ExptRunMode(logged.Mode) == entity.EvaluationModeRetryItems {
 		_, err = e.mutex.UnlockWithValue(releaseCtx, e.makeExptMutexLockKey(expt), strconv.FormatInt(run, 10))
 	} else {
-		_, err = e.mutex.Unlock(e.makeExptMutexLockKey(expt))
+		_, err = e.mutex.UnlockWithContext(releaseCtx, e.makeExptMutexLockKey(expt))
 	}
 	return err
 }
@@ -907,6 +946,11 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		fn(opt)
 	}
 	data, _ := ctx.Value(completeDataKey{}).(*completeData)
+	if data != nil {
+		linked, stop := bindCompleteTickOwner(ctx)
+		defer stop()
+		ctx = linked
+	}
 	if data != nil && (data.result == nil || data.result.Experiment == nil || data.result.Experiment.ID != exptID || exptRunID == nil || data.result.Experiment.LatestRunID != *exptRunID) {
 		return errno.NewMQRetryErr("complete frozen binding missing")
 	}
@@ -1100,7 +1144,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	resourceCtx := ctx
 	stopResources := func() {}
 	if data != nil {
-		resourceCtx, stopResources = context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+		resourceCtx, stopResources = context.WithTimeout(ctx, 8*time.Second)
 	}
 	defer stopResources()
 	if data != nil && len(data.sources) > 0 {
@@ -1192,11 +1236,39 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		exptDo.EndAt = got.EndAt
 	}
 
+	sharedCtx := ctx
+	if data != nil && ctx.Err() != nil {
+		// Required filters above must finish before shared resources. A cancelled
+		// lease cannot authorize exptID-only quota or fixed-value admission IO.
+		// Reacquire the same existing run tick, then check current SQL again.
+		retryCtx, stopRetry := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+		defer stopRetry()
+		retryCtx = context.WithValue(retryCtx, completeTickKey{}, completeTickIdentity{})
+		var stopTick func()
+		if err := backoff.RetryWithElapsedTime(retryCtx, time.Second, func() error {
+			var err error
+			sharedCtx, stopTick, err = e.completeTick(retryCtx, exptID, *exptRunID)
+			return err
+		}); err != nil {
+			return errors.Join(errno.WrapMQRetryErr(ctx.Err()), err)
+		}
+		defer stopTick()
+		latest, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(sharedCtx), exptID, spaceID)
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if latest == nil || latest.LatestRunID != *exptRunID || !entity.IsExptFinished(latest.Status) {
+			return errno.WrapMQRetryErr(ctx.Err())
+		}
+	}
+	if data != nil && sharedCtx.Err() != nil {
+		return errno.WrapMQRetryErr(sharedCtx.Err())
+	}
 	if e.quotaRepo != nil {
 		quotaCtx := ctx
 		stopQuota := func() {}
 		if data != nil {
-			quotaCtx, stopQuota = context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+			quotaCtx, stopQuota = context.WithTimeout(sharedCtx, 8*time.Second)
 		}
 		defer stopQuota()
 		if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(quotaCtx, exptID, spaceID, session); err != nil {
@@ -1205,13 +1277,13 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	}
 	if err := ctx.Err(); err != nil {
 		if data != nil {
-			if releaseErr := e.releaseCompleteAdmission(resourceCtx, exptID, *exptRunID, spaceID); releaseErr != nil {
+			if releaseErr := e.releaseCompleteAdmission(sharedCtx, exptID, *exptRunID, spaceID); releaseErr != nil {
 				return errors.Join(errno.WrapMQRetryErr(err), releaseErr)
 			}
 			// Resource cleanup completed despite caller cancellation. Record the
 			// successful release so its error replay cannot release admission twice.
 			if e.idem != nil && opt.CID != "" {
-				markCtx, stopMark := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+				markCtx, stopMark := context.WithTimeout(sharedCtx, 8*time.Second)
 				defer stopMark()
 				if markErr := e.idem.Set(markCtx, idemKeyPrefix+opt.CID, 3*time.Minute); markErr != nil {
 					logs.CtxError(markCtx, "CompleteExpt SetNX fail, expt_id: %v, err: %v", exptID, markErr)
@@ -1270,7 +1342,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	logs.CtxInfo(ctx, "[ExptEval] CompleteExpt success, expt_id: %v, status: %v, stats: %v", exptID, status, json.Jsonify(stats))
 
 	if data != nil {
-		if err := e.releaseCompleteAdmission(resourceCtx, exptID, *exptRunID, spaceID); err != nil {
+		if err := e.releaseCompleteAdmission(sharedCtx, exptID, *exptRunID, spaceID); err != nil {
 			return err
 		}
 	}
@@ -1280,7 +1352,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		markCtx := resourceCtx
 		stopMark := func() {}
 		if data != nil {
-			markCtx, stopMark = context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+			markCtx, stopMark = context.WithTimeout(sharedCtx, 8*time.Second)
 		}
 		defer stopMark()
 		if err := e.idem.Set(markCtx, idemKeyPrefix+opt.CID, 3*time.Minute); err != nil {
@@ -1487,15 +1559,40 @@ func (e *ExptMangerImpl) releaseCentralQuotaForRun(
 
 	failed := 0
 	var releaseErrors []error
-	relCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+	data, frozen := ctx.Value(completeDataKey{}).(*completeData)
+	frozen = frozen && data.sources != nil
+	parent := ctx
+	// Already-cancelled entry may reclaim original token reservations once in
+	// one bounded detached batch. Healthy batches retain the actual tick ctx.
+	if !frozen || ctx.Err() != nil {
+		parent = context.WithoutCancel(ctx)
+	}
+	relCtx, cancel := context.WithTimeout(parent, 8*time.Second)
 	defer cancel()
+	healthy := frozen && ctx.Err() == nil
 	for _, observation := range observations {
+		callCtx := relCtx
+		stopCall := func() {}
+		if healthy {
+			if err := ctx.Err(); err != nil {
+				return errors.Join(append(releaseErrors, err)...)
+			}
+			callCtx, stopCall = context.WithTimeout(ctx, 8*time.Second)
+		}
 		itemID := observation.ItemID
-		if err := e.centralGuard.Release(relCtx, expt.SchedulerScope, runID, itemID, observation.RequestID, reason); err != nil {
+		err := e.centralGuard.Release(callCtx, expt.SchedulerScope, runID, itemID, observation.RequestID, reason)
+		if err == nil && frozen {
+			err = callCtx.Err()
+		}
+		stopCall()
+		if err != nil {
 			failed++
 			releaseErrors = append(releaseErrors, err)
 			logs.CtxWarn(ctx, "[CentralReservation] release quota fail on %s, scope: %v, expt_run_id: %v, item_id: %v, err: %v",
 				occasion, expt.SchedulerScope, runID, itemID, err)
+		}
+		if healthy && ctx.Err() != nil {
+			return errors.Join(append(releaseErrors, ctx.Err())...)
 		}
 	}
 	logs.CtxInfo(ctx, "[CentralReservation] quota released for incomplete items on %s, scope: %v, expt_id: %v, expt_run_id: %v, items: %v, failed: %v, reason: %v",
@@ -2268,7 +2365,79 @@ func (e *ExptMangerImpl) unlockCompletingRun(ctx context.Context, exptID, exptRu
 	return err
 }
 
+// A replacement must own the predecessor's existing tick before SETNX. Once
+// LatestRunID is published, old Complete cannot pass its tick-protected recheck,
+// including before the replacement's later AllowExptRun. No new lock is added.
+func (e *ExptMangerImpl) newRunAdmissionTick(ctx context.Context, expt, run, space int64, mode entity.ExptRunMode) (context.Context, context.Context, func(), error) {
+	nop := func() {}
+	if err := ctx.Err(); err != nil {
+		return ctx, ctx, nop, errno.WrapMQRetryErr(err)
+	}
+	if e.runFinishRepo == nil || mode == entity.EvaluationModeAppend {
+		return ctx, ctx, nop, nil
+	}
+	if e.exptRepo == nil {
+		return ctx, ctx, nop, errno.NewMQRetryErr("admission experiment repository missing")
+	}
+	current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), expt, space)
+	if err != nil {
+		return ctx, ctx, nop, err
+	}
+	if current == nil {
+		return ctx, ctx, nop, errno.NewMQRetryErr("admission experiment missing")
+	}
+	if current.ExptType != entity.ExptType_Offline || current.LatestRunID == 0 {
+		return ctx, ctx, nop, nil
+	}
+	previous := current.LatestRunID
+	var leaseCtx context.Context
+	var stopLease func()
+	if held, ok := ctx.Value(completeTickKey{}).(completeTickIdentity); ok {
+		if held != (completeTickIdentity{expt, previous}) {
+			return ctx, ctx, nop, errno.NewMQRetryErr("admission cannot nest a different run tick")
+		}
+		leaseCtx, stopLease, err = e.completeTick(ctx, expt, previous)
+		if err != nil {
+			return ctx, ctx, nop, err
+		}
+	} else {
+		// Caller cancellation stops writes, while the already acquired run tick
+		// stays alive just through synchronous compensation. Actual lease loss
+		// still cancels both writes and cleanup; its existing maxHold is 5min.
+		parent, stopParent := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Minute)
+		leaseCtx, stopLease, err = e.completeTick(parent, expt, previous)
+		if err != nil {
+			stopParent()
+			return ctx, ctx, nop, err
+		}
+		cancelTick := stopLease
+		stopLease = func() { cancelTick(); stopParent() }
+	}
+	latest, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(leaseCtx), expt, space)
+	if err != nil || latest == nil || latest.LatestRunID != previous {
+		stopLease()
+		if err == nil {
+			err = errno.NewMQRetryErr("admission current run changed")
+		}
+		return ctx, ctx, nop, err
+	}
+	opCtx, stopOp := context.WithCancel(ctx)
+	unregister := context.AfterFunc(leaseCtx, stopOp)
+	opCtx = withHeldCompleteTick(opCtx, expt, previous, leaseCtx)
+	stop := func() { unregister(); stopOp(); stopLease() }
+	if err := opCtx.Err(); err != nil {
+		stop()
+		return ctx, ctx, nop, errno.WrapMQRetryErr(err)
+	}
+	return opCtx, leaseCtx, stop, nil
+}
+
 func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) (err error) {
+	ctx, cleanupCtx, stopTick, err := e.newRunAdmissionTick(ctx, exptID, exptRunID, spaceID, mode)
+	if err != nil {
+		return err
+	}
+	defer stopTick()
 	duration := time.Duration(e.configer.GetExptExecConf(ctx, spaceID).GetZombieIntervalSecond()) * time.Second
 	// Ordinary runs retain the injected locker contract (production: evaluation).
 	// Only LogRetryItemsRun uses a numeric admission value.
@@ -2283,7 +2452,7 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 	ownedRunID := exptRunID
 	defer func(runID int64) {
 		if err != nil {
-			e.cleanupUnscheduledRun(ctx, exptID, runID, spaceID, err, true)
+			e.cleanupUnscheduledRun(cleanupCtx, exptID, runID, spaceID, err, true)
 		}
 	}(ownedRunID)
 
@@ -2332,6 +2501,11 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 	if err != nil {
 		return 0, false, err
 	}
+	ctx, cleanupCtx, stopTick, err := e.newRunAdmissionTick(ctx, exptID, runID, spaceID, mode)
+	if err != nil {
+		return 0, false, err
+	}
+	defer stopTick()
 
 	locked, existedRunID, err := e.mutex.BackoffLockWithValue(ctx, e.makeExptMutexLockKey(exptID), strconv.FormatInt(runID, 10), expireAt, retryTime)
 	if err != nil {
@@ -2341,7 +2515,7 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 		ownedRunID := runID
 		defer func(runID int64) {
 			if err != nil {
-				e.cleanupUnscheduledRun(ctx, exptID, runID, spaceID, err, false)
+				e.cleanupUnscheduledRun(cleanupCtx, exptID, runID, spaceID, err, false)
 			}
 		}(ownedRunID)
 	}

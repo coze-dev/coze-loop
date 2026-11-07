@@ -107,6 +107,16 @@ func (l *completeReleaseFaultLocker) Unlock(key string) (bool, error) {
 	return l.ILocker.Unlock(key)
 }
 
+func (l *completeReleaseFaultLocker) UnlockWithContext(ctx context.Context, key string) (bool, error) {
+	l.calls++
+	if l.fault != nil {
+		err := l.fault
+		l.fault = nil
+		return false, err
+	}
+	return l.ILocker.UnlockWithContext(ctx, key)
+}
+
 type completeReleaseFaultRunRepo struct {
 	repo.IExptRunLogRepo
 	fault error

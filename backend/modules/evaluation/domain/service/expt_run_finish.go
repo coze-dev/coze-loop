@@ -38,6 +38,8 @@ func (e *ExptMangerImpl) FinishCurrentRunWithHeldTickLock(ctx context.Context, e
 	if event == nil {
 		return nil, errno.NewMQRetryErr("completion event missing")
 	}
-	ctx = context.WithValue(withHeldCompleteTick(ctx, event.ExptID, event.ExptRunID), completeCalibratedKey{}, true)
+	// Reuse actual caller ownership, or let standard Complete acquire the tick.
+	// This compatibility promise cannot create ownership from identity alone.
+	ctx = context.WithValue(ctx, completeCalibratedKey{}, true)
 	return e.FinishCurrentRun(ctx, event)
 }
