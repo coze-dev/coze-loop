@@ -22,7 +22,6 @@ import (
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	mysqlmodel "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/redis/go-redis/v9"
-	"github.com/rs/xid"
 
 	idemmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
 	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
@@ -53,6 +52,7 @@ func (p *naturalFinishProbe) CompleteRun(_ context.Context, _, _, _ int64, _ *en
 	p.standardRunCompleted = true
 	return nil
 }
+
 func (p *naturalFinishProbe) CompleteExpt(_ context.Context, _ int64, _ *int64, _ int64, _ *entity.Session, _ ...entity.CompleteExptOptionFn) error {
 	if p.standardRunCompleted {
 		p.standardRunCompleted = false
@@ -230,12 +230,6 @@ func TestRunFinishLogRunUsesInjectedLifecycleLocker(t *testing.T) {
 	metric.EXPECT().EmitExptExecRun(int64(3), int64(entity.EvaluationModeSubmit))
 	manager := &ExptMangerImpl{runFinishRepo: &finishRepoProbe{}, mutex: locker, configer: config, runLogRepo: runs, exptRepo: expts, mtr: metric}
 	require.NoError(t, manager.LogRun(context.Background(), 1, 2, entity.EvaluationModeSubmit, 3, nil, &entity.Session{UserID: "test"}))
-}
-
-// 用真实 XID 构造可迁移的老 holder，或模拟刚获取的新 holder。
-func legacyHolderAt(t *testing.T, when time.Time) string {
-	t.Helper()
-	return "test-host-" + xid.NewWithTime(when).String()
 }
 
 func finishRealLockerFactory(t *testing.T) (ManualRetryLockerFactory, *miniredis.Miniredis) {

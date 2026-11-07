@@ -502,17 +502,19 @@ func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID 
 
 // The context carries the existing tick lease and the immutable SQL commit
 // result between the two standard Complete methods. It is not another run state.
-type completeTickKey struct{}
-type completeTickIdentity struct{ expt, run int64 }
-type completeCalibratedKey struct{}
-type completeDataKey struct{}
-type completeCaptureKey struct{}
-type completeExpectedSourceKey struct{}
-type completeData struct {
-	result  *entity.ExptRunFinishResult
-	sources []*entity.ExptCurrentItemRunSource
-	from    entity.ExptStatus
-}
+type (
+	completeTickKey           struct{}
+	completeTickIdentity      struct{ expt, run int64 }
+	completeCalibratedKey     struct{}
+	completeDataKey           struct{}
+	completeCaptureKey        struct{}
+	completeExpectedSourceKey struct{}
+	completeData              struct {
+		result  *entity.ExptRunFinishResult
+		sources []*entity.ExptCurrentItemRunSource
+		from    entity.ExptStatus
+	}
+)
 
 func withHeldCompleteTick(ctx context.Context, expt, run int64) context.Context {
 	return context.WithValue(ctx, completeTickKey{}, completeTickIdentity{expt, run})
@@ -1026,7 +1028,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	}
 
 	var stats *entity.ExptCalculateStats
-	status := opt.Status
+	var status entity.ExptStatus
 	if data != nil {
 		got = data.result.Experiment
 		status = got.Status
@@ -1551,8 +1553,10 @@ func (e *ExptMangerImpl) releaseSupersededRunQuota(ctx context.Context, exptID, 
 	if oldRunID == 0 || oldRunID == newRunID {
 		return
 	}
-	e.releaseCentralQuotaForRun(ctx, expt, gptr.Of(oldRunID),
-		fmt.Sprintf("superseded by retry run=%d", newRunID), "retry")
+	if err := e.releaseCentralQuotaForRun(ctx, expt, gptr.Of(oldRunID),
+		fmt.Sprintf("superseded by retry run=%d", newRunID), "retry"); err != nil {
+		logs.CtxWarn(ctx, "[CentralReservation] release superseded run quota failed, expt_id: %v, old_run_id: %v, err: %v", exptID, oldRunID, err)
+	}
 }
 
 // isRetryRunMode 判断该模式是否"顶替上一个 run"。

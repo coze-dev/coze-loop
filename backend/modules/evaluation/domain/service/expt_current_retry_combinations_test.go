@@ -110,7 +110,7 @@ func newCurrentRetryCombinationFixture(t *testing.T, parent entity.ExptRunMode) 
 	factory, server := finishRealLockerFactory(t)
 	ids := idmocks.NewMockIIDGenerator(ctrl)
 	ids.EXPECT().GenID(gomock.Any()).Return(f.run, nil).AnyTimes()
-	var nextID int64 = f.base + 9000
+	nextID := f.base + 9000
 	ids.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, n int) ([]int64, error) {
 		out := make([]int64, n)
 		for i := range out {
