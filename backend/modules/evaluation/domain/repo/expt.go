@@ -149,6 +149,12 @@ type IExptRunLogRepo interface {
 	UpdateRunStats(ctx context.Context, exptID, exptRunID, spaceID int64, runLog *entity.ExptRunLog, stats *entity.ExptStats) error
 }
 
+// IExptRunLogLatestRunUpdater persists run-log fields only while the expected run
+// still owns the experiment. Legacy repositories may keep the plain Update.
+type IExptRunLogLatestRunUpdater interface {
+	UpdateIfLatestRun(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any) (bool, error)
+}
+
 type IExptAggrResultRepo interface {
 	GetExptAggrResult(ctx context.Context, experimentID int64, fieldType int32, fieldKey string) (*entity.ExptAggrResult, error)
 	GetExptAggrResultByExperimentID(ctx context.Context, experimentID int64) ([]*entity.ExptAggrResult, error)
