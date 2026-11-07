@@ -2186,10 +2186,8 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 	}
 
 	goroutine.Go(ctx, func() {
-		// Cleanup stays blocked until a fresh legacy lifecycle holder ages past the
-		// migration grace, so the retry window must outlast that grace. The request
-		// ctx is canceled once the response is written, so detach from it.
-		window := service.LegacyLifecycleMigrationGrace + 2*time.Minute
+		// The request context is canceled after the response, so detach the retries.
+		window := 7 * time.Minute
 		retryCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), window+time.Minute)
 		defer cancel()
 		if err := backoff.RetryWithElapsedTime(retryCtx, window, func() error {

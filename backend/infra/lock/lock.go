@@ -29,6 +29,8 @@ type ILocker interface {
 	WithHolder(holder string) ILocker
 	Lock(ctx context.Context, key string, expiresIn time.Duration) (bool, error)
 	Unlock(key string) (bool, error)
+	// UnlockWithContext compares this locker's injected holder using caller ctx.
+	UnlockWithContext(ctx context.Context, key string) (bool, error)
 	ExpireLockIn(key string, expiresIn time.Duration) (bool, error)
 	LockBackoff(ctx context.Context, key string, expiresIn time.Duration, maxWait time.Duration) (bool, error)
 	// LockBackoffWithRenew 获取锁并异步保持定时续期，每次锁保持时间为 ttl，到达 maxHold 时间或被 cancel
@@ -166,6 +168,10 @@ func (r *redisLocker) UnlockWithValue(ctx context.Context, key, val string) (boo
 		return false, errors.Errorf("unknown result type %T", result)
 	}
 	return rt == 1, nil
+}
+
+func (r *redisLocker) UnlockWithContext(ctx context.Context, key string) (bool, error) {
+	return r.UnlockWithValue(ctx, key, r.holder)
 }
 
 func (r *redisLocker) GetLifecycleLockValue(ctx context.Context, key string) (string, bool, error) {

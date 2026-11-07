@@ -99,6 +99,9 @@ func newFinishTickFixture(t *testing.T, runMode entity.ExptRunMode, dispatch str
 	switch runMode {
 	case entity.EvaluationModeSubmit:
 		realMode = &ExptSubmitExec{manager: manager, idem: idem, configer: config, exptItemResultRepo: items, resultSvc: result, publisher: publisher}
+	case entity.EvaluationModeTrialRun:
+		expt.TrialRunItemCount = 2
+		realMode = &ExptTrialRunExec{ExptSubmitExec: &ExptSubmitExec{manager: manager, idem: idem, configer: config, exptItemResultRepo: items, resultSvc: result, publisher: publisher}}
 	case entity.EvaluationModeFailRetry:
 		realMode = &ExptFailRetryExec{manager: manager, idem: idem, configer: config, exptItemResultRepo: items, resultSvc: result, publisher: publisher}
 	case entity.EvaluationModeRetryAll:
@@ -120,7 +123,7 @@ func newFinishTickFixture(t *testing.T, runMode entity.ExptRunMode, dispatch str
 // Removing finish-error rearming strands the normal cadence even though calibration blocks completion.
 func TestFinishCalibrationTickLiveness(t *testing.T) {
 	for _, dispatch := range []string{entity.ExptDispatchModeLegacy, entity.ExptDispatchModeEnforce} {
-		for _, mode := range []entity.ExptRunMode{entity.EvaluationModeSubmit, entity.EvaluationModeFailRetry, entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems} {
+		for _, mode := range []entity.ExptRunMode{entity.EvaluationModeSubmit, entity.EvaluationModeTrialRun, entity.EvaluationModeFailRetry, entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems} {
 			t.Run(fmt.Sprintf("%s/mode%d", dispatch, mode), func(t *testing.T) {
 				f := newFinishTickFixture(t, mode, dispatch)
 				for _, state := range []string{"calibration_pending", "calibration_error", "finish_pending"} {
@@ -201,7 +204,7 @@ func TestFinishCalibrationTickBrokerFallback(t *testing.T) {
 }
 
 func TestFinishCalibrationTickExcludedModesAndOldManager(t *testing.T) {
-	for _, scope := range []string{"online", "append", "trial", "old_manager", "noncurrent"} {
+	for _, scope := range []string{"online", "append", "old_manager", "noncurrent"} {
 		t.Run(scope, func(t *testing.T) {
 			f := newFinishTickFixture(t, entity.EvaluationModeSubmit, entity.ExptDispatchModeLegacy)
 			retry := errno.NewMQRetryErr("typed end retry")
@@ -212,8 +215,6 @@ func TestFinishCalibrationTickExcludedModesAndOldManager(t *testing.T) {
 				f.expt.ExptType = entity.ExptType_Online
 			case "append":
 				f.event.ExptRunMode = entity.EvaluationModeAppend
-			case "trial":
-				f.event.ExptRunMode = entity.EvaluationModeTrialRun
 			case "old_manager":
 				f.scheduler.Manager = f.manager.IExptManager
 			case "noncurrent":

@@ -479,7 +479,9 @@ func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID i
 		if err := e.cancelSandboxBeforeDelete(ctx, expt, session); err != nil {
 			return err
 		}
-		e.releaseCentralQuotaForIncompleteItems(ctx, expt, nil, entity.ExptStatus_Terminated)
+		if err := e.releaseCentralQuotaForIncompleteItems(ctx, expt, nil, entity.ExptStatus_Terminated); err != nil {
+			logs.CtxWarn(ctx, "release central quota before deleting experiment failed, expt_id: %v, err: %v", expt.ID, err)
+		}
 	}
 
 	// 批量删除实验
@@ -1884,7 +1886,9 @@ func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, sess
 	if err := e.cancelSandboxBeforeDelete(ctx, expt, session); err != nil {
 		return err
 	}
-	e.releaseCentralQuotaForIncompleteItems(ctx, expt, nil, entity.ExptStatus_Terminated)
+	if err := e.releaseCentralQuotaForIncompleteItems(ctx, expt, nil, entity.ExptStatus_Terminated); err != nil {
+		logs.CtxWarn(ctx, "release central quota before deleting experiment failed, expt_id: %v, err: %v", exptID, err)
+	}
 
 	// 删除实验
 	if err := e.exptRepo.Delete(ctx, exptID, spaceID); err != nil {

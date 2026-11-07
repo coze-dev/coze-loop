@@ -97,7 +97,7 @@ func TestCompleteRunKeepsReceiptForIndirectWriters(t *testing.T) {
 					injectWriterReceipt(t, provider)
 					return []*entity.ExptTurnResult{{Status: int32(entity.TurnRunState_Success)}}, int64(1), nil
 				})
-			mgr.mutex.(*lockMocks.MockILocker).EXPECT().UnlockForce(ctx, mgr.makeExptMutexLockKey(7)).Return(true, nil)
+			mgr.mutex.(*lockMocks.MockILocker).EXPECT().Unlock(mgr.makeExptMutexLockKey(7)).Return(true, nil)
 			require.NoError(t, mgr.CompleteRun(ctx, 7, 8, 9, &entity.Session{UserID: "u"}, entity.WithStatus(tc.status)))
 			requireWriterReceipt(t, provider)
 		})
@@ -109,8 +109,8 @@ func TestCompleteRunPersistsBeforeLifecycleUnlock(t *testing.T) {
 	ctx := context.Background()
 	mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).EXPECT().ListTurnResult(ctx, int64(9), int64(7), nil, gomock.Any(), false).
 		Return([]*entity.ExptTurnResult{}, int64(0), nil)
-	mgr.mutex.(*lockMocks.MockILocker).EXPECT().UnlockForce(ctx, mgr.makeExptMutexLockKey(7)).
-		DoAndReturn(func(context.Context, string) (bool, error) {
+	mgr.mutex.(*lockMocks.MockILocker).EXPECT().Unlock(mgr.makeExptMutexLockKey(7)).
+		DoAndReturn(func(string) (bool, error) {
 			var row model.ExptRunLog
 			require.NoError(t, provider.NewSession(ctx).First(&row, 8).Error)
 			require.Equal(t, int64(entity.ExptStatus_Terminated), gptr.Indirect(row.Status))

@@ -40,11 +40,11 @@ func cleanupLeaseRealRedis(t *testing.T, f *filterSyncFixture, m *ExptMangerImpl
 	require.Contains(t, info, "redis_version:8.2.0")
 	t.Log("REAL_REDIS_EXECUTED version=8.2.0")
 	m.manualRetryLocker = func() lock.ILocker { return filterRealTestLocker(client) }
-	m.mutex = m.manualRetryLocker()
+	m.mutex = m.manualRetryLocker().WithHolder(legacyStaticHolderValue)
 	m.idem = idemrepo.NewIdempotentService(idemredis.NewIdemDAO(client))
 	f.svc.resultPublishLocker = m.manualRetryLocker
-	keys := []string{m.makeExptMutexLockKey(f.expt), fmt.Sprintf("expt_run_exec_lock:%d:%d", f.expt, f.run), f.key(), fmt.Sprintf("[idempotent]idem_key:finish-cleanup:%d:%d", f.expt, f.run)}
-	require.NoError(t, raw.Set(context.Background(), keys[0], fmt.Sprint(f.run), 36*time.Hour).Err())
+	keys := []string{m.makeExptMutexLockKey(f.expt), fmt.Sprintf("expt_run_exec_lock:%d:%d", f.expt, f.run), f.key(), fmt.Sprintf("[idempotent]idem_key:CompleteExpt:exptexec:onend:%d", f.run)}
+	require.NoError(t, raw.Set(context.Background(), keys[0], legacyStaticHolderValue, 36*time.Hour).Err())
 	t.Cleanup(func() {
 		_, err := raw.Del(context.Background(), keys...).Result()
 		require.NoError(t, err)
@@ -94,8 +94,20 @@ func (s *cleanupLeaseFilterSink) Save(ctx context.Context, rows []*entity.ExptTu
 func TestCancelCleanupLeaseSlowFilterRealRedisMySQL(t *testing.T) {
 	f, m := newCancelFilterFixture(t)
 	_, raw := cleanupLeaseRealRedis(t, f, m)
-	sink := &cleanupLeaseFilterSink{wait: 9 * time.Second, raw: raw, lifecycleKey: m.makeExptMutexLockKey(f.expt), itemKey: f.key()}
+	sink := &cleanupLeaseFilterSink{wait: 9 * time.Second, raw: raw, lifecycleKey: fmt.Sprintf("expt_run_exec_lock:%d:%d", f.expt, f.run), itemKey: f.key()}
 	f.svc.exptTurnResultFilterRepo = sink
+	calls := 0
+	sink.before = func(context.Context) { calls++ }
+	quotaState := &entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{f.expt: time.Now().Unix()}}
+	quota := repomocks.NewMockQuotaRepo(gomock.NewController(t))
+	quota.EXPECT().CreateOrUpdate(gomock.Any(), f.space, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, update func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
+		next, _, err := update(quotaState)
+		if next != nil {
+			quotaState = next
+		}
+		return err
+	}).Times(1)
+	m.quotaRepo = quota
 	start := time.Now()
 	_, err := m.TerminateCurrentRun(context.Background(), f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
 	t.Logf("SLOW_FILTER_REAL_LEASE elapsed=%s sink_cancel=%v rows=%d", time.Since(start), sink.observedCancel, len(sink.rows))
@@ -103,14 +115,21 @@ func TestCancelCleanupLeaseSlowFilterRealRedisMySQL(t *testing.T) {
 	require.GreaterOrEqual(t, time.Since(start), 9*time.Second)
 	require.Len(t, sink.rows, 1)
 	require.Equal(t, entity.ItemRunState_Terminal, sink.rows[0].Status)
-	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("finish-cleanup:%d:%d", f.expt, f.run))
+	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run))
 	require.NoError(t, err)
 	require.True(t, marked)
+	require.Zero(t, raw.Exists(context.Background(), m.makeExptMutexLockKey(f.expt)).Val())
+	require.NotContains(t, quotaState.ExptID2RunTime, f.expt)
 	before := f.snapshot()
+	quotaState.ExptID2RunTime[f.expt] = time.Now().Unix()
+	require.NoError(t, raw.Set(context.Background(), m.makeExptMutexLockKey(f.expt), legacyStaticHolderValue, time.Minute).Err())
 	sink.wait = 0
 	_, err = m.TerminateCurrentRun(context.Background(), f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
 	require.NoError(t, err)
 	require.Equal(t, before, f.snapshot(), "cleanup replay preserves terminal stats and end time")
+	require.Equal(t, 1, calls)
+	require.Equal(t, legacyStaticHolderValue, raw.Get(context.Background(), m.makeExptMutexLockKey(f.expt)).Val())
+	require.Contains(t, quotaState.ExptID2RunTime, f.expt, "completed R1 redelivery preserves replacement resources")
 }
 
 type cleanupLeaseSlowGuard struct {
@@ -151,10 +170,13 @@ func (g *cleanupLeaseSlowGuard) Release(ctx context.Context, _ string, run, item
 	}
 	// The external sink retains the same original-token compare/delete contract.
 	const script = `if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]); end; return 0;`
-	if _, err := g.raw.Eval(ctx, script, []string{g.keys[item]}, token).Result(); err != nil {
+	released, err := g.raw.Eval(ctx, script, []string{g.keys[item]}, token).Result()
+	if err != nil {
 		return err
 	}
-	g.completed = append(g.completed, item)
+	if released == int64(1) {
+		g.completed = append(g.completed, item)
+	}
 	return nil
 }
 
@@ -196,12 +218,30 @@ func TestCancelCleanupLeaseCancelDuringResourceIOPreservesBindings(t *testing.T)
 	m.evalTargetService = target
 	_, err := m.TerminateCurrentRun(ctx, f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
 	require.True(t, errno.NeedMQRetry(err))
-	require.Len(t, guard.completed, 1)
-	require.Equal(t, 2, queries, "cancelled cleanup may only re-read run ownership")
+	require.ErrorIs(t, err, context.Canceled)
+	require.Empty(t, guard.completed)
+	require.Zero(t, queries, "quota failure returns before any additional SQL reads")
+	require.NoError(t, f.conn.Callback().Query().Remove("cleanup_cancel_during_io"))
+	require.Equal(t, "rq1", raw.Get(context.Background(), guard.keys[f.item]).Val())
+	require.Equal(t, legacyStaticHolderValue, raw.Get(context.Background(), m.makeExptMutexLockKey(f.expt)).Val())
 	require.Empty(t, store.rows)
-	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("finish-cleanup:%d:%d", f.expt, f.run))
+	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run))
 	require.NoError(t, err)
 	require.False(t, marked)
+	before := f.snapshot()
+	_, err = m.TerminateCurrentRun(context.Background(), f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
+	require.NoError(t, err)
+	require.Equal(t, []int64{f.item}, guard.completed)
+	require.Zero(t, raw.Exists(context.Background(), guard.keys[f.item]).Val())
+	require.Zero(t, raw.Exists(context.Background(), m.makeExptMutexLockKey(f.expt)).Val())
+	require.Equal(t, before, f.snapshot())
+	marked, err = m.idem.Exist(context.Background(), fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run))
+	require.NoError(t, err)
+	require.True(t, marked)
+	_, err = m.TerminateCurrentRun(context.Background(), f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
+	require.NoError(t, err)
+	require.Equal(t, []int64{f.item}, guard.completed)
+	require.Equal(t, before, f.snapshot())
 }
 
 func TestCancelCleanupLeaseCancelDuringFilterStopsNotification(t *testing.T) {
@@ -209,13 +249,13 @@ func TestCancelCleanupLeaseCancelDuringFilterStopsNotification(t *testing.T) {
 	_, raw := cleanupLeaseRealRedis(t, f, m)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	sink := &cleanupLeaseFilterSink{wait: 9 * time.Second, raw: raw, lifecycleKey: m.makeExptMutexLockKey(f.expt), itemKey: f.key(), before: func(context.Context) { cancel() }}
+	sink := &cleanupLeaseFilterSink{wait: 9 * time.Second, raw: raw, lifecycleKey: fmt.Sprintf("expt_run_exec_lock:%d:%d", f.expt, f.run), itemKey: f.key(), before: func(context.Context) { cancel() }}
 	f.svc.exptTurnResultFilterRepo = sink
 	_, err := m.TerminateCurrentRun(ctx, f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
 	require.True(t, errno.NeedMQRetry(err))
 	require.Empty(t, sink.rows)
 	require.ErrorIs(t, sink.observedCancel, context.Canceled)
-	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("finish-cleanup:%d:%d", f.expt, f.run))
+	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run))
 	require.NoError(t, err)
 	require.False(t, marked)
 }
@@ -223,24 +263,33 @@ func TestCancelCleanupLeaseCancelDuringFilterStopsNotification(t *testing.T) {
 type cleanupLeaseLostLocker struct{ lock.ILocker }
 
 func (l *cleanupLeaseLostLocker) LockWithRenew(ctx context.Context, key string, ttl, hold time.Duration) (bool, context.Context, func(), error) {
-	if strings.HasPrefix(key, "expt_run_mutex_lock:") {
-		child, cancel := context.WithCancel(ctx)
+	if strings.HasPrefix(key, "expt_run_exec_lock:") {
+		locked, child, cancel, err := l.ILocker.LockWithRenew(ctx, key, ttl, hold)
+		if err != nil || !locked {
+			return locked, child, cancel, err
+		}
 		cancel()
-		return true, child, func() {}, nil
+		return locked, child, cancel, nil
 	}
 	return l.ILocker.LockWithRenew(ctx, key, ttl, hold)
 }
 
 func TestCancelCleanupLeaseLossIsNotParentCancelResourcePermission(t *testing.T) {
 	f, m := newCancelFilterFixture(t)
-	client, _ := cleanupLeaseRealRedis(t, f, m)
+	client, raw := cleanupLeaseRealRedis(t, f, m)
 	m.manualRetryLocker = func() lock.ILocker { return &cleanupLeaseLostLocker{ILocker: filterRealTestLocker(client)} }
+	before := f.snapshot()
+	guard := &fakeGuard{}
+	m.centralGuard = guard
 	store := &filterStore{}
 	f.svc.exptTurnResultFilterRepo = store
 	_, err := m.TerminateCurrentRun(context.Background(), f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
 	require.True(t, errno.NeedMQRetry(err))
 	require.Empty(t, store.rows)
-	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("finish-cleanup:%d:%d", f.expt, f.run))
+	require.Equal(t, before, f.snapshot())
+	require.Empty(t, guard.releases())
+	require.Equal(t, legacyStaticHolderValue, raw.Get(context.Background(), m.makeExptMutexLockKey(f.expt)).Val())
+	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run))
 	require.NoError(t, err)
 	require.False(t, marked)
 }
@@ -251,9 +300,13 @@ func TestCancelCleanupLeaseCancelledCommitOnlyFrozenResources(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	queriesAfterCancel := 0
-	require.NoError(t, f.conn.Callback().Query().Before("gorm:query").Register("cleanup_ownership_sql_only", func(tx *gorm.DB) {
+	require.NoError(t, f.conn.Callback().Query().After("gorm:query").Register("cleanup_ownership_sql_only", func(tx *gorm.DB) {
 		if ctx.Err() != nil {
-			require.Contains(t, []string{"experiment", "expt_evaluator_ref"}, tx.Statement.Table)
+			require.Contains(t, []string{"experiment", "expt_evaluator_ref", "expt_run_log"}, tx.Statement.Table)
+			require.Contains(t, fmt.Sprint(tx.Statement.Vars), fmt.Sprint(f.expt), "read must bind original experiment")
+			if tx.Statement.Table == "expt_run_log" {
+				require.Contains(t, fmt.Sprint(tx.Statement.Vars), fmt.Sprint(f.run), "read must bind original run")
+			}
 			queriesAfterCancel++
 		}
 	}))
@@ -274,9 +327,23 @@ func TestCancelCleanupLeaseCancelledCommitOnlyFrozenResources(t *testing.T) {
 	require.Len(t, guard.completed, 1)
 	require.Equal(t, 2, queriesAfterCancel, "cancelled cleanup may only re-read run ownership before using frozen sources")
 	require.Empty(t, store.rows)
-	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("finish-cleanup:%d:%d", f.expt, f.run))
+	require.NoError(t, f.conn.Callback().Query().Remove("cleanup_ownership_sql_only"))
+	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run))
 	require.NoError(t, err)
 	require.False(t, marked)
+	require.Equal(t, legacyStaticHolderValue, raw.Get(context.Background(), m.makeExptMutexLockKey(f.expt)).Val())
+	before := f.snapshot()
+	m.runFinishRepo = m.runFinishRepo.(*cancelFilterCommitHook).IExptRunFinishRepo
+	_, err = m.TerminateCurrentRun(context.Background(), f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
+	require.NoError(t, err)
+	require.Equal(t, []int64{f.item}, guard.completed)
+	require.Zero(t, raw.Exists(context.Background(), guard.keys[f.item]).Val())
+	require.NotEmpty(t, store.rows)
+	require.Equal(t, entity.ItemRunState_Terminal, store.rows[0].Status)
+	require.Equal(t, before, f.snapshot())
+	marked, err = m.idem.Exist(context.Background(), fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run))
+	require.NoError(t, err)
+	require.True(t, marked)
 }
 
 func TestCancelCleanupLeaseReplacementOwnerHasZeroActions(t *testing.T) {
@@ -299,13 +366,13 @@ func TestCancelCleanupLeaseReplacementOwnerHasZeroActions(t *testing.T) {
 			if cancelled {
 				cancel()
 			}
-			err = m.cleanupTerminatedRun(ctx, &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, Session: &entity.Session{}}, finished, []*entity.ExptCurrentItemRunSource{source}, &entity.CompleteExptOption{})
+			err = completeTerminationFixture(m, ctx, &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, Session: &entity.Session{}}, finished, []*entity.ExptCurrentItemRunSource{source}, &entity.CompleteExptOption{})
 			require.True(t, errno.NeedMQRetry(err))
 			require.Equal(t, fmt.Sprint(f.run+100), raw.Get(context.Background(), m.makeExptMutexLockKey(f.expt)).Val())
 			require.Equal(t, before, f.snapshot())
 			require.Empty(t, guard.releases())
 			require.Empty(t, store.rows)
-			marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("finish-cleanup:%d:%d", f.expt, f.run))
+			marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run))
 			require.NoError(t, err)
 			require.False(t, marked)
 		})
@@ -321,7 +388,8 @@ func TestCancelCleanupLeaseExpiredReplacementStillFencesQuota(t *testing.T) {
 
 	replacement := f.run + 100
 	runStatus := int64(entity.ExptStatus_Processing)
-	require.NoError(t, f.conn.Create(&model.ExptRunLog{ID: replacement, SpaceID: f.space, ExptID: f.expt, ExptRunID: replacement, Status: &runStatus}).Error)
+	runMode := int32(entity.EvaluationModeRetryItems)
+	require.NoError(t, f.conn.Create(&model.ExptRunLog{ID: replacement, SpaceID: f.space, ExptID: f.expt, ExptRunID: replacement, Mode: &runMode, Status: &runStatus}).Error)
 	require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=? AND expt_run_id=?", f.space, f.run).Update("status", int64(entity.ExptStatus_Terminated)).Error)
 	require.NoError(t, f.conn.Model(&model.Experiment{}).Where("space_id=?", f.space).Updates(map[string]any{"latest_run_id": replacement, "status": int32(entity.ExptStatus_Processing), "end_at": nil}).Error)
 	lockKey := m.makeExptMutexLockKey(f.expt)
@@ -343,8 +411,8 @@ func TestCancelCleanupLeaseExpiredReplacementStillFencesQuota(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	event := &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, Session: &entity.Session{}}
-	err = m.cleanupCancelledTerminationResources(ctx, event, frozen, nil)
-	require.True(t, errno.NeedMQRetry(err))
+	err = completeCancelledFixture(m, ctx, event, frozen, nil)
+	require.NoError(t, err, "standard NonCurrent completion performs no cleanup")
 	locked, owner, err := m.mutex.BackoffLockWithValue(context.Background(), lockKey, fmt.Sprint(replacement), time.Minute, time.Millisecond)
 	require.NoError(t, err)
 	require.True(t, locked, "stale cleanup must not leave its lease behind")

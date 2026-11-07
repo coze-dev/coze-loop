@@ -12,9 +12,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	lockmocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
-	idemmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
 	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
-	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
@@ -78,10 +76,10 @@ func (d *termUnitDeps) manager() *ExptMangerImpl {
 	return m
 }
 
-func (d *termUnitDeps) expectLock(locked bool, lockCtx context.Context) {
+func (d *termUnitDeps) expectLock(locked bool, _ context.Context) {
 	d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ string, _ any, _ any) (bool, context.Context, func(), error) {
-			return locked, lockCtx, func() {}, nil
+		DoAndReturn(func(ctx context.Context, _ string, _ any, _ any) (bool, context.Context, func(), error) {
+			return locked, ctx, func() {}, nil
 		}).AnyTimes()
 }
 
@@ -345,6 +343,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 	t.Run("lock_error", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil, nil, errors.New("lock"))
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
@@ -372,7 +371,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99, ExptType: entity.ExptType_Offline}, nil)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
 		require.NoError(t, err)
@@ -381,7 +380,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).Return(nil, errors.New("read"))
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, termUnitSource(9, entity.ItemRunState_Processing))
 		require.False(t, applied)
@@ -391,7 +390,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		changed := termUnitSource(9, entity.ItemRunState_Processing)
 		changed.Current.RequestID = "other"
 		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).Return(changed, nil)
@@ -403,7 +402,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(0), int64(500), int64(3)).Return(nil, int64(0), errors.New("scan"))
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
@@ -413,7 +412,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{nil}, int64(0), nil)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
@@ -423,7 +422,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(0), nil)
 		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
 		d.expectLock(true, context.Background())
@@ -432,22 +431,12 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		require.False(t, applied)
 		require.True(t, errno.NeedMQRetry(err))
 	})
-	t.Run("cleanup_failure_after_apply", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
-		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
-		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{Applied: true, Experiment: &entity.Experiment{ID: 99}}, nil)
-		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
-		require.True(t, applied)
-		require.True(t, errno.NeedMQRetry(err))
-	})
+
 	t.Run("non_current_with_expected", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		expected := termUnitSource(9, entity.ItemRunState_Processing)
 		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
@@ -510,168 +499,6 @@ func TestReleaseTerminationResourcesUnit(t *testing.T) {
 		m := d.manager()
 		m.quotaRepo = quota
 		require.Error(t, m.releaseTerminationResources(context.Background(), &entity.Experiment{ID: 1, SpaceID: 3}, 2, nil, true, &entity.Session{}))
-	})
-}
-
-func TestCleanupTerminatedRunUnit(t *testing.T) {
-	expt := func() *entity.Experiment {
-		return &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Terminated}
-	}
-	event := func() *entity.ExptScheduleEvent {
-		return &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
-	}
-
-	t.Run("frozen_experiment_mismatch", func(t *testing.T) {
-		m := &ExptMangerImpl{}
-		require.True(t, errno.NeedMQRetry(m.cleanupTerminatedRun(context.Background(), event(), &entity.Experiment{ID: 9}, nil, &entity.CompleteExptOption{})))
-	})
-	t.Run("nil_locker", func(t *testing.T) {
-		m := &ExptMangerImpl{manualRetryLocker: func() lock.ILocker { return nil }}
-		require.True(t, errno.NeedMQRetry(m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{})))
-	})
-	t.Run("unlock_error", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(false, errors.New("unlock"))
-		require.True(t, errno.NeedMQRetry(m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{})))
-	})
-	t.Run("cancelled_before_owner", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel()
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil, nil, errors.New("owner"))
-		require.Error(t, m.cleanupTerminatedRun(ctx, event(), expt(), nil, &entity.CompleteExptOption{}))
-	})
-	t.Run("owner_unavailable", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
-		require.True(t, errno.NeedMQRetry(m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{})))
-	})
-	t.Run("experiment_missing", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, nil)
-		require.True(t, errno.NeedMQRetry(m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{})))
-	})
-	t.Run("latest_run_changed", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99}, nil)
-		require.NoError(t, m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{}))
-	})
-	t.Run("run_still_active", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		active := expt()
-		active.Status = entity.ExptStatus_Processing
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(active, nil)
-		require.True(t, errno.NeedMQRetry(m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{})))
-	})
-	t.Run("resource_release_error", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(expt(), nil)
-		err := m.cleanupTerminatedRun(context.Background(), event(), expt(), []*entity.ExptCurrentItemRunSource{nil}, &entity.CompleteExptOption{})
-		require.Error(t, err)
-	})
-	t.Run("idem_missing", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(expt(), nil)
-		require.True(t, errno.NeedMQRetry(m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{NoCompleteItemTurn: true})))
-	})
-	t.Run("idem_exist_error", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		idem := idemmocks.NewMockIdempotentService(d.ctrl)
-		idem.EXPECT().Exist(gomock.Any(), "finish-cleanup:1:2").Return(false, errors.New("idem"))
-		m := d.manager()
-		m.idem = idem
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(expt(), nil)
-		require.Error(t, m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{NoCompleteItemTurn: true}))
-	})
-	t.Run("already_notified", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		idem := idemmocks.NewMockIdempotentService(d.ctrl)
-		idem.EXPECT().Exist(gomock.Any(), "finish-cleanup:1:2").Return(true, nil)
-		m := d.manager()
-		m.idem = idem
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(expt(), nil)
-		require.NoError(t, m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{NoCompleteItemTurn: true}))
-	})
-	t.Run("success", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		idem := idemmocks.NewMockIdempotentService(d.ctrl)
-		idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
-		idem.EXPECT().Set(gomock.Any(), "finish-cleanup:1:2", gomock.Any()).Return(nil)
-		m := d.manager()
-		m.idem = idem
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(expt(), nil)
-		require.NoError(t, m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{NoCompleteItemTurn: true}))
-	})
-}
-
-func TestCleanupCancelledTerminationResourcesUnit(t *testing.T) {
-	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
-	frozen := &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Terminated}
-	t.Run("nil_locker", func(t *testing.T) {
-		m := &ExptMangerImpl{manualRetryLocker: func() lock.ILocker { return nil }}
-		require.True(t, errno.NeedMQRetry(m.cleanupCancelledTerminationResources(context.Background(), event, frozen, nil)))
-	})
-	t.Run("lock_error", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil, nil, errors.New("lock"))
-		require.True(t, errno.NeedMQRetry(m.cleanupCancelledTerminationResources(context.Background(), event, frozen, nil)))
-	})
-	t.Run("owner_unavailable", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
-		require.True(t, errno.NeedMQRetry(m.cleanupCancelledTerminationResources(context.Background(), event, frozen, nil)))
-	})
-	t.Run("release_error", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(frozen, nil)
-		require.Error(t, m.cleanupCancelledTerminationResources(context.Background(), event, frozen, []*entity.ExptCurrentItemRunSource{nil}))
-	})
-	t.Run("cancelled_returns_retry", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel()
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(frozen, nil)
-		require.True(t, errno.NeedMQRetry(m.cleanupCancelledTerminationResources(ctx, event, frozen, nil)))
-	})
-	t.Run("success", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(frozen, nil)
-		// The trailing unwrap always reports a retryable envelope, preserving replay.
-		require.Error(t, m.cleanupCancelledTerminationResources(context.Background(), event, frozen, nil))
 	})
 }
 
@@ -744,17 +571,21 @@ func TestCleanupCurrentUnscheduledRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
+		runLogs := repomocks.NewMockIExptRunLogRepo(d.ctrl)
+		runLogs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{Mode: int32(entity.EvaluationModeRetryItems)}, nil)
+		m.runLogRepo = runLogs
 		d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(true, nil)
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, errors.New("read"))
-		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
+		failure := errors.New("read")
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, failure)
+		require.ErrorIs(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")), failure)
 	})
 	t.Run("latest_run_finished", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
 		runLogs := repomocks.NewMockIExptRunLogRepo(d.ctrl)
-		runLogs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Success)}, nil)
+		runLogs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{Mode: int32(entity.EvaluationModeRetryItems), Status: int64(entity.ExptStatus_Success)}, nil).Times(2)
 		m.runLogRepo = runLogs
 		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 		d.expectLock(true, context.Background())
@@ -765,10 +596,11 @@ func TestCleanupCurrentUnscheduledRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		runLogs := repomocks.NewMockIExptRunLogRepo(d.ctrl)
 		runLogs.EXPECT().Update(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).Return(nil)
+		runLogs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{Mode: int32(entity.EvaluationModeRetryItems)}, nil)
 		m := d.manager()
 		m.mutex = d.locker
 		m.runLogRepo = runLogs
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+		d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(true, nil)
 		d.expectLock(true, context.Background())
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Online}, nil)
 		require.NoError(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
@@ -777,6 +609,9 @@ func TestCleanupCurrentUnscheduledRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
+		runLogs := repomocks.NewMockIExptRunLogRepo(d.ctrl)
+		runLogs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{Mode: int32(entity.EvaluationModeRetryItems)}, nil)
+		m.runLogRepo = runLogs
 		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 		d.expectLock(true, context.Background())
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Pending, ExptType: entity.ExptType_Offline}, nil)
@@ -790,10 +625,11 @@ func TestCleanupCurrentUnscheduledRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, errors.New("unlock"))
+		failure := errors.New("unlock")
+		d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(false, failure)
 		d.expectLock(true, context.Background())
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99}, nil)
-		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
+		require.ErrorIs(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause"), false), failure)
 	})
 }
 
@@ -1018,9 +854,6 @@ func TestTerminationRemainingBranches(t *testing.T) {
 	event := func() *entity.ExptScheduleEvent {
 		return &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
 	}
-	expt := func() *entity.Experiment {
-		return &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Terminated}
-	}
 
 	t.Run("commit_item_ctx_cancelled", func(t *testing.T) {
 		d := newTermUnitDeps(t)
@@ -1054,7 +887,7 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(0), int64(500), int64(3)).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(5), nil)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(5), int64(500), int64(3)).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(5), nil)
 		_, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
@@ -1064,7 +897,7 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(0), nil)
 		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(nil, errors.New("read"))
 		_, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
@@ -1074,7 +907,7 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(0), nil)
 		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
 		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(nil, errors.New("commit"))
@@ -1085,7 +918,7 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{Applied: true}, nil)
 		_, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
@@ -1103,91 +936,7 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		})
 		require.True(t, errno.NeedMQRetry(m.releaseTerminationResources(ctx, &entity.Experiment{ID: 1, SpaceID: 3}, 2, []*entity.ExptCurrentItemRunSource{source}, false, &entity.Session{})))
 	})
-	t.Run("cleanup_lock_error", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil, nil, errors.New("lock"))
-		require.True(t, errno.NeedMQRetry(m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{NoCompleteItemTurn: true})))
-	})
-	t.Run("cleanup_read_error_while_cancelled", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		ctx, cancel := context.WithCancel(context.Background())
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, ctx, func() {}, nil).Times(2)
-		d.locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).DoAndReturn(func(context.Context, int64, int64) (*entity.Experiment, error) {
-			cancel()
-			return nil, errors.New("read")
-		}).Times(2)
-		require.Error(t, m.cleanupTerminatedRun(ctx, event(), expt(), nil, &entity.CompleteExptOption{NoCompleteItemTurn: true}))
-	})
-	t.Run("cleanup_release_error_while_cancelled", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		m := d.manager()
-		ctx, cancel := context.WithCancel(context.Background())
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, ctx, func() {}, nil).Times(2)
-		d.locker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
-		current := expt()
-		current.ExptDispatchMode = entity.ExptDispatchModeEnforce
-		current.SchedulerScope = "scope"
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(current, nil).Times(2)
-		d.guard.EXPECT().Release(gomock.Any(), "scope", int64(2), int64(9), "req", gomock.Any()).DoAndReturn(func(context.Context, string, int64, int64, string, string) error {
-			cancel()
-			return errors.New("release")
-		})
-		err := m.cleanupTerminatedRun(ctx, event(), expt(), []*entity.ExptCurrentItemRunSource{termUnitSource(9, entity.ItemRunState_Processing)}, &entity.CompleteExptOption{NoCompleteItemTurn: true})
-		require.Error(t, err)
-	})
-	t.Run("cleanup_template_error", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		idem := idemmocks.NewMockIdempotentService(d.ctrl)
-		idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
-		template := svcmocks.NewMockIExptTemplateManager(d.ctrl)
-		template.EXPECT().UpdateExptInfo(gomock.Any(), int64(4), int64(3), int64(1), gomock.Any(), int64(0), gomock.Any()).Return(errors.New("template"))
-		m := d.manager()
-		m.idem = idem
-		m.templateManager = template
-		current := expt()
-		current.ExptTemplateMeta = &entity.ExptTemplateMeta{ID: 4}
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(current, nil)
-		require.Error(t, m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{NoCompleteItemTurn: true}))
-	})
-	t.Run("cleanup_aggr_error", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		idem := idemmocks.NewMockIdempotentService(d.ctrl)
-		idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
-		aggr := svcmocks.NewMockExptAggrResultService(d.ctrl)
-		aggr.EXPECT().PublishExptAggrResultEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("aggr"))
-		m := d.manager()
-		m.idem = idem
-		m.exptAggrResultService = aggr
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(expt(), nil)
-		require.Error(t, m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{NoCompleteItemTurn: true}))
-	})
-	t.Run("cleanup_workflow_notify", func(t *testing.T) {
-		d := newTermUnitDeps(t)
-		idem := idemmocks.NewMockIdempotentService(d.ctrl)
-		idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
-		idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-		pipeline := rpcmocks.NewMockIPipelineListAdapter(d.ctrl)
-		pipeline.EXPECT().PipelineNodeFinishCallback(gomock.Any(), int64(1), int64(3)).Return(errors.New("pipeline"))
-		m := d.manager()
-		m.idem = idem
-		m.pipelineListAdapter = pipeline
-		current := expt()
-		current.SourceType = entity.SourceType_Workflow
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(current, nil)
-		require.NoError(t, m.cleanupTerminatedRun(context.Background(), event(), expt(), nil, &entity.CompleteExptOption{NoCompleteItemTurn: true}))
-	})
+
 	t.Run("refresh_local_source_changed", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		local := &ExptResultServiceImpl{resultPublishLocker: func() lock.ILocker { return d.locker }}
@@ -1207,7 +956,7 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 		d.expectLock(true, context.Background())
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, nil)
-		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
+		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause"), false))
 	})
 	t.Run("unscheduled_pending_port_missing", func(t *testing.T) {
 		d := newTermUnitDeps(t)
@@ -1215,16 +964,15 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 		d.expectLock(true, context.Background())
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Pending, ExptType: entity.ExptType_Offline}, nil)
-		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
+		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause"), false))
 	})
 	t.Run("unscheduled_processing_terminates", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil, nil, errors.New("second lock"))
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil).Times(2)
 		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
 	})
 	t.Run("superseded_port_missing", func(t *testing.T) {

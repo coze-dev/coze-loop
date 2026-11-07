@@ -15,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	exptrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	exptck "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck"
 	exptmysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
@@ -125,7 +126,11 @@ func TestFilterRefreshFinishedReplayBeforeNotificationMarker(t *testing.T) {
 				m.publisher = pub
 			}
 			_, err := m.TerminateCurrentRun(context.Background(), f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
-			require.Error(t, err, "a failed filter or notification must remain retryable after commit")
+			if fault == "filter_write" {
+				require.Error(t, err, "failed canonical filter refresh must remain retryable after commit")
+			} else {
+				require.NoError(t, err, "standard lifecycle publication retries internally and remains best effort")
+			}
 			require.Positive(t, attempts)
 			before := f.snapshot()
 			store.fail = false
@@ -138,7 +143,7 @@ func TestFilterRefreshFinishedReplayBeforeNotificationMarker(t *testing.T) {
 			require.Equal(t, before, f.snapshot(), "replay cannot rewrite stats, end time or logs")
 			previous := attempts
 			require.NoError(t, scheduler.HandleEventCheck(func(context.Context, *entity.ExptScheduleEvent) error { return nil })(context.Background(), event))
-			require.Greater(t, attempts, previous, "notification marker must not skip filter calibration")
+			require.Equal(t, previous, attempts, "completed cleanup replay must not repeat filter calibration")
 			require.Equal(t, before, f.snapshot())
 		})
 	}
@@ -153,7 +158,7 @@ func TestFilterRefreshMissingPayloadCannotMarkNotificationComplete(t *testing.T)
 	_, err := m.TerminateCurrentRun(context.Background(), f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
 	require.Error(t, err)
 	require.True(t, errno.NeedMQRetry(err))
-	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("finish-cleanup:%d:%d", f.expt, f.run))
+	marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run))
 	require.NoError(t, err)
 	require.False(t, marked)
 	require.Empty(t, store.rows)
@@ -176,6 +181,19 @@ func TestFilterRefreshParentCancelOnlyResourcesAndNoCompleteTurns(t *testing.T) 
 	for _, noComplete := range []bool{false, true} {
 		t.Run(fmt.Sprint(noComplete), func(t *testing.T) {
 			f, m := newCancelFilterFixture(t)
+			lockKey := m.makeExptMutexLockKey(f.expt)
+			m.mutex = m.manualRetryLocker().WithHolder(legacyStaticHolderValue)
+			require.NoError(t, f.server.Set(lockKey, legacyStaticHolderValue))
+			quotaState := &entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{f.expt: time.Now().Unix()}}
+			quota := repomocks.NewMockQuotaRepo(gomock.NewController(t))
+			quota.EXPECT().CreateOrUpdate(gomock.Any(), f.space, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, update func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
+				next, _, err := update(quotaState)
+				if next != nil {
+					quotaState = next
+				}
+				return err
+			}).Times(1)
+			m.quotaRepo = quota
 			store := &filterStore{}
 			f.svc.exptTurnResultFilterRepo = store
 			ctx, cancel := context.WithCancel(context.Background())
@@ -197,16 +215,33 @@ func TestFilterRefreshParentCancelOnlyResourcesAndNoCompleteTurns(t *testing.T) 
 				require.NoError(t, f.conn.Where("space_id=?", f.space).Take(&turn).Error)
 				require.Equal(t, int32(entity.TurnRunState_Processing), turn.Status)
 			} else {
-				require.Error(t, err)
+				require.ErrorIs(t, err, context.Canceled)
+				require.True(t, errno.NeedMQRetry(err))
 				require.Zero(t, calls, "parent cancellation must prevent CK writes after commit")
+				owner, ownerErr := f.server.Get(lockKey)
+				require.NoError(t, ownerErr)
+				require.Equal(t, legacyStaticHolderValue, owner)
+				require.Contains(t, quotaState.ExptID2RunTime, f.expt)
+				marked, markErr := m.idem.Exist(context.Background(), fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run))
+				require.NoError(t, markErr)
+				require.False(t, marked, "required filter remains recoverable")
 				var expt model.Experiment
 				require.NoError(t, f.conn.Where("space_id=?", f.space).Take(&expt).Error)
 				require.Equal(t, int32(entity.ExptStatus_Terminated), expt.Status)
+				before := f.snapshot()
 				m.runFinishRepo = m.runFinishRepo.(*cancelFilterCommitHook).IExptRunFinishRepo
 				_, err = m.TerminateCurrentRun(context.Background(), f.expt, f.run, f.space, &entity.Session{}, nil, entity.NoAggrCalculate())
 				require.NoError(t, err)
 				require.Positive(t, calls)
+				require.NotEmpty(t, store.rows)
+				require.Equal(t, entity.ItemRunState_Terminal, store.rows[0].Status)
+				require.Equal(t, before, f.snapshot())
 			}
+			marked, err := m.idem.Exist(context.Background(), fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run))
+			require.NoError(t, err)
+			require.True(t, marked)
+			require.False(t, f.server.Exists(lockKey))
+			require.NotContains(t, quotaState.ExptID2RunTime, f.expt)
 		})
 	}
 }

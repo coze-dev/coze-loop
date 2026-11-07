@@ -6,7 +6,6 @@ package service
 import (
 	"context"
 	"errors"
-	"strconv"
 	"testing"
 	"time"
 
@@ -18,7 +17,6 @@ import (
 	idgenMocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
-	idemMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
 	metricsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	componentMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -61,6 +59,18 @@ func TestHandleEventErrFallsBackForFinishedExperiment(t *testing.T) {
 			exptRepo.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(&entity.Experiment{ID: 7, SpaceID: 9, Status: status}, nil)
 			if kind == "finished" {
 				manager.EXPECT().CompleteRun(gomock.Any(), int64(7), int64(8), int64(9), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			} else {
+				manager.EXPECT().CompleteExpt(gomock.Any(), int64(7), &event.ExptRunID, int64(9), gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, _ int64, _ *int64, _ int64, _ *entity.Session, opts ...entity.CompleteExptOptionFn) error {
+						option := &entity.CompleteExptOption{}
+						for _, fn := range opts {
+							fn(option)
+						}
+						require.Equal(t, entity.ExptStatus_Failed, option.Status)
+						require.Equal(t, "list evaluation set items failed", option.StatusMessage)
+						manager.terminated = true
+						return nil
+					})
 			}
 
 			handler := impl.HandleEventErr(func(context.Context, *entity.ExptScheduleEvent) error {
@@ -102,12 +112,12 @@ func TestHandleEventErrClosesPendingRetryOnFinishedExperiment(t *testing.T) {
 	}).Error)
 
 	lockerFactory, lockServer := finishRealLockerFactory(t)
-	manager.mutex, manager.manualRetryLocker = lockerFactory(), lockerFactory
+	manager.mutex, manager.manualRetryLocker = lockerFactory().WithHolder(legacyStaticHolderValue), lockerFactory
 	manager.exptRepo = exptrepo.NewExptRepo(exptmysql.NewExptDAO(provider), exptmysql.NewExptEvaluatorRefDAO(provider), manager.idgenerator)
 	manager.runLogRepo = exptrepo.NewExptRunLogRepo(exptmysql.NewExptRunLogDAO(provider))
 	manager.runFinishRepo = exptrepo.NewExptRunFinishRepo(provider)
 	lockKey := manager.makeExptMutexLockKey(7)
-	locked, _, err := manager.mutex.BackoffLockWithValue(ctx, lockKey, "8", time.Hour, time.Millisecond)
+	locked, err := manager.mutex.LockBackoff(ctx, lockKey, time.Hour, time.Millisecond)
 	require.NoError(t, err)
 	require.True(t, locked)
 	require.True(t, lockServer.Exists(lockKey))
@@ -115,8 +125,6 @@ func TestHandleEventErrClosesPendingRetryOnFinishedExperiment(t *testing.T) {
 	manager.turnResultRepo.(*repomocks.MockIExptTurnResultRepo).EXPECT().
 		ListTurnResult(gomock.Any(), int64(9), int64(7), nil, gomock.Any(), false).
 		Return([]*entity.ExptTurnResult{}, int64(0), nil).AnyTimes()
-	manager.idem.(*idemMocks.MockIdempotentService).EXPECT().Exist(gomock.Any(), "CompleteRun:exptexec:onerr:8").Return(false, nil).AnyTimes()
-	manager.idem.(*idemMocks.MockIdempotentService).EXPECT().Set(gomock.Any(), "CompleteRun:exptexec:onerr:8", 3*time.Minute).Return(nil).AnyTimes()
 	manager.idgenerator.(*idgenMocks.MockIIDGenerator).EXPECT().GenID(gomock.Any()).Return(int64(9), nil).AnyTimes()
 	manager.mtr.(*metricsMocks.MockExptMetric).EXPECT().EmitExptExecRun(int64(9), int64(entity.EvaluationModeRetryItems)).AnyTimes()
 
@@ -127,6 +135,8 @@ func TestHandleEventErrClosesPendingRetryOnFinishedExperiment(t *testing.T) {
 		ExptType: entity.ExptType_Offline, ExptRunMode: entity.EvaluationModeRetryAll,
 		Session: &entity.Session{},
 	}
+	beforeExpt, err := manager.exptRepo.GetByID(ctx, 7, 9)
+	require.NoError(t, err)
 	handler := scheduler.HandleEventErr(func(context.Context, *entity.ExptScheduleEvent) error { return cause })
 	require.NoError(t, handler(ctx, event))
 
@@ -137,6 +147,7 @@ func TestHandleEventErrClosesPendingRetryOnFinishedExperiment(t *testing.T) {
 	expt, err := manager.exptRepo.GetByID(ctx, 7, 9)
 	require.NoError(t, err)
 	require.Equal(t, entity.ExptStatus_Success, expt.Status)
+	require.Equal(t, beforeExpt.EndAt, expt.EndAt)
 	require.NotContains(t, quota.ExptID2RunTime, int64(7), "failed retry run left its prepareRun space quota reserved")
 	require.NoError(t, NewQuotaService(manager.quotaRepo, manager.configer).AllowExptRun(ctx, 100, 9, event.Session),
 		"space quota limit is one; the leaked retry reservation rejects the next experiment")
@@ -172,6 +183,17 @@ func (r *retryStartResetFailureRepo) ResetItemForRetry(ctx context.Context, spac
 		return false, err
 	}
 	return applied, errors.New("save stats error")
+}
+
+func logSchedulerRetryFixtureRun(ctx context.Context, p *pendingRunFixture, mode entity.ExptRunMode) (int64, bool, error) {
+	if mode == entity.EvaluationModeRetryItems {
+		return p.manager.LogRetryItemsRun(ctx, p.f.expt, mode, p.f.space, []int64{p.f.item}, p.event.Session)
+	}
+	run, err := p.manager.idgenerator.GenID(ctx)
+	if err != nil {
+		return 0, false, err
+	}
+	return run, false, p.manager.LogRun(ctx, p.f.expt, run, mode, p.f.space, []int64{p.f.item}, p.event.Session)
 }
 
 func TestRetryAllStartFailureTerminatesMutatedRun(t *testing.T) {
@@ -212,8 +234,7 @@ func TestRetryAllStartFailureTerminatesMutatedRun(t *testing.T) {
 				Update("status", int32(entity.TurnRunState_Success)).Error)
 			require.NoError(t, p.f.conn.Model(&model.ExptStats{}).Where("space_id=? AND expt_id=?", p.f.space, p.f.expt).
 				Updates(map[string]any{"pending_cnt": 0, "processing_cnt": 0, "success_cnt": 1, "fail_cnt": 0, "terminated_cnt": 0}).Error)
-			_, err := p.manager.mutex.UnlockWithValue(ctx, p.manager.makeExptMutexLockKey(p.f.expt), strconv.FormatInt(p.f.run, 10))
-			require.NoError(t, err)
+			require.NoError(t, p.manager.CompleteRun(ctx, p.f.expt, p.f.run, p.f.space, p.event.Session))
 
 			if tc.multiSet {
 				p.expt.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
@@ -241,7 +262,7 @@ func TestRetryAllStartFailureTerminatesMutatedRun(t *testing.T) {
 			p.manager.idgenerator = ids
 			p.manager.mtr.(*metricsMocks.MockExptMetric).EXPECT().EmitExptExecRun(p.f.space, int64(mode)).Times(2)
 
-			runID, joined, err := p.manager.LogRetryItemsRun(ctx, p.f.expt, mode, p.f.space, []int64{p.f.item}, p.event.Session)
+			runID, joined, err := logSchedulerRetryFixtureRun(ctx, p, mode)
 			require.NoError(t, err)
 			require.False(t, joined)
 			require.Equal(t, p.f.run+100, runID)
@@ -304,7 +325,7 @@ func TestRetryAllStartFailureTerminatesMutatedRun(t *testing.T) {
 				Where("space_id=? AND expt_id=? AND expt_run_id=? AND status=?", p.f.space, p.f.expt, runID, int32(entity.ItemRunState_Queueing)).Count(&queueing).Error)
 			require.Zero(t, queueing)
 
-			newRunID, joined, err := p.manager.LogRetryItemsRun(ctx, p.f.expt, mode, p.f.space, []int64{p.f.item}, p.event.Session)
+			newRunID, joined, err := logSchedulerRetryFixtureRun(ctx, p, mode)
 			require.NoError(t, err)
 			require.False(t, joined)
 			require.Equal(t, runID+1, newRunID)
@@ -373,8 +394,7 @@ func TestRetryStartRedeliveryPreservesLoggedItems(t *testing.T) {
 				Update("status", int32(entity.TurnRunState_Success)).Error)
 			require.NoError(t, p.f.conn.Model(&model.ExptStats{}).Where("space_id=? AND expt_id=?", p.f.space, p.f.expt).
 				Updates(map[string]any{"pending_cnt": 0, "processing_cnt": 0, "success_cnt": 1, "fail_cnt": 0, "terminated_cnt": 0}).Error)
-			_, err := p.manager.mutex.UnlockWithValue(ctx, p.manager.makeExptMutexLockKey(p.f.expt), strconv.FormatInt(p.f.run, 10))
-			require.NoError(t, err)
+			require.NoError(t, p.manager.CompleteRun(ctx, p.f.expt, p.f.run, p.f.space, p.event.Session))
 
 			if tc.multiSet {
 				p.expt.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
@@ -397,7 +417,7 @@ func TestRetryStartRedeliveryPreservesLoggedItems(t *testing.T) {
 			}).AnyTimes()
 			p.manager.idgenerator = ids
 			p.manager.mtr.(*metricsMocks.MockExptMetric).EXPECT().EmitExptExecRun(p.f.space, int64(mode)).Times(1)
-			createdRunID, joined, err := p.manager.LogRetryItemsRun(ctx, p.f.expt, mode, p.f.space, []int64{p.f.item}, p.event.Session)
+			createdRunID, joined, err := logSchedulerRetryFixtureRun(ctx, p, mode)
 			require.NoError(t, err)
 			require.False(t, joined)
 			require.Equal(t, runID, createdRunID)
@@ -545,7 +565,7 @@ func TestRetryStartRedeliveryRechecksItemStateUnderLock(t *testing.T) {
 		Update("status", int32(entity.TurnRunState_Success)).Error)
 	require.NoError(t, p.f.conn.Model(&model.ExptStats{}).Where("space_id=? AND expt_id=?", p.f.space, p.f.expt).
 		Updates(map[string]any{"pending_cnt": 0, "processing_cnt": 0, "success_cnt": 1, "fail_cnt": 0, "terminated_cnt": 0}).Error)
-	_, err := p.manager.mutex.UnlockWithValue(ctx, p.manager.makeExptMutexLockKey(p.f.expt), strconv.FormatInt(p.f.run, 10))
+	_, err := p.manager.mutex.Unlock(p.manager.makeExptMutexLockKey(p.f.expt))
 	require.NoError(t, err)
 
 	runID := p.f.run + 100
@@ -635,7 +655,7 @@ func TestRetryStartResetAppliesStatsDeltaWithoutSnapshotOverwrite(t *testing.T) 
 		Update("status", int32(entity.TurnRunState_Success)).Error)
 	require.NoError(t, p.f.conn.Model(&model.ExptStats{}).Where("space_id=? AND expt_id=?", p.f.space, p.f.expt).
 		Updates(map[string]any{"pending_cnt": 0, "processing_cnt": 0, "success_cnt": 1, "fail_cnt": 0, "terminated_cnt": 0}).Error)
-	_, err := p.manager.mutex.UnlockWithValue(ctx, p.manager.makeExptMutexLockKey(p.f.expt), strconv.FormatInt(p.f.run, 10))
+	_, err := p.manager.mutex.Unlock(p.manager.makeExptMutexLockKey(p.f.expt))
 	require.NoError(t, err)
 
 	runID := p.f.run + 100
@@ -697,65 +717,22 @@ func TestRetryStartResetAppliesStatsDeltaWithoutSnapshotOverwrite(t *testing.T) 
 	require.Equal(t, int32(1), stats.PendingCnt)
 }
 
+// Preserve CompleteRun -> cleanupCurrentUnscheduledRunWithQuota for an old
+// Pending run on a Success experiment, as well as confirmed Latest=R2 replay.
 func TestCompleteRunDelayedCleanupPreservesReplacementRun(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	manager := newTestExptManager(ctrl)
-	provider := db.NewTestDB(t, &model.Experiment{}, &model.ExptRunLog{}, &model.ExptStats{}, &model.ExptEvaluatorRef{})
-	ctx := context.Background()
-	endedAt := time.Now().Add(-time.Minute)
-	require.NoError(t, provider.NewSession(ctx).Create(&model.Experiment{
-		ID: 7, SpaceID: 9, ExptType: int32(entity.ExptType_Offline), LatestRunID: 8,
-		Status: int32(entity.ExptStatus_Success), EndAt: &endedAt,
-	}).Error)
-
-	lockerFactory, lockServer := finishRealLockerFactory(t)
-	manager.mutex, manager.manualRetryLocker = lockerFactory(), lockerFactory
-	manager.exptRepo = exptrepo.NewExptRepo(exptmysql.NewExptDAO(provider), exptmysql.NewExptEvaluatorRefDAO(provider), manager.idgenerator)
-	manager.runFinishRepo = exptrepo.NewExptRunFinishRepo(provider)
-	quota := &entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{7: time.Now().Add(-time.Minute).Unix()}}
-	manager.quotaRepo.(*repomocks.MockQuotaRepo).EXPECT().CreateOrUpdate(gomock.Any(), int64(9), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ int64, update func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
-			next, changed, err := update(quota.Clone())
-			if err == nil && changed {
-				quota = next
-			}
-			return err
-		}).AnyTimes()
-
-	lockKey := manager.makeExptMutexLockKey(7)
-	locked, _, err := manager.mutex.BackoffLockWithValue(ctx, lockKey, "8", time.Hour, time.Millisecond)
-	require.NoError(t, err)
-	require.True(t, locked)
-	manager.runLogRepo.(*repomocks.MockIExptRunLogRepo).EXPECT().Get(gomock.Any(), int64(7), int64(8)).
-		Return(&entity.ExptRunLog{ID: 8, ExptID: 7, ExptRunID: 8, SpaceID: 9, Status: int64(entity.ExptStatus_Pending)}, nil).AnyTimes()
-	manager.runLogRepo.(*repomocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), int64(7), int64(8), int64(9), gomock.Any()).Return(nil).AnyTimes()
-	manager.turnResultRepo.(*repomocks.MockIExptTurnResultRepo).EXPECT().
-		ListTurnResult(gomock.Any(), int64(9), int64(7), nil, gomock.Any(), false).
-		Return([]*entity.ExptTurnResult{}, int64(0), nil).AnyTimes()
-	manager.idem.(*idemMocks.MockIdempotentService).EXPECT().Exist(gomock.Any(), "CompleteRun:delayed").
-		DoAndReturn(func(context.Context, string) (bool, error) {
-			// A duplicate R1 close finishes while this close is paused after idempotency checking; R2 then starts.
-			released, err := manager.mutex.UnlockWithValue(ctx, lockKey, "8")
-			require.NoError(t, err)
-			require.True(t, released)
-			locked, _, err := manager.mutex.BackoffLockWithValue(ctx, lockKey, "9", time.Hour, time.Millisecond)
-			require.NoError(t, err)
-			require.True(t, locked)
-			require.NoError(t, manager.exptRepo.Update(ctx, &entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 9}))
-			quota.ExptID2RunTime[7] = time.Now().Unix()
-			return false, nil
+	for _, tc := range []struct {
+		name               string
+		r1Mode, r2Mode     entity.ExptRunMode
+		replayBeforeCreate bool
+	}{
+		{"retry_items_admission_before_create", entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems, true},
+		{"ordinary_admission_before_create", entity.EvaluationModeRetryItems, entity.EvaluationModeRetryAll, true},
+		{"persisted_retry_items", entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems, false},
+		// Ordinary and numeric replacements retain the same prior-tick protection.
+		{"persisted_ordinary", entity.EvaluationModeRetryAll, entity.EvaluationModeRetryAll, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			runReplacementAdmissionFixture(t, tc.r1Mode, tc.r2Mode, tc.replayBeforeCreate, true)
 		})
-	manager.idem.(*idemMocks.MockIdempotentService).EXPECT().Set(gomock.Any(), "CompleteRun:delayed", 3*time.Minute).Return(nil).AnyTimes()
-
-	require.NoError(t, manager.CompleteRun(ctx, 7, 8, 9, &entity.Session{},
-		entity.WithCID("delayed"), entity.WithStatus(entity.ExptStatus_Failed)))
-	require.True(t, lockServer.Exists(lockKey), "delayed R1 cleanup deleted the replacement R2 lifecycle lock")
-	owner, err := lockServer.Get(lockKey)
-	require.NoError(t, err)
-	require.Equal(t, "9", owner)
-	require.Contains(t, quota.ExptID2RunTime, int64(7), "delayed R1 cleanup released the replacement R2 space quota")
-	expt, err := manager.exptRepo.GetByID(ctx, 7, 9)
-	require.NoError(t, err)
-	require.Equal(t, int64(9), expt.LatestRunID)
-	require.Equal(t, entity.ExptStatus_Success, expt.Status)
+	}
 }
