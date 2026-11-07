@@ -258,19 +258,25 @@ func TestRunFinishRealCommitNotificationFailureRetry(t *testing.T) {
 			pipeline := rpcmocks.NewMockIPipelineListAdapter(ctrl)
 			counts := map[string]int{}
 			fail := func(step string) bool { counts[step]++; return fault == step && counts[step] == 1 }
-			template.EXPECT().UpdateExptInfo(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, int64, int64, int64, entity.ExptStatus, int64, *int64) error {
+			template.EXPECT().UpdateExptInfo(gomock.Any(), f.base+700, f.space, f.expt, entity.ExptStatus_Success, int64(0), nil).DoAndReturn(func(context.Context, int64, int64, int64, entity.ExptStatus, int64, *int64) error {
 				if fail("template") {
 					return errors.New("template commit cleanup fault")
 				}
 				return nil
 			}).AnyTimes()
-			aggr.EXPECT().PublishExptAggrResultEvent(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, *entity.AggrCalculateEvent, *time.Duration) error {
+			aggr.EXPECT().PublishExptAggrResultEvent(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, event *entity.AggrCalculateEvent, delay *time.Duration) error {
+				require.Equal(t, &entity.AggrCalculateEvent{ExperimentID: f.expt, SpaceID: f.space, CalculateMode: entity.CreateAllFields}, event)
+				require.Equal(t, 3*time.Second, *delay)
 				if fail("aggr") {
 					return errors.New("aggr commit cleanup fault")
 				}
 				return nil
 			}).AnyTimes()
-			publisher.EXPECT().PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, *entity.ExptLifecycleEvent, *time.Duration, string) error {
+			publisher.EXPECT().PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, event *entity.ExptLifecycleEvent, delay *time.Duration, key string) error {
+				wantKey := fmt.Sprintf("expt_%d_%d_%d_%d", f.expt, f.run, entity.ExptStatus_Processing, entity.ExptStatus_Success)
+				require.Equal(t, &entity.ExptLifecycleEvent{ExptID: f.expt, ExptRunID: &f.run, SpaceID: f.space, FromStatus: entity.ExptStatus_Processing, ToStatus: entity.ExptStatus_Success, ExptType: entity.ExptType_Offline, SourceType: entity.SourceType_Workflow, IdempotentKey: wantKey}, event)
+				require.Equal(t, wantKey, key)
+				require.Equal(t, 3*time.Second, *delay)
 				if fail("lifecycle") {
 					return errors.New("lifecycle commit cleanup fault")
 				}
@@ -282,10 +288,22 @@ func TestRunFinishRealCommitNotificationFailureRetry(t *testing.T) {
 			p.manager.publisher = publisher
 			p.manager.pipelineListAdapter = pipeline
 			result, err := p.manager.FinishCurrentRun(ctx, p.event)
-			require.True(t, errno.NeedMQRetry(err))
+			require.NoError(t, err)
 			require.Equal(t, entity.ExptRunFinishFinished, result.Disposition)
-			require.Zero(t, counts["workflow"])
-			require.Zero(t, p.notifications.Load())
+			require.Equal(t, 1, counts["workflow"])
+			require.Equal(t, int32(1), p.notifications.Load())
+			require.Equal(t, 1, counts["template"])
+			require.Equal(t, 1, counts["aggr"])
+			lifecycleCalls := 1
+			if fault == "lifecycle" {
+				lifecycleCalls = 2
+			}
+			require.Equal(t, lifecycleCalls, counts["lifecycle"])
+			owner, exists, ownerErr := p.factory().(lifecycleLockValueReader).GetLifecycleLockValue(ctx, p.manager.makeExptMutexLockKey(f.expt))
+			require.NoError(t, ownerErr)
+			require.False(t, exists)
+			require.Empty(t, owner)
+			require.Equal(t, int32(1), p.resources.Load())
 			snapshot := f.snapshot()
 			result, err = p.manager.FinishCurrentRun(ctx, p.event)
 			require.NoError(t, err)
@@ -299,7 +317,7 @@ func TestRunFinishRealCommitNotificationFailureRetry(t *testing.T) {
 			require.Equal(t, entity.ExptRunFinishAlreadyFinished, result.Disposition)
 			require.Equal(t, calls, fmt.Sprint(counts))
 			require.Equal(t, int32(1), p.notifications.Load())
-			require.Equal(t, int32(2), p.resources.Load(), "completed replay must not release shared quota again")
+			require.Equal(t, int32(1), p.resources.Load(), "completed replay must not release shared quota again")
 			require.Equal(t, snapshot, f.snapshot())
 		})
 	}

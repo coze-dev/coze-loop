@@ -137,10 +137,7 @@ func controlledStaticHolderMigration(ctx context.Context, client infraredis.Cmda
 	return true, "", nil
 }
 
-// 排空完成后的受控迁移验收：R1 是 latest 且终态、Redis 仍是固定 "evaluation"、
-// 不存在 R2 Create 前窗口。操作者按固定旧值删除后重放 R1 cleanup，必须取得
-// 独立 cleanup 锁并完成额度和通知清理；首次失败必须保持 MQRetry（AlreadyFinished
-// 不得被当成一律 ACK），再次重放可以完成。
+// After an operator proves drain and removes the fixed holder, replay uses the standard run tick and completion CID.
 func TestControlledStaticHolderMigrationAfterDrain(t *testing.T) {
 	env := newControlledMigrationEnv(t)
 	endAt := time.Now().Add(-10 * time.Minute).Truncate(time.Second)
@@ -167,17 +164,18 @@ func TestControlledStaticHolderMigrationAfterDrain(t *testing.T) {
 	quotaReleased := false
 	var leaseOwners []string
 	quota := repomocks.NewMockQuotaRepo(ctrl)
-	notificationKey := fmt.Sprintf("finish-cleanup:%d:%d", env.expt, env.run)
+	notificationKey := fmt.Sprintf("CompleteExpt:exptexec:onend:%d", env.run)
+	tickKey := fmt.Sprintf("expt_run_exec_lock:%d:%d", env.expt, env.run)
 	quota.EXPECT().CreateOrUpdate(gomock.Any(), env.space, gomock.Any(), gomock.Any()).DoAndReturn(
 		func(ctx context.Context, _ int64, mutate func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
 			quotaCalls++
-			leaseOwner, ownerErr := env.client.Get(ctx, env.key).Result()
-			require.NoError(t, ownerErr, "cleanup must hold an independent lifecycle lease")
+			leaseOwner, ownerErr := env.client.Get(ctx, tickKey).Result()
+			require.NoError(t, ownerErr, "standard completion must hold its real run tick")
 			require.NotEqual(t, legacyStaticHolderValue, leaseOwner)
 			require.NotEqual(t, strconv.FormatInt(env.run, 10), leaseOwner)
-			ttl, ttlErr := env.raw.TTL(env.ctx, env.key).Result()
+			ttl, ttlErr := env.raw.TTL(env.ctx, tickKey).Result()
 			require.NoError(t, ttlErr)
-			require.Greater(t, ttl, time.Duration(0), "independent cleanup lease must have a live TTL")
+			require.Greater(t, ttl, time.Duration(0), "run tick must have a live TTL")
 			leaseOwners = append(leaseOwners, leaseOwner)
 			if quotaCalls == 1 {
 				return errors.New("quota backend unavailable")
@@ -190,32 +188,44 @@ func TestControlledStaticHolderMigrationAfterDrain(t *testing.T) {
 	idem.EXPECT().Exist(gomock.Any(), notificationKey).Return(false, nil).Times(2)
 	idem.EXPECT().Set(gomock.Any(), notificationKey, gomock.Any()).Return(nil).Times(1)
 
+	event := &entity.ExptScheduleEvent{ExptID: env.expt, ExptRunID: env.run, SpaceID: env.space, ExptRunMode: entity.EvaluationModeSubmit, Session: &entity.Session{}}
 	manager := &ExptMangerImpl{
+		runLogRepo:        &completedFixtureRunRepo{event: event},
+		mutex:             filterRealTestLocker(env.client).WithHolder(legacyStaticHolderValue),
 		runFinishRepo:     &finishRepoProbe{result: &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishAlreadyFinished, Experiment: stored}},
 		manualRetryLocker: func() lock.ILocker { return filterRealTestLocker(env.client) },
 		exptRepo:          env.repo,
 		quotaRepo:         quota,
 		idem:              idem,
 	}
-	event := &entity.ExptScheduleEvent{ExptID: env.expt, ExptRunID: env.run, SpaceID: env.space, Session: &entity.Session{}}
 
-	_, err = manager.FinishCurrentRunWithHeldTickLock(env.ctx, event)
+	_, err = manager.FinishCurrentRun(env.ctx, event)
 	require.True(t, errno.NeedMQRetry(err), "AlreadyFinished cleanup failure must remain retryable, not ACK")
 	require.False(t, quotaReleased)
+	require.Eventually(t, func() bool { return env.raw.Exists(env.ctx, tickKey).Val() == 0 }, 2*time.Second, 10*time.Millisecond)
 	exists, err = env.client.Exists(env.ctx, env.key).Result()
 	require.NoError(t, err)
 	require.Zero(t, exists, "a failed cleanup attempt must release its own lifecycle lease")
 
-	_, err = manager.FinishCurrentRunWithHeldTickLock(env.ctx, event)
+	_, err = manager.FinishCurrentRun(env.ctx, event)
 	require.NoError(t, err)
 	require.True(t, quotaReleased, "replayed R1 cleanup must release quota")
+	require.Eventually(t, func() bool { return env.raw.Exists(env.ctx, tickKey).Val() == 0 }, 2*time.Second, 10*time.Millisecond)
 	require.Equal(t, 2, quotaCalls)
-	require.Len(t, leaseOwners, 2, "both attempts must acquire a fresh independent cleanup lease")
-	require.NotEqual(t, leaseOwners[0], leaseOwners[1], "cleanup leases must not reuse the legacy value")
+	require.Len(t, leaseOwners, 2, "both attempts must acquire their actual run tick")
+	require.NotEqual(t, leaseOwners[0], leaseOwners[1], "run tick owners must differ between attempts")
 	exists, err = env.client.Exists(env.ctx, env.key).Result()
 	require.NoError(t, err)
 	require.Zero(t, exists, "completed cleanup must release the lifecycle lease")
-	t.Log("CONTROLLED_STATIC_HOLDER_MIGRATION_AFTER_DRAIN_EXECUTED quota_and_notification_replayed_with_independent_leases")
+	before, readErr := env.repo.GetByID(env.ctx, env.expt, env.space)
+	require.NoError(t, readErr)
+	require.Equal(t, stored.EndAt, before.EndAt)
+	idem.EXPECT().Exist(gomock.Any(), notificationKey).Return(true, nil)
+	_, err = manager.FinishCurrentRun(env.ctx, event)
+	require.NoError(t, err)
+	require.Equal(t, 2, quotaCalls)
+	require.Eventually(t, func() bool { return env.raw.Exists(env.ctx, tickKey).Val() == 0 }, 2*time.Second, 10*time.Millisecond)
+	t.Log("CONTROLLED_DRAIN_STANDARD_RUN_TICK_AND_COMPLETE_CID_EXECUTED")
 }
 
 // 负向屏障：R2 在 Create 之前已用数字 runID 取得准入锁，或 R1 的旧写入仍未

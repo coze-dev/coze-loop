@@ -19,6 +19,7 @@ import (
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	confmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"go.uber.org/mock/gomock"
@@ -410,24 +411,104 @@ func TestRunCancelLostLeaseHasZeroStateWrites(t *testing.T) {
 }
 
 func TestRunCancelR2LifecycleOwnerPreventsAnyCleanup(t *testing.T) {
-	p := newPendingRunFixture(t, entity.EvaluationModeSubmit)
-	f := p.f
-	finished := *p.expt
-	finished.Status = entity.ExptStatus_Terminated
-	released, err := p.manager.mutex.Unlock(p.manager.makeExptMutexLockKey(f.expt))
-	require.NoError(t, err)
-	require.True(t, released)
-	replacement := p.factory()
-	locked, _, err := replacement.BackoffLockWithValue(context.Background(), p.manager.makeExptMutexLockKey(f.expt), fmt.Sprint(f.run+100), time.Minute, time.Millisecond)
-	require.NoError(t, err)
-	require.True(t, locked)
-	source := f.source()
-	before := f.snapshot()
-	err = completeTerminationFixture(p.manager, context.Background(), p.event, &finished, []*entity.ExptCurrentItemRunSource{source}, &entity.CompleteExptOption{})
-	require.True(t, errno.NeedMQRetry(err))
-	require.Equal(t, before, f.snapshot())
-	require.Zero(t, p.resources.Load())
-	require.Zero(t, p.notifications.Load())
+	for _, tc := range []struct {
+		name           string
+		r1Mode, r2Mode entity.ExptRunMode
+		persist        bool
+	}{
+		{"retry_items_admission_before_create", entity.EvaluationModeSubmit, entity.EvaluationModeRetryItems, false},
+		{"ordinary_admission_before_create", entity.EvaluationModeRetryItems, entity.EvaluationModeRetryAll, false},
+		{"persisted_retry_items", entity.EvaluationModeSubmit, entity.EvaluationModeRetryItems, true},
+		{"persisted_ordinary", entity.EvaluationModeSubmit, entity.EvaluationModeRetryAll, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := newPendingRunFixture(t, tc.r1Mode)
+			f := p.f
+			ctx := context.Background()
+			// Capture and commit actual original sources through the standard SQL boundary.
+			require.NoError(t, p.manager.withTerminationRunLock(ctx, f.expt, f.run, func(lockCtx context.Context) error {
+				data, err := p.manager.commitCompleteData(lockCtx, p.expt, f.run, &entity.CompleteExptOption{Status: entity.ExptStatus_Terminated})
+				if err == nil {
+					require.Equal(t, entity.ExptRunFinishFinished, data.result.Disposition)
+					require.Equal(t, entity.ExptStatus_Terminated, data.result.Experiment.Status)
+				}
+				return err
+			}))
+			require.Eventually(t, func() bool {
+				_, exists, err := p.factory().(lifecycleLockValueReader).GetLifecycleLockValue(ctx, fmt.Sprintf("expt_run_exec_lock:%d:%d", f.expt, f.run))
+				return err == nil && !exists
+			}, 2*time.Second, 10*time.Millisecond)
+			require.Zero(t, p.resources.Load())
+			require.Zero(t, p.notifications.Load())
+			lockKey := p.manager.makeExptMutexLockKey(f.expt)
+			var released bool
+			var err error
+			if tc.r1Mode == entity.EvaluationModeRetryItems {
+				released, err = p.manager.mutex.UnlockWithValue(ctx, lockKey, fmt.Sprint(f.run))
+			} else {
+				released, err = p.manager.mutex.Unlock(lockKey)
+			}
+			require.NoError(t, err)
+			require.True(t, released)
+			r2 := f.run + 100
+			replacement := p.factory()
+			owner := legacyStaticHolderValue
+			var locked bool
+			if tc.r2Mode == entity.EvaluationModeRetryItems {
+				owner = fmt.Sprint(r2)
+				locked, _, err = replacement.BackoffLockWithValue(ctx, lockKey, owner, time.Minute, time.Millisecond)
+			} else {
+				locked, err = replacement.WithHolder(owner).LockBackoff(ctx, lockKey, time.Minute, time.Millisecond)
+			}
+			require.NoError(t, err)
+			require.True(t, locked)
+			persist := func() {
+				require.NoError(t, f.conn.Create(&model.ExptRunLog{ID: r2, SpaceID: f.space, ExptID: f.expt, ExptRunID: r2, Mode: gptr.Of(int32(tc.r2Mode)), Status: gptr.Of(int64(entity.ExptStatus_Pending))}).Error)
+				require.NoError(t, p.manager.exptRepo.Update(ctx, &entity.Experiment{ID: f.expt, SpaceID: f.space, LatestRunID: r2}))
+			}
+			if tc.persist {
+				persist()
+			} else {
+				current, readErr := p.manager.exptRepo.GetByID(ctx, f.expt, f.space)
+				require.NoError(t, readErr)
+				require.Equal(t, f.run, current.LatestRunID)
+				var count int64
+				require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=? AND expt_id=? AND expt_run_id=?", f.space, f.expt, r2).Count(&count).Error)
+				require.Zero(t, count, "R2 has only admission, not Create or LatestRunID")
+			}
+			quotaState := &entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{f.expt: time.Now().Add(-time.Minute).Unix()}}
+			quota := repomocks.NewMockQuotaRepo(gomock.NewController(t))
+			quota.EXPECT().CreateOrUpdate(gomock.Any(), f.space, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, update func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
+				p.resources.Add(1)
+				next, _, err := update(quotaState)
+				if next != nil {
+					quotaState = next
+				}
+				return err
+			}).AnyTimes()
+			p.manager.quotaRepo = quota
+			before := f.snapshot()
+			err = p.manager.CompleteExpt(ctx, f.expt, &f.run, f.space, p.event.Session, entity.WithStatus(entity.ExptStatus_Terminated), entity.NoAggrCalculate())
+			t.Logf("R2_WINDOW persist=%v original=%d replacement=%d quota_calls=%d notifications=%d quota=%v", tc.persist, f.run, r2, p.resources.Load(), p.notifications.Load(), quotaState.ExptID2RunTime)
+			require.Zero(t, p.resources.Load(), "R1 cannot release shared quota under replacement admission")
+			require.Contains(t, quotaState.ExptID2RunTime, f.expt)
+			require.Zero(t, p.notifications.Load())
+			require.Equal(t, before, f.snapshot())
+			actual, exists, readErr := p.factory().(lifecycleLockValueReader).GetLifecycleLockValue(ctx, lockKey)
+			require.NoError(t, readErr)
+			require.True(t, exists)
+			require.Equal(t, owner, actual)
+			if tc.persist {
+				require.NoError(t, err)
+			} else {
+				require.True(t, errno.NeedMQRetry(err))
+				persist()
+				require.NoError(t, p.manager.CompleteExpt(ctx, f.expt, &f.run, f.space, p.event.Session, entity.WithStatus(entity.ExptStatus_Terminated)))
+				require.Zero(t, p.resources.Load())
+				require.Contains(t, quotaState.ExptID2RunTime, f.expt)
+			}
+		})
+	}
 }
 
 func TestNewRunResetReleasesOriginalTerminalManualQuotaBeforeMigration(t *testing.T) {

@@ -656,6 +656,27 @@ func (e *ExptMangerImpl) commitCompleteData(ctx context.Context, current *entity
 	return data, nil
 }
 
+func (e *ExptMangerImpl) checkCompleteAdmission(ctx context.Context, expt, run int64, mode entity.ExptRunMode) error {
+	observer, ok := e.mutex.(interface {
+		GetLifecycleLockValue(context.Context, string) (string, bool, error)
+	})
+	if !ok {
+		return errno.NewMQRetryErr("completion admission observer missing")
+	}
+	owner, exists, err := observer.GetLifecycleLockValue(ctx, e.makeExptMutexLockKey(expt))
+	if err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	expected := "evaluation"
+	if mode == entity.EvaluationModeRetryItems {
+		expected = strconv.FormatInt(run, 10)
+	}
+	if exists && owner != expected {
+		return errno.NewMQRetryErr("completion admission belongs to another run")
+	}
+	return nil
+}
+
 func (e *ExptMangerImpl) releaseCompleteAdmission(ctx context.Context, expt, run, space int64) error {
 	if e.mutex == nil {
 		return errno.NewMQRetryErr("completion admission locker missing")
@@ -716,18 +737,28 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 			if current == nil {
 				return errno.NewMQRetryErr("complete run experiment missing")
 			}
+			opt := &entity.CompleteExptOption{}
+			for _, fn := range opts {
+				fn(opt)
+			}
 			if entity.IsExptFinished(current.Status) && current.LatestRunID == exptRunID && e.runLogRepo != nil {
 				logged, err := e.runLogRepo.Get(ctx, exptID, exptRunID)
 				if err != nil {
 					return err
 				}
 				if logged != nil && logged.Status == int64(entity.ExptStatus_Pending) {
-					return e.cleanupCurrentUnscheduledRunWithQuota(ctx, exptID, exptRunID, spaceID, fmt.Errorf("run setup did not start"), true)
+					admissionCtx, stopAdmission := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
+					admissionErr := e.checkCompleteAdmission(admissionCtx, exptID, exptRunID, entity.ExptRunMode(logged.Mode))
+					stopAdmission()
+					if admissionErr != nil {
+						return admissionErr
+					}
+					cause := errors.New("run setup did not start")
+					if opt.StatusMessage != "" {
+						cause = errors.New(opt.StatusMessage)
+					}
+					return e.cleanupCurrentUnscheduledRunWithQuota(ctx, exptID, exptRunID, spaceID, cause, true)
 				}
-			}
-			opt := &entity.CompleteExptOption{}
-			for _, fn := range opts {
-				fn(opt)
 			}
 			data, err := e.commitCompleteData(ctx, current, exptRunID, opt)
 			if err != nil {
@@ -1080,6 +1111,20 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	// 自查（见 incompleteItemIDsForRelease）。原因是 reservation 是 item 粒度，
 	// 而 turn 与 item 可以不同步 —— turn 已终态、item 仍 Processing 时用 turn 判据会漏，
 	// 那正是沙箱执行进程死亡的典型形态（2026-08-24 PPE 实测 45 条卡住）。
+	if data != nil {
+		admissionCtx, stopAdmission := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
+		defer stopAdmission()
+		logged, err := e.runLogRepo.Get(admissionCtx, exptID, *exptRunID)
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if logged == nil {
+			return errno.NewMQRetryErr("completion run missing")
+		}
+		if err := e.checkCompleteAdmission(admissionCtx, exptID, *exptRunID, entity.ExptRunMode(logged.Mode)); err != nil {
+			return err
+		}
+	}
 	if err := e.releaseCentralQuotaForIncompleteItems(ctx, got, exptRunID, status); err != nil && data != nil && data.sources != nil {
 		// Whole termination has committed its original sources. Keep admission
 		// and Done pending until replay releases those same RequestIDs.
@@ -1106,7 +1151,10 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		}
 		_ = e.terminateSandboxExecutesForCancelledItems(resourceCtx, spaceID, got.TargetSpaceID, exptID, exptRunID, ids)
 	}
-	if !opt.NoCompleteItemTurn && data != nil && data.sources != nil && ctx.Err() == nil {
+	if !opt.NoCompleteItemTurn && data != nil && data.sources != nil {
+		if err := ctx.Err(); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
 		if err := e.refreshTerminatedRunFilters(ctx, &entity.ExptScheduleEvent{SpaceID: spaceID, ExptID: exptID, ExptRunID: *exptRunID}, data.sources); err != nil {
 			return err
 		}
@@ -1204,8 +1252,10 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			// Resource cleanup completed despite caller cancellation. Record the
 			// successful release so its error replay cannot release admission twice.
 			if e.idem != nil && opt.CID != "" {
-				if markErr := e.idem.Set(resourceCtx, idemKeyPrefix+opt.CID, 3*time.Minute); markErr != nil {
-					logs.CtxError(resourceCtx, "CompleteExpt SetNX fail, expt_id: %v, err: %v", exptID, markErr)
+				markCtx, stopMark := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+				defer stopMark()
+				if markErr := e.idem.Set(markCtx, idemKeyPrefix+opt.CID, 3*time.Minute); markErr != nil {
+					logs.CtxError(markCtx, "CompleteExpt SetNX fail, expt_id: %v, err: %v", exptID, markErr)
 				}
 			}
 			return errno.WrapMQRetryErr(err)
@@ -1268,8 +1318,14 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	// Done includes the paired admission release. A failed release must remain
 	// replayable; a seen CID must never perform another release.
 	if e.idem != nil && len(opt.CID) > 0 {
-		if err := e.idem.Set(resourceCtx, idemKeyPrefix+opt.CID, 3*time.Minute); err != nil {
-			logs.CtxError(resourceCtx, "CompleteExpt SetNX fail, expt_id: %v, err: %v", exptID, err)
+		markCtx := ctx
+		if data != nil {
+			var stopMark context.CancelFunc
+			markCtx, stopMark = context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+			defer stopMark()
+		}
+		if err := e.idem.Set(markCtx, idemKeyPrefix+opt.CID, 3*time.Minute); err != nil {
+			logs.CtxError(markCtx, "CompleteExpt SetNX fail, expt_id: %v, err: %v", exptID, err)
 		}
 	}
 	return nil
