@@ -73,7 +73,8 @@ func TestNonCurrentRunMySQLRequiresActualReplacement(t *testing.T) {
 			}
 			before := f.snapshot()
 			result, err := finishFixture(f)
-			if state == "actual" {
+			switch state {
+			case "actual":
 				require.NoError(t, err)
 				require.Equal(t, entity.ExptRunFinishNonCurrent, result.Disposition)
 				var old, current model.ExptRunLog
@@ -87,11 +88,11 @@ func TestNonCurrentRunMySQLRequiresActualReplacement(t *testing.T) {
 				require.NoError(t, f.conn.Where("space_id=? AND expt_run_id=?", f.space, next).Take(&current).Error)
 				require.Equal(t, int64(entity.ExptStatus_Pending), gptr.Indirect(current.Status))
 				require.Equal(t, withoutOwnRunCompletion(t, before, f), withoutOwnRunCompletion(t, f.snapshot(), f))
-			} else if state == "already_terminal" {
+			case "already_terminal":
 				require.NoError(t, err)
 				require.Equal(t, entity.ExptRunFinishNonCurrent, result.Disposition)
 				require.Equal(t, before, f.snapshot())
-			} else {
+			default:
 				require.Error(t, err)
 				require.Nil(t, result)
 				require.Equal(t, before, f.snapshot())
