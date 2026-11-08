@@ -660,6 +660,7 @@ type AgentSkillDeclare struct {
 // SUA 相关字段对被测 Agent 不可见。
 type ItemRunConf struct {
 	MaxTurns                 int           `json:"max_turns,omitempty"`
+	MaxQATurns               *int          `json:"max_qa_turns,omitempty"`
 	MaxRunMinutes            int           `json:"max_run_minutes,omitempty"`
 	FixedQueryList           []*FixedQuery `json:"fixed_query_list,omitempty"`
 	SuaGoal                  string        `json:"sua_goal,omitempty"`
@@ -668,7 +669,11 @@ type ItemRunConf struct {
 	// SuaPETemplate 是 SUA loop 跑法必需的 PE 模板 (含 {{eval_result}} 占位符, sua-cli 用它
 	// 把上一轮评分拼成下一轮追问); 缺失时 runtime 在 prepare 阶段即拒绝该 trial。
 	// 题目级配置优先于实验级配置。
-	SuaPETemplate string `json:"sua_pe_template,omitempty"`
+	SuaPETemplate       string `json:"sua_pe_template,omitempty"`
+	SuaResumePETemplate string `json:"sua_resume_pe_template,omitempty"`
+	SuaQAReplyTemplate  string `json:"sua_qa_reply_template,omitempty"`
+	// 阶段语义由 runtime 解释；保留未知子字段与精确数字，指针区分未配和空 object。
+	SuaStageConf *map[string]stdjson.RawMessage `json:"sua_stage_conf,omitempty"`
 	// EvaluatorTrigger 决定该题目**什么时候**跑评估器: never / after_each_turn /
 	// final_turn_only / by_testcase_config (空 = 未配, 回落到 by_testcase_config)。
 	//

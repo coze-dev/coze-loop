@@ -84,13 +84,18 @@ func TestItemRunConf_EmptyMarshalsToEmptyObject(t *testing.T) {
 func TestItemRunConf_WireTagsAreTheCrossRepoContract(t *testing.T) {
 	t.Parallel()
 
+	maxQATurns := 60
 	rc := &ItemRunConf{
 		MaxTurns:                 4,
+		MaxQATurns:               &maxQATurns,
 		MaxRunMinutes:            30,
 		SuaGoal:                  "g",
 		SuaPersona:               "p",
 		SuaBehavioralConstraints: "c",
 		SuaPETemplate:            "tpl {{eval_result}}",
+		SuaResumePETemplate:      "resume",
+		SuaQAReplyTemplate:       "qa",
+		SuaStageConf:             &map[string]json.RawMessage{"mode": json.RawMessage(`"staged"`)},
 		EvaluatorTrigger:         "final_turn_only",
 		FixedQueryList: []*FixedQuery{{
 			Query:      "q",
@@ -107,8 +112,9 @@ func TestItemRunConf_WireTagsAreTheCrossRepoContract(t *testing.T) {
 
 	assert.ElementsMatch(t,
 		[]string{
-			"max_turns", "max_run_minutes", "fixed_query_list", "sua_goal", "sua_persona",
+			"max_turns", "max_qa_turns", "max_run_minutes", "fixed_query_list", "sua_goal", "sua_persona",
 			"sua_behavioral_constraints", "sua_pe_template", "evaluator_trigger",
+			"sua_resume_pe_template", "sua_qa_reply_template", "sua_stage_conf",
 		},
 		wireKeys(t, rc),
 		"ItemRunConf 的 wire tag 集合变了 —— 必须同步 runtime 的 testcase.RunConf, 否则单向丢字段")

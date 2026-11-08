@@ -58,6 +58,56 @@ func newRunConfEtec(itemConfig *entity.ExptItemConfig, runModeConfig *entity.Run
 	}
 }
 
+func TestCallTarget_SUAStageRunConfReachesExt(t *testing.T) {
+	const raw = `{"max_qa_turns":60,"sua_stage_conf":{"mode":"staged","initial_stage":"review","stages":[{"stage_id":"review","files":[],"future":{"id":9007199254740993}}]},"sua_resume_pe_template":"继续 {{eval_result}}","sua_qa_reply_template":"仅回答当前问题"}`
+	var conf entity.ItemRunConf
+	require.NoError(t, json.Unmarshal([]byte(raw), &conf))
+	ctrl := gomock.NewController(t)
+	metric := metricsmocks.NewMockExptMetric(ctrl)
+	target := svcmocks.NewMockIEvalTargetService(ctrl)
+	svc := &DefaultExptTurnEvaluationImpl{metric: metric, evalTargetService: target}
+	metric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), false)
+	target.EXPECT().ExecuteTarget(gomock.Any(), int64(123), int64(1), int64(1), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _, _ int64, _ *entity.ExecuteTargetCtx, in *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
+			assert.JSONEq(t, raw, in.Ext[consts.TargetExecuteExtRunConfKey])
+			assert.Contains(t, in.Ext[consts.TargetExecuteExtRunConfKey], "9007199254740993")
+			return &entity.EvalTargetRecord{ID: 1}, nil
+		})
+	_, err := svc.callTarget(context.Background(), newRunConfEtec(&entity.ExptItemConfig{
+		EvalTargetConf: &entity.ItemTargetConf{TargetVersionID: 1, RunConf: &conf},
+	}, nil), nil, 123)
+	require.NoError(t, err)
+}
+
+func TestCallTarget_MaxQATurnsZeroAndUnsetReachesExt(t *testing.T) {
+	for _, tc := range []struct {
+		name, input, want string
+	}{
+		{"zero", `{"max_qa_turns":0,"sua_goal":"goal"}`, `{"max_qa_turns":0,"sua_goal":"goal"}`},
+		{"null", `{"max_qa_turns":null,"sua_goal":"goal"}`, `{"sua_goal":"goal"}`},
+		{"absent", `{"sua_goal":"goal"}`, `{"sua_goal":"goal"}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var conf entity.ItemRunConf
+			require.NoError(t, json.Unmarshal([]byte(tc.input), &conf))
+			ctrl := gomock.NewController(t)
+			metric := metricsmocks.NewMockExptMetric(ctrl)
+			target := svcmocks.NewMockIEvalTargetService(ctrl)
+			svc := &DefaultExptTurnEvaluationImpl{metric: metric, evalTargetService: target}
+			metric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), false)
+			target.EXPECT().ExecuteTarget(gomock.Any(), int64(123), int64(1), int64(1), gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ context.Context, _, _, _ int64, _ *entity.ExecuteTargetCtx, in *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
+					assert.JSONEq(t, tc.want, in.Ext[consts.TargetExecuteExtRunConfKey])
+					return &entity.EvalTargetRecord{ID: 1}, nil
+				})
+			_, err := svc.callTarget(context.Background(), newRunConfEtec(&entity.ExptItemConfig{
+				EvalTargetConf: &entity.ItemTargetConf{TargetVersionID: 1, RunConf: &conf},
+			}, nil), nil, 123)
+			require.NoError(t, err)
+		})
+	}
+}
+
 // 题目级 + 实验级两份配置都必须原样落到 Ext, 且**各自落在自己的 key 上**。
 //
 // 两个 key 名字只差一个词、在同一个函数里前后相邻写入, 是最容易被复制粘贴写错的一对;
