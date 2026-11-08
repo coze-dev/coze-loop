@@ -47,9 +47,12 @@ func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.E
 		if expt.ExptType != int32(entity.ExptType_Offline) {
 			return fmt.Errorf("natural current-run finish requires offline experiment")
 		}
-		runFinished := entity.IsExptFinished(entity.ExptStatus(gptr.Indirect(run.Status)))
+		runStatus := entity.ExptStatus(gptr.Indirect(run.Status))
+		runFinished := entity.IsExptFinished(runStatus)
 		exptFinished := entity.IsExptFinished(entity.ExptStatus(expt.Status))
-		if runFinished || exptFinished {
+		// Legacy CompleteRun commits before CompleteExpt; revalidate its result below.
+		legacyCompleted := expt.Status == int32(entity.ExptStatus_Processing) && (runStatus == entity.ExptStatus_Success || runStatus == entity.ExptStatus_Failed)
+		if (runFinished || exptFinished) && !legacyCompleted {
 			if !runFinished || !exptFinished || expt.EndAt == nil {
 				return fmt.Errorf("inconsistent partially finished current run")
 			}
@@ -57,7 +60,7 @@ func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.E
 			result.Experiment, err = convert.NewExptConverter().PO2DO(expt, nil)
 			return err
 		}
-		if expt.Status != int32(entity.ExptStatus_Processing) || (gptr.Indirect(run.Status) != int64(entity.ExptStatus_Pending) && gptr.Indirect(run.Status) != int64(entity.ExptStatus_Processing)) {
+		if expt.Status != int32(entity.ExptStatus_Processing) || !legacyCompleted && (runStatus != entity.ExptStatus_Pending && runStatus != entity.ExptStatus_Processing) {
 			return fmt.Errorf("finish requires active experiment and run")
 		}
 		session := d.provider.NewSession(ctx, opts...)
@@ -108,11 +111,14 @@ func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.E
 		if err := session.Where("space_id=? AND expt_id=?", r.SpaceID, r.ExptID).Take(&stats).Error; err != nil {
 			return err
 		}
-		runStatus := entity.ExptStatus_Success
+		runStatus = entity.ExptStatus_Success
 		// Preserve calculateRunLogStats: canonical turns across all runs, including
 		// unexecuted turns after an item failure. Those counts do not block finish.
 		if turnCounts.pending > 0 || turnCounts.fail > 0 {
 			runStatus = entity.ExptStatus_Failed
+		}
+		if legacyCompleted && gptr.Indirect(run.Status) != int64(runStatus) {
+			return fmt.Errorf("legacy finished run does not match canonical turn stats")
 		}
 		exptStatus := entity.ExptStatus_Success
 		// User-terminated items are not evaluation failures (CalculateStats contract).
