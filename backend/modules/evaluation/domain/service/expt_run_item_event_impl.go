@@ -1006,6 +1006,9 @@ func (e *ExptItemEventEvalServiceImpl) handleItemLockBusy(ctx context.Context, e
 		return busy
 	}
 	if frozen.Current.RunID != event.ExptRunID || frozen.Current.RequestID != event.RequestID {
+		if (isOrdinaryLegacyWakeup(event) || isLegacyAsyncNotice(event)) && frozen.Current.RunID == event.ExptRunID && frozen.Current.RequestID != "" && !entity.IsItemRunFinished(frozen.Current.Status) {
+			return busy
+		}
 		// The event refers to a request that is no longer current: it is safe to
 		// drop, because executing it could only mutate a superseded source.
 		return nil
@@ -1742,11 +1745,89 @@ func (e *ExptRecordEvalModeRetryIgnoreResult) PostEval(ctx context.Context, eiec
 	return nil
 }
 
+func isOrdinaryLegacyWakeup(event *entity.ExptItemEvalEvent) bool {
+	return event != nil && event.RequestID == "" && !event.AsyncReportTrigger && !event.AsyncEvaluatorReportTrigger && event.ResumeSource == nil
+}
+
 func (e *ExptItemEventEvalServiceImpl) HandleCurrentSource(next RecordEvalEndPoint) RecordEvalEndPoint {
 	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+		if isLegacyAsyncNotice(event) {
+			ctx = contexts.WithCtxWriteDB(ctx)
+		}
 		source, err := e.exptItemResultRepo.GetCurrentRequest(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
 		if err != nil {
 			return errno.WrapMQRetryErr(err)
+		}
+		var observed *entity.ExptCurrentItemRunSource
+		legacyResume := false
+		if source != nil && source.RequestID != "" && source.Matches(event.ExptRunID, source.RequestID) && isLegacyAsyncNotice(event) {
+			port, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo)
+			if !ok || e.manager == nil || e.experimentRepo == nil {
+				return errno.NewMQRetryErr("legacy resume source provider missing")
+			}
+			if source.ObservationUnstable {
+				return errno.NewMQRetryErr("legacy resume source unstable")
+			}
+			expt, err := e.experimentRepo.GetByID(ctx, event.ExptID, event.SpaceID)
+			if err != nil {
+				return errno.WrapMQRetryErr(err)
+			}
+			if expt == nil || expt.ID != event.ExptID || expt.SpaceID != event.SpaceID || expt.LatestRunID != event.ExptRunID || expt.ExptType != entity.ExptType_Offline || expt.Status != entity.ExptStatus_Processing {
+				return nil
+			}
+			run, err := e.manager.GetRunLog(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session)
+			if err != nil {
+				return errno.WrapMQRetryErr(err)
+			}
+			if run == nil || run.ExptID != event.ExptID || run.ExptRunID != event.ExptRunID || run.SpaceID != event.SpaceID || run.Status != int64(entity.ExptStatus_Pending) && run.Status != int64(entity.ExptStatus_Processing) {
+				return nil
+			}
+			observed, err = port.GetCurrentItemRunSource(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
+			if err != nil {
+				return errno.WrapMQRetryErr(err)
+			}
+			if observed == nil || !observed.Current.Matches(event.ExptRunID, source.RequestID) {
+				return nil
+			}
+			if executionSource(ctx) == nil {
+				ctx = context.WithValue(ctx, currentItemSourceKey{}, &currentItemExecution{})
+			}
+			executionSource(ctx).Source = observed
+			local, err := e.bindLegacyAsyncNotice(ctx, event, observed)
+			if err != nil || local == nil {
+				return err
+			}
+			*event = *local
+			source = &observed.Current
+			legacyResume = true
+			executionSource(ctx).LegacyContinuation = true
+		}
+		if source != nil && source.RequestID != "" && source.Matches(event.ExptRunID, source.RequestID) && isOrdinaryLegacyWakeup(event) {
+			if _, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); !ok || e.manager == nil || e.experimentRepo == nil {
+				return nil
+			}
+			if source.ObservationUnstable {
+				return errno.NewMQRetryErr("legacy wakeup source unstable")
+			}
+			primaryCtx := contexts.WithCtxWriteDB(ctx)
+			expt, err := e.experimentRepo.GetByID(primaryCtx, event.ExptID, event.SpaceID)
+			if err != nil {
+				return errno.WrapMQRetryErr(err)
+			}
+			if expt == nil || expt.ID != event.ExptID || expt.SpaceID != event.SpaceID || expt.LatestRunID != event.ExptRunID || expt.ExptType != entity.ExptType_Offline || expt.Status != entity.ExptStatus_Processing {
+				return nil
+			}
+			run, err := e.manager.GetRunLog(primaryCtx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session)
+			if err != nil {
+				return errno.WrapMQRetryErr(err)
+			}
+			if run == nil || run.ExptID != event.ExptID || run.ExptRunID != event.ExptRunID || run.SpaceID != event.SpaceID || entity.ExptRunMode(run.Mode) != event.ExptRunMode || run.Status != int64(entity.ExptStatus_Pending) && run.Status != int64(entity.ExptStatus_Processing) {
+				return nil
+			}
+			// e6 wakes the original run mode; execution still belongs to the frozen request.
+			local := event.Clone()
+			local.RequestID, local.ExptRunMode, local.RetryTimes = source.RequestID, source.Mode, int(source.RetryTimes)
+			*event = *local
 		}
 		if !source.Matches(event.ExptRunID, event.RequestID) {
 			return nil
@@ -1758,9 +1839,12 @@ func (e *ExptItemEventEvalServiceImpl) HandleCurrentSource(next RecordEvalEndPoi
 			ctx = context.WithValue(ctx, currentItemSourceKey{}, &currentItemExecution{})
 		}
 		if port, ok := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); ok {
-			frozen, err := port.GetCurrentItemRunSource(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
-			if err != nil {
-				return errno.WrapMQRetryErr(err)
+			frozen := observed
+			if frozen == nil {
+				frozen, err = port.GetCurrentItemRunSource(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
+				if err != nil {
+					return errno.WrapMQRetryErr(err)
+				}
 			}
 			if frozen == nil || !frozen.Current.Matches(event.ExptRunID, event.RequestID) {
 				return nil
@@ -1770,12 +1854,14 @@ func (e *ExptItemEventEvalServiceImpl) HandleCurrentSource(next RecordEvalEndPoi
 			}
 			source = &frozen.Current
 		}
-		valid, sourceErr := e.validateResumeSource(ctx, event, source)
-		if sourceErr != nil {
-			return sourceErr
-		}
-		if !valid {
-			return nil
+		if !legacyResume {
+			valid, sourceErr := e.validateResumeSource(ctx, event, source)
+			if sourceErr != nil {
+				return sourceErr
+			}
+			if !valid {
+				return nil
+			}
 		}
 		if event.RetryTimes < 0 {
 			return errno.NewMQRetryErr("invalid event retry count")

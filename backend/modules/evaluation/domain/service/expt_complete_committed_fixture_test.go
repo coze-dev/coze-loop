@@ -8,6 +8,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 )
 
 // Existing post-commit tests inject an already committed SQL result into the
@@ -22,7 +23,7 @@ func (r *completedFixtureRunRepo) Get(context.Context, int64, int64) (*entity.Ex
 	return &entity.ExptRunLog{ExptID: r.event.ExptID, ExptRunID: r.event.ExptRunID, SpaceID: r.event.SpaceID, Mode: int32(r.event.ExptRunMode), Status: int64(entity.ExptStatus_Success)}, nil
 }
 
-func completeCommittedFixture(m *ExptMangerImpl, ctx context.Context, event *entity.ExptScheduleEvent, finished *entity.Experiment, sources []*entity.ExptCurrentItemRunSource, opt *entity.CompleteExptOption) error {
+func completeCommittedFixture(m *ExptMangerImpl, ctx context.Context, event *entity.ExptScheduleEvent, finished *entity.Experiment, sources []*entity.ExptCurrentItemRunSource, opt *entity.CompleteExptOption, initial ...bool) error {
 	if m.runFinishRepo == nil {
 		m.runFinishRepo = &finishRepoProbe{}
 	}
@@ -32,7 +33,26 @@ func completeCommittedFixture(m *ExptMangerImpl, ctx context.Context, event *ent
 	if m.mutex == nil && m.manualRetryLocker != nil {
 		m.mutex = m.manualRetryLocker().WithHolder(legacyStaticHolderValue)
 	}
-	data := &completeData{result: &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishAlreadyFinished, Experiment: finished}, sources: sources, from: entity.ExptStatus_Processing}
+	first := len(initial) == 0 || initial[0]
+	disposition := entity.ExptRunFinishAlreadyFinished
+	if first {
+		disposition = entity.ExptRunFinishFinished
+	}
+	data := &completeData{result: &entity.ExptRunFinishResult{Disposition: disposition, Experiment: finished}, sources: sources, from: entity.ExptStatus_Processing}
+	if first {
+		originalCtx, stop := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+		defer stop()
+		current, err := m.exptRepo.GetByID(contexts.WithCtxWriteDB(originalCtx), event.ExptID, event.SpaceID)
+		if err != nil {
+			return err
+		}
+		if current != nil && current.LatestRunID == event.ExptRunID {
+			if err := m.releaseCompleteAdmissionForMode(originalCtx, event.ExptID, event.ExptRunID, event.ExptRunMode); err != nil {
+				return err
+			}
+			data.admissionReleased = true
+		}
+	}
 	ctx = context.WithValue(ctx, completeDataKey{}, data)
 	options := []entity.CompleteExptOptionFn{}
 	if opt != nil {
@@ -43,6 +63,10 @@ func completeCommittedFixture(m *ExptMangerImpl, ctx context.Context, event *ent
 
 func completeNaturalFixture(m *ExptMangerImpl, ctx context.Context, event *entity.ExptScheduleEvent, finished *entity.Experiment) error {
 	return completeCommittedFixture(m, ctx, event, finished, nil, nil)
+}
+
+func completeNaturalReplayFixture(m *ExptMangerImpl, ctx context.Context, event *entity.ExptScheduleEvent, finished *entity.Experiment) error {
+	return completeCommittedFixture(m, ctx, event, finished, nil, nil, false)
 }
 
 func completeTerminationFixture(m *ExptMangerImpl, ctx context.Context, event *entity.ExptScheduleEvent, finished *entity.Experiment, sources []*entity.ExptCurrentItemRunSource, opt *entity.CompleteExptOption) error {

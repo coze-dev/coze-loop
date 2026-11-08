@@ -511,9 +511,10 @@ type (
 	completeCaptureKey        struct{}
 	completeExpectedSourceKey struct{}
 	completeData              struct {
-		result  *entity.ExptRunFinishResult
-		sources []*entity.ExptCurrentItemRunSource
-		from    entity.ExptStatus
+		result            *entity.ExptRunFinishResult
+		sources           []*entity.ExptCurrentItemRunSource
+		from              entity.ExptStatus
+		admissionReleased bool
 	}
 )
 
@@ -620,6 +621,24 @@ func (e *ExptMangerImpl) commitCompleteData(ctx context.Context, current *entity
 	if err := ctx.Err(); err != nil {
 		return nil, errno.WrapMQRetryErr(err)
 	}
+	if !entity.IsExptFinished(current.Status) && e.runLogRepo != nil {
+		logged, err := e.runLogRepo.Get(contexts.WithCtxWriteDB(ctx), current.ID, run)
+		if err != nil {
+			return nil, errno.WrapMQRetryErr(err)
+		}
+		if logged != nil && (entity.IsExptFinished(entity.ExptStatus(logged.Status)) || logged.Status == int64(entity.ExptStatus_Terminating) && current.Status == entity.ExptStatus_Processing) {
+			// e6's original in-flight CompleteExpt still owns its shared cleanup.
+			data.result.Disposition = entity.ExptRunFinishPending
+			return data, nil
+		}
+	}
+	beforeCommit := func(ctx context.Context, mode entity.ExptRunMode) error {
+		if err := e.releaseCompleteAdmissionForMode(ctx, current.ID, run, mode); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		data.admissionReleased = true
+		return nil
+	}
 	if opt.Status != entity.ExptStatus_Failed && opt.Status != entity.ExptStatus_Terminated {
 		if !entity.IsExptFinished(current.Status) && ctx.Value(completeCalibratedKey{}) != true {
 			calibration, ok := e.exptResultService.(ExptManualRetryFilterService)
@@ -635,7 +654,7 @@ func (e *ExptMangerImpl) commitCompleteData(ctx context.Context, current *entity
 				return data, nil
 			}
 		}
-		result, err := e.runFinishRepo.FinishCurrentRun(ctx, &entity.ExptRunFinishRequest{SpaceID: current.SpaceID, ExptID: current.ID, RunID: run})
+		result, err := e.runFinishRepo.FinishCurrentRun(ctx, &entity.ExptRunFinishRequest{SpaceID: current.SpaceID, ExptID: current.ID, RunID: run, BeforeCommit: beforeCommit})
 		if err != nil {
 			return nil, errno.WrapMQRetryErr(err)
 		}
@@ -693,7 +712,7 @@ func (e *ExptMangerImpl) commitCompleteData(ctx context.Context, current *entity
 	if err != nil {
 		return nil, err
 	}
-	result, err := e.commitTerminationItems(ctx, port, &entity.ExptRunTerminationRequest{SpaceID: current.SpaceID, ExptID: current.ID, RunID: run, Finalize: true, Status: opt.Status, StatusMessage: opt.StatusMessage, NoCompleteItemTurn: opt.NoCompleteItemTurn, ExpectedSource: expected, Items: data.sources})
+	result, err := e.commitTerminationItems(ctx, port, &entity.ExptRunTerminationRequest{SpaceID: current.SpaceID, ExptID: current.ID, RunID: run, Finalize: true, Status: opt.Status, StatusMessage: opt.StatusMessage, NoCompleteItemTurn: opt.NoCompleteItemTurn, ExpectedSource: expected, Items: data.sources, BeforeCommit: beforeCommit})
 	if err != nil {
 		return nil, err
 	}
@@ -736,7 +755,20 @@ func (e *ExptMangerImpl) releaseCompleteAdmission(ctx context.Context, expt, run
 	if err := releaseCtx.Err(); err != nil {
 		return err
 	}
-	if entity.ExptRunMode(logged.Mode) == entity.EvaluationModeRetryItems {
+	return e.releaseCompleteAdmissionForMode(releaseCtx, expt, run, entity.ExptRunMode(logged.Mode))
+}
+
+func (e *ExptMangerImpl) releaseCompleteAdmissionForMode(ctx context.Context, expt, run int64, mode entity.ExptRunMode) error {
+	if e.mutex == nil {
+		return errno.NewMQRetryErr("completion admission locker missing")
+	}
+	releaseCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	if err := releaseCtx.Err(); err != nil {
+		return err
+	}
+	var err error
+	if mode == entity.EvaluationModeRetryItems {
 		_, err = e.mutex.UnlockWithValue(releaseCtx, e.makeExptMutexLockKey(expt), strconv.FormatInt(run, 10))
 	} else {
 		_, err = e.mutex.UnlockWithContext(releaseCtx, e.makeExptMutexLockKey(expt))
@@ -1154,8 +1186,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	// 而 turn 与 item 可以不同步 —— turn 已终态、item 仍 Processing 时用 turn 判据会漏，
 	// 那正是沙箱执行进程死亡的典型形态（2026-08-24 PPE 实测 45 条卡住）。
 	if err := e.releaseCentralQuotaForIncompleteItems(ctx, got, exptRunID, status); err != nil && data != nil && data.sources != nil {
-		// Whole termination has committed its original sources. Keep admission
-		// and Done pending until replay releases those same RequestIDs.
+		// Keep Done pending until replay releases the same original RequestIDs.
 		return errno.WrapMQRetryErr(err)
 	}
 
@@ -1244,6 +1275,21 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		}
 	}
 
+	if data != nil && data.result.Disposition == entity.ExptRunFinishAlreadyFinished {
+		// A terminal replay owns only the original source resources above.
+		if err := e.releaseCompleteRunQuota(ctx, exptID, *exptRunID, spaceID, session); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if e.idem != nil && opt.CID != "" {
+			markCtx, stop := context.WithTimeout(ctx, 8*time.Second)
+			defer stop()
+			if err := e.idem.Set(markCtx, idemKeyPrefix+opt.CID, 3*time.Minute); err != nil {
+				logs.CtxError(markCtx, "CompleteExpt SetNX fail, expt_id: %v, err: %v", exptID, err)
+			}
+		}
+		return nil
+	}
+
 	exptDo := &entity.Experiment{
 		ID:      exptID,
 		SpaceID: spaceID,
@@ -1264,7 +1310,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	sharedCtx := ctx
 	if data != nil && ctx.Err() != nil {
 		// Required filters above must finish before shared resources. A cancelled
-		// lease cannot authorize exptID-only quota or fixed-value admission IO.
+		// lease cannot authorize exptID-only quota IO.
 		// Reacquire the same existing run tick, then check current SQL again.
 		retryCtx, stopRetry := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
 		defer stopRetry()
@@ -1289,22 +1335,25 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	if data != nil && sharedCtx.Err() != nil {
 		return errno.WrapMQRetryErr(sharedCtx.Err())
 	}
-	if e.quotaRepo != nil {
+	if e.quotaRepo != nil && (data == nil || data.admissionReleased) {
 		quotaCtx := ctx
 		stopQuota := func() {}
 		if data != nil {
 			quotaCtx, stopQuota = context.WithTimeout(sharedCtx, 8*time.Second)
 		}
 		defer stopQuota()
-		if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(quotaCtx, exptID, spaceID, session); err != nil {
+		var err error
+		if data != nil {
+			err = e.releaseCompleteRunQuota(quotaCtx, exptID, *exptRunID, spaceID, session)
+		} else {
+			err = NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(quotaCtx, exptID, spaceID, session)
+		}
+		if err != nil {
 			return err
 		}
 	}
 	if err := ctx.Err(); err != nil {
 		if data != nil {
-			if releaseErr := e.releaseCompleteAdmission(sharedCtx, exptID, *exptRunID, spaceID); releaseErr != nil {
-				return errors.Join(errno.WrapMQRetryErr(err), releaseErr)
-			}
 			// Resource cleanup completed despite caller cancellation. Record the
 			// successful release so its error replay cannot release admission twice.
 			if e.idem != nil && opt.CID != "" {
@@ -1366,13 +1415,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 
 	logs.CtxInfo(ctx, "[ExptEval] CompleteExpt success, expt_id: %v, status: %v, stats: %v", exptID, status, json.Jsonify(stats))
 
-	if data != nil {
-		if err := e.releaseCompleteAdmission(sharedCtx, exptID, *exptRunID, spaceID); err != nil {
-			return err
-		}
-	}
-	// Done includes the paired admission release. A failed release must remain
-	// replayable; a seen CID must never perform another release.
+	// The initial SQL commit already included its synchronous admission release.
 	if e.idem != nil && len(opt.CID) > 0 {
 		markCtx := resourceCtx
 		stopMark := func() {}
@@ -1385,6 +1428,37 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		}
 	}
 	return nil
+}
+
+// AllowExptRun uses the same existing quota mutex, after publishing LatestRunID.
+// The primary recheck belongs inside that mutex, so an e6 replacement cannot
+// acquire its quota between this observation and the original slot's removal.
+func (e *ExptMangerImpl) releaseCompleteRunQuota(ctx context.Context, expt, run, space int64, session *entity.Session) error {
+	if e.quotaRepo == nil {
+		return nil
+	}
+	return e.quotaRepo.CreateOrUpdate(ctx, space, func(cur *entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error) {
+		if cur == nil || cur.ExptID2RunTime == nil {
+			return cur, false, nil
+		}
+		if _, exists := cur.ExptID2RunTime[expt]; !exists {
+			return cur, false, nil
+		}
+		readCtx, stop := context.WithTimeout(contexts.WithCtxWriteDB(ctx), time.Second)
+		defer stop()
+		latest, err := e.exptRepo.GetByID(readCtx, expt, space)
+		if err != nil {
+			return nil, false, err
+		}
+		if err := readCtx.Err(); err != nil {
+			return nil, false, err
+		}
+		if latest == nil || latest.ID != expt || latest.SpaceID != space || latest.LatestRunID != run || latest.ExptType != entity.ExptType_Offline || !entity.IsExptFinished(latest.Status) {
+			return cur, false, nil
+		}
+		delete(cur.ExptID2RunTime, expt)
+		return cur, true, nil
+	}, session)
 }
 
 // emitSandboxAgentExperimentFinished 判断实验是否为沙箱 agent 类型, 是则上报 experiment_finished / experiment_duration。

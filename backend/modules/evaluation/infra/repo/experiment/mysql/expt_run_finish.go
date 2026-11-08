@@ -139,7 +139,14 @@ func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.E
 		expt.Status = int32(exptStatus)
 		expt.EndAt = &now
 		result.Experiment, err = convert.NewExptConverter().PO2DO(expt, nil)
-		return err
+		if err != nil {
+			return err
+		}
+		// e6 already released admission before saving a legacy terminal run.
+		if !runFinished && r.BeforeCommit != nil {
+			return r.BeforeCommit(ctx, entity.ExptRunMode(gptr.Indirect(run.Mode)))
+		}
+		return nil
 	}, db.WithMaster())
 	if err != nil {
 		return nil, err

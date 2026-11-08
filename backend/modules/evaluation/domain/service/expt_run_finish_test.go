@@ -20,6 +20,7 @@ import (
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
+	experimentmysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	mysqlmodel "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/redis/go-redis/v9"
@@ -138,8 +139,13 @@ type finishRepoProbe struct {
 	err    error
 }
 
-func (p *finishRepoProbe) FinishCurrentRun(context.Context, *entity.ExptRunFinishRequest) (*entity.ExptRunFinishResult, error) {
+func (p *finishRepoProbe) FinishCurrentRun(ctx context.Context, request *entity.ExptRunFinishRequest) (*entity.ExptRunFinishResult, error) {
 	p.calls++
+	if p.err == nil && p.result != nil && p.result.Disposition == entity.ExptRunFinishFinished && request.BeforeCommit != nil {
+		if err := request.BeforeCommit(ctx, entity.EvaluationModeSubmit); err != nil {
+			return nil, err
+		}
+	}
 	return p.result, p.err
 }
 
@@ -204,7 +210,8 @@ func TestRunFinishManagerCleanupFailureReplaysAfterCommit(t *testing.T) {
 	_, err := manager.FinishCurrentRunWithHeldTickLock(context.Background(), &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2})
 	require.True(t, errno.NeedMQRetry(err))
 	require.Equal(t, 1, port.calls)
-	require.True(t, server.Exists("expt_run_mutex_lock:1"), "failed effects retain admission")
+	require.False(t, server.Exists("expt_run_mutex_lock:1"), "first committed receipt already paired admission release")
+	require.NoError(t, server.Set("expt_run_mutex_lock:1", "evaluation"), "R2 owns the replacement admission")
 	latest = 99
 	port.result.Disposition = entity.ExptRunFinishNonCurrent
 	_, err = manager.FinishCurrentRunWithHeldTickLock(context.Background(), &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2})
@@ -265,7 +272,7 @@ func TestRunFinishActualModesCommitThenCleanupRetry(t *testing.T) {
 			f := newLateWriteFixture(t, "rq1")
 			ctrl := gomock.NewController(t)
 			require.NoError(t, f.conn.Model(&mysqlmodel.Experiment{}).Where("space_id=?", f.space).Updates(map[string]any{"status": int32(entity.ExptStatus_Processing), "expt_type": int32(entity.ExptType_Offline)}).Error)
-			require.NoError(t, f.conn.Model(&mysqlmodel.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(entity.ExptStatus_Processing)).Error)
+			require.NoError(t, f.conn.Model(&mysqlmodel.ExptRunLog{}).Where("space_id=?", f.space).Updates(map[string]any{"status": int64(entity.ExptStatus_Processing), "mode": int32(mode)}).Error)
 			require.NoError(t, f.conn.Model(&mysqlmodel.ExptItemResult{}).Where("space_id=?", f.space).Update("status", int32(entity.ItemRunState_Success)).Error)
 			require.NoError(t, f.conn.Model(&mysqlmodel.ExptItemResultRunLog{}).Where("space_id=?", f.space).Updates(map[string]any{"status": int32(entity.ItemRunState_Success), "result_state": 1}).Error)
 			require.NoError(t, f.conn.Model(&mysqlmodel.ExptTurnResult{}).Where("space_id=?", f.space).Update("status", int32(entity.TurnRunState_Success)).Error)
@@ -283,21 +290,18 @@ func TestRunFinishActualModesCommitThenCleanupRetry(t *testing.T) {
 				var row mysqlmodel.Experiment
 				require.NoError(t, f.conn.WithContext(ctx).Where("space_id=? AND id=?", f.space, f.expt).Take(&row).Error)
 				require.True(t, entity.IsExptFinished(entity.ExptStatus(row.Status)), "cleanup before finish commit")
-				// Cleanup's lifecycle key must reject a concurrent R2 creation.
-				locked, _, err := factory().BackoffLockWithValue(ctx, fmt.Sprintf("expt_run_mutex_lock:%d", f.expt), fmt.Sprint(f.run+1), time.Minute, time.Millisecond)
-				require.NoError(t, err)
-				require.False(t, locked)
+				require.False(t, server.Exists(fmt.Sprintf("expt_run_mutex_lock:%d", f.expt)), "admission must be released before terminal visibility")
 				if releases.Add(1) == 1 {
 					return errors.New("quota cleanup fault")
 				}
-				_, _, err = mutate(&entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{f.expt: 1}})
+				_, _, err := mutate(&entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{f.expt: 1}})
 				return err
 			}).Times(2)
 			result := &finishCalibrationTestResult{ExptResultService: svcmocks.NewMockExptResultService(ctrl), ready: true}
 			result.ExptResultService.(*svcmocks.MockExptResultService).EXPECT().GetIncompleteTurns(gomock.Any(), f.expt, f.space, gomock.Any()).Return(nil, nil).Times(2)
 			publisher := eventmocks.NewMockExptEventPublisher(ctrl)
-			publisher.EXPECT().PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			manager := &ExptMangerImpl{mutex: factory().WithHolder(legacyStaticHolderValue), runLogRepo: &completedFixtureRunRepo{event: &entity.ExptScheduleEvent{ExptID: f.expt, ExptRunID: f.run, SpaceID: f.space, ExptRunMode: mode}}, runFinishRepo: experimentrepo.NewExptRunFinishRepo(f.provider), manualRetryLocker: factory, exptRepo: experiments, quotaRepo: quota, exptResultService: result, publisher: publisher}
+			publisher.EXPECT().PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			manager := &ExptMangerImpl{mutex: factory().WithHolder(legacyStaticHolderValue), runLogRepo: experimentrepo.NewExptRunLogRepo(experimentmysql.NewExptRunLogDAO(f.provider)), runFinishRepo: experimentrepo.NewExptRunFinishRepo(f.provider), manualRetryLocker: factory, exptRepo: experiments, quotaRepo: quota, exptResultService: result, publisher: publisher}
 			idem := idemmocks.NewMockIdempotentService(ctrl)
 			idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 			idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -316,8 +320,7 @@ func TestRunFinishActualModesCommitThenCleanupRetry(t *testing.T) {
 			case entity.EvaluationModeRetryAll:
 				end = (&ExptRetryAllExec{manager: manager, idem: idem, configer: config, exptItemResultRepo: items, resultSvc: result}).ExptEnd
 			case entity.EvaluationModeRetryItems:
-				runs := repomocks.NewMockIExptRunLogRepo(ctrl)
-				runs.EXPECT().Get(gomock.Any(), f.expt, f.run).Return(&entity.ExptRunLog{Mode: int32(entity.EvaluationModeRetryItems), Status: int64(entity.ExptStatus_Success)}, nil).AnyTimes()
+				runs := experimentrepo.NewExptRunLogRepo(experimentmysql.NewExptRunLogDAO(f.provider))
 				manager.runLogRepo = runs
 				manager.mutex = factory().WithHolder(legacyStaticHolderValue)
 				end = (&ExptRetryItemsExec{manager: manager, idem: idem, configer: config, exptItemResultRepo: items, exptRunLogRepo: runs, resultSvc: result}).ExptEnd
@@ -336,7 +339,7 @@ func TestRunFinishActualModesCommitThenCleanupRetry(t *testing.T) {
 			require.NoError(t, retryErr)
 			require.Equal(t, entity.ExptRunFinishAlreadyFinished, retryResult.Disposition)
 			require.Equal(t, before, lateWriteSnapshot(f))
-			require.Equal(t, int32(2), releases.Load())
+			require.Equal(t, int32(2), releases.Load(), "no-R2 replay completes the original quota under its existing mutex")
 		})
 	}
 }

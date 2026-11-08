@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
@@ -293,6 +294,9 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 			result.Experiment, err = convert.NewExptConverter().PO2DO(&expt, nil)
 			if err != nil {
 				return err
+			}
+			if !entity.IsExptFinished(runStatus) && r.BeforeCommit != nil {
+				return r.BeforeCommit(ctx, entity.ExptRunMode(gptr.Indirect(run.Mode)))
 			}
 		}
 		return ctx.Err()

@@ -113,9 +113,7 @@ func TestStaticLegacyHolderRealRedisAndMySQL(t *testing.T) {
 	quotaReleased := false
 	quota := repomocks.NewMockQuotaRepo(ctrl)
 	quota.EXPECT().CreateOrUpdate(gomock.Any(), space, gomock.Any(), gomock.Any()).DoAndReturn(func(opCtx context.Context, _ int64, mutate func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
-		owner, ownerErr := raw.Get(opCtx, key).Result()
-		require.NoError(t, ownerErr)
-		require.Equal(t, legacyStaticHolderValue, owner)
+		require.Zero(t, raw.Exists(opCtx, key).Val(), "the first commit already released its admission")
 		next, changed, err := mutate(&entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{expt: time.Now().Unix()}})
 		quotaReleased = changed && next != nil
 		return err
@@ -123,11 +121,13 @@ func TestStaticLegacyHolderRealRedisAndMySQL(t *testing.T) {
 	idem := &cleanupTestIdem{}
 	manager := &ExptMangerImpl{
 		manualRetryLocker: func() lock.ILocker { return filterRealTestLocker(client) },
+		mutex:             holderLocker,
 		exptRepo:          repo,
 		quotaRepo:         quota,
 		idem:              idem,
 	}
-	// Current completion uses the original fixed holder and does not wait for TTL.
+	// Construct the initial committed receipt with its real synchronous paired release.
+	require.NoError(t, manager.releaseCompleteAdmissionForMode(ctx, expt, run, entity.EvaluationModeSubmit))
 	event := &entity.ExptScheduleEvent{ExptID: expt, ExptRunID: run, SpaceID: space, Session: &entity.Session{}}
 	require.NoError(t, completeNaturalFixture(manager, ctx, event, stored))
 	require.True(t, quotaReleased)
@@ -138,7 +138,7 @@ func TestStaticLegacyHolderRealRedisAndMySQL(t *testing.T) {
 	// B has acquired the same fixed value but has not advanced SQL yet. A's
 	// successfully completed marker must suppress this known duplicate.
 	require.NoError(t, raw.Set(ctx, key, legacyStaticHolderValue, legacyStaticZombieTTL).Err())
-	require.NoError(t, completeNaturalFixture(manager, ctx, event, stored))
+	require.NoError(t, completeNaturalReplayFixture(manager, ctx, event, stored))
 	holder, getErr := raw.Get(ctx, key).Result()
 	require.NoError(t, getErr)
 	require.Equal(t, legacyStaticHolderValue, holder)

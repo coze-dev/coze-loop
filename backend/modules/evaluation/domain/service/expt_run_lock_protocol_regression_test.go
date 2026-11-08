@@ -73,7 +73,7 @@ func TestLifecycleProtocolEvaluationInitializationFailureReleases(t *testing.T) 
 	require.NoError(t, mgr.LogRun(context.Background(), 1, 4, entity.EvaluationModeSubmit, 3, nil, &entity.Session{}))
 }
 
-func TestLifecycleProtocolFinishRetainsAdmissionUntilEffectsComplete(t *testing.T) {
+func TestLifecycleProtocolInitialPairPrecedesSharedEffects(t *testing.T) {
 	for _, holder := range []string{"evaluation", "2"} {
 		for _, endpoint := range []string{"natural", "termination", "cancelled"} {
 			t.Run(holder+"/"+endpoint, func(t *testing.T) {
@@ -88,9 +88,7 @@ func TestLifecycleProtocolFinishRetainsAdmissionUntilEffectsComplete(t *testing.
 				quota := repomocks.NewMockQuotaRepo(ctrl)
 				quota.EXPECT().CreateOrUpdate(gomock.Any(), int64(3), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, _ int64, _ func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
 					require.NoError(t, ctx.Err())
-					actual, err := server.Get(key)
-					require.NoError(t, err)
-					require.Equal(t, holder, actual, "release must run under the original admission lock, without a SETNX handoff")
+					require.False(t, server.Exists(key), "initial admission release precedes post-commit shared effects")
 					return nil
 				})
 				mgr := &ExptMangerImpl{manualRetryLocker: factory, mutex: factory().WithHolder("evaluation"), exptRepo: expts, quotaRepo: quota, idem: &cleanupTestIdem{}}
@@ -98,6 +96,7 @@ func TestLifecycleProtocolFinishRetainsAdmissionUntilEffectsComplete(t *testing.
 				if holder == "2" {
 					event.ExptRunMode = entity.EvaluationModeRetryItems
 				}
+				require.NoError(t, mgr.releaseCompleteAdmissionForMode(context.Background(), 1, 2, event.ExptRunMode))
 				ctx := context.Background()
 				var err error
 				if endpoint == "natural" {
@@ -234,9 +233,7 @@ func TestLifecycleProtocolSQLCompletionEndpoints(t *testing.T) {
 					var row mysqlmodel.Experiment
 					require.NoError(t, f.conn.WithContext(ctx).Where("space_id=?", f.space).Take(&row).Error)
 					require.Equal(t, int32(entity.ExptStatus_Success), row.Status, "SQL transaction must finish before shared quota is released")
-					actual, err := server.Get(key)
-					require.NoError(t, err)
-					require.Equal(t, holder, actual, "admission excludes replacement until all side effects complete")
+					require.False(t, server.Exists(key), "initial paired release precedes post-commit side effects")
 					return nil
 				})
 				resultSvc := svcmocks.NewMockExptResultService(ctrl)

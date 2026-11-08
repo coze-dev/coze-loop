@@ -301,33 +301,22 @@ func TestRunFinishPendingRealHalfTerminalCheckRetries(t *testing.T) {
 	p := newPendingRunFixture(t, entity.EvaluationModeSubmit)
 	p.publishSuccess(t, false)
 	f := p.f
-	// Reproduce the old split CompleteRun/CompleteExpt half-state explicitly.
+	require.NoError(t, p.manager.releaseCompleteAdmissionForMode(context.Background(), f.expt, f.run, entity.EvaluationModeSubmit))
 	require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(entity.ExptStatus_Success)).Error)
+	before := f.snapshot()
 	scheduler := &ExptSchedulerImpl{Manager: p.manager}
 	handler := scheduler.HandleEventCheck(func(context.Context, *entity.ExptScheduleEvent) error {
 		t.Fatal("half-terminal event entered execution")
 		return nil
 	})
-	require.NoError(t, handler(context.Background(), p.event), "valid legacy half-state must finish the experiment")
-	run, err := p.manager.runLogRepo.Get(context.Background(), f.expt, f.run)
+	err := handler(context.Background(), p.event)
+	require.True(t, errno.NeedMQRetry(err), "original e6 CompleteExpt retains the half-terminal obligation")
+	require.Equal(t, before, f.snapshot(), "half-terminal observation must not write terminal/end/stats")
+	require.Zero(t, p.resources.Load())
+	require.Zero(t, p.notifications.Load())
+	seen, err := p.manager.idem.Exist(context.Background(), fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run))
 	require.NoError(t, err)
-	require.Equal(t, int64(entity.ExptStatus_Success), run.Status)
-	require.Equal(t, int32(1), run.SuccessCnt)
-	require.Zero(t, run.PendingCnt)
-	require.Zero(t, run.ProcessingCnt)
-	require.Zero(t, run.FailCnt)
-	require.Zero(t, run.TerminatedCnt)
-	expt, err := p.manager.exptRepo.GetByID(context.Background(), f.expt, f.space)
-	require.NoError(t, err)
-	require.Equal(t, entity.ExptStatus_Success, expt.Status)
-	require.NotNil(t, expt.EndAt)
-	require.Equal(t, int32(1), p.resources.Load())
-	require.Equal(t, int32(1), p.notifications.Load())
-	after := f.snapshot()
-	require.NoError(t, handler(context.Background(), p.event))
-	require.Equal(t, after, f.snapshot(), "settled replay cannot recalculate SQL counts or endAt")
-	require.Equal(t, int32(1), p.resources.Load())
-	require.Equal(t, int32(1), p.notifications.Load())
+	require.False(t, seen, "no-op must not suppress the e6 in-flight pair")
 }
 
 func TestRunFinishPendingRealHalfTerminalMismatchRetries(t *testing.T) {
@@ -342,7 +331,7 @@ func TestRunFinishPendingRealHalfTerminalMismatchRetries(t *testing.T) {
 		return nil
 	})(context.Background(), p.event)
 	require.True(t, errno.NeedMQRetry(err))
-	require.ErrorContains(t, err, "legacy finished run does not match canonical turn stats")
+	require.ErrorContains(t, err, "current run completion pending")
 	require.Equal(t, before, f.snapshot())
 	require.Zero(t, p.resources.Load())
 	require.Zero(t, p.notifications.Load())

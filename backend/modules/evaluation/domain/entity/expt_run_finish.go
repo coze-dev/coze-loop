@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package entity
 
+import "context"
+
 type ExptRunFinishDisposition int
 
 const (
@@ -11,8 +13,12 @@ const (
 	ExptRunFinishNonCurrent
 )
 
-// ExptRunFinishRequest carries identities only; final counts are read in SQL.
-type ExptRunFinishRequest struct{ SpaceID, ExptID, RunID int64 }
+// Final counts and the admission mode are read from the locked SQL rows.
+type ExptRunFinishRequest struct {
+	SpaceID, ExptID, RunID int64
+	// BeforeCommit runs only after current-run validation, before terminal visibility.
+	BeforeCommit func(context.Context, ExptRunMode) error `json:"-"`
+}
 
 type ExptRunFinishResult struct {
 	Disposition ExptRunFinishDisposition
@@ -31,6 +37,7 @@ type ExptRunTerminationRequest struct {
 	ExpectedSource         *ExptCurrentItemRunSource
 	Items                  []*ExptCurrentItemRunSource
 	MissingTurnLogs        []*ExptTurnResultRunLog
+	BeforeCommit           func(context.Context, ExptRunMode) error `json:"-"`
 }
 type ExptRunTerminationResult struct {
 	Applied    bool

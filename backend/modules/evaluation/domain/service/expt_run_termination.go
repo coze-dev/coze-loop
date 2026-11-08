@@ -479,11 +479,14 @@ func (e *ExptMangerImpl) cleanupCurrentUnscheduledRunWithQuota(ctx context.Conte
 				if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(ctx, expt, space, &entity.Session{}); err != nil {
 					return errno.WrapMQRetryErr(err)
 				}
+				if err := e.releaseCompleteAdmissionForMode(ctx, expt, run, entity.ExptRunMode(runLog.Mode)); err != nil {
+					return errno.WrapMQRetryErr(err)
+				}
 			}
 			if err := e.runLogRepo.Update(ctx, expt, run, space, map[string]any{"status": int64(entity.ExptStatus_Failed), "status_message": []byte(cause.Error())}); err != nil {
 				return err
 			}
-			releaseAdmission = true
+			releaseAdmission = !quotaReserved
 			return nil
 		}
 		terminate = true
