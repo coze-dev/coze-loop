@@ -186,6 +186,12 @@ func TestCancelSetupRepositoryRechecksLatestAndPending(t *testing.T) {
 			if kind == "replacement" {
 				require.NoError(t, err)
 				require.True(t, result.NonCurrent)
+			} else if kind == "normal_cancel" {
+				require.NoError(t, err)
+				require.True(t, result.Applied)
+				require.Equal(t, entity.ExptStatus_Terminated, result.Experiment.Status)
+				require.NotNil(t, result.Experiment.EndAt)
+				return
 			} else {
 				require.Error(t, err)
 			}

@@ -2152,7 +2152,10 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 		return nil, err
 	}
 
-	if got.Status != entity.ExptStatus_Processing {
+	terminator, currentRun := e.manager.(service.IExptCurrentRunTerminator)
+	currentRun = currentRun && got.ExptType == entity.ExptType_Offline
+	pendingOrCancelled := got.Status == entity.ExptStatus_Pending || got.Status == entity.ExptStatus_Terminating || got.Status == entity.ExptStatus_Terminated
+	if got.Status != entity.ExptStatus_Processing && !(currentRun && pendingOrCancelled) {
 		return nil, errorx.NewByCode(errno.TerminateNonRunningExperimentErrorCode)
 	}
 
@@ -2166,6 +2169,19 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 		}); err != nil {
 			return nil, err
 		}
+	}
+
+	if currentRun && pendingOrCancelled {
+		// Pending 尚无 worker；同步走原 run 锁与收尾，缺 provider/清理失败不可假报受理。
+		applied, err := terminator.TerminateCurrentRun(ctx, req.GetExptID(), got.LatestRunID, req.GetWorkspaceID(), session, nil,
+			entity.WithStatus(entity.ExptStatus_Terminated), entity.NoAggrCalculate())
+		if err != nil {
+			return nil, err
+		}
+		if !applied {
+			return nil, errorx.NewByCode(errno.ExperimentRunningExistedCode)
+		}
+		return &expt.KillExperimentResponse{BaseResp: base.NewBaseResp()}, nil
 	}
 
 	if err := e.manager.SetExptTerminating(ctx, req.GetExptID(), got.LatestRunID, req.GetWorkspaceID(), session); err != nil {

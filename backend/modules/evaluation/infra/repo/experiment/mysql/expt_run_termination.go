@@ -33,7 +33,7 @@ func (d *ExptRunFinishDAOImpl) GetTerminationItemSource(ctx context.Context, spa
 }
 
 func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entity.ExptRunTerminationRequest) (*entity.ExptRunTerminationResult, error) {
-	if r == nil || r.SpaceID <= 0 || r.ExptID <= 0 || r.RunID <= 0 {
+	if r == nil || r.SpaceID <= 0 || r.ExptID <= 0 || r.RunID < 0 {
 		return nil, fmt.Errorf("invalid termination identities")
 	}
 	result := &entity.ExptRunTerminationResult{}
@@ -101,13 +101,16 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id=? AND id=?", r.SpaceID, r.ExptID).Take(&expt).Error; err != nil {
 			return err
 		}
-		var run model.ExptRunLog
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id=? AND expt_id=? AND expt_run_id=?", r.SpaceID, r.ExptID, r.RunID).Take(&run).Error; err != nil {
-			return err
-		}
 		if expt.LatestRunID != r.RunID {
 			result.NonCurrent = true
 			return nil
+		}
+		if r.RunID == 0 {
+			return terminateUnstartedExperiment(tx, r, &expt, result)
+		}
+		var run model.ExptRunLog
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id=? AND expt_id=? AND expt_run_id=?", r.SpaceID, r.ExptID, r.RunID).Take(&run).Error; err != nil {
+			return err
 		}
 		if expt.ExptType != int32(entity.ExptType_Offline) || run.Status == nil {
 			return fmt.Errorf("invalid offline termination binding")
@@ -127,6 +130,10 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 			return ctx.Err()
 		}
 		if entity.IsExptFinished(entity.ExptStatus(expt.Status)) || entity.IsExptFinished(entity.ExptStatus(*run.Status)) {
+			if r.Begin && expt.Status == int32(entity.ExptStatus_Terminated) && *run.Status == int64(entity.ExptStatus_Terminated) && expt.EndAt != nil {
+				result.Applied = true
+				return ctx.Err()
+			}
 			if !r.Finalize || !entity.IsExptFinished(entity.ExptStatus(expt.Status)) || !entity.IsExptFinished(entity.ExptStatus(*run.Status)) || expt.EndAt == nil {
 				return fmt.Errorf("termination requires active current run")
 			}
@@ -134,7 +141,8 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 			result.Experiment, err = convert.NewExptConverter().PO2DO(&expt, nil)
 			return err
 		}
-		active := expt.Status == int32(entity.ExptStatus_Processing) && (*run.Status == int64(entity.ExptStatus_Pending) || *run.Status == int64(entity.ExptStatus_Processing))
+		pending := expt.Status == int32(entity.ExptStatus_Pending) && *run.Status == int64(entity.ExptStatus_Pending) && (r.Begin || r.Finalize)
+		active := pending || expt.Status == int32(entity.ExptStatus_Processing) && (*run.Status == int64(entity.ExptStatus_Pending) || *run.Status == int64(entity.ExptStatus_Processing))
 		terminating := expt.Status == int32(entity.ExptStatus_Terminating) && *run.Status == int64(entity.ExptStatus_Terminating)
 		allowed := active || terminating && (r.Begin || r.Finalize)
 		if !allowed {
@@ -293,4 +301,36 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 		return nil, err
 	}
 	return result, nil
+}
+
+// 零 run 尚未创建执行记录；仍在原终止事务内关闭实验，不伪造 attempt 或改写题目结果。
+func terminateUnstartedExperiment(tx *gorm.DB, r *entity.ExptRunTerminationRequest, expt *model.Experiment, result *entity.ExptRunTerminationResult) error {
+	if expt.ExptType != int32(entity.ExptType_Offline) || r.SetupAbort || len(r.Items) != 0 || r.ExpectedSource != nil || (!r.Begin && !r.Finalize) {
+		return fmt.Errorf("invalid unstarted experiment cancellation")
+	}
+	if expt.Status == int32(entity.ExptStatus_Terminated) && expt.EndAt != nil {
+		result.Applied = true
+		var err error
+		result.Experiment, err = convert.NewExptConverter().PO2DO(expt, nil)
+		return err
+	}
+	fields := map[string]any{}
+	switch {
+	case r.Begin && (expt.Status == int32(entity.ExptStatus_Pending) || expt.Status == int32(entity.ExptStatus_Terminating)):
+		expt.Status = int32(entity.ExptStatus_Terminating)
+		fields["status"] = expt.Status
+	case r.Finalize && expt.Status == int32(entity.ExptStatus_Terminating) && r.Status == entity.ExptStatus_Terminated:
+		now := time.Now()
+		expt.Status, expt.EndAt = int32(entity.ExptStatus_Terminated), &now
+		fields["status"], fields["end_at"] = expt.Status, now
+	default:
+		return fmt.Errorf("unstarted experiment is not cancellable")
+	}
+	if err := tx.Model(&model.Experiment{}).Where("space_id=? AND id=? AND latest_run_id=0", r.SpaceID, r.ExptID).UpdateColumns(fields).Error; err != nil {
+		return err
+	}
+	result.Applied = true
+	var err error
+	result.Experiment, err = convert.NewExptConverter().PO2DO(expt, nil)
+	return err
 }

@@ -63,7 +63,7 @@ func (e *ExptMangerImpl) beginCurrentRunTermination(ctx context.Context, expt, r
 	if err != nil {
 		return err
 	}
-	return e.withTerminationRunLock(ctx, expt, run, func(ctx context.Context) error {
+	begin := func(ctx context.Context) error {
 		result, err := port.TerminateCurrentRun(ctx, &entity.ExptRunTerminationRequest{SpaceID: space, ExptID: expt, RunID: run, Begin: true})
 		if err != nil {
 			return errno.WrapMQRetryErr(err)
@@ -75,7 +75,30 @@ func (e *ExptMangerImpl) beginCurrentRunTermination(ctx context.Context, expt, r
 			return errno.NewMQRetryErr("cancellation run replaced")
 		}
 		return nil
-	})
+	}
+	if run != 0 {
+		return e.withTerminationRunLock(ctx, expt, run, begin)
+	}
+	// 首次 LogRun 也持有此实验锁；零 run 的取消不得与登记新 run 交错。
+	locker := e.manualRetryLocker()
+	if locker == nil {
+		return errno.NewMQRetryErr("termination lifecycle locker missing")
+	}
+	key := e.makeExptMutexLockKey(expt)
+	locked, leaseCtx, cancel, err := locker.LockWithRenew(ctx, key, 5*time.Second, 5*time.Minute)
+	if err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if !locked {
+		return errno.NewMQRetryErr("initial run admission in progress")
+	}
+	err = leaseCtx.Err()
+	if err == nil {
+		err = begin(leaseCtx)
+	}
+	cancel()
+	_, unlockErr := locker.Unlock(key)
+	return errors.Join(err, unlockErr)
 }
 
 func (e *ExptMangerImpl) captureTerminationSources(ctx context.Context, port repo.IExptRunTerminationRepo, space, expt, run int64, ids []int64) ([]*entity.ExptCurrentItemRunSource, error) {
@@ -197,6 +220,11 @@ func (e *ExptMangerImpl) TerminateCurrentRun(ctx context.Context, expt, run, spa
 	opt := &entity.CompleteExptOption{Status: entity.ExptStatus_Terminated}
 	for _, fn := range opts {
 		fn(opt)
+	}
+	if run == 0 {
+		if err := e.beginCurrentRunTermination(ctx, expt, run, space); err != nil {
+			return false, err
+		}
 	}
 	applied := false
 	err = e.withTerminationRunLock(ctx, expt, run, func(ctx context.Context) error {

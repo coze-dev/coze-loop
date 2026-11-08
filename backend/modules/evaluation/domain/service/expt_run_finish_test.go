@@ -191,6 +191,8 @@ func TestRunFinishLogRunBindsLifecycleOwnerToRunID(t *testing.T) {
 	runs := repomocks.NewMockIExptRunLogRepo(ctrl)
 	runs.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 	expts := repomocks.NewMockIExperimentRepo(ctrl)
+	expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).
+		Return(&entity.Experiment{ID: 1, SpaceID: 3, Status: entity.ExptStatus_Pending}, nil)
 	expts.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 	metric := metricsmocks.NewMockExptMetric(ctrl)
 	metric.EXPECT().EmitExptExecRun(int64(3), int64(entity.EvaluationModeSubmit))

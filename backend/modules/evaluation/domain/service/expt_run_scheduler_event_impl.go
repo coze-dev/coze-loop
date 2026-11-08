@@ -272,6 +272,20 @@ func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEnd
 			}
 		}()
 
+		// 加锁前的检查可能已过期；取消与 Start 共用本锁，锁内复查后才能初始化。
+		if event.ExptType == entity.ExptType_Offline {
+			run, err := e.Manager.GetRunLog(contexts.WithCtxWriteDB(ctx), event.ExptID, event.ExptRunID, event.SpaceID, event.Session)
+			if err != nil {
+				return err
+			}
+			if run == nil {
+				return errno.NewMQRetryErr("schedule run missing")
+			}
+			status := entity.ExptStatus(run.Status)
+			if entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
+				return nil
+			}
+		}
 		return next(ctx, event)
 	}
 }

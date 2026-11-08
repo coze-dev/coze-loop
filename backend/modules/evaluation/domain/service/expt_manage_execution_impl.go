@@ -1953,6 +1953,19 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 		logs.CtxInfo(ctx, "[ExptEval][RunLock] lock occupied [expt_id=%v run_id=%v]", exptID, exptRunID)
 		return errorx.NewByCode(errno.ExperimentRunningExistedCode)
 	}
+	if e.runFinishRepo != nil && (mode == entity.EvaluationModeSubmit || mode == entity.EvaluationModeTrialRun) {
+		current, readErr := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
+		if readErr != nil || current == nil || (current.LatestRunID == 0 &&
+			(entity.IsExptFinished(current.Status) || entity.IsExptFinishing(current.Status))) {
+			if _, unlockErr := e.mutex.UnlockWithValue(context.WithoutCancel(ctx), e.makeExptMutexLockKey(exptID), strconv.FormatInt(exptRunID, 10)); unlockErr != nil {
+				return unlockErr
+			}
+			if readErr != nil {
+				return readErr
+			}
+			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("initial experiment was cancelled"))
+		}
+	}
 	ownedRunID := exptRunID
 	defer func(runID int64) {
 		if err != nil {
