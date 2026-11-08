@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	mysqlDriver "gorm.io/driver/mysql"
@@ -36,7 +35,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 )
 
-func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
+func TestRunningRetryMySQLApplicationIdentityRejection(t *testing.T) {
 	dsn := os.Getenv("EXPT_RETRY_MYSQL_DSN")
 	if dsn == "" {
 		t.Skip("EXPT_RETRY_MYSQL_DSN not configured")
@@ -76,65 +75,46 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 	lwt := lwtmocks.NewMockILatestWriteTracker(ctrl)
 	mutex := lockmocks.NewMockILocker(ctrl)
 	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
-	// same-run 准入不再读取开关；显式 expected_run_id 时必须直接进入当前 run。
 	lwt.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), expt).Return(false).AnyTimes()
 	auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	// 4 次加锁：首次受理时 run exec lock + 被受理 item 的 eval lock；
-	// 之后两次重复请求（含开关门禁删除后新增的第三次调用）各自再取一次 run exec lock，
-	// 因此重复请求的拒绝原因只可能是队列/run 状态，而不是 disabled。
-	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), 5*time.Second, 5*time.Minute).DoAndReturn(func(ctx context.Context, _ string, _ time.Duration, _ time.Duration) (bool, context.Context, func(), error) {
-		c, cancel := context.WithCancel(ctx)
-		return true, c, cancel, nil
-	}).Times(4)
-	publisher.EXPECT().PublishExptScheduleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 	manager := service.NewExptManager(nil,
 		exptrepo.NewExptRepo(exptmysql.NewExptDAO(provider), exptmysql.NewExptEvaluatorRefDAO(provider), generator),
 		exptrepo.NewExptRunLogRepo(exptmysql.NewExptRunLogDAO(provider)), exptrepo.NewExptStatsRepo(exptmysql.NewExptStatsDAO(provider)), exptrepo.NewExptItemResultRepo(exptmysql.NewExptItemResultDAO(provider)), exptrepo.NewExptItemRefRepo(exptmysql.NewExptItemRefDAO(provider)), exptrepo.NewExptTurnResultRepo(generator, exptmysql.NewExptTurnResultDAO(provider), exptmysql.NewExptTurnEvaluatorResultRefDAO(provider)), config, nil, mutex, nil, publisher, nil, generator, nil, lwt, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, component.NewNoopCentralSchedulerScopeProvider(), component.NewNoopCentralAdmissionPolicy(), component.NewNoopCentralReservationGuard(), exptrepo.NewExptManualRetryRepo(provider, generator), nil, component.NewNoopCurrentRunSchedulerWaker(), func() lock.ILocker { return mutex })
 	app := &experimentApplication{manager: manager, auth: auth, idgen: generator}
-	req := &exptpb.RetryExperimentRequest{WorkspaceID: &space, ExptID: &expt, ExpectedRunID: &run, RetryMode: gptr.Of(dexpt.ExptRetryMode_RetryTargetItems), ItemIds: []int64{item, item}, Ext: map[string]string{"caller": "identity"}}
-	response, err := app.RetryExperiment(context.Background(), req)
-	require.NoError(t, err)
-	require.Equal(t, int32(1), response.GetAcceptedCount())
-	require.Equal(t, run, response.GetRunID())
-	var canonical model.ExptItemResult
-	require.NoError(t, conn.First(&canonical, "id=?", base+12).Error)
-	require.Zero(t, canonical.Status)
-	ext, err := entity.ParseExptItemResultExt(*canonical.Ext)
-	require.NoError(t, err)
-	require.Equal(t, "keep", ext["business"])
-	require.NotContains(t, ext, "caller")
-	manual, err := entity.ParseManualRetryContext(ext)
-	require.NoError(t, err)
-	_, uuidErr := uuid.Parse(manual.RequestID)
-	require.NoError(t, uuidErr)
-	var log model.ExptItemResultRunLog
-	require.NoError(t, conn.First(&log, "id=?", base+13).Error)
-	require.Zero(t, *log.ResultState)
-	require.Equal(t, int32(3), log.RetryTimes)
-	var runLog model.ExptRunLog
-	require.NoError(t, conn.First(&runLog, "id=?", run).Error)
-	require.JSONEq(t, string(raw), string(*runLog.ItemIds))
-	again, err := app.RetryExperiment(context.Background(), req)
-	require.NoError(t, err)
-	require.Zero(t, again.GetAcceptedCount())
-	require.Equal(t, "queueing", again.RejectedItems[0].GetReason())
-	require.Equal(t, item, again.RejectedItems[0].GetItemID())
-	require.Equal(t, run, again.GetRunID())
-	// 开关门禁删除后，重复请求的拒绝原因只由 run / 队列状态决定，配置读取不再发生。
-	gate := confmocks.NewMockIConfiger(ctrl)
-	gate.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Times(0)
-	app.configer = gate
-	third, err := app.RetryExperiment(context.Background(), req)
-	require.NoError(t, err)
-	require.Zero(t, third.GetAcceptedCount())
-	require.Equal(t, "queueing", third.RejectedItems[0].GetReason())
-	require.NoError(t, conn.Model(&model.Experiment{}).Where("id=?", expt).Update("status", entity.ExptStatus_Success).Error)
-	_, err = app.RetryExperiment(context.Background(), req)
-	require.ErrorContains(t, err, "run_finished")
-	req.Ext = map[string]string{"caller": "changed"}
-	_, err = app.RetryExperiment(context.Background(), req)
-	require.ErrorContains(t, err, "run_finished")
-	require.NoError(t, conn.First(&runLog, "id=?", run).Error)
-	require.JSONEq(t, string(raw), string(*runLog.ItemIds))
-	t.Log("REAL_MYSQL_APPLICATION_RESULT_VERIFIED same-run reset, budget preserved, duplicate rejected, no persisted receipt")
+	req := &exptpb.RetryExperimentRequest{WorkspaceID: &space, ExptID: &expt, ExpectedRunID: &run, RetryMode: gptr.Of(dexpt.ExptRetryMode_RetryTargetItems), Ext: map[string]string{"caller": "identity"}}
+	snapshot := func() []byte {
+		t.Helper()
+		state := map[string][]map[string]any{}
+		for _, table := range []string{"experiment", "expt_run_log", "expt_stats", "expt_item_result", "expt_item_result_run_log", "expt_item_ref", "expt_turn_result", "expt_turn_result_run_log", "expt_turn_evaluator_result_ref"} {
+			rows := []map[string]any{}
+			query := conn.Table(table).Where("space_id=? AND expt_id=?", space, expt)
+			if table == "experiment" {
+				query = conn.Table(table).Where("space_id=? AND id=?", space, expt)
+			}
+			require.NoError(t, query.Order("id").Find(&rows).Error)
+			state[table] = rows
+		}
+		body, err := json.Marshal(state)
+		require.NoError(t, err)
+		return body
+	}
+	for _, status := range []entity.ExptStatus{entity.ExptStatus_Processing, entity.ExptStatus_Success} {
+		require.NoError(t, conn.Model(&model.Experiment{}).Where("id=?", expt).Update("status", status).Error)
+		before := snapshot()
+		for _, mode := range []dexpt.ExptRetryMode{dexpt.ExptRetryMode_RetryFailure, dexpt.ExptRetryMode_RetryTargetItems, dexpt.ExptRetryMode_RetryAll} {
+			req.RetryMode = gptr.Of(mode)
+			req.ItemIds = nil
+			if mode == dexpt.ExptRetryMode_RetryTargetItems {
+				req.ItemIds = []int64{item}
+			}
+			for _, expected := range []int64{run, 0} {
+				req.ExpectedRunID = gptr.Of(expected)
+				response, err := app.RetryExperiment(context.Background(), req)
+				require.ErrorContains(t, err, "expected_run_id")
+				require.Nil(t, response)
+				require.Equal(t, before, snapshot())
+			}
+		}
+	}
+	t.Log("REAL_MYSQL_APPLICATION_RESULT_VERIFIED explicit identity rejection preserves all seeded tables")
 }

@@ -108,7 +108,7 @@ func TestOpenAPIRunningRetryLegacyAndError(t *testing.T) {
 }
 
 func TestOpenAPIRunningRetryRealExperimentApplication(t *testing.T) {
-	for _, kind := range []string{"receipt", "manager error", "without request_id", "zero expected_run_id", "negative expected_run_id"} {
+	for _, kind := range []string{"positive expected_run_id", "zero expected_run_id", "negative expected_run_id"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			manager := svcmocks.NewMockIExptManager(ctrl)
@@ -126,44 +126,18 @@ func TestOpenAPIRunningRetryRealExperimentApplication(t *testing.T) {
 			input := `{"workspace_id":"9","experiment_id":"7","expected_run_id":"8","retry_mode":"retry_target_items","item_ids":["11","12"]}`
 			var req openapi.RetryExperimentOApiRequest
 			require.NoError(t, js_conv.GetUnmarshaler()([]byte(input), &req))
-			failure := errors.New("current run mismatch")
 			switch kind {
 			case "zero expected_run_id":
 				req.ExpectedRunID = gptr.Of(int64(0))
 			case "negative expected_run_id":
 				req.ExpectedRunID = gptr.Of(int64(-1))
 			}
-			if kind != "negative expected_run_id" {
-				manager.EXPECT().RetryInCurrentRun(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.RetryInCurrentRunRequest) (*entity.ManualRetryReceipt, error) {
-					assert.Equal(t, req.GetExpectedRunID(), r.ExpectedRunID)
-					assert.Equal(t, int64(9), r.SpaceID)
-					assert.Equal(t, int64(7), r.ExptID)
-					assert.Equal(t, entity.NewSession(context.Background()), r.Session)
-					assert.Equal(t, entity.EvaluationModeRetryItems, r.Mode)
-					assert.Equal(t, []int64{11, 12}, r.ItemIDs)
-					if kind == "manager error" {
-						return nil, failure
-					}
-					return &entity.ManualRetryReceipt{
-						RunID: 8, AcceptedCount: 1,
-						RejectedItems: []*entity.ManualRetryRejectedItem{{ItemID: 12, Reason: "busy"}}, SnapshotAtMS: 1793275200123,
-					}, nil
-				})
-			}
+
 			app := &EvalOpenAPIApplication{auth: auth, metric: &fakeOpenAPIMetric{}, experimentApp: &experimentApplication{manager: manager, auth: auth}}
 			resp, err := app.RetryExperimentOApi(context.Background(), &req)
-			if kind == "manager error" || kind == "negative expected_run_id" {
-				require.Error(t, err)
-				require.Nil(t, resp)
-				if kind == "manager error" {
-					assert.ErrorIs(t, err, failure)
-				}
-				return
-			}
-			require.NoError(t, err)
-			body, err := js_conv.GetMarshaler()(resp.Data)
-			require.NoError(t, err)
-			assert.JSONEq(t, `{"run_id":"8","accepted_count":1,"rejected_items":[{"item_id":"12","reason":"busy"}],"snapshot_at_ms":"1793275200123"}`, string(body))
+			require.Error(t, err)
+			require.Nil(t, resp)
+			require.ErrorContains(t, err, "expected_run_id")
 		})
 	}
 }
