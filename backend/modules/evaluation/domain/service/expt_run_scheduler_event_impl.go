@@ -247,6 +247,15 @@ func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEnd
 
 		if !locked {
 			logs.CtxWarn(ctx, "ExptSchedulerConsumer.HandleEventLock found locked expt eval event: %v. Abort event, err: %v", json.Jsonify(event), err)
+			if event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+				mode, err := e.schedulerModeFactory.NewSchedulerMode(event.ExptRunMode)
+				if err != nil {
+					return err
+				}
+				if err := mode.NextTick(ctx, event, true); err != nil {
+					return errno.WrapMQRetryErr(err)
+				}
+			}
 			return nil
 		}
 

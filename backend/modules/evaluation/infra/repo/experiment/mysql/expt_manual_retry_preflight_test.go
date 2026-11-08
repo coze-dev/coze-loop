@@ -94,7 +94,7 @@ func prepareManualRetryCapacityAppend(t *testing.T, f *manualRetryFixture, req *
 	require.NotContains(t, (&entity.ExptRunLog{ItemIds: chunks}).GetItemIDs(), req.Items[0].SourceItem.ItemID)
 	req.RunID = f.base + 999
 	require.NoError(t, f.conn.Model(&model.Experiment{}).Where("id=?", f.expt).Update("latest_run_id", req.RunID).Error)
-	require.NoError(t, f.conn.Create(&model.ExptRunLog{ID: req.RunID, SpaceID: f.space, ExptID: f.expt, ExptRunID: req.RunID, Status: gptr.Of(int64(entity.ExptStatus_Processing)), ItemIds: &raw}).Error)
+	require.NoError(t, f.conn.Create(&model.ExptRunLog{ID: req.RunID, SpaceID: f.space, ExptID: f.expt, ExptRunID: req.RunID, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(entity.EvaluationModeRetryItems)), ItemIds: &raw}).Error)
 	req.Items[0].CurrentItemLog = nil
 	for _, turn := range req.Items[0].Turns {
 		turn.CurrentRunLog = nil
