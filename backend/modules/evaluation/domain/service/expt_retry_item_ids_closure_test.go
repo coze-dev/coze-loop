@@ -78,16 +78,22 @@ func newRetryItemIDsClosureFixture(t *testing.T, parent entity.ExptRunMode, curr
 	}
 	for i, status := range []entity.TurnRunState{entity.TurnRunState_Processing, entity.TurnRunState_Success} {
 		itemID := a + int64(i)
-		require.NoError(t, f.conn.Create(&model.ExptTurnResult{ID: f.base + 450 + int64(i), SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run,
-			ItemID: itemID, ItemVersionID: f.version, TurnID: 0, Status: int32(status)}).Error)
-		require.NoError(t, f.conn.Create(&model.ExptTurnResultRunLog{ID: f.base + 550 + int64(i), SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run,
-			ItemID: itemID, ItemVersionID: f.version, TurnID: 0, Status: int32(status), EvaluatorResultIds: gptr.Of([]byte(`{}`))}).Error)
+		require.NoError(t, f.conn.Create(&model.ExptTurnResult{
+			ID: f.base + 450 + int64(i), SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run,
+			ItemID: itemID, ItemVersionID: f.version, TurnID: 0, Status: int32(status),
+		}).Error)
+		require.NoError(t, f.conn.Create(&model.ExptTurnResultRunLog{
+			ID: f.base + 550 + int64(i), SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run,
+			ItemID: itemID, ItemVersionID: f.version, TurnID: 0, Status: int32(status), EvaluatorResultIds: gptr.Of([]byte(`{}`)),
+		}).Error)
 	}
 	if !currentLog {
 		oldRun := f.base + 700
 		oldMetadata := []byte(fmt.Sprintf(`[{"ItemIDs":[%d],"CreateAt":1700000000}]`, d))
-		require.NoError(t, f.conn.Create(&model.ExptRunLog{ID: oldRun, SpaceID: f.space, ExptID: f.expt, ExptRunID: oldRun,
-			Status: gptr.Of(int64(entity.ExptStatus_Success)), Mode: gptr.Of(int32(entity.EvaluationModeSubmit)), ItemIds: &oldMetadata, SuccessCnt: 1}).Error)
+		require.NoError(t, f.conn.Create(&model.ExptRunLog{
+			ID: oldRun, SpaceID: f.space, ExptID: f.expt, ExptRunID: oldRun,
+			Status: gptr.Of(int64(entity.ExptStatus_Success)), Mode: gptr.Of(int32(entity.EvaluationModeSubmit)), ItemIds: &oldMetadata, SuccessCnt: 1,
+		}).Error)
 		for _, table := range []string{"expt_item_result", "expt_item_result_run_log", "expt_turn_result", "expt_turn_result_run_log"} {
 			require.NoError(t, f.conn.Table(table).Where("space_id=? AND expt_id=? AND item_id=?", f.space, f.expt, d).Update("expt_run_id", oldRun).Error)
 		}
@@ -119,8 +125,10 @@ func newRetryItemIDsClosureFixture(t *testing.T, parent entity.ExptRunMode, curr
 }
 
 func (p *retryItemIDsClosureFixture) request() *entity.RetryInCurrentRunRequest {
-	return &entity.RetryInCurrentRunRequest{SpaceID: p.f.space, ExptID: p.f.expt, ExpectedRunID: p.f.run,
-		Mode: entity.EvaluationModeRetryItems, ItemIDs: []int64{p.f.item, p.f.item}, Session: &entity.Session{UserID: "item-ids-closure"}}
+	return &entity.RetryInCurrentRunRequest{
+		SpaceID: p.f.space, ExptID: p.f.expt, ExpectedRunID: p.f.run,
+		Mode: entity.EvaluationModeRetryItems, ItemIDs: []int64{p.f.item, p.f.item}, Session: &entity.Session{UserID: "item-ids-closure"},
+	}
 }
 
 func (p *retryItemIDsClosureFixture) unchangedRows(t *testing.T) map[string]string {
@@ -287,9 +295,11 @@ func TestRetryItemIDsClosureRealMySQLPreflightCapacity(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, prepared.Items, 1)
 			require.Empty(t, prepared.RejectedItems)
-			request := &entity.RequeueTerminalItemsRequest{SpaceID: f.space, ExptID: f.expt, RunID: f.run,
+			request := &entity.RequeueTerminalItemsRequest{
+				SpaceID: f.space, ExptID: f.expt, RunID: f.run,
 				Mode: entity.EvaluationModeRetryItems, RequestID: "item-ids-preflight", Operator: "item-ids-closure",
-				SnapshotAtMS: prepared.SnapshotAtMS, Items: prepared.Items}
+				SnapshotAtMS: prepared.SnapshotAtMS, Items: prepared.Items,
+			}
 			before := f.snapshot()
 			checked, err := p.manager.manualRetryRepo.PreflightTerminalItems(context.Background(), request)
 			if tc.capacity {
@@ -388,8 +398,10 @@ func TestRetryItemIDsClosureRealMySQLSchedulerExecution(t *testing.T) {
 	})
 	metric := metricsmocks.NewMockEvalTargetMetrics(ctrl)
 	metric.EXPECT().EmitRun(f.space, nil, gomock.Any())
-	targetService := &EvalTargetServiceImpl{evalTargetRepo: targets, idgen: ids, metric: metric,
-		typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{entity.EvalTargetTypeCustomRPCServer: operator}, configer: actor.config}
+	targetService := &EvalTargetServiceImpl{
+		evalTargetRepo: targets, idgen: ids, metric: metric,
+		typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{entity.EvalTargetTypeCustomRPCServer: operator}, configer: actor.config,
+	}
 	actor.executor.ItemResultRepo, actor.executor.TurnResultRepo = f.itemRepo(), f.turnRepo()
 	actor.executor.evalTargetService = targetService
 	actor.config.EXPECT().BuildEvalExt(gomock.Any(), f.space, gomock.Any()).Return(nil).AnyTimes()
@@ -421,8 +433,10 @@ func TestRetryItemIDsClosureRealMySQLSchedulerExecution(t *testing.T) {
 	}
 	t.Cleanup(waitReleased)
 	waitReleased()
-	schedule := &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, ExptRunMode: entity.EvaluationModeRetryItems,
-		ExptType: entity.ExptType_Offline, ExecEvalSetItemIDs: []int64{f.item + 1}, Session: p.request().Session}
+	schedule := &entity.ExptScheduleEvent{
+		SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, ExptRunMode: entity.EvaluationModeRetryItems,
+		ExptType: entity.ExptType_Offline, ExecEvalSetItemIDs: []int64{f.item + 1}, Session: p.request().Session,
+	}
 	mode := &ExptRetryItemsExec{manager: p.manager, configer: actor.config, exptItemResultRepo: f.itemRepo(), exptRunLogRepo: p.manager.runLogRepo}
 	snapshot := f.snapshot()
 	require.NoError(t, mode.ScheduleStart(ctx, schedule, expt))
@@ -455,9 +469,11 @@ func TestRetryItemIDsClosureRealMySQLSchedulerExecution(t *testing.T) {
 	require.Equal(t, entity.ItemRunState_Success, current.Status)
 	require.Equal(t, entity.ExptItemResultStateLogged, current.ResultState)
 	stats := exptrepo.NewExptStatsRepo(exptmysql.NewExptStatsDAO(f.provider))
-	result := &ExptResultServiceImpl{ExptItemResultRepo: f.itemRepo(), ExptTurnResultRepo: f.turnRepo(), ExptStatsRepo: stats,
+	result := &ExptResultServiceImpl{
+		ExptItemResultRepo: f.itemRepo(), ExptTurnResultRepo: f.turnRepo(), ExptStatsRepo: stats,
 		evalTargetService: targetService, evaluatorRecordService: actor.records,
-		scoreCalculator: NewEvaluatorScoreCalculator(nil, nil), resultPublishRepo: exptrepo.NewExptResultPublishRepo(f.provider), resultPublishLocker: factory}
+		scoreCalculator: NewEvaluatorScoreCalculator(nil, nil), resultPublishRepo: exptrepo.NewExptResultPublishRepo(f.provider), resultPublishLocker: factory,
+	}
 	_, err = result.RecordItemRunLogs(ctx, f.expt, f.run, f.item, f.space, expt)
 	require.NoError(t, err)
 	waitReleased()
