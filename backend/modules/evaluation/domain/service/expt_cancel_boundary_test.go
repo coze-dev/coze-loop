@@ -825,7 +825,11 @@ func runReplacementAdmissionFixture(t *testing.T, r1Mode, r2Mode entity.ExptRunM
 	require.NoError(t, err)
 	require.False(t, seen, "the final replay is not hidden by a previous Done")
 	require.NoError(t, complete(lateCID), "Latest=R2 makes the delayed original run non-current")
-	require.Equal(t, before, f.snapshot(), "R2 reservation/source and both runs' SQL must remain byte-equivalent")
+	if pendingSetup && !replayBeforeCreate {
+		requireHistoricalRunSnapshot(t, before, f.snapshot(), f.run, entity.ExptStatus_Terminated, [5]int64{0, 0, 1, 0, 0}, "")
+	} else {
+		require.Equal(t, before, f.snapshot(), "R2 reservation/source and both runs' SQL must remain byte-equivalent")
+	}
 	require.Equal(t, map[int64]int64{f.expt: quotaBefore}, quotaState.ExptID2RunTime, "the actual R2 slot is preserved")
 	require.Equal(t, callsBefore, p.resources.Load())
 	require.Equal(t, notificationsBefore, p.notifications.Load())
@@ -836,6 +840,54 @@ func runReplacementAdmissionFixture(t *testing.T, r1Mode, r2Mode entity.ExptRunM
 	require.Equal(t, claims[0].RequestID, raw.Get(ctx, r2Reservation).Val())
 	assertAdmission()
 	t.Logf("R2_CONFIRMED latest=%d quota=%v reservation=%d request=%q old_request=%q replay_before_create=%v pending_setup=%v SQL_UNCHANGED", r2, quotaState.ExptID2RunTime, reserved[0].QuotaReservationState, r2Source.Current.RequestID, originalToken, replayBeforeCreate, pendingSetup)
+}
+
+// Normalize only independently asserted R1 history fields; all other SQL stays protected.
+func requireHistoricalRunSnapshot(t *testing.T, before, after map[string]string, run int64, status entity.ExptStatus, counts [5]int64, message string) {
+	t.Helper()
+	var oldRows, newRows []map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal([]byte(before["expt_run_log"]), &oldRows))
+	require.NoError(t, json.Unmarshal([]byte(after["expt_run_log"]), &newRows))
+	require.Len(t, newRows, len(oldRows))
+	found := false
+	for i, old := range oldRows {
+		if string(old["expt_run_id"]) != fmt.Sprint(run) {
+			continue
+		}
+		found = true
+		require.Equal(t, fmt.Sprint(run), string(newRows[i]["expt_run_id"]))
+		require.Equal(t, fmt.Sprint(int64(status)), string(newRows[i]["status"]))
+		newRows[i]["status"] = old["status"]
+		for index, field := range []string{"pending_cnt", "processing_cnt", "success_cnt", "fail_cnt", "terminated_cnt"} {
+			require.Equal(t, fmt.Sprint(counts[index]), string(newRows[i][field]), field)
+			newRows[i][field] = old[field]
+		}
+		var oldTime, newTime time.Time
+		require.NoError(t, json.Unmarshal(old["updated_at"], &oldTime))
+		require.NoError(t, json.Unmarshal(newRows[i]["updated_at"], &newTime))
+		require.False(t, newTime.Before(oldTime), "historical updated_at cannot move backwards")
+		newRows[i]["updated_at"] = old["updated_at"]
+		if message != "" {
+			var actual []byte
+			require.NoError(t, json.Unmarshal(newRows[i]["status_message"], &actual))
+			require.Equal(t, message, string(actual))
+			newRows[i]["status_message"] = old["status_message"]
+		}
+	}
+	require.True(t, found, "R1 historical row must exist in the SQL snapshot")
+	oldJSON, err := json.Marshal(oldRows)
+	require.NoError(t, err)
+	newJSON, err := json.Marshal(newRows)
+	require.NoError(t, err)
+	oldSnapshot, newSnapshot := map[string]string{}, map[string]string{}
+	for key, value := range before {
+		oldSnapshot[key] = value
+	}
+	for key, value := range after {
+		newSnapshot[key] = value
+	}
+	oldSnapshot["expt_run_log"], newSnapshot["expt_run_log"] = string(oldJSON), string(newJSON)
+	require.Equal(t, oldSnapshot, newSnapshot, "R1 other fields, R2 and all canonical/shared SQL must remain byte-equivalent")
 }
 
 func TestNewRunResetReleasesOriginalTerminalManualQuotaBeforeMigration(t *testing.T) {

@@ -303,13 +303,46 @@ func TestRunFinishPendingRealHalfTerminalCheckRetries(t *testing.T) {
 	f := p.f
 	// Reproduce the old split CompleteRun/CompleteExpt half-state explicitly.
 	require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(entity.ExptStatus_Success)).Error)
-	before := f.snapshot()
 	scheduler := &ExptSchedulerImpl{Manager: p.manager}
-	err := scheduler.HandleEventCheck(func(context.Context, *entity.ExptScheduleEvent) error {
+	handler := scheduler.HandleEventCheck(func(context.Context, *entity.ExptScheduleEvent) error {
 		t.Fatal("half-terminal event entered execution")
+		return nil
+	})
+	require.NoError(t, handler(context.Background(), p.event), "valid legacy half-state must finish the experiment")
+	run, err := p.manager.runLogRepo.Get(context.Background(), f.expt, f.run)
+	require.NoError(t, err)
+	require.Equal(t, int64(entity.ExptStatus_Success), run.Status)
+	require.Equal(t, int32(1), run.SuccessCnt)
+	require.Zero(t, run.PendingCnt)
+	require.Zero(t, run.ProcessingCnt)
+	require.Zero(t, run.FailCnt)
+	require.Zero(t, run.TerminatedCnt)
+	expt, err := p.manager.exptRepo.GetByID(context.Background(), f.expt, f.space)
+	require.NoError(t, err)
+	require.Equal(t, entity.ExptStatus_Success, expt.Status)
+	require.NotNil(t, expt.EndAt)
+	require.Equal(t, int32(1), p.resources.Load())
+	require.Equal(t, int32(1), p.notifications.Load())
+	after := f.snapshot()
+	require.NoError(t, handler(context.Background(), p.event))
+	require.Equal(t, after, f.snapshot(), "settled replay cannot recalculate SQL counts or endAt")
+	require.Equal(t, int32(1), p.resources.Load())
+	require.Equal(t, int32(1), p.notifications.Load())
+}
+
+func TestRunFinishPendingRealHalfTerminalMismatchRetries(t *testing.T) {
+	p := newPendingRunFixture(t, entity.EvaluationModeSubmit)
+	p.publishSuccess(t, false)
+	f := p.f
+	require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(entity.ExptStatus_Success)).Error)
+	require.NoError(t, f.conn.Model(&model.ExptTurnResult{}).Where("space_id=?", f.space).Update("status", int32(entity.TurnRunState_Fail)).Error)
+	before := f.snapshot()
+	err := (&ExptSchedulerImpl{Manager: p.manager}).HandleEventCheck(func(context.Context, *entity.ExptScheduleEvent) error {
+		t.Fatal("inconsistent half-terminal event entered execution")
 		return nil
 	})(context.Background(), p.event)
 	require.True(t, errno.NeedMQRetry(err))
+	require.ErrorContains(t, err, "legacy finished run does not match canonical turn stats")
 	require.Equal(t, before, f.snapshot())
 	require.Zero(t, p.resources.Load())
 	require.Zero(t, p.notifications.Load())

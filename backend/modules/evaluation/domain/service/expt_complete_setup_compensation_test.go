@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/bytedance/gg/gptr"
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	lwtmocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
@@ -201,6 +202,7 @@ func TestSetupCompensationReservedQuota(t *testing.T) {
 						require.NotContains(t, p.quota.ExptID2RunTime, f.expt)
 					}
 					if fault == "replacement" {
+						require.NoError(t, f.conn.Create(&model.ExptRunLog{ID: f.run + 1, SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run + 1, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(mode))}).Error)
 						require.NoError(t, m.exptRepo.Update(ctx, &entity.Experiment{ID: f.expt, LatestRunID: f.run + 1}))
 						replacement := "evaluation"
 						if mode == entity.EvaluationModeRetryItems {
@@ -210,7 +212,8 @@ func TestSetupCompensationReservedQuota(t *testing.T) {
 						p.quota.ExptID2RunTime[f.expt] = time.Now().Unix() + 100
 						before, calls := f.snapshot(), p.quotaCalls
 						require.NoError(t, handler(ctx, p.event))
-						require.Equal(t, before, f.snapshot(), "Latest=B prohibits A cleanup SQL writes")
+						requireHistoricalRunSnapshot(t, before, f.snapshot(), f.run, entity.ExptStatus_Failed, [5]int64{0, 2, 0, 0, 0}, "evaluation set item 999 does not exist")
+						require.Equal(t, 2, startCalls, "historical replay still reaches the original setup failure")
 						require.Equal(t, calls, p.quotaCalls, "A cannot clear B's space quota")
 						require.Contains(t, p.quota.ExptID2RunTime, f.expt)
 						value, getErr := p.server.Get(m.makeExptMutexLockKey(f.expt))

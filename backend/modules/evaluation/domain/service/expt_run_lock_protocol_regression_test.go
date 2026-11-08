@@ -20,6 +20,7 @@ import (
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	experimentmysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	mysqlmodel "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -136,6 +137,22 @@ func TestLifecycleProtocolCompletedReplayDoesNotTouchReplacementAdmission(t *tes
 				expts := repomocks.NewMockIExperimentRepo(ctrl)
 				expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(current, nil).AnyTimes()
 				mgr := &ExptMangerImpl{manualRetryLocker: factory, exptRepo: expts, quotaRepo: repomocks.NewMockQuotaRepo(ctrl), idem: &cleanupTestIdem{seen: true}}
+				if newerSQL {
+					port := repomocks.NewMockIExptRunFinishRepo(ctrl)
+					request := &entity.ExptRunFinishRequest{SpaceID: 3, ExptID: 1, RunID: 2}
+					if endpoint == "cancelled" {
+						port.EXPECT().FinishCurrentRun(gomock.Any(), request).DoAndReturn(func(ctx context.Context, _ *entity.ExptRunFinishRequest) (*entity.ExptRunFinishResult, error) {
+							if err := ctx.Err(); err != nil {
+								require.ErrorIs(t, err, context.Canceled)
+								return nil, err
+							}
+							return &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishNonCurrent}, nil
+						}).Times(2)
+					} else {
+						port.EXPECT().FinishCurrentRun(gomock.Any(), request).Return(&entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishNonCurrent}, nil).Times(1)
+					}
+					mgr.runFinishRepo = port
+				}
 				event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
 				ctx := context.Background()
 				if endpoint == "cancelled" {
@@ -149,10 +166,21 @@ func TestLifecycleProtocolCompletedReplayDoesNotTouchReplacementAdmission(t *tes
 				} else {
 					err = completeTerminationFixture(mgr, ctx, event, &frozen, nil, &entity.CompleteExptOption{NoCompleteItemTurn: true})
 				}
-				require.NoError(t, err)
+				if newerSQL && endpoint == "cancelled" {
+					require.ErrorIs(t, err, context.Canceled)
+					require.True(t, errno.NeedMQRetry(err))
+				} else {
+					require.NoError(t, err)
+				}
 				actual, err := server.Get("expt_run_mutex_lock:1")
 				require.NoError(t, err)
 				require.Equal(t, "evaluation", actual, "completed replay must exit before deleting the next admission or releasing shared quota")
+				if newerSQL && endpoint == "cancelled" {
+					require.NoError(t, completeTerminationFixture(mgr, context.Background(), event, &frozen, nil, &entity.CompleteExptOption{NoCompleteItemTurn: true}))
+					actual, err = server.Get("expt_run_mutex_lock:1")
+					require.NoError(t, err)
+					require.Equal(t, "evaluation", actual, "healthy R1 replay must preserve the R2 admission and quota")
+				}
 			})
 		}
 	}
@@ -306,6 +334,20 @@ func TestLifecycleProtocolLateCleanupSkipsConfirmedNumericReplacement(t *testing
 				expts := repomocks.NewMockIExperimentRepo(ctrl)
 				expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99, Status: entity.ExptStatus_Processing}, nil).AnyTimes()
 				mgr := &ExptMangerImpl{manualRetryLocker: factory, exptRepo: expts, quotaRepo: repomocks.NewMockQuotaRepo(ctrl), idem: &cleanupTestIdem{}}
+				port := repomocks.NewMockIExptRunFinishRepo(ctrl)
+				request := &entity.ExptRunFinishRequest{SpaceID: 3, ExptID: 1, RunID: 2}
+				if endpoint == "cancelled" {
+					port.EXPECT().FinishCurrentRun(gomock.Any(), request).DoAndReturn(func(ctx context.Context, _ *entity.ExptRunFinishRequest) (*entity.ExptRunFinishResult, error) {
+						if err := ctx.Err(); err != nil {
+							require.ErrorIs(t, err, context.Canceled)
+							return nil, err
+						}
+						return &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishNonCurrent}, nil
+					}).Times(2)
+				} else {
+					port.EXPECT().FinishCurrentRun(gomock.Any(), request).Return(&entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishNonCurrent}, nil).Times(1)
+				}
+				mgr.runFinishRepo = port
 				frozen := &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Success, EndAt: gptr.Of(time.Now())}
 				event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
 				ctx := context.Background()
@@ -320,10 +362,21 @@ func TestLifecycleProtocolLateCleanupSkipsConfirmedNumericReplacement(t *testing
 					}
 					err = completeTerminationFixture(mgr, ctx, event, frozen, nil, &entity.CompleteExptOption{NoCompleteItemTurn: true})
 				}
-				require.NoError(t, err, "confirmed replacement is an idempotent exit, including resource-only cancellation replay")
+				if endpoint == "cancelled" {
+					require.ErrorIs(t, err, context.Canceled)
+					require.True(t, errno.NeedMQRetry(err))
+				} else {
+					require.NoError(t, err, "confirmed replacement is an idempotent exit")
+				}
 				actual, err := server.Get(key)
 				require.NoError(t, err)
 				require.Equal(t, holder, actual)
+				if endpoint == "cancelled" {
+					require.NoError(t, completeTerminationFixture(mgr, context.Background(), event, frozen, nil, &entity.CompleteExptOption{NoCompleteItemTurn: true}))
+					actual, err = server.Get(key)
+					require.NoError(t, err)
+					require.Equal(t, holder, actual, "healthy R1 replay must preserve the R2 holder and quota")
+				}
 			})
 		}
 	}

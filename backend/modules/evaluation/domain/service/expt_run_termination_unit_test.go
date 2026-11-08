@@ -372,6 +372,7 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		m := d.manager()
 		d.expectLock(true, context.Background())
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99, ExptType: entity.ExptType_Offline}, nil)
+		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), &entity.ExptRunTerminationRequest{SpaceID: 3, ExptID: 1, RunID: 2, Finalize: true, Status: entity.ExptStatus_Terminated}).Return(&entity.ExptRunTerminationResult{NonCurrent: true}, nil).Times(1)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
 		require.NoError(t, err)

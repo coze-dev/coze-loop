@@ -399,25 +399,26 @@ func TestCancelCleanupLeaseExpiredReplacementStillFencesQuota(t *testing.T) {
 
 	quotaState := &entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{f.expt: time.Now().Unix()}}
 	quota := repomocks.NewMockQuotaRepo(gomock.NewController(t))
-	quota.EXPECT().CreateOrUpdate(gomock.Any(), f.space, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, update func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
-		updated, _, err := update(quotaState)
-		if updated != nil {
-			quotaState = updated
-		}
-		return err
-	}).AnyTimes()
+	quota.EXPECT().CreateOrUpdate(gomock.Any(), f.space, gomock.Any(), gomock.Any()).Times(0)
 	m.quotaRepo = quota
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	event := &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, Session: &entity.Session{}}
+	before := f.snapshot()
 	err = completeCancelledFixture(m, ctx, event, frozen, nil)
-	require.NoError(t, err, "standard NonCurrent completion performs no cleanup")
+	require.ErrorIs(t, err, context.Canceled)
+	require.True(t, errno.NeedMQRetry(err), "cancelled historical access must remain visible for redelivery")
+	require.Equal(t, before, f.snapshot())
 	locked, owner, err := m.mutex.BackoffLockWithValue(context.Background(), lockKey, fmt.Sprint(replacement), time.Minute, time.Millisecond)
 	require.NoError(t, err)
 	require.True(t, locked, "stale cleanup must not leave its lease behind")
 	require.Equal(t, fmt.Sprint(replacement), owner)
 	require.Contains(t, quotaState.ExptID2RunTime, f.expt, "R1 cleanup must not release R2's experiment quota")
+	require.NoError(t, completeCancelledFixture(m, context.Background(), event, frozen, nil), "fresh-context redelivery must complete the same historical event")
+	require.Equal(t, before, f.snapshot(), "R1 already-terminal history and R2 SQL must remain unchanged")
+	require.Equal(t, fmt.Sprint(replacement), raw.Get(context.Background(), lockKey).Val())
+	require.Contains(t, quotaState.ExptID2RunTime, f.expt)
 }
 
 func TestCancelCleanupLeaseWholeResourcesPastEightSeconds(t *testing.T) {
