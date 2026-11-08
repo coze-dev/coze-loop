@@ -1543,7 +1543,7 @@ const exptStatsReconcileInterval = 5 * time.Minute
 // （见 expt_result_impl.go），要能修正它就必须以同一张表为准；拿 turn 表对账会在多轮实验上
 // 得出另一套数字。CalculateStats 走的是 turn 表，所以这里不复用它。
 //
-// 代价是一条 GROUP BY（走 (space_id, expt_id) 前缀），每实验每拍一次，可接受。
+// 代价是最多两条 GROUP BY（走 (space_id, expt_id) 前缀），每实验每五分钟一次，可接受。
 //
 // 失败只告警：对账是自愈机制，它自己不能成为调度中断的理由。
 func (e *ExptSchedulerImpl) reconcileExptStats(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) {
@@ -1577,6 +1577,12 @@ func (e *ExptSchedulerImpl) reconcileExptStats(ctx context.Context, event *entit
 		}
 	}
 
+	reconciler, ok := e.ExptStatsRepo.(repo.IExptStatsReconcileRepo)
+	if !ok {
+		logs.CtxWarn(ctx, "[ExptStatsReconcile] conditional stats writer missing, skip this tick, expt_id: %v", event.ExptID)
+		return
+	}
+	ctx = contexts.WithCtxWriteDB(ctx)
 	actual, err := e.ExptItemResultRepo.CountItemsByStatus(ctx, event.SpaceID, event.ExptID)
 	if err != nil {
 		logs.CtxWarn(ctx, "[ExptStatsReconcile] count items by status failed, skip this tick, expt_id: %v: %v", event.ExptID, err)
@@ -1594,6 +1600,17 @@ func (e *ExptSchedulerImpl) reconcileExptStats(ctx context.Context, event *entit
 		return
 	}
 	if got == nil {
+		return
+	}
+
+	// The first count may already be stale. Recompute after reading the stats
+	// version so the CAS below cannot overwrite a newly committed item delta.
+	actual, err = e.ExptItemResultRepo.CountItemsByStatus(ctx, event.SpaceID, event.ExptID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptStatsReconcile] recount items by status failed, skip this tick, expt_id: %v: %v", event.ExptID, err)
+		return
+	}
+	if len(actual) == 0 {
 		return
 	}
 
@@ -1618,7 +1635,12 @@ func (e *ExptSchedulerImpl) reconcileExptStats(ctx context.Context, event *entit
 		got.PendingItemCnt, got.SuccessItemCnt, got.FailItemCnt, got.ProcessingItemCnt, got.TerminatedItemCnt,
 		want.PendingItemCnt, want.SuccessItemCnt, want.FailItemCnt, want.ProcessingItemCnt, want.TerminatedItemCnt)
 
-	if err := e.ExptStatsRepo.UpdateByExptID(ctx, event.ExptID, event.SpaceID, want); err != nil {
-		logs.CtxWarn(ctx, "[ExptStatsReconcile] correct expt stats failed, expt_id: %v: %v", event.ExptID, err)
+	applied, err := reconciler.UpdateByExptIDIfMatch(ctx, event.ExptID, event.SpaceID, got, want)
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptStatsReconcile] cas correct expt stats failed, skip this tick, expt_id: %v: %v", event.ExptID, err)
+		return
+	}
+	if !applied {
+		logs.CtxWarn(ctx, "[ExptStatsReconcile] stats changed during reconciliation, skip stale write, expt_id: %v", event.ExptID)
 	}
 }

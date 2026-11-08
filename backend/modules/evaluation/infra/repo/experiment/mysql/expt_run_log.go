@@ -37,6 +37,10 @@ type IExptRunLogLatestRunDAO interface {
 	UpdateIfLatestRun(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any, opts ...db.Option) (bool, error)
 }
 
+type IExptRunLogTerminalDAO interface {
+	UpdateStatusIfCurrent(ctx context.Context, exptID, exptRunID, spaceID, expectedStatus, status int64) (bool, error)
+}
+
 func (dao *ExptRunLogDAOImpl) UpdateRunStats(ctx context.Context, exptID, exptRunID, spaceID int64, fields map[string]any, stats *model.ExptStats) error {
 	return dao.provider.Transaction(ctx, func(tx *gorm.DB) error {
 		opts := []db.Option{db.WithTransaction(tx), db.WithMaster(), db.WithSelectForUpdate()}
@@ -148,6 +152,16 @@ func (dao *ExptRunLogDAOImpl) Update(ctx context.Context, exptID, exptRunID, spa
 	}
 	logs.CtxInfo(ctx, "update expt_run_log success, expt_id: %v, expt_run_id: %v, ufields: %v", exptID, exptRunID, ufields)
 	return nil
+}
+
+func (dao *ExptRunLogDAOImpl) UpdateStatusIfCurrent(ctx context.Context, exptID, exptRunID, spaceID, expectedStatus, status int64) (bool, error) {
+	result := dao.provider.NewSession(ctx).Clauses(dbresolver.Write).Model(&model.ExptRunLog{}).
+		Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND status = ?", spaceID, exptID, exptRunID, expectedStatus).
+		UpdateColumns(map[string]any{"status": status, "updated_at": time.Now()})
+	if result.Error != nil {
+		return false, errorx.Wrapf(result.Error, "cas expt_run_log terminal status fail, expt_id: %v, expt_run_id: %v", exptID, exptRunID)
+	}
+	return result.RowsAffected > 0, nil
 }
 
 func (dao *ExptRunLogDAOImpl) UpdateIfLatestRun(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any, opts ...db.Option) (bool, error) {

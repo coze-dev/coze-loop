@@ -68,6 +68,12 @@ type IExptCurrentRunStatsRepo interface {
 	UpdateByExptIDIfLatestRun(ctx context.Context, exptID, spaceID int64, stats *entity.ExptStats, expectedRunID int64) (bool, error)
 }
 
+// IExptStatsReconcileRepo rejects a reconciliation write when the stats row
+// changed after its counts were read.
+type IExptStatsReconcileRepo interface {
+	UpdateByExptIDIfMatch(ctx context.Context, exptID, spaceID int64, expected, stats *entity.ExptStats) (bool, error)
+}
+
 type IExptItemResultRepo interface {
 	// Resource cleanup uses the same strict primary dispatch observation, including terminal runs.
 	ScanIncompleteDispatchObservations(ctx context.Context, spaceID, exptID, runID int64) ([]*ExptDispatchObservation, error)
@@ -153,6 +159,12 @@ type IExptRunLogRepo interface {
 // still owns the experiment. Legacy repositories may keep the plain Update.
 type IExptRunLogLatestRunUpdater interface {
 	UpdateIfLatestRun(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any) (bool, error)
+}
+
+// IExptRunLogTerminalUpdater makes terminal state absorption explicit: a late
+// writer may not overwrite a status committed after its own read.
+type IExptRunLogTerminalUpdater interface {
+	UpdateStatusIfCurrent(ctx context.Context, exptID, exptRunID, spaceID, expectedStatus, status int64) (bool, error)
 }
 
 type IExptAggrResultRepo interface {

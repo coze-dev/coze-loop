@@ -30,6 +30,14 @@ type termDualRepo struct {
 	*repomocks.MockIExptRunTerminationRepo
 }
 
+type termUnitRunLogRepo struct {
+	*repomocks.MockIExptRunLogRepo
+}
+
+func (r *termUnitRunLogRepo) UpdateStatusIfCurrent(ctx context.Context, exptID, exptRunID, spaceID, _, status int64) (bool, error) {
+	return true, r.Update(ctx, exptID, exptRunID, spaceID, map[string]any{"status": status})
+}
+
 func termUnitSource(itemID int64, status entity.ItemRunState) *entity.ExptCurrentItemRunSource {
 	return &entity.ExptCurrentItemRunSource{
 		Current: entity.ExptItemCurrentRequest{
@@ -45,6 +53,7 @@ type termUnitDeps struct {
 	finish      *repomocks.MockIExptRunFinishRepo
 	termination *repomocks.MockIExptRunTerminationRepo
 	expts       *repomocks.MockIExperimentRepo
+	runLogs     *repomocks.MockIExptRunLogRepo
 	items       *repomocks.MockIExptItemResultRepo
 	locker      *lockmocks.MockILocker
 	guard       *componentmocks.MockICentralReservationGuard
@@ -59,6 +68,7 @@ func newTermUnitDeps(t *testing.T) *termUnitDeps {
 		finish:      repomocks.NewMockIExptRunFinishRepo(ctrl),
 		termination: repomocks.NewMockIExptRunTerminationRepo(ctrl),
 		expts:       repomocks.NewMockIExperimentRepo(ctrl),
+		runLogs:     repomocks.NewMockIExptRunLogRepo(ctrl),
 		items:       repomocks.NewMockIExptItemResultRepo(ctrl),
 		locker:      lockmocks.NewMockILocker(ctrl),
 		guard:       componentmocks.NewMockICentralReservationGuard(ctrl),
@@ -71,6 +81,7 @@ func (d *termUnitDeps) manager() *ExptMangerImpl {
 		runFinishRepo:     &termDualRepo{MockIExptRunFinishRepo: d.finish, MockIExptRunTerminationRepo: d.termination},
 		manualRetryLocker: func() lock.ILocker { return d.locker },
 		exptRepo:          d.expts,
+		runLogRepo:        &termUnitRunLogRepo{MockIExptRunLogRepo: d.runLogs},
 		itemResultRepo:    d.items,
 		centralGuard:      d.guard,
 		evalTargetService: d.targets,
@@ -373,6 +384,8 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 		m := d.manager()
 		d.expectLock(true, context.Background())
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99}, nil)
+		d.runLogs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{ExptID: 1, ExptRunID: 2, Status: int64(entity.ExptStatus_Processing)}, nil)
+		d.runLogs.EXPECT().Update(gomock.Any(), int64(1), int64(2), int64(3), map[string]any{"status": int64(entity.ExptStatus_Success)}).Return(nil)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
 		require.NoError(t, err)

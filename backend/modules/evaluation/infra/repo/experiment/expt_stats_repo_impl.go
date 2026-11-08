@@ -54,6 +54,14 @@ func (e *exptStatsRepo) UpdateByExptID(ctx context.Context, exptID, spaceID int6
 	return nil
 }
 
+func (e *exptStatsRepo) UpdateByExptIDIfMatch(ctx context.Context, exptID, spaceID int64, expected, stats *entity.ExptStats) (bool, error) {
+	reconciler, ok := e.exptStatsDAO.(mysql.IExptStatsReconcileDAO)
+	if !ok {
+		return false, errorx.New("stats reconcile DAO missing")
+	}
+	return reconciler.UpdateByExptIDIfMatch(ctx, exptID, spaceID, convert.NewExptStatsConverter().DO2PO(expected), convert.NewExptStatsConverter().DO2PO(stats))
+}
+
 func (e *exptStatsRepo) UpdateByExptIDIfLatestRun(ctx context.Context, exptID, spaceID int64, stats *entity.ExptStats, expectedRunID int64) (bool, error) {
 	current, ok := e.exptStatsDAO.(mysql.IExptCurrentRunStatsDAO)
 	if !ok {

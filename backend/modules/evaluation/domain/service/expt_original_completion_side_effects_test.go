@@ -48,15 +48,24 @@ type originalCompletionSideEffects struct {
 	quotaReleases     int
 	aggregateEvents   int
 	lifecycleEvents   int
-	runUpdates        int
+	runUpdates        []map[string]any
 	unlocks           int
 	updatedExpt       *entity.Experiment
+}
+
+type originalCompletionRunLogRepo struct {
+	*repomocks.MockIExptRunLogRepo
+}
+
+func (r *originalCompletionRunLogRepo) UpdateStatusIfCurrent(ctx context.Context, exptID, exptRunID, spaceID, _, status int64) (bool, error) {
+	return true, r.Update(ctx, exptID, exptRunID, spaceID, map[string]any{"status": status})
 }
 
 func newOriginalCompletionSideEffects(t *testing.T) *originalCompletionSideEffects {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	manager := newTestExptManager(ctrl)
+	manager.runLogRepo = &originalCompletionRunLogRepo{MockIExptRunLogRepo: manager.runLogRepo.(*repomocks.MockIExptRunLogRepo)}
 	manager.runFinishRepo = &originalCompletionRunFinishRepo{}
 	f := &originalCompletionSideEffects{
 		manager:    manager,
@@ -148,12 +157,12 @@ func newOriginalCompletionSideEffects(t *testing.T) *originalCompletionSideEffec
 	manager.templateManager.(*svcmocks.MockIExptTemplateManager).EXPECT().UpdateExptInfo(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, int64, int64, int64, entity.ExptStatus, int64, *int64) error {
 		return f.templateErr
 	}).AnyTimes()
-	manager.runLogRepo.(*repomocks.MockIExptRunLogRepo).EXPECT().Get(gomock.Any(), int64(1), int64(2)).DoAndReturn(func(context.Context, int64, int64) (*entity.ExptRunLog, error) {
+	manager.runLogRepo.(*originalCompletionRunLogRepo).MockIExptRunLogRepo.EXPECT().Get(gomock.Any(), int64(1), int64(2)).DoAndReturn(func(context.Context, int64, int64) (*entity.ExptRunLog, error) {
 		current := *f.run
 		return &current, nil
 	}).AnyTimes()
-	manager.runLogRepo.(*repomocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).DoAndReturn(func(_ context.Context, _, _, _ int64, fields map[string]any) error {
-		f.runUpdates++
+	manager.runLogRepo.(*originalCompletionRunLogRepo).MockIExptRunLogRepo.EXPECT().Update(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).DoAndReturn(func(_ context.Context, _, _, _ int64, fields map[string]any) error {
+		f.runUpdates = append(f.runUpdates, fields)
 		f.run.Status = fields["status"].(int64)
 		for field, target := range map[string]*int32{"pending_cnt": &f.run.PendingCnt, "success_cnt": &f.run.SuccessCnt, "fail_cnt": &f.run.FailCnt, "processing_cnt": &f.run.ProcessingCnt, "terminated_cnt": &f.run.TerminatedCnt} {
 			if value, ok := fields[field]; ok {
@@ -194,7 +203,8 @@ func TestCompleteExptStopsWhenReplacementRunAppears(t *testing.T) {
 			require.Zero(t, f.quotaReleases, "stale completion must not release the replacement run quota")
 			require.Zero(t, f.aggregateEvents)
 			require.Zero(t, f.lifecycleEvents)
-			require.Zero(t, f.runUpdates)
+			require.Len(t, f.runUpdates, 1)
+			require.Equal(t, map[string]any{"status": int64(entity.ExptStatus_Success)}, f.runUpdates[0], "R1 may only write its own terminal status")
 			require.Zero(t, f.unlocks)
 		})
 	}
@@ -271,7 +281,8 @@ func TestCompleteExptStopsLifecycleWhenReplacementAppearsAfterAggregate(t *testi
 	runID := int64(2)
 	require.NoError(t, f.manager.CompleteExpt(context.Background(), 1, &runID, 3, &entity.Session{}))
 	require.Zero(t, f.lifecycleEvents)
-	require.Zero(t, f.runUpdates)
+	require.Len(t, f.runUpdates, 1)
+	require.Equal(t, map[string]any{"status": int64(entity.ExptStatus_Success)}, f.runUpdates[0], "R1 may only write its own terminal status")
 	require.Zero(t, f.unlocks)
 }
 

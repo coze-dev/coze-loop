@@ -33,6 +33,10 @@ type IExptCurrentRunStatsDAO interface {
 	UpdateByExptIDIfLatestRun(ctx context.Context, exptID, spaceID int64, stats *model.ExptStats, expectedRunID int64) (bool, error)
 }
 
+type IExptStatsReconcileDAO interface {
+	UpdateByExptIDIfMatch(ctx context.Context, exptID, spaceID int64, expected, stats *model.ExptStats) (bool, error)
+}
+
 func NewExptStatsDAO(db db.Provider) IExptStatsDAO {
 	return &exptStatsDAOImpl{
 		db:    db,
@@ -92,6 +96,24 @@ func (e *exptStatsDAOImpl) UpdateByExptID(ctx context.Context, exptID, spaceID i
 		return errorx.Wrapf(err, "update ExptStats fail, exptID: %v, spaceID: %v, stats: %v", exptID, spaceID, json.Jsonify(stats))
 	}
 	return nil
+}
+
+func (e *exptStatsDAOImpl) UpdateByExptIDIfMatch(ctx context.Context, exptID, spaceID int64, expected, stats *model.ExptStats) (bool, error) {
+	result := e.db.NewSession(ctx).Clauses(dbresolver.Write).Model(&model.ExptStats{}).
+		Where("expt_id = ? AND space_id = ?", exptID, spaceID).
+		Where("processing_cnt = ? AND pending_cnt = ? AND success_cnt = ? AND fail_cnt = ? AND terminated_cnt = ?",
+			expected.ProcessingCnt, expected.PendingCnt, expected.SuccessCnt, expected.FailCnt, expected.TerminatedCnt).
+		Updates(map[string]any{
+			"processing_cnt": stats.ProcessingCnt,
+			"pending_cnt":    stats.PendingCnt,
+			"success_cnt":    stats.SuccessCnt,
+			"fail_cnt":       stats.FailCnt,
+			"terminated_cnt": stats.TerminatedCnt,
+		})
+	if result.Error != nil {
+		return false, errorx.Wrapf(result.Error, "cas reconcile ExptStats fail, exptID: %v, spaceID: %v", exptID, spaceID)
+	}
+	return result.RowsAffected > 0, nil
 }
 
 func (e *exptStatsDAOImpl) UpdateByExptIDIfLatestRun(ctx context.Context, exptID, spaceID int64, stats *model.ExptStats, expectedRunID int64) (bool, error) {

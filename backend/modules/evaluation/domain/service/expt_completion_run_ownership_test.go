@@ -47,6 +47,11 @@ func (r *latestRunRunLogRepo) UpdateIfLatestRun(_ context.Context, _, exptRunID,
 	return true, nil
 }
 
+func (r *latestRunRunLogRepo) UpdateStatusIfCurrent(_ context.Context, _, _, _, _, status int64) (bool, error) {
+	r.updates = append(r.updates, map[string]any{"status": status})
+	return true, nil
+}
+
 // TestCompleteRunSkipsSupersededRunLogWrite covers the check-to-write window in
 // CompleteRun: R2 takes over after the point ownership read but before the
 // run-log write, so the canonical scan already reflects R2's rows.
@@ -81,7 +86,8 @@ func TestCompleteRunSkipsSupersededRunLogWrite(t *testing.T) {
 		Return([]*entity.ExptTurnResult{{ExptRunID: r2, Status: int32(entity.TurnRunState_Queueing)}}, int64(1), nil).AnyTimes()
 
 	require.NoError(t, m.CompleteRun(context.Background(), exptID, r1, spaceID, &entity.Session{}))
-	require.Empty(t, fake.updates, "superseded R1 must not persist R2-derived run counts")
+	require.Len(t, fake.updates, 1)
+	require.Equal(t, map[string]any{"status": int64(entity.ExptStatus_Success)}, fake.updates[0], "only R1's own terminal status is allowed; R2 counts must not be persisted")
 }
 
 // TestCompleteExptTailSkipsSupersededRunLogWrite covers the unguarded tail after
@@ -127,9 +133,10 @@ func TestCompleteExptTailSkipsSupersededRunLogWrite(t *testing.T) {
 	m.idem.(*idemmocks.MockIdempotentService).EXPECT().
 		Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	// No lock call is expected: losing ownership must not release R2's holder.
-	mock.EXPECT().Get(gomock.Any(), exptID, r1).Return(
-		&entity.ExptRunLog{ExptID: exptID, ExptRunID: r1, Status: int64(entity.ExptStatus_Processing)}, nil,
-	).AnyTimes()
+	mock.EXPECT().Get(gomock.Any(), exptID, r1).DoAndReturn(
+		func(context.Context, int64, int64) (*entity.ExptRunLog, error) {
+			return &entity.ExptRunLog{ExptID: exptID, ExptRunID: r1, Status: int64(entity.ExptStatus_Processing)}, nil
+		}).AnyTimes()
 
 	// R2 takes over during the lifecycle publish, after the last ownership read.
 	m.publisher.(*eventmocks.MockExptEventPublisher).EXPECT().
@@ -144,7 +151,8 @@ func TestCompleteExptTailSkipsSupersededRunLogWrite(t *testing.T) {
 		Return([]*entity.ExptTurnResult{{ExptRunID: r2, Status: int32(entity.TurnRunState_Queueing)}}, int64(1), nil).AnyTimes()
 
 	require.NoError(t, m.CompleteExpt(context.Background(), exptID, &r1, spaceID, &entity.Session{}))
-	require.Empty(t, fake.updates, "superseded R1 must not persist R2-derived run stats in the completion tail")
+	require.Len(t, fake.updates, 1)
+	require.Equal(t, map[string]any{"status": int64(entity.ExptStatus_Success)}, fake.updates[0], "only R1's own terminal status is allowed; R2 stats must not be persisted in the completion tail")
 }
 
 func TestCompleteRunKeepsOnlineWriteOutsideLatestRunCAS(t *testing.T) {

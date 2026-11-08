@@ -513,7 +513,7 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 		}
 		if current.ExptType == entity.ExptType_Offline {
 			if current.LatestRunID != exptRunID {
-				return nil
+				return e.finishSupersededRunLog(ctx, exptID, exptRunID, spaceID, opts...)
 			}
 			opt := &entity.CompleteExptOption{}
 			for _, fn := range opts {
@@ -663,7 +663,7 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 	if !applied {
 		// A replacement run took over after the point ownership read; its rows
 		// must not be persisted into this run, and its holder must not be released.
-		return nil
+		return e.finishSupersededRunLog(ctx, exptID, exptRunID, spaceID, opts...)
 	}
 	if currentRunCleanup {
 		// The lifecycle lease blocks a replacement run until this run's quota is released.
@@ -690,6 +690,44 @@ func runStatusFromCounts(run *entity.ExptRunLog) entity.ExptStatus {
 		return entity.ExptStatus_Failed
 	}
 	return entity.ExptStatus_Success
+}
+
+// finishSupersededRunLog finalizes only the stale run's own row. It deliberately
+// uses its existing counts instead of rescanning turns already reset by a new run.
+func (e *ExptMangerImpl) finishSupersededRunLog(ctx context.Context, exptID, exptRunID, spaceID int64, opts ...entity.CompleteExptOptionFn) error {
+	runLog, err := e.runLogRepo.Get(ctx, exptID, exptRunID)
+	if err != nil {
+		return err
+	}
+	if runLog == nil {
+		return errno.NewMQRetryErr("completion run log missing")
+	}
+	if entity.IsExptFinished(entity.ExptStatus(runLog.Status)) {
+		return nil
+	}
+	opt := &entity.CompleteExptOption{}
+	for _, fn := range opts {
+		fn(opt)
+	}
+	status := opt.Status
+	if status <= 0 {
+		status = runStatusFromCounts(runLog)
+	}
+	if !entity.IsExptFinished(status) {
+		return nil
+	}
+	updater, ok := e.runLogRepo.(repo.IExptRunLogTerminalUpdater)
+	if !ok {
+		return errno.NewMQRetryErr("terminal run log CAS missing")
+	}
+	applied, err := updater.UpdateStatusIfCurrent(ctx, exptID, exptRunID, spaceID, runLog.Status, int64(status))
+	if err != nil {
+		return err
+	}
+	if !applied {
+		return errno.NewMQRetryErr("superseded run status advanced")
+	}
+	return nil
 }
 
 func runLogMutableFields(run *entity.ExptRunLog) map[string]any {
@@ -857,7 +895,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			}
 			if exptRunID != nil && *exptRunID > 0 {
 				if current.LatestRunID != *exptRunID {
-					return nil
+					return e.finishSupersededRunLog(ctx, exptID, *exptRunID, spaceID, opts...)
 				}
 				releaseRunLock = true
 			}
@@ -963,7 +1001,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			return err
 		}
 		if !owned {
-			return nil
+			return e.finishSupersededRunLog(ctx, exptID, *exptRunID, spaceID, opts...)
 		}
 	}
 
@@ -981,7 +1019,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 				return errno.WrapMQRetryErr(err)
 			}
 			if !applied {
-				return nil
+				return e.finishSupersededRunLog(ctx, exptID, *exptRunID, spaceID, opts...)
 			}
 		} else if err := e.statsRepo.UpdateByExptID(ctx, exptID, spaceID, wantStats); err != nil {
 			return errno.WrapMQRetryErr(err)
@@ -1105,7 +1143,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			return err
 		}
 		if !owned {
-			return nil
+			return e.finishSupersededRunLog(ctx, exptID, *exptRunID, spaceID, opts...)
 		}
 	}
 	exptDo := &entity.Experiment{
@@ -1127,7 +1165,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 				return errno.WrapMQRetryErr(err)
 			}
 			if !applied {
-				return nil
+				return e.finishSupersededRunLog(ctx, exptID, *exptRunID, spaceID, opts...)
 			}
 		} else if err := e.exptRepo.Update(ctx, exptDo); err != nil {
 			return errno.WrapMQRetryErr(err)
@@ -1141,7 +1179,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			return err
 		}
 		if !owned {
-			return nil
+			return e.finishSupersededRunLog(ctx, exptID, *exptRunID, spaceID, opts...)
 		}
 	}
 
@@ -1167,7 +1205,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			return err
 		}
 		if !owned {
-			return nil
+			return e.finishSupersededRunLog(ctx, exptID, *exptRunID, spaceID, opts...)
 		}
 	}
 	if releaseRunLock {
@@ -1187,7 +1225,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			return err
 		}
 		if !owned {
-			return nil
+			return e.finishSupersededRunLog(ctx, exptID, *exptRunID, spaceID, opts...)
 		}
 	}
 
@@ -1215,7 +1253,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			return err
 		}
 		if !owned {
-			return nil
+			return e.finishSupersededRunLog(ctx, exptID, *exptRunID, spaceID, opts...)
 		}
 	}
 
@@ -1279,7 +1317,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		if !applied {
 			// A replacement run took over after the last ownership read; stop
 			// without writing its stats or releasing its lifecycle holder.
-			return nil
+			return e.finishSupersededRunLog(ctx, exptID, *exptRunID, spaceID, opts...)
 		}
 		if err := e.releaseCompletedRunLifecycleHolder(ctx, exptID, *exptRunID, spaceID, session); err != nil {
 			return errno.WrapMQRetryErr(err)
