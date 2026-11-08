@@ -380,6 +380,7 @@ func (e *ExptMangerImpl) cleanupCurrentUnscheduledRunWithQuota(ctx context.Conte
 	}
 	capturedOrdinary := len(ordinaryAdmission) > 0 && ordinaryAdmission[0]
 	capturedNumeric := len(ordinaryAdmission) > 0 && !ordinaryAdmission[0]
+	admissionTick, hasAdmissionTick := ctx.Value(completeTickKey{}).(completeTickIdentity)
 	primaryReadFailed := false
 	ordinaryReleaseAllowed := false
 	releaseAdmission := !quotaReserved
@@ -445,6 +446,12 @@ func (e *ExptMangerImpl) cleanupCurrentUnscheduledRunWithQuota(ctx context.Conte
 			return fmt.Errorf("cleanup experiment missing")
 		}
 		if current.LatestRunID != run {
+			if capturedOrdinary || capturedNumeric {
+				if hasAdmissionTick && current.LatestRunID != admissionTick.run {
+					releaseAdmission = false
+				}
+				return e.runLogRepo.Update(ctx, expt, run, space, map[string]any{"status": int64(entity.ExptStatus_Failed), "status_message": []byte(cause.Error())})
+			}
 			return nil
 		}
 		ordinaryReleaseAllowed = true

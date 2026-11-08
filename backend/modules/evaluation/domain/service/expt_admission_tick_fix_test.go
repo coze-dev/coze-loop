@@ -112,7 +112,11 @@ func TestAdmissionTickFixConcurrentNewRunsAndCancellation(t *testing.T) {
 				}
 				waitFixTickReleased(t, f, f.r1)
 				require.NoError(t, f.replay(f.manager))
-				require.Equal(t, "<absent>", f.admission())
+				if kind == "caller_cancel" {
+					require.Equal(t, "<absent>", f.admission())
+				} else {
+					require.Equal(t, "evaluation", f.admission(), "R1 terminal replay cannot release the captured R2 holder after genuine lease loss")
+				}
 			}
 			f.snapshot("FIX_new_run_" + kind)
 		})
@@ -214,7 +218,7 @@ func TestWholeReleaseFixCancellationAndRealLeaseLoss(t *testing.T) {
 			}
 			if kind != "already_cancelled_no_filters" {
 				require.True(t, f.slot())
-				require.Equal(t, "evaluation", f.admission())
+				require.Equal(t, "<absent>", f.admission(), "original terminal commit already released admission")
 				n, err := f.raw.Exists(f.ctx, f.cidKey()).Result()
 				require.NoError(t, err)
 				require.Zero(t, n)
@@ -516,7 +520,7 @@ func TestWholeReleaseFixSingleTimeoutCannotMarkDone(t *testing.T) {
 	require.True(t, errno.NeedMQRetry(err))
 	require.ErrorIs(t, err, context.DeadlineExceeded)
 	require.True(t, f.slot())
-	require.Equal(t, "evaluation", f.admission())
+	require.Equal(t, "<absent>", f.admission(), "initial terminal commit already paired admission release")
 	n, err := f.raw.Exists(f.ctx, f.cidKey()).Result()
 	require.NoError(t, err)
 	require.Zero(t, n)
@@ -659,12 +663,25 @@ func TestAdmissionTickFixTwoCancelledOldCompletionsPreserveNewSlot(t *testing.T)
 		firstDone <- first.CompleteExpt(ctx, f.expt, &f.r1, f.space, &entity.Session{}, entity.NoCompleteItemTurn())
 	}()
 	independentAuditWait(t, b1.entered)
-	require.True(t, errno.NeedMQRetry(f.replay(&second)), "second old completion cannot enter first's recovered real tick")
-	require.NoError(t, f.raw.Del(f.ctx, fmt.Sprintf("expt_run_exec_lock:%d:%d", f.expt, f.r1)).Err())
-	require.Error(t, independentAuditResult(t, firstDone))
-	waitFixTickReleased(t, f, f.r1)
+	// Cancellation can release A1's tick before this replay arrives. Observe
+	// A2 asynchronously so its quota barrier never blocks the test driver.
 	go func() { secondDone <- f.replay(&second) }()
-	independentAuditWait(t, b2.entered)
+	secondPaused := false
+	select {
+	case <-b2.entered:
+		secondPaused = true
+	case err := <-secondDone:
+		require.True(t, errno.NeedMQRetry(err))
+	case <-time.After(15 * time.Second):
+		t.Fatal("second completion neither returned nor reached quota barrier")
+	}
+	require.Error(t, independentAuditResult(t, firstDone))
+	if !secondPaused {
+		waitFixTickReleased(t, f, f.r1)
+		go func() { secondDone <- f.replay(&second) }()
+		independentAuditWait(t, b2.entered)
+	}
+
 	// A1's cancelled actual owner remains in the values of WithoutCancel.
 	// A2 now owns the same real tick. A1 must reject this stale reentry.
 	go func() {

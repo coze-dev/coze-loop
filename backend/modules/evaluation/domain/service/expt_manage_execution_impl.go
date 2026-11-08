@@ -1307,6 +1307,19 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 		exptDo.EndAt = got.EndAt
 	}
 
+	// First completion attempts these best-effort duties before fallible quota
+	// cleanup. A fully terminal replay will not attempt them again.
+	e.notifyWorkflowPipelineOnExptFinished(ctx, got, spaceID, status)
+
+	// 如果实验关联了模板，更新模板的 ExptInfo（状态变更，数量不变）
+	if got.ExptTemplateMeta != nil && got.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
+		if err := e.templateManager.UpdateExptInfo(ctx, got.ExptTemplateMeta.ID, spaceID, exptID, status, 0, nil); err != nil {
+			// 记录错误但不影响主流程
+			logs.CtxError(ctx, "[ExptEval] UpdateExptInfo failed in CompleteExpt, template_id: %v, expt_id: %v, err: %v",
+				got.ExptTemplateMeta.ID, exptID, err)
+		}
+	}
+
 	sharedCtx := ctx
 	if data != nil && ctx.Err() != nil {
 		// Required filters above must finish before shared resources. A cancelled
@@ -1366,17 +1379,6 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			return errno.WrapMQRetryErr(err)
 		}
 		return err
-	}
-
-	e.notifyWorkflowPipelineOnExptFinished(ctx, got, spaceID, status)
-
-	// 如果实验关联了模板，更新模板的 ExptInfo（状态变更，数量不变）
-	if got.ExptTemplateMeta != nil && got.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
-		if err := e.templateManager.UpdateExptInfo(ctx, got.ExptTemplateMeta.ID, spaceID, exptID, status, 0, nil); err != nil {
-			// 记录错误但不影响主流程
-			logs.CtxError(ctx, "[ExptEval] UpdateExptInfo failed in CompleteExpt, template_id: %v, expt_id: %v, err: %v",
-				got.ExptTemplateMeta.ID, exptID, err)
-		}
 	}
 
 	if !opt.NoAggrCalculate && e.exptAggrResultService != nil {

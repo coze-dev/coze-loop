@@ -50,9 +50,14 @@ func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.E
 		runStatus := entity.ExptStatus(gptr.Indirect(run.Status))
 		runFinished := entity.IsExptFinished(runStatus)
 		exptFinished := entity.IsExptFinished(entity.ExptStatus(expt.Status))
-		// Legacy CompleteRun commits before CompleteExpt; revalidate its result below.
+		// The old CompleteRun can commit after the manager's pre-read. Its
+		// in-flight CompleteExpt still owns completion and shared cleanup.
 		legacyCompleted := expt.Status == int32(entity.ExptStatus_Processing) && (runStatus == entity.ExptStatus_Success || runStatus == entity.ExptStatus_Failed)
-		if (runFinished || exptFinished) && !legacyCompleted {
+		if legacyCompleted {
+			result.Disposition = entity.ExptRunFinishPending
+			return nil
+		}
+		if runFinished || exptFinished {
 			if !runFinished || !exptFinished || expt.EndAt == nil {
 				return fmt.Errorf("inconsistent partially finished current run")
 			}
@@ -60,7 +65,7 @@ func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.E
 			result.Experiment, err = convert.NewExptConverter().PO2DO(expt, nil)
 			return err
 		}
-		if expt.Status != int32(entity.ExptStatus_Processing) || !legacyCompleted && (runStatus != entity.ExptStatus_Pending && runStatus != entity.ExptStatus_Processing) {
+		if expt.Status != int32(entity.ExptStatus_Processing) || (runStatus != entity.ExptStatus_Pending && runStatus != entity.ExptStatus_Processing) {
 			return fmt.Errorf("finish requires active experiment and run")
 		}
 		session := d.provider.NewSession(ctx, opts...)
@@ -117,9 +122,6 @@ func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.E
 		if turnCounts.pending > 0 || turnCounts.fail > 0 {
 			runStatus = entity.ExptStatus_Failed
 		}
-		if legacyCompleted && gptr.Indirect(run.Status) != int64(runStatus) {
-			return fmt.Errorf("legacy finished run does not match canonical turn stats")
-		}
 		exptStatus := entity.ExptStatus_Success
 		// User-terminated items are not evaluation failures (CalculateStats contract).
 		if itemCounts.fail > 0 || itemCounts.pending > 0 || itemCounts.processing > 0 {
@@ -142,8 +144,7 @@ func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.E
 		if err != nil {
 			return err
 		}
-		// e6 already released admission before saving a legacy terminal run.
-		if !runFinished && r.BeforeCommit != nil {
+		if r.BeforeCommit != nil {
 			return r.BeforeCommit(ctx, entity.ExptRunMode(gptr.Indirect(run.Mode)))
 		}
 		return nil

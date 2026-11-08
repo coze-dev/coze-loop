@@ -131,11 +131,14 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 			return ctx.Err()
 		}
 		runStatus := entity.ExptStatus(*run.Status)
-		// Resume only the two legacy writes preceding the explicit CompleteExpt.
+		// Decide under the SQL locks: the original legacy pair still owns these
+		// intermediate states, including explicit termination's two writes.
 		legacyCompleted := expt.Status == int32(entity.ExptStatus_Processing) && (runStatus == entity.ExptStatus_Success || runStatus == entity.ExptStatus_Failed)
 		legacyTerminating := r.Status == entity.ExptStatus_Terminated && (expt.Status == int32(entity.ExptStatus_Processing) && runStatus == entity.ExptStatus_Terminating || expt.Status == int32(entity.ExptStatus_Terminating) && runStatus == entity.ExptStatus_Terminated)
-		legacyFinalize := r.Finalize && !r.Begin && (legacyCompleted || legacyTerminating)
-		if (entity.IsExptFinished(entity.ExptStatus(expt.Status)) || entity.IsExptFinished(runStatus)) && !legacyFinalize {
+		if legacyCompleted || legacyTerminating {
+			return errno.NewMQRetryErr("legacy current run completion pending")
+		}
+		if entity.IsExptFinished(entity.ExptStatus(expt.Status)) || entity.IsExptFinished(runStatus) {
 			if !r.Finalize || !entity.IsExptFinished(entity.ExptStatus(expt.Status)) || !entity.IsExptFinished(entity.ExptStatus(*run.Status)) || expt.EndAt == nil {
 				return fmt.Errorf("termination requires active current run")
 			}
@@ -145,7 +148,7 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 		}
 		active := expt.Status == int32(entity.ExptStatus_Processing) && (*run.Status == int64(entity.ExptStatus_Pending) || *run.Status == int64(entity.ExptStatus_Processing))
 		terminating := expt.Status == int32(entity.ExptStatus_Terminating) && *run.Status == int64(entity.ExptStatus_Terminating)
-		allowed := active || terminating && (r.Begin || r.Finalize) || legacyFinalize
+		allowed := active || terminating && (r.Begin || r.Finalize)
 		if !allowed {
 			return fmt.Errorf("termination requires processing experiment and active run")
 		}
