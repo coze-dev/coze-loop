@@ -192,7 +192,29 @@ func (e *ExptMangerImpl) TerminateCurrentRun(ctx context.Context, expt, run, spa
 	}
 	options := append([]entity.CompleteExptOptionFn{entity.WithStatus(entity.ExptStatus_Terminated)}, opts...)
 	err := e.CompleteRun(ctx, expt, run, space, session, options...)
-	return result.Experiment != nil && result.Disposition != entity.ExptRunFinishNonCurrent, err
+	accepted := result.Experiment != nil && result.Disposition != entity.ExptRunFinishNonCurrent
+	if err != nil {
+		return accepted, errno.WrapMQRetryErr(err)
+	}
+	// Offline completion captures its SQL boundary and already calls CompleteExpt.
+	// Online's legacy run-only branch still needs the original completion pair.
+	if result.Disposition != 0 {
+		return accepted, nil
+	}
+	current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), expt, space)
+	if err != nil {
+		return false, errno.WrapMQRetryErr(err)
+	}
+	if current == nil {
+		return false, errno.NewMQRetryErr("termination experiment missing")
+	}
+	if current.ExptType != entity.ExptType_Online {
+		return accepted, nil
+	}
+	if err := e.CompleteExpt(ctx, expt, &run, space, session, options...); err != nil {
+		return false, errno.WrapMQRetryErr(err)
+	}
+	return true, nil
 }
 
 // releaseTerminationResources 保持原有"只返回错误"的契约（存量调用方与单测依赖它）。
