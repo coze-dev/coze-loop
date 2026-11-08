@@ -194,6 +194,9 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 
 		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
 			logs.CtxInfo(ctx, "ExptSchedulerConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
+			if event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+				return e.requeueCompatEvent(ctx, event)
+			}
 			return nil
 		}
 
@@ -204,6 +207,17 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 
 		return next(ctx, event)
 	}
+}
+
+func (e *ExptSchedulerImpl) requeueCompatEvent(ctx context.Context, event *entity.ExptScheduleEvent) error {
+	mode, err := e.schedulerModeFactory.NewSchedulerMode(event.ExptRunMode)
+	if err != nil {
+		return err
+	}
+	if err := mode.NextTick(ctx, event, true); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	return nil
 }
 
 func (e *ExptSchedulerImpl) makeExptRunExecLockKey(exptID, exptRunID int64) string {
@@ -222,6 +236,9 @@ func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEnd
 
 		if !locked {
 			logs.CtxWarn(ctx, "ExptSchedulerConsumer.HandleEventLock found locked expt eval event: %v. Abort event, err: %v", json.Jsonify(event), err)
+			if event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+				return e.requeueCompatEvent(ctx, event)
+			}
 			return nil
 		}
 
@@ -285,6 +302,9 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 		}
 
 		logs.CtxError(ctx, "[ExptEval] HandleEventErr found error: %v, event: %v", nextErr, json.Jsonify(event))
+		if errno.NeedMQRetry(nextErr) {
+			return nextErr
+		}
 
 		// 基础设施类错误（Redis抖动、MQ发送失败、context cancel等）：尝试用新ctx重新调度，不直接终止实验
 		if isSchedulerInfraError(nextErr) {

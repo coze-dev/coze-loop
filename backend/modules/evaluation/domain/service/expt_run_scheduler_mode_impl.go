@@ -24,6 +24,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
@@ -2472,7 +2473,7 @@ func (e *ExptRetryItemsExec) ExptEnd(ctx context.Context, event *entity.ExptSche
 	}
 
 	if err := e.manager.LockCompletingRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session); err != nil {
-		return false, err
+		return false, errno.WrapMQRetryErr(err)
 	}
 	defer func() {
 		_ = e.manager.UnlockCompletingRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session)
