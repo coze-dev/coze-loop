@@ -90,6 +90,7 @@ func TestPendingCancelUsesOriginalQuotaCleanup(t *testing.T) {
 	ctx := context.Background()
 	finished := &entity.Experiment{ID: 2, SpaceID: 1, LatestRunID: 3, ExptType: entity.ExptType_Offline, Status: entity.ExptStatus_Terminated}
 	locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:2:3", gomock.Any(), gomock.Any()).Return(true, ctx, func() {}, nil)
+	locker.EXPECT().Unlock("expt_run_exec_lock:2:3").Return(true, nil)
 	manager.exptRepo.(*repomocks.MockIExperimentRepo).EXPECT().GetByID(gomock.Any(), int64(2), int64(1)).
 		Return(&entity.Experiment{ID: 2, SpaceID: 1, LatestRunID: 3, Status: entity.ExptStatus_Pending}, nil)
 	manager.itemResultRepo.(*repomocks.MockIExptItemResultRepo).EXPECT().ScanItemRunLogs(gomock.Any(), int64(2), int64(3), gomock.Any(), int64(0), int64(500), int64(1)).

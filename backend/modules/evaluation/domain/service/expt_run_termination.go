@@ -35,7 +35,7 @@ func (e *ExptMangerImpl) terminationRepo() (repo.IExptRunTerminationRepo, error)
 	return port, nil
 }
 
-func (e *ExptMangerImpl) withTerminationRunLock(ctx context.Context, expt, run int64, f func(context.Context) error) error {
+func (e *ExptMangerImpl) withTerminationRunLock(ctx context.Context, expt, run int64, f func(context.Context) error) (err error) {
 	if e.manualRetryLocker == nil {
 		return errno.NewMQRetryErr("termination tick locker missing")
 	}
@@ -51,7 +51,11 @@ func (e *ExptMangerImpl) withTerminationRunLock(ctx context.Context, expt, run i
 	if !locked {
 		return errno.NewMQRetryErr("termination tick lock busy")
 	}
-	defer cancel()
+	defer func() {
+		cancel()
+		_, unlockErr := locker.Unlock(key)
+		err = errors.Join(err, unlockErr)
+	}()
 	if err := lockCtx.Err(); err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
@@ -567,7 +571,7 @@ func (e *ExptMangerImpl) cleanupCurrentUnscheduledRun(ctx context.Context, expt,
 		_, releaseErr := e.mutex.UnlockWithValue(releaseCtx, e.makeExptMutexLockKey(expt), strconv.FormatInt(run, 10))
 		err = errors.Join(err, releaseErr)
 	}()
-	stateCtx, cancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
+	stateCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
 	defer cancel()
 	terminate := false
 	err = e.withTerminationRunLock(stateCtx, expt, run, func(ctx context.Context) error {
@@ -591,7 +595,10 @@ func (e *ExptMangerImpl) cleanupCurrentUnscheduledRun(ctx context.Context, expt,
 				return err
 			}
 			_, err = port.TerminateCurrentRun(ctx, &entity.ExptRunTerminationRequest{SpaceID: space, ExptID: expt, RunID: run, SetupAbort: true, StatusMessage: cause.Error()})
-			return err
+			if err != nil {
+				return err
+			}
+			return e.releaseUnscheduledRunQuota(ctx, expt, run, space)
 		}
 		if entity.IsExptFinished(current.Status) {
 			runLog, err := e.runLogRepo.Get(ctx, expt, run)
@@ -601,10 +608,12 @@ func (e *ExptMangerImpl) cleanupCurrentUnscheduledRun(ctx context.Context, expt,
 			if runLog == nil {
 				return fmt.Errorf("cleanup run missing")
 			}
-			if runLog.Status != int64(entity.ExptStatus_Pending) {
-				return nil
+			if runLog.Status == int64(entity.ExptStatus_Pending) {
+				if err := e.runLogRepo.Update(ctx, expt, run, space, map[string]any{"status": int64(entity.ExptStatus_Failed), "status_message": []byte(cause.Error())}); err != nil {
+					return err
+				}
 			}
-			return e.runLogRepo.Update(ctx, expt, run, space, map[string]any{"status": int64(entity.ExptStatus_Failed), "status_message": []byte(cause.Error())})
+			return e.releaseUnscheduledRunQuota(ctx, expt, run, space)
 		}
 		terminate = true
 		return nil
@@ -614,6 +623,41 @@ func (e *ExptMangerImpl) cleanupCurrentUnscheduledRun(ctx context.Context, expt,
 	}
 	_, err = e.TerminateCurrentRun(ctx, expt, run, space, &entity.Session{}, nil, entity.WithStatus(entity.ExptStatus_Failed), entity.WithStatusMessage(cause.Error()), entity.NoAggrCalculate())
 	return err
+}
+
+// 额度按实验记账；持有原生命周期锁并主库复核，不能释放随后替代 run 的额度。
+func (e *ExptMangerImpl) releaseUnscheduledRunQuota(ctx context.Context, expt, run, space int64) (err error) {
+	ctx, stop := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
+	defer stop()
+	locker := e.manualRetryLocker()
+	if locker == nil {
+		return errno.NewMQRetryErr("setup quota lifecycle locker missing")
+	}
+	key := e.makeExptMutexLockKey(expt)
+	event := &entity.ExptScheduleEvent{SpaceID: space, ExptID: expt, ExptRunID: run}
+	if err := e.releasePreviousLifecycleHolder(ctx, locker, key, event); err != nil {
+		return err
+	}
+	locked, leaseCtx, cancel, err := locker.LockWithRenew(ctx, key, 5*time.Second, 8*time.Second)
+	if err != nil {
+		return err
+	}
+	if !locked {
+		return errno.NewMQRetryErr("setup quota lifecycle owner changed")
+	}
+	defer func() {
+		cancel()
+		_, unlockErr := locker.Unlock(key)
+		err = errors.Join(err, unlockErr)
+	}()
+	current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(leaseCtx), expt, space)
+	if err != nil {
+		return err
+	}
+	if current == nil || current.LatestRunID != run {
+		return nil
+	}
+	return NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(leaseCtx, expt, space, &entity.Session{})
 }
 
 func (e *ExptMangerImpl) releaseCurrentSupersededRunQuota(ctx context.Context, expt, space, newRun int64, mode entity.ExptRunMode) error {

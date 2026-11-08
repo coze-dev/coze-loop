@@ -129,7 +129,9 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 			result.Applied = true
 			return ctx.Err()
 		}
-		if entity.IsExptFinished(entity.ExptStatus(expt.Status)) || entity.IsExptFinished(entity.ExptStatus(*run.Status)) {
+		pendingRetry := entity.IsExptFinished(entity.ExptStatus(expt.Status)) &&
+			*run.Status == int64(entity.ExptStatus_Pending) && (r.Begin || r.Finalize)
+		if (entity.IsExptFinished(entity.ExptStatus(expt.Status)) && !pendingRetry) || entity.IsExptFinished(entity.ExptStatus(*run.Status)) {
 			if r.Begin && expt.Status == int32(entity.ExptStatus_Terminated) && *run.Status == int64(entity.ExptStatus_Terminated) && expt.EndAt != nil {
 				result.Applied = true
 				return ctx.Err()
@@ -142,7 +144,7 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 			return err
 		}
 		pending := expt.Status == int32(entity.ExptStatus_Pending) && *run.Status == int64(entity.ExptStatus_Pending) && (r.Begin || r.Finalize)
-		active := pending || expt.Status == int32(entity.ExptStatus_Processing) && (*run.Status == int64(entity.ExptStatus_Pending) || *run.Status == int64(entity.ExptStatus_Processing))
+		active := pending || pendingRetry || expt.Status == int32(entity.ExptStatus_Processing) && (*run.Status == int64(entity.ExptStatus_Pending) || *run.Status == int64(entity.ExptStatus_Processing))
 		terminating := expt.Status == int32(entity.ExptStatus_Terminating) && *run.Status == int64(entity.ExptStatus_Terminating)
 		allowed := active || terminating && (r.Begin || r.Finalize)
 		if !allowed {

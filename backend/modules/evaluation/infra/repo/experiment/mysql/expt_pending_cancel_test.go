@@ -133,6 +133,9 @@ func TestPendingCancelDoesNotAffectReplacementOrCompletedExperiment(t *testing.T
 		require.NoError(t, err)
 		require.True(t, result.NonCurrent)
 		require.NoError(t, conn.Table("experiment").Where("id=2").Updates(map[string]any{"latest_run_id": current, "status": entity.ExptStatus_Success}).Error)
+		if current > 0 {
+			require.NoError(t, conn.Table("expt_run_log").Where("id=?", current).Update("status", entity.ExptStatus_Success).Error)
+		}
 		_, err = port.TerminateCurrentRun(context.Background(), &entity.ExptRunTerminationRequest{SpaceID: 1, ExptID: 2, RunID: current, Begin: true})
 		require.Error(t, err)
 		var status int32

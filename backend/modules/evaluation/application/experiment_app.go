@@ -2155,6 +2155,13 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 	terminator, currentRun := e.manager.(service.IExptCurrentRunTerminator)
 	currentRun = currentRun && got.ExptType == entity.ExptType_Offline
 	pendingOrCancelled := got.Status == entity.ExptStatus_Pending || got.Status == entity.ExptStatus_Terminating || got.Status == entity.ExptStatus_Terminated
+	if currentRun && !pendingOrCancelled && got.LatestRunID > 0 && entity.IsExptFinished(got.Status) {
+		run, err := e.manager.GetRunLog(contexts.WithCtxWriteDB(ctx), req.GetExptID(), got.LatestRunID, req.GetWorkspaceID(), session)
+		if err != nil {
+			return nil, err
+		}
+		pendingOrCancelled = pendingOrCancelled || run != nil && entity.ExptStatus(run.Status) == entity.ExptStatus_Pending
+	}
 	if got.Status != entity.ExptStatus_Processing && !(currentRun && pendingOrCancelled) {
 		return nil, errorx.NewByCode(errno.TerminateNonRunningExperimentErrorCode)
 	}

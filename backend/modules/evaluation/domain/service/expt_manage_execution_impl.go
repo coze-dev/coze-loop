@@ -318,7 +318,32 @@ func (e *ExptMangerImpl) prepareRun(ctx context.Context, exptID, runID, spaceID 
 	if err != nil {
 		return nil, err
 	}
-	err = NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session)
+	prepare := func(ctx context.Context) error {
+		if e.runFinishRepo != nil && expt.ExptType == entity.ExptType_Offline {
+			current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
+			if err != nil {
+				return err
+			}
+			run, err := e.runLogRepo.Get(contexts.WithCtxWriteDB(ctx), exptID, runID)
+			if err != nil {
+				return err
+			}
+			if current == nil || current.LatestRunID != runID || run == nil ||
+				(entity.ExptStatus(run.Status) != entity.ExptStatus_Pending && entity.ExptStatus(run.Status) != entity.ExptStatus_Processing) ||
+				entity.IsExptFinishing(current.Status) {
+				return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("run is no longer active for preparation"))
+			}
+		}
+		if err := NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session); err != nil {
+			return err
+		}
+		return e.prepareFluxWorkflowSchedule(ctx, expt, session)
+	}
+	if e.runFinishRepo != nil && expt.ExptType == entity.ExptType_Offline {
+		err = e.withTerminationRunLock(ctx, exptID, runID, prepare)
+	} else {
+		err = prepare(ctx)
+	}
 	return expt, err
 }
 
@@ -376,10 +401,6 @@ func (e *ExptMangerImpl) cleanupLegacyUnscheduledRun(ctx context.Context, exptID
 func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error {
 	expt, err := e.prepareRun(ctx, exptID, runID, spaceID, session)
 	if err != nil {
-		return err
-	}
-	if err := e.prepareFluxWorkflowSchedule(ctx, expt, session); err != nil {
-		e.cleanupUnscheduledRun(ctx, exptID, runID, spaceID, err)
 		return err
 	}
 
@@ -486,10 +507,6 @@ func buildExptNotifyParam(expt *entity.Experiment, toStatus entity.ExptStatus) (
 func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, itemIDs []int64, session *entity.Session, ext map[string]string) error {
 	expt, err := e.prepareRun(ctx, exptID, runID, spaceID, session)
 	if err != nil {
-		return err
-	}
-	if err := e.prepareFluxWorkflowSchedule(ctx, expt, session); err != nil {
-		e.cleanupUnscheduledRun(ctx, exptID, runID, spaceID, err)
 		return err
 	}
 

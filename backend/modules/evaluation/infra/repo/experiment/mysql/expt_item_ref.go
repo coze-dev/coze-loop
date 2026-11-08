@@ -59,6 +59,9 @@ func (dao *exptItemRefDAOImpl) BatchCreateNX(ctx context.Context, items []*model
 
 func (dao *exptItemRefDAOImpl) ListByExptID(ctx context.Context, spaceID, exptID, cursor, limit int64, opts ...db.Option) ([]*model.ExptItemRef, int64, error) {
 	dbConn := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		dbConn = dbConn.Clauses(dbresolver.Write)
+	}
 	q := query.Use(dbConn).ExptItemRef
 	do := q.WithContext(ctx).
 		Where(q.SpaceID.Eq(spaceID), q.ExptID.Eq(exptID), q.DeletedAt.IsNull())

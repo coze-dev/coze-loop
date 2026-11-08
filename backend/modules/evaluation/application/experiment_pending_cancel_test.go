@@ -75,6 +75,22 @@ func TestKillPendingRejectsUnauthorizedOrReplacedRun(t *testing.T) {
 	}
 }
 
+func TestReviewKillFailedExperimentWithNewPendingRun(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	manager := &pendingCancelManager{MockIExptManager: servicemocks.NewMockIExptManager(ctrl), cancelled: make(chan int64, 1)}
+	auth, cfg := rpcmocks.NewMockIAuthProvider(ctrl), componentmocks.NewMockIConfiger(ctrl)
+	manager.EXPECT().Get(gomock.Any(), int64(2), int64(1), gomock.Any()).Return(
+		&entity.Experiment{ID: 2, SpaceID: 1, LatestRunID: 99, ExptType: entity.ExptType_Offline, Status: entity.ExptStatus_Failed}, nil)
+	manager.EXPECT().GetRunLog(gomock.Any(), int64(2), int64(99), int64(1), gomock.Any()).Return(
+		&entity.ExptRunLog{SpaceID: 1, ExptID: 2, ExptRunID: 99, Status: int64(entity.ExptStatus_Pending)}, nil)
+	cfg.EXPECT().GetMaintainerUserIDs(gomock.Any()).Return(nil)
+	auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+	app := &experimentApplication{manager: manager, auth: auth, configer: cfg}
+	_, err := app.KillExperiment(context.Background(), &exptapi.KillExperimentRequest{WorkspaceID: gptr.Of(int64(1)), ExptID: gptr.Of(int64(2))})
+	require.NoError(t, err)
+	require.Equal(t, int64(99), <-manager.cancelled)
+}
+
 func TestKillPendingUsesOriginalCancellation(t *testing.T) {
 	for _, run := range []int64{0, 3} {
 		t.Run(fmt.Sprint(run), func(t *testing.T) {
