@@ -9,6 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/query"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -34,6 +35,9 @@ func NewExptRunLogDAO(db db.Provider) IExptRunLogDAO {
 
 func (dao *ExptRunLogDAOImpl) Get(ctx context.Context, exptID, exptRunID int64, opts ...db.Option) (*model.ExptRunLog, error) {
 	var exptRunLog model.ExptRunLog
+	if contexts.CtxWriteDB(ctx) {
+		opts = append(opts, db.WithMaster())
+	}
 	db := dao.provider.NewSession(ctx, opts...)
 	if err := db.WithContext(ctx).Where("id = ?", exptRunID).First(&exptRunLog).Error; err != nil {
 		return nil, errorx.Wrapf(err, "mget expt fail, expt_id: %v, expt_run_id: %v", exptID, exptRunID)

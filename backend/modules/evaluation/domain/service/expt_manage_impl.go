@@ -76,6 +76,7 @@ func NewExptManager(
 	// centralGuard 额度闸。CompleteExpt 用它释放实验终态时仍未跑完的 item 预占。
 	// 开源部署注入 noop（Release 直接返回 nil）。
 	centralGuard component.ICentralReservationGuard,
+	runTickLocker ExptRunTickLockerFactory,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -111,6 +112,7 @@ func NewExptManager(
 		centralScopeProvider:        centralScopeProvider,
 		centralAdmissionPolicy:      centralAdmissionPolicy,
 		centralGuard:                centralGuard,
+		runTickLocker:               runTickLocker,
 	}
 }
 
@@ -126,6 +128,7 @@ type ExptMangerImpl struct {
 	turnResultRepo              repo.IExptTurnResultRepo
 	quotaRepo                   repo.QuotaRepo
 	mutex                       lock.ILocker
+	runTickLocker               ExptRunTickLockerFactory
 	idem                        idem.IdempotentService
 	publisher                   events.ExptEventPublisher
 	configer                    component.IConfiger

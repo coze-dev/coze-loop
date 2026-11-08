@@ -179,7 +179,8 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	iCentralSchedulerScopeProvider := component.NewNoopCentralSchedulerScopeProvider()
 	iCentralAdmissionPolicy := component.NewNoopCentralAdmissionPolicy()
 	iCentralReservationGuard := component.NewNoopCentralReservationGuard()
-	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, componentIConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, serviceEvaluatorService, benefitSvc, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics, iCentralSchedulerScopeProvider, iCentralAdmissionPolicy, iCentralReservationGuard)
+	exptRunTickLockerFactory := NewExptRunTickLockerFactory(cmdable)
+	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, componentIConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, serviceEvaluatorService, benefitSvc, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics, iCentralSchedulerScopeProvider, iCentralAdmissionPolicy, iCentralReservationGuard, exptRunTickLockerFactory)
 	v4 := service.ProvideNoSandboxAgentNotifiers()
 	schedulerModeFactory := service.NewSchedulerModeFactory(iExptManager, iExptItemResultRepo, iExptStatsRepo, iExptTurnResultRepo, idgen2, evaluationSetItemService, iExperimentRepo, iExptItemRefRepo, idempotentService, componentIConfiger, exptEventPublisher, evaluatorRecordService, exptResultService, iExptTemplateManager, iExptRunLogRepo, iLocker, v4...)
 	iItemCompletePublisher := service.ProvideNilItemCompletePublisher()
@@ -456,7 +457,8 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	iCentralSchedulerScopeProvider := component.NewNoopCentralSchedulerScopeProvider()
 	iCentralAdmissionPolicy := component.NewNoopCentralAdmissionPolicy()
 	iCentralReservationGuard := component.NewNoopCentralReservationGuard()
-	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, iConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, evaluatorService, benefitService, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics, iCentralSchedulerScopeProvider, iCentralAdmissionPolicy, iCentralReservationGuard)
+	exptRunTickLockerFactory := NewExptRunTickLockerFactory(cmdable)
+	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, iConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, evaluatorService, benefitService, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics, iCentralSchedulerScopeProvider, iCentralAdmissionPolicy, iCentralReservationGuard, exptRunTickLockerFactory)
 	v4 := service.ProvideNoSandboxAgentNotifiers()
 	schedulerModeFactory := service.NewSchedulerModeFactory(iExptManager, iExptItemResultRepo, iExptStatsRepo, iExptTurnResultRepo, idgen2, evaluationSetItemService, iExperimentRepo, iExptItemRefRepo, idempotentService, iConfiger, exptEventPublisher, evaluatorRecordService, exptResultService, iExptTemplateManager, iExptRunLogRepo, iLocker, v4...)
 	iItemCompletePublisher := service.ProvideNilItemCompletePublisher()
@@ -492,6 +494,7 @@ var (
 
 	experimentSet = wire.NewSet(
 		NewExperimentApplication, service.ExperimentDomainServiceSet, service.EvaluationSetDomainServiceSet, service.TargetDomainServiceSet, service.EvaluatorDomainServiceSet, conf2.NewSharedResourceConfigProvider, service.NewResourceAccessAuthorizer, metrics2.ExperimentMetricsSet, metrics3.EvalTargetMetricsSet, sandbox_agent.SandboxAgentMetricsSet, http.NewHTTPClient, foundation.FoundationRPCSet, tag.TagRPCSet, agent.AgentRPCSet, notify.NotifyRPCSet, userinfo.NewUserInfoServiceImpl, NewLock,
+		NewExptRunTickLockerFactory,
 		flagSet, service.NewDefaultURLProcessor, storage.StorageSet,
 	)
 
@@ -515,4 +518,8 @@ var (
 
 func NewLock(cmdable redis.Cmdable) lock.ILocker {
 	return lock.NewRedisLockerWithHolder(cmdable, "evaluation")
+}
+
+func NewExptRunTickLockerFactory(cmdable redis.Cmdable) service.ExptRunTickLockerFactory {
+	return func() lock.ILocker { return lock.NewRedisLocker(cmdable) }
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -325,16 +326,49 @@ func (e *ExptMangerImpl) cleanupUnscheduledRun(ctx context.Context, exptID, runI
 		return
 	}
 
-	// Only the owned run before MQ publication may be unlocked here.
-	// Attempt this bare DEL synchronously once; a delayed retry could delete a new run's lock.
-	ctx = context.WithoutCancel(ctx)
-	stateCtx, cancelState := context.WithTimeout(ctx, exptRunLogPersistTimeout)
+	// Retire the owned run before MQ publication independently of tick loss.
+	// Shared release below requires a live owner when admission acquired a tick.
+	owner, owned := ctx.Value(admissionTickOwnerKey{}).(admissionTickOwner)
+	stateCtx, cancelState := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
 	stateErr := e.runLogRepo.Update(stateCtx, exptID, runID, spaceID, map[string]any{
 		"status": int64(entity.ExptStatus_Failed), "status_message": []byte(cause.Error()),
 	})
 	cancelState()
 
+	if owned && owner.ctx.Err() != nil {
+		previous := ctx.Value(admissionTickKey{}).(admissionTickIdentity)
+		owner.stop()
+		fresh, cleanupCtx, stopTick, err := e.newRunAdmissionTick(context.WithoutCancel(ctx), exptID, spaceID, entity.EvaluationModeSubmit)
+		if err != nil {
+			logs.CtxWarn(ctx, "admission cleanup cannot regain tick [expt_id=%v run_id=%v err=%v]", exptID, runID, err)
+			return
+		}
+		defer stopTick()
+		// Latest may already be our own run when its UPDATE committed before
+		// returning an error. A successor's tick/current still forbids release.
+		if tick, ok := fresh.Value(admissionTickKey{}).(admissionTickIdentity); !ok || tick != previous && tick != (admissionTickIdentity{exptID, runID}) {
+			logs.CtxWarn(ctx, "admission cleanup predecessor changed [expt_id=%v run_id=%v]", exptID, runID)
+			return
+		}
+		ctx = cleanupCtx
+		owner = ctx.Value(admissionTickOwnerKey{}).(admissionTickOwner)
+	}
+	ctx = context.WithoutCancel(ctx)
+	if owned {
+		linked, stop := context.WithCancel(ctx)
+		unregister := context.AfterFunc(owner.ctx, stop)
+		defer func() { unregister(); stop() }()
+		if owner.ctx.Err() != nil {
+			stop()
+		}
+		ctx = linked
+	}
 	unlockCtx, cancelUnlock := context.WithTimeout(ctx, 2*time.Second)
+	if unlockCtx.Err() != nil || owned && owner.ctx.Err() != nil {
+		cancelUnlock()
+		logs.CtxWarn(ctx, "admission cleanup lost tick owner, skip shared release [expt_id=%v run_id=%v state_err=%v]", exptID, runID, stateErr)
+		return
+	}
 	released, unlockErr := e.mutex.UnlockForce(unlockCtx, e.makeExptMutexLockKey(exptID))
 	cancelUnlock()
 	if stateErr != nil || unlockErr != nil {
@@ -1726,6 +1760,11 @@ func (e *ExptMangerImpl) unlockCompletingRun(ctx context.Context, exptID, exptRu
 }
 
 func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) (err error) {
+	ctx, cleanupCtx, stopTick, err := e.newRunAdmissionTick(ctx, exptID, spaceID, mode)
+	if err != nil {
+		return err
+	}
+	defer stopTick()
 	duration := time.Duration(e.configer.GetExptExecConf(ctx, spaceID).GetZombieIntervalSecond()) * time.Second
 	locked, err := e.mutex.LockBackoff(ctx, e.makeExptMutexLockKey(exptID), duration, time.Second)
 	if err != nil {
@@ -1738,7 +1777,7 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 	ownedRunID := exptRunID
 	defer func(runID int64) {
 		if err != nil {
-			e.cleanupUnscheduledRun(ctx, exptID, runID, spaceID, err)
+			e.cleanupUnscheduledRun(cleanupCtx, exptID, runID, spaceID, err)
 		}
 	}(ownedRunID)
 
@@ -1781,6 +1820,11 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 	if err != nil {
 		return 0, false, err
 	}
+	ctx, cleanupCtx, stopTick, err := e.newRunAdmissionTick(ctx, exptID, spaceID, mode)
+	if err != nil {
+		return 0, false, err
+	}
+	defer stopTick()
 
 	locked, existedRunID, err := e.mutex.BackoffLockWithValue(ctx, e.makeExptMutexLockKey(exptID), strconv.FormatInt(runID, 10), expireAt, retryTime)
 	if err != nil {
@@ -1790,7 +1834,7 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 		ownedRunID := runID
 		defer func(runID int64) {
 			if err != nil {
-				e.cleanupUnscheduledRun(ctx, exptID, runID, spaceID, err)
+				e.cleanupUnscheduledRun(cleanupCtx, exptID, runID, spaceID, err)
 			}
 		}(ownedRunID)
 	}
@@ -1805,22 +1849,26 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 			return 0, false, errorx.NewByCode(errno.ExperimentRunningExistedCode)
 		}
 		logs.CtxDebug(ctx, "[ExptEval][RunLock] joining existing run [expt_id=%v run_id=%v]", exptID, runID)
+		if tick, offline := ctx.Value(admissionTickKey{}).(admissionTickIdentity); offline && tick != (admissionTickIdentity{exptID, runID}) {
+			return 0, false, errno.NewMQRetryErr("retry join predecessor changed before admission")
+		}
 
-		completing, err := e.ExistCompletingRunLock(ctx, exptID, runID, spaceID)
+		if err := e.LockCompletingRun(ctx, exptID, runID, spaceID, session); err != nil {
+			return 0, false, errno.WrapMQRetryErr(err)
+		}
+		defer e.UnlockCompletingRun(ctx, exptID, runID, spaceID, session)
+
+		current, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), exptID, spaceID)
 		if err != nil {
 			return 0, false, err
 		}
-		if completing {
-			return 0, false, errorx.NewByCode(errno.ExperimentIsCompletingCode)
-		}
-
-		rl, err = e.runLogRepo.Get(ctx, exptID, runID)
+		rl, err = e.runLogRepo.Get(contexts.WithCtxWriteDB(ctx), exptID, runID)
 		if err != nil {
 			return 0, false, err
 		}
 
-		if rl == nil {
-			return 0, false, errorx.New("target runlog %v not found, expt_id: %v", runID, exptID)
+		if current.LatestRunID != runID || rl.SpaceID != spaceID || rl.ExptID != exptID || rl.ExptRunID != runID || entity.ExptRunMode(rl.Mode) != entity.EvaluationModeRetryItems || (rl.Status != int64(entity.ExptStatus_Pending) && rl.Status != int64(entity.ExptStatus_Processing)) {
+			return 0, false, errorx.NewByCode(errno.ExperimentRunningExistedCode)
 		}
 
 		if err := rl.AppendItemIDs(itemIDs); err != nil {

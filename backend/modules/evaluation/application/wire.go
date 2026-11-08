@@ -81,6 +81,7 @@ var (
 		notifyrpc.NotifyRPCSet,
 		userinfo.NewUserInfoServiceImpl,
 		NewLock,
+		NewExptRunTickLockerFactory,
 		flagSet,
 		domainservice.NewDefaultURLProcessor,
 		storage.StorageSet,
@@ -149,6 +150,10 @@ var (
 
 func NewLock(cmdable redis.Cmdable) lock.ILocker {
 	return lock.NewRedisLockerWithHolder(cmdable, "evaluation")
+}
+
+func NewExptRunTickLockerFactory(cmdable redis.Cmdable) domainservice.ExptRunTickLockerFactory {
+	return func() lock.ILocker { return lock.NewRedisLocker(cmdable) }
 }
 
 func InitExperimentApplication(

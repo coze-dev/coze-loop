@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	benefitMocks "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
 	idgenMocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
+	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	lockMocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
 	lwtMocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
@@ -539,6 +541,7 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 	mgr := newTestExptManager(ctrl)
 	ctx := context.Background()
 	session := &entity.Session{UserID: "test_user"}
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByID(gomock.Any(), int64(123), int64(789)).Return(&entity.Experiment{ID: 123, SpaceID: 789, ExptType: entity.ExptType_Offline}, nil).AnyTimes()
 
 	tests := []struct {
 		name      string
@@ -558,7 +561,7 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 			setup: func() {
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					LockBackoff(ctx, gomock.Any(), gomock.Any(), time.Second).
+					LockBackoff(gomock.Any(), gomock.Any(), gomock.Any(), time.Second).
 					Return(true, nil)
 
 				mgr.mtr.(*metricsMocks.MockExptMetric).
@@ -567,7 +570,7 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().
-					Create(ctx, gomock.Any()).
+					Create(gomock.Any(), gomock.Any()).
 					Do(func(ctx context.Context, runLog *entity.ExptRunLog) {
 						assert.Equal(t, int64(456), runLog.ID)
 						assert.Equal(t, int64(789), runLog.SpaceID)
@@ -581,7 +584,7 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 
 				mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
 					EXPECT().
-					Update(ctx, gomock.Any()).
+					Update(gomock.Any(), gomock.Any()).
 					Do(func(ctx context.Context, expt *entity.Experiment) {
 						assert.Equal(t, int64(123), expt.ID)
 						assert.Equal(t, int64(456), expt.LatestRunID)
@@ -599,7 +602,7 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 			setup: func() {
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					LockBackoff(ctx, gomock.Any(), gomock.Any(), time.Second).
+					LockBackoff(gomock.Any(), gomock.Any(), gomock.Any(), time.Second).
 					Return(false, nil)
 			},
 			wantErr: true,
@@ -613,7 +616,7 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 			setup: func() {
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					LockBackoff(ctx, gomock.Any(), gomock.Any(), time.Second).
+					LockBackoff(gomock.Any(), gomock.Any(), gomock.Any(), time.Second).
 					Return(true, nil)
 
 				mgr.mtr.(*metricsMocks.MockExptMetric).
@@ -622,7 +625,7 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().
-					Create(ctx, gomock.Any()).
+					Create(gomock.Any(), gomock.Any()).
 					Return(errors.New("create failed"))
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), int64(123), int64(456), int64(789), gomock.Any()).Return(nil)
 				mgr.mutex.(*lockMocks.MockILocker).EXPECT().UnlockForce(gomock.Any(), mgr.makeExptMutexLockKey(123)).Return(true, nil)
@@ -638,7 +641,7 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 			setup: func() {
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					LockBackoff(ctx, gomock.Any(), gomock.Any(), time.Second).
+					LockBackoff(gomock.Any(), gomock.Any(), gomock.Any(), time.Second).
 					Return(true, nil)
 
 				mgr.mtr.(*metricsMocks.MockExptMetric).
@@ -647,7 +650,7 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().
-					Create(ctx, gomock.Any()).
+					Create(gomock.Any(), gomock.Any()).
 					Do(func(ctx context.Context, runLog *entity.ExptRunLog) {
 						assert.Equal(t, int64(456), runLog.ID)
 						assert.Equal(t, int64(123), runLog.ExptID)
@@ -658,7 +661,7 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 
 				mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
 					EXPECT().
-					Update(ctx, gomock.Any()).
+					Update(gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
 			wantErr: false,
@@ -684,12 +687,25 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mgr := newTestExptManager(ctrl)
+	mgr.runTickLocker = func() lock.ILocker {
+		mutex := lockMocks.NewMockILocker(ctrl)
+		mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), 5*time.Second, 5*time.Minute).DoAndReturn(func(parent context.Context, _ string, _, _ time.Duration) (bool, context.Context, func(), error) {
+			child, cancel := context.WithCancel(parent)
+			return true, child, cancel, nil
+		}).AnyTimes()
+		mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
+		return mutex
+	}
 	ctx := context.Background()
 	session := &entity.Session{UserID: "test_user"}
 	exptID := int64(123)
 	spaceID := int64(789)
 	mode := entity.EvaluationModeRetryItems
 	itemIDs := []int64{1, 2}
+	previous := int64(0)
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByID(gomock.Any(), exptID, spaceID).DoAndReturn(func(context.Context, int64, int64) (*entity.Experiment, error) {
+		return &entity.Experiment{ID: exptID, SpaceID: spaceID, ExptType: entity.ExptType_Offline, LatestRunID: previous}, nil
+	}).AnyTimes()
 
 	tests := []struct {
 		name      string
@@ -705,10 +721,10 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					EXPECT().GenID(ctx).Return(int64(1001), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1001", gomock.Any(), time.Second).
+					BackoffLockWithValue(gomock.Any(), gomock.Any(), "1001", gomock.Any(), time.Second).
 					Return(true, "1001", nil)
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
-					EXPECT().Save(ctx, gomock.Any()).
+					EXPECT().Save(gomock.Any(), gomock.Any()).
 					Do(func(ctx context.Context, rl *entity.ExptRunLog) {
 						assert.Equal(t, int64(1001), rl.ExptRunID)
 						assert.Len(t, rl.ItemIds, 1)
@@ -716,7 +732,7 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					}).
 					Return(nil)
 				mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
-					EXPECT().Update(ctx, &entity.Experiment{ID: exptID, LatestRunID: 1001}).Return(nil)
+					EXPECT().Update(gomock.Any(), &entity.Experiment{ID: exptID, LatestRunID: 1001}).Return(nil)
 				mgr.mtr.(*metricsMocks.MockExptMetric).
 					EXPECT().EmitExptExecRun(spaceID, int64(mode))
 			},
@@ -731,16 +747,17 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					EXPECT().GenID(ctx).Return(int64(1002), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1002", gomock.Any(), time.Second).
+					BackoffLockWithValue(gomock.Any(), gomock.Any(), "1002", gomock.Any(), time.Second).
 					Return(false, "1001", nil)
 				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(false, nil)
-				existingLog := &entity.ExptRunLog{ID: 1001, ExptID: exptID, ExptRunID: 1001}
+					EXPECT().Lock(gomock.Any(), "expt_completing_mutex_lock:123:1001", 3*time.Minute).Return(true, nil)
+				mgr.mutex.(*lockMocks.MockILocker).EXPECT().Unlock("expt_completing_mutex_lock:123:1001").Return(true, nil)
+				existingLog := &entity.ExptRunLog{ID: 1001, SpaceID: spaceID, ExptID: exptID, ExptRunID: 1001, Mode: int32(mode), Status: int64(entity.ExptStatus_Processing)}
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
-					EXPECT().Get(ctx, exptID, int64(1001)).
+					EXPECT().Get(gomock.Any(), exptID, int64(1001)).
 					Return(existingLog, nil)
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
-					EXPECT().Save(ctx, gomock.Any()).Return(nil)
+					EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			wantRunID: 1001,
 			wantRetry: true,
@@ -761,7 +778,7 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					EXPECT().GenID(ctx).Return(int64(1003), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1003", gomock.Any(), time.Second).
+					BackoffLockWithValue(gomock.Any(), gomock.Any(), "1003", gomock.Any(), time.Second).
 					Return(false, "", errors.New("redis error"))
 			},
 			wantErr: true,
@@ -773,7 +790,7 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					EXPECT().GenID(ctx).Return(int64(1004), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1004", gomock.Any(), time.Second).
+					BackoffLockWithValue(gomock.Any(), gomock.Any(), "1004", gomock.Any(), time.Second).
 					Return(false, "not_a_number", nil)
 			},
 			wantErr: true,
@@ -785,12 +802,13 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					EXPECT().GenID(ctx).Return(int64(1005), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1005", gomock.Any(), time.Second).
+					BackoffLockWithValue(gomock.Any(), gomock.Any(), "1005", gomock.Any(), time.Second).
 					Return(false, "1001", nil)
 				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(false, nil)
+					EXPECT().Lock(gomock.Any(), "expt_completing_mutex_lock:123:1001", 3*time.Minute).Return(true, nil)
+				mgr.mutex.(*lockMocks.MockILocker).EXPECT().Unlock("expt_completing_mutex_lock:123:1001").Return(true, nil)
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
-					EXPECT().Get(ctx, exptID, int64(1001)).
+					EXPECT().Get(gomock.Any(), exptID, int64(1001)).
 					Return(nil, errors.New("get run log failed"))
 			},
 			wantErr: true,
@@ -802,10 +820,10 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					EXPECT().GenID(ctx).Return(int64(1006), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1006", gomock.Any(), time.Second).
+					BackoffLockWithValue(gomock.Any(), gomock.Any(), "1006", gomock.Any(), time.Second).
 					Return(true, "1006", nil)
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
-					EXPECT().Save(ctx, gomock.Any()).Return(errors.New("save failed"))
+					EXPECT().Save(gomock.Any(), gomock.Any()).Return(errors.New("save failed"))
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().Update(gomock.Any(), exptID, int64(1006), spaceID, gomock.Any()).Return(nil)
 				mgr.mutex.(*lockMocks.MockILocker).EXPECT().UnlockForce(gomock.Any(), mgr.makeExptMutexLockKey(exptID)).Return(true, nil)
 			},
@@ -818,10 +836,10 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					EXPECT().GenID(ctx).Return(int64(1007), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1007", gomock.Any(), time.Second).
+					BackoffLockWithValue(gomock.Any(), gomock.Any(), "1007", gomock.Any(), time.Second).
 					Return(false, "1001", nil)
 				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(true, nil)
+					EXPECT().Lock(gomock.Any(), "expt_completing_mutex_lock:123:1001", 3*time.Minute).Return(false, nil)
 			},
 			wantErr: true,
 		},
@@ -832,16 +850,20 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					EXPECT().GenID(ctx).Return(int64(1008), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1008", gomock.Any(), time.Second).
+					BackoffLockWithValue(gomock.Any(), gomock.Any(), "1008", gomock.Any(), time.Second).
 					Return(false, "1001", nil)
 				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(false, errors.New("lock check error"))
+					EXPECT().Lock(gomock.Any(), "expt_completing_mutex_lock:123:1001", 3*time.Minute).Return(false, errors.New("lock error"))
 			},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			previous = 0
+			if strings.HasPrefix(tt.name, "retried_") {
+				previous = 1001
+			}
 			tt.setup()
 			runID, retried, err := mgr.LogRetryItemsRun(ctx, exptID, mode, spaceID, itemIDs, session)
 			if tt.wantErr {
