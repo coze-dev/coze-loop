@@ -121,7 +121,7 @@ func TestRunFinishRescanIncludesLogged(t *testing.T) {
 	items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(0), int64(1), int64(3)).DoAndReturn(func(context.Context, int64, int64, *entity.ExptItemRunLogFilter, int64, int64, int64) ([]*entity.ExptItemResultRunLog, int64, error) {
 		return nil, 0, nil
 	})
-	items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(0), int64(1), int64(3)).DoAndReturn(func(_ context.Context, _ int64, _ int64, filter *entity.ExptItemRunLogFilter, _ int64, _ int64, _ int64) ([]*entity.ExptItemResultRunLog, int64, error) {
+	items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(0), int64(1), int64(3)).DoAndReturn(func(_ context.Context, _, _ int64, filter *entity.ExptItemRunLogFilter, _, _, _ int64) ([]*entity.ExptItemResultRunLog, int64, error) {
 		require.NotNil(t, filter.ResultState)
 		require.Equal(t, entity.ExptItemResultStateLogged, *filter.ResultState)
 		return []*entity.ExptItemResultRunLog{{ItemID: 11}}, 1, nil
@@ -206,10 +206,10 @@ func TestRunFinishManagerCleanupFailureReplaysAfterCommit(t *testing.T) {
 	require.Equal(t, 1, port.calls)
 	require.True(t, server.Exists("expt_run_mutex_lock:1"), "failed effects retain admission")
 	latest = 99
-	port.result.Disposition = entity.ExptRunFinishAlreadyFinished
+	port.result.Disposition = entity.ExptRunFinishNonCurrent
 	_, err = manager.FinishCurrentRunWithHeldTickLock(context.Background(), &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2})
 	require.NoError(t, err)
-	require.Equal(t, 1, port.calls, "confirmed replacement exits before SQL completion")
+	require.Equal(t, 2, port.calls, "confirmed replacement revalidates the historical run without current cleanup")
 	require.True(t, server.Exists("expt_run_mutex_lock:1"), "confirmed replacement must keep its admission")
 }
 
@@ -355,7 +355,7 @@ func TestRunFinishDirectAcquiresTickAndLeaseLossStopsSQL(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	locker := lockmocks.NewMockILocker(ctrl)
 	port := &finishRepoProbe{}
-	locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).DoAndReturn(func(ctx context.Context, _ string, _ time.Duration, _ time.Duration) (bool, context.Context, func(), error) {
+	locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).DoAndReturn(func(ctx context.Context, _ string, _, _ time.Duration) (bool, context.Context, func(), error) {
 		child, cancel := context.WithCancel(ctx)
 		cancel()
 		return true, child, cancel, nil

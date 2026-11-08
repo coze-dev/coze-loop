@@ -42,7 +42,7 @@ func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.E
 		}
 		if expt.LatestRunID != r.RunID {
 			result.Disposition = entity.ExptRunFinishNonCurrent
-			return nil
+			return d.completeHistoricalRun(ctx, tx, expt, run, 0, "")
 		}
 		if expt.ExptType != int32(entity.ExptType_Offline) {
 			return fmt.Errorf("natural current-run finish requires offline experiment")
@@ -145,6 +145,51 @@ func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.E
 		return nil, err
 	}
 	return result, nil
+}
+
+func (d *ExptRunFinishDAOImpl) completeHistoricalRun(ctx context.Context, tx *gorm.DB, expt *model.Experiment, run *model.ExptRunLog, status entity.ExptStatus, message string) error {
+	if run.Status == nil {
+		return fmt.Errorf("historical run status missing")
+	}
+	if entity.IsExptFinished(entity.ExptStatus(*run.Status)) {
+		return nil
+	}
+	if expt.ExptType != int32(entity.ExptType_Offline) || expt.LatestRunID <= 0 || expt.LatestRunID == run.ExptRunID {
+		return fmt.Errorf("historical completion requires another current offline run")
+	}
+	var latest model.ExptRunLog
+	if err := tx.WithContext(ctx).Where("space_id=? AND expt_id=? AND expt_run_id=?", expt.SpaceID, expt.ID, expt.LatestRunID).Take(&latest).Error; err != nil {
+		return err
+	}
+	active := []int64{int64(entity.ExptStatus_Pending), int64(entity.ExptStatus_Processing), int64(entity.ExptStatus_Terminating)}
+	if *run.Status != active[0] && *run.Status != active[1] && *run.Status != active[2] {
+		return fmt.Errorf("invalid historical run status")
+	}
+	var turns []model.ExptTurnResultRunLog
+	if err := tx.WithContext(ctx).Select("status").Where("space_id=? AND expt_id=? AND expt_run_id=?", run.SpaceID, run.ExptID, run.ExptRunID).Find(&turns).Error; err != nil {
+		return err
+	}
+	var counts finishCounts
+	for _, turn := range turns {
+		counts.addTurn(entity.TurnRunState(turn.Status))
+	}
+	if status == 0 {
+		status = entity.ExptStatus_Success
+		if counts.pending > 0 || counts.fail > 0 {
+			status = entity.ExptStatus_Failed
+		}
+	} else if status != entity.ExptStatus_Failed && status != entity.ExptStatus_Terminated {
+		return fmt.Errorf("invalid historical explicit status")
+	}
+	// R2 owns canonical projections; only R1's historical log may be updated.
+	fields := counts.fields("status", int64(status))
+	fields["updated_at"] = time.Now()
+	if message != "" {
+		fields["status_message"] = []byte(message)
+	}
+	return tx.WithContext(ctx).Model(&model.ExptRunLog{}).
+		Where("space_id=? AND expt_id=? AND expt_run_id=? AND status IN ?", run.SpaceID, run.ExptID, run.ExptRunID, active).
+		UpdateColumns(fields).Error
 }
 
 // Counts follow the existing canonical projection readers. Item and turn

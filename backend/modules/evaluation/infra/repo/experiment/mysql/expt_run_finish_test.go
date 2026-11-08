@@ -153,6 +153,7 @@ func TestRunFinishMySQLMissingBindingAndHalfTerminalFailClosed(t *testing.T) {
 	for _, which := range []string{"missing_run", "missing_experiment", "wrong_space", "noncurrent", "half_run", "half_expt", "missing_stats"} {
 		t.Run(which, func(t *testing.T) {
 			f := terminalFinishFixture(t)
+			var replacementBefore model.ExptRunLog
 			switch which {
 			case "missing_run":
 				require.NoError(t, f.conn.Where("space_id=?", f.space).Delete(&model.ExptRunLog{}).Error)
@@ -162,6 +163,10 @@ func TestRunFinishMySQLMissingBindingAndHalfTerminalFailClosed(t *testing.T) {
 				require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("space_id", f.space+100).Error)
 				t.Cleanup(func() { f.conn.Exec("DELETE FROM expt_run_log WHERE space_id=? AND expt_id=?", f.space+100, f.expt) })
 			case "noncurrent":
+				require.NoError(t, f.conn.Create(&model.ExptRunLog{ID: f.run - 100, SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run - 100, Status: gptr.Of(int64(entity.ExptStatus_Success)), Mode: gptr.Of(int32(entity.EvaluationModeSubmit)), SuccessCnt: 17, CreditCost: 31, StatusMessage: gptr.Of([]byte("keep earlier historical run"))}).Error)
+				replacementBefore = model.ExptRunLog{ID: f.run + 100, SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run + 100, Status: gptr.Of(int64(entity.ExptStatus_Pending)), Mode: gptr.Of(int32(entity.EvaluationModeRetryAll))}
+				require.NoError(t, f.conn.Create(&replacementBefore).Error)
+				require.NoError(t, f.conn.Where("space_id=? AND expt_run_id=?", f.space, f.run+100).Take(&replacementBefore).Error)
 				require.NoError(t, f.conn.Model(&model.Experiment{}).Where("space_id=?", f.space).Update("latest_run_id", f.run+100).Error)
 			case "half_run":
 				require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(entity.ExptStatus_Success)).Error)
@@ -175,11 +180,22 @@ func TestRunFinishMySQLMissingBindingAndHalfTerminalFailClosed(t *testing.T) {
 			if which == "noncurrent" {
 				require.NoError(t, err)
 				require.Equal(t, entity.ExptRunFinishNonCurrent, r.Disposition)
+				var old, replacementAfter model.ExptRunLog
+				require.NoError(t, f.conn.Where("space_id=? AND expt_run_id=?", f.space, f.run).Take(&old).Error)
+				require.Equal(t, int64(entity.ExptStatus_Failed), gptr.Indirect(old.Status))
+				require.Equal(t, int32(1), old.FailCnt)
+				require.Equal(t, int32(1), old.SuccessCnt)
+				require.Zero(t, old.PendingCnt)
+				require.Zero(t, old.ProcessingCnt)
+				require.Zero(t, old.TerminatedCnt)
+				require.NoError(t, f.conn.Where("space_id=? AND expt_run_id=?", f.space, f.run+100).Take(&replacementAfter).Error)
+				require.Equal(t, replacementBefore, replacementAfter)
+				require.Equal(t, withoutOwnRunCompletion(t, before, f), withoutOwnRunCompletion(t, f.snapshot(), f))
 			} else {
 				require.Error(t, err)
 				require.Nil(t, r)
+				require.Equal(t, before, f.snapshot())
 			}
-			require.Equal(t, before, f.snapshot())
 		})
 	}
 }

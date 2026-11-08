@@ -1518,6 +1518,10 @@ func (e *exptBaseExec) exptEnd(ctx context.Context, event *entity.ExptScheduleEv
 	}
 
 	if exist {
+		if _, current := e.Manager.(IExptNaturalRunFinisher); current && expt.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend &&
+			expt.LatestRunID > 0 && expt.LatestRunID != event.ExptRunID {
+			return e.Manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(fmt.Sprintf("exptexec:onend:%d", event.ExptRunID)))
+		}
 		return nil
 	}
 

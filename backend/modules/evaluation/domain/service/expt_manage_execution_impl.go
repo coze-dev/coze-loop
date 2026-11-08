@@ -585,12 +585,37 @@ func captureCompleteResult(ctx context.Context, result *entity.ExptRunFinishResu
 	}
 }
 
+func (e *ExptMangerImpl) completeNonCurrentRun(ctx context.Context, current *entity.Experiment, run int64, opt *entity.CompleteExptOption) error {
+	if opt.Status == entity.ExptStatus_Failed || opt.Status == entity.ExptStatus_Terminated {
+		port, err := e.terminationRepo()
+		if err != nil {
+			return err
+		}
+		result, err := port.TerminateCurrentRun(ctx, &entity.ExptRunTerminationRequest{SpaceID: current.SpaceID, ExptID: current.ID, RunID: run, Finalize: true, Status: opt.Status, StatusMessage: opt.StatusMessage})
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if result == nil || !result.NonCurrent {
+			return errno.NewMQRetryErr("historical completion requires replaced run")
+		}
+		return nil
+	}
+	result, err := e.runFinishRepo.FinishCurrentRun(ctx, &entity.ExptRunFinishRequest{SpaceID: current.SpaceID, ExptID: current.ID, RunID: run})
+	if err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if result == nil || result.Disposition != entity.ExptRunFinishNonCurrent {
+		return errno.NewMQRetryErr("historical completion requires replaced run")
+	}
+	return nil
+}
+
 // This is only the current-source SQL boundary. Resource and notification duties
 // belong to CompleteExpt below, including the normal best-effort options.
 func (e *ExptMangerImpl) commitCompleteData(ctx context.Context, current *entity.Experiment, run int64, opt *entity.CompleteExptOption) (*completeData, error) {
 	data := &completeData{from: current.Status, result: &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishNonCurrent}}
 	if current.LatestRunID != run {
-		return data, nil
+		return data, e.completeNonCurrentRun(ctx, current, run, opt)
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, errno.WrapMQRetryErr(err)
@@ -738,9 +763,13 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 			return errno.NewMQRetryErr("complete run experiment missing")
 		}
 		if current.ExptType == entity.ExptType_Offline {
+			opt := &entity.CompleteExptOption{}
+			for _, fn := range opts {
+				fn(opt)
+			}
 			if current.LatestRunID != exptRunID {
 				captureCompleteResult(ctx, &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishNonCurrent})
-				return nil
+				return e.completeNonCurrentRun(ctx, current, exptRunID, opt)
 			}
 			lockCtx, cancel, err := e.completeTick(ctx, exptID, exptRunID)
 			if err != nil {
@@ -754,10 +783,6 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 			}
 			if current == nil {
 				return errno.NewMQRetryErr("complete run experiment missing")
-			}
-			opt := &entity.CompleteExptOption{}
-			for _, fn := range opts {
-				fn(opt)
 			}
 			if entity.IsExptFinished(current.Status) && current.LatestRunID == exptRunID && e.runLogRepo != nil {
 				logged, err := e.runLogRepo.Get(ctx, exptID, exptRunID)
@@ -980,7 +1005,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			}
 			if current.LatestRunID != *exptRunID {
 				captureCompleteResult(ctx, &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishNonCurrent})
-				return nil
+				return e.completeNonCurrentRun(ctx, current, *exptRunID, opt)
 			}
 			if opt.CID == "" {
 				opt.CID = fmt.Sprintf("exptexec:onend:%d", *exptRunID)
@@ -1010,7 +1035,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 				}
 				if current.LatestRunID != *exptRunID {
 					captureCompleteResult(ctx, &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishNonCurrent})
-					return nil
+					return e.completeNonCurrentRun(ctx, current, *exptRunID, opt)
 				}
 				if e.idem != nil {
 					seen, err := e.idem.Exist(ctx, idemKeyPrefix+opt.CID)

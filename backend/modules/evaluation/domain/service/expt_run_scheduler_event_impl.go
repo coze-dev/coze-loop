@@ -451,6 +451,13 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	if err != nil {
 		return err
 	}
+	if _, current := e.Manager.(IExptNaturalRunFinisher); current && event.ExptType == entity.ExptType_Offline && exptDetail.ExptType == entity.ExptType_Offline &&
+		event.ExptRunMode != entity.EvaluationModeAppend && exptDetail.LatestRunID > 0 && exptDetail.LatestRunID != event.ExptRunID {
+		if err := e.Manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		return nil
+	}
 
 	mode, err := e.schedulerModeFactory.NewSchedulerMode(event.ExptRunMode)
 	if err != nil {
@@ -1388,7 +1395,7 @@ func (e *ExptSchedulerImpl) emitSandboxZombieInvokeFinished(
 
 // sandboxAgentTargetTagsFromExpt 从实验的沙箱 agent 评测对象上取应用名称/id, 供 invoke_finished 打点使用。
 // 与 pickAgentName / pickApplicationID (etec 版本) 语义一致, 兼容 expt/target/version 任一层缺失。
-func sandboxAgentTargetTagsFromExpt(expt *entity.Experiment) (agentName string, applicationID string) {
+func sandboxAgentTargetTagsFromExpt(expt *entity.Experiment) (agentName, applicationID string) {
 	if expt == nil || expt.Target == nil {
 		return "", ""
 	}

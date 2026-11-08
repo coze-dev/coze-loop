@@ -107,6 +107,9 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 		}
 		if expt.LatestRunID != r.RunID {
 			result.NonCurrent = true
+			if r.Finalize && !r.Begin && !r.SetupAbort {
+				return d.completeHistoricalRun(ctx, tx, &expt, &run, r.Status, r.StatusMessage)
+			}
 			return nil
 		}
 		if expt.ExptType != int32(entity.ExptType_Offline) || run.Status == nil {
