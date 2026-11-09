@@ -515,7 +515,28 @@ func projectionAnnotation(row *entity.ExptTurnResultFilterEntity, key string, re
 	if data == nil {
 		return nil
 	}
-	switch data.TagContentType {
+	contentType := data.TagContentType
+	if contentType == "" {
+		// Older JSON omitted the type; only a single present value identifies it.
+		for _, field := range []struct {
+			present     bool
+			contentType entity.TagContentType
+		}{
+			{data.Score != nil, entity.TagContentTypeContinuousNumber},
+			{data.TextValue != nil, entity.TagContentTypeFreeText},
+			{data.BoolValue != nil, entity.TagContentTypeBoolean},
+			{data.Option != nil, entity.TagContentTypeCategorical},
+		} {
+			if !field.present {
+				continue
+			}
+			if contentType != "" {
+				return fmt.Errorf("ambiguous legacy annotation values")
+			}
+			contentType = field.contentType
+		}
+	}
+	switch contentType {
 	case entity.TagContentTypeContinuousNumber:
 		if data.Score == nil || !projectionFinite(*data.Score) {
 			return fmt.Errorf("numeric annotation requires a finite score")
@@ -527,7 +548,28 @@ func projectionAnnotation(row *entity.ExptTurnResultFilterEntity, key string, re
 		}
 		row.AnnotationString[key] = *data.TextValue
 	case entity.TagContentTypeCategorical, entity.TagContentTypeBoolean:
-		row.AnnotationString[key] = strconv.FormatInt(record.TagValueID, 10)
+		valueID := record.TagValueID
+		if valueID < 0 {
+			return fmt.Errorf("annotation option ID must be positive")
+		}
+		option := data.Option
+		if contentType == entity.TagContentTypeBoolean {
+			option = data.BoolValue
+		}
+		if option != nil {
+			parsedID, err := strconv.ParseInt(*option, 10, 64)
+			if err != nil || parsedID <= 0 {
+				return fmt.Errorf("annotation option requires a positive int64 ID")
+			}
+			if valueID != 0 && valueID != parsedID {
+				return fmt.Errorf("annotation option ID conflicts with JSON value")
+			}
+			valueID = parsedID
+		}
+		if valueID == 0 {
+			return fmt.Errorf("annotation option ID is missing")
+		}
+		row.AnnotationString[key] = strconv.FormatInt(valueID, 10)
 	default:
 		return fmt.Errorf("unknown annotation content type %q", data.TagContentType)
 	}
