@@ -146,7 +146,7 @@ func TestPendingRetryEmptyEvaluatorCollectionsSurviveJSONRoundTrip(t *testing.T)
 }
 
 func TestPendingRetryJSONRoundTripStillRejectsChangedSource(t *testing.T) {
-	for _, change := range []string{"nonempty_evaluator", "version", "source_run"} {
+	for _, change := range []string{"nonempty_evaluator", "version", "source_run", "timestamp"} {
 		t.Run(change, func(t *testing.T) {
 			p, port, _ := newPendingRetryTestFixture(t)
 			pending := preparePendingRetryTestRequest(t, p, port)
@@ -161,6 +161,8 @@ func TestPendingRetryJSONRoundTripStillRejectsChangedSource(t *testing.T) {
 				fields["item_version_id"] = p.f.version + 1
 			case "source_run":
 				fields["expt_run_id"] = p.oldRun + 1
+			case "timestamp":
+				fields["updated_at"] = pending.Request.Items[0].Turns[0].CurrentRunLog.UpdatedAt.Add(time.Second)
 			}
 			require.NoError(t, p.f.conn.Model(&model.ExptTurnResultRunLog{}).
 				Where("space_id=? AND expt_run_id=? AND item_id=? AND turn_id=0", p.f.space, p.f.run, p.f.item).Updates(fields).Error)

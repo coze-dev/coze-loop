@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/cloudwego/kitex/pkg/kerrors"
@@ -19,6 +20,70 @@ import (
 
 type terminalRetryPreflight interface {
 	PreflightTerminalItems(context.Context, *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryPreparation, error)
+}
+
+func TestManualRetryMySQLPreflightSnapshotTimeRoundTrip(t *testing.T) {
+	for _, change := range []string{"utc", "fixed_offset", "source_item_timestamp", "item_log_timestamp", "current_turn_timestamp", "source_turn_timestamp", "nil_source_item_timestamp", "nil_item_log_timestamp"} {
+		t.Run(change, func(t *testing.T) {
+			f := newManualRetryFixture(t)
+			req := f.request(entity.EvaluationModeRetryItems)
+			item := req.Items[0]
+			item.SourceTurnLogs = []*entity.ExptTurnResultRunLog{item.Turns[0].CurrentRunLog}
+			location := time.UTC
+			if change == "fixed_offset" {
+				location = time.FixedZone("snapshot-offset", 8*60*60)
+			}
+			storedAt := item.SourceItem.UpdatedAt
+			item.SourceItem.UpdatedAt = gptr.Of(item.SourceItem.UpdatedAt.In(location))
+			item.CurrentItemLog.UpdatedAt = gptr.Of(item.CurrentItemLog.UpdatedAt.In(location))
+			for _, turn := range item.Turns {
+				turn.CurrentRunLog.UpdatedAt = turn.CurrentRunLog.UpdatedAt.In(location)
+			}
+			raw, err := json.Marshal(req)
+			require.NoError(t, err)
+			var cached entity.RequeueTerminalItemsRequest
+			require.NoError(t, json.Unmarshal(raw, &cached))
+			item = cached.Items[0]
+			t.Logf("SNAPSHOT_TIME stored_is_local=%t cached_is_utc=%t same_instant=%t", storedAt.Location() == time.Local, item.SourceItem.UpdatedAt.Location() == time.UTC, storedAt.Equal(*item.SourceItem.UpdatedAt))
+			switch change {
+			case "source_item_timestamp":
+				item.SourceItem.UpdatedAt = gptr.Of(item.SourceItem.UpdatedAt.Add(time.Nanosecond))
+			case "item_log_timestamp":
+				item.CurrentItemLog.UpdatedAt = gptr.Of(item.CurrentItemLog.UpdatedAt.Add(time.Nanosecond))
+			case "current_turn_timestamp":
+				item.Turns[0].CurrentRunLog.UpdatedAt = item.Turns[0].CurrentRunLog.UpdatedAt.Add(time.Nanosecond)
+			case "source_turn_timestamp":
+				item.SourceTurnLogs[0].UpdatedAt = item.SourceTurnLogs[0].UpdatedAt.Add(time.Nanosecond)
+			case "nil_source_item_timestamp":
+				item.SourceItem.UpdatedAt = nil
+			case "nil_item_log_timestamp":
+				item.CurrentItemLog.UpdatedAt = nil
+			}
+			before := f.snapshot()
+			snapshot, err := json.Marshal(&cached)
+			require.NoError(t, err)
+			plan, err := f.port.(terminalRetryPreflight).PreflightTerminalItems(context.Background(), &cached)
+			require.NoError(t, err)
+			require.Equal(t, before, f.snapshot(), "preflight must preserve SQL rows")
+			after, err := json.Marshal(&cached)
+			require.NoError(t, err)
+			require.Equal(t, snapshot, after, "comparison must preserve the prepared snapshot")
+			if change == "utc" || change == "fixed_offset" {
+				require.Len(t, plan.Items, 1, "equivalent timestamp locations must survive pending JSON")
+				require.Empty(t, plan.RejectedItems)
+				receipt, err := f.port.RequeueTerminalItems(context.Background(), &cached)
+				require.NoError(t, err)
+				require.Equal(t, int32(1), receipt.AcceptedCount)
+				return
+			}
+			require.Empty(t, plan.Items)
+			require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 11, Reason: "source_changed"}}, plan.RejectedItems)
+			receipt, err := f.port.RequeueTerminalItems(context.Background(), &cached)
+			require.NoError(t, err)
+			require.Zero(t, receipt.AcceptedCount)
+			require.Equal(t, before, f.snapshot(), "changed or missing timestamps must prevent writes")
+		})
+	}
 }
 
 func TestManualRetryMySQLPreflight(t *testing.T) {

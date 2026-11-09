@@ -333,7 +333,10 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryItem(ctx context.Context, r *ent
 	if current.ItemVersionID != p.ItemVersionID {
 		return nil, "source_changed", nil
 	}
-	if current.ExptRunID != p.PreviousRunID || previousRequest != p.PreviousRequestID || !reflect.DeepEqual(source, p.SourceItem) {
+	expectedSource := *p.SourceItem
+	source.UpdatedAt = canonicalManualRetrySnapshotTime(source.UpdatedAt)
+	expectedSource.UpdatedAt = canonicalManualRetrySnapshotTime(expectedSource.UpdatedAt)
+	if current.ExptRunID != p.PreviousRunID || previousRequest != p.PreviousRequestID || !reflect.DeepEqual(source, &expectedSource) {
 		return nil, "source_changed", nil
 	}
 	var log *model.ExptItemResultRunLog
@@ -359,7 +362,14 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryItem(ctx context.Context, r *ent
 		if gptr.Indirect(log.ResultState) != int32(entity.ExptItemResultStateResulted) {
 			return nil, "result_not_ready", nil
 		}
-		if !reflect.DeepEqual(convert.NewExptItemResultRunLogConverter().PO2DO(log), p.CurrentItemLog) {
+		if p.CurrentItemLog == nil {
+			return nil, "source_changed", nil
+		}
+		actualLog := convert.NewExptItemResultRunLogConverter().PO2DO(log)
+		expectedLog := *p.CurrentItemLog
+		actualLog.UpdatedAt = canonicalManualRetrySnapshotTime(actualLog.UpdatedAt)
+		expectedLog.UpdatedAt = canonicalManualRetrySnapshotTime(expectedLog.UpdatedAt)
+		if !reflect.DeepEqual(actualLog, &expectedLog) {
 			return nil, "source_changed", nil
 		}
 	}
@@ -553,15 +563,22 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 	return "", nil
 }
 
-// Pending JSON omits empty evaluator collections. Compare their canonical
-// shape without changing the source snapshot or its other identity/result
-// fields; nonempty references and a missing EvaluatorResults still differ.
+// Pending JSON does not retain a time's location or monotonic clock.
+func canonicalManualRetrySnapshotTime(timestamp *time.Time) *time.Time {
+	if timestamp == nil {
+		return nil
+	}
+	return gptr.Of(timestamp.UTC())
+}
+
+// Pending JSON omits empty evaluator collections; keep nonempty and nil results distinct.
 func sameManualRetryTurnLogSource(a, b *entity.ExptTurnResultRunLog) bool {
 	if a == nil || b == nil {
 		return a == b
 	}
 	canonical := func(log *entity.ExptTurnResultRunLog) entity.ExptTurnResultRunLog {
 		copy := *log
+		copy.UpdatedAt = log.UpdatedAt.UTC()
 		if log.EvaluatorResultIds != nil {
 			results := *log.EvaluatorResultIds
 			if len(results.EvalVerIDToResID) == 0 {
