@@ -109,14 +109,20 @@ type lifecycleLockValueReader interface {
 
 const (
 	// LegacyLifecycleMigrationGrace is the minimum holder age before a
-	// pre-upgrade random holder may be migrated.
+	// pre-upgrade lifecycle holder may be migrated.
 	LegacyLifecycleMigrationGrace = 5 * time.Minute
+	// legacyStaticLifecycleHolder is the fixed value written by the pre-upgrade
+	// shared evaluation locker (application.NewLock) for lifecycle keys. It is
+	// kept here rather than infra/lock on purpose: it is a legacy evaluation
+	// business vocabulary, not part of the generic lock API.
+	legacyStaticLifecycleHolder = "evaluation"
 )
 
-// legacyLifecycleHolderAge derives the acquisition time from the legacy writer's
-// "<hostname>-<xid>" holder. XID embeds an immutable creation timestamp, so age
-// is independent of any configuration change between acquisition and migration.
-func legacyLifecycleHolderAge(holder string) (time.Time, bool) {
+// legacyLifecycleHolderAcquiredAt derives the acquisition time from a
+// pre-upgrade "<hostname>-<xid>" holder. XID embeds an immutable creation
+// timestamp, so age is independent of any configuration change between
+// acquisition and migration.
+func legacyLifecycleHolderAcquiredAt(holder string) (time.Time, bool) {
 	sep := strings.LastIndex(holder, "-")
 	if sep <= 0 || sep+1 >= len(holder) {
 		return time.Time{}, false
@@ -130,7 +136,8 @@ func legacyLifecycleHolderAge(holder string) (time.Time, bool) {
 
 // releasePreviousLifecycleHolder migrates a pre-upgrade random holder only when
 // the current run is already terminal. Numeric holders belong to another run,
-// and prefixed holders belong to a live new cleanup lease; neither is migrated.
+// prefixed holders belong to a live new cleanup lease, and the fixed legacy
+// "evaluation" holder carries no acquisition token at all; none are migrated.
 func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, locker lock.ILocker, key string, event *entity.ExptScheduleEvent) error {
 	if event == nil {
 		return errno.NewMQRetryErr("legacy lifecycle event missing")
@@ -152,20 +159,29 @@ func (e *ExptMangerImpl) releasePreviousLifecycleHolder(ctx context.Context, loc
 		return nil
 	}
 	// 无过期时间的锁永远等不到自然过期，迁移前先暴露出来。
-	if _, exists, err := reader.GetLifecycleLockTTL(ctx, key); err != nil {
+	if _, hasTTL, err := reader.GetLifecycleLockTTL(ctx, key); err != nil {
 		return err
-	} else if !exists {
+	} else if !hasTTL {
 		logs.CtxWarn(ctx, "[ExptLifecycle] legacy holder has no expiry or TTL is unavailable; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
 		return nil
 	}
-	acquiredAt, ok := legacyLifecycleHolderAge(holder)
-	if !ok {
+	if holder == legacyStaticLifecycleHolder {
+		// 固定的旧 "evaluation" holder 没有 acquisition token：旧 LogRun 在上一
+		// 个 run 的 holder 被释放后会以完全相同的 value 为下一个 run 重新 SETNX。
+		// 终态 EndAt 只证明上一个 run 结束了多久，不证明当前 Redis owner 属于
+		// 它；同值 CAS 也无法识别 R1/R2 换代。R2 可能已经 SETNX 但仍停在
+		// Create/LatestRunID 之前，此时删除就是抹掉它已取得的排他保护。无法证明
+		// 归属就不能删除，只能保留并让 AlreadyFinished 重放等到租约自然到期。
+		logs.CtxWarn(ctx, "[ExptLifecycle] fixed legacy holder has no ownership token; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
+		return nil
+	}
+	acquiredAt, provable := legacyLifecycleHolderAcquiredAt(holder)
+	if !provable {
 		// 不认识的老 holder 格式：无法证明获取时间，宁可等自然过期也不删。
 		logs.CtxWarn(ctx, "[ExptLifecycle] legacy holder age unverifiable; keep lock, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
 		return nil
 	}
-	// holder 内的 XID 时间戳是写入时刻的不可变证据，与当前配置无关。
-	if age := time.Since(acquiredAt); age < LegacyLifecycleMigrationGrace {
+	if time.Since(acquiredAt) < LegacyLifecycleMigrationGrace {
 		return nil
 	}
 	if e.exptRepo == nil {

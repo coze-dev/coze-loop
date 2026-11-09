@@ -121,13 +121,25 @@ func (s *singleSetItemStorage) ScanItemResults(ctx context.Context, expt, cursor
 }
 
 func (s *singleSetItemStorage) MGetItemRunLog(ctx context.Context, expt, run int64, ids []int64, space int64) ([]*entity.ExptItemResultRunLog, error) {
-	var result []*entity.ExptItemResultRunLog
-	for _, id := range ids {
-		row, err := mysql.NewExptItemResultDAO(s.f.provider).GetItemRunLog(ctx, expt, run, id, space)
-		if err != nil {
-			return nil, err
-		}
+	rows, err := mysql.NewExptItemResultDAO(s.f.provider).MGetItemRunLog(ctx, expt, run, ids, space)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*entity.ExptItemResultRunLog, 0, len(rows))
+	for _, row := range rows {
 		result = append(result, convert.NewExptItemResultRunLogConverter().PO2DO(row))
+	}
+	return result, nil
+}
+
+func (s *singleSetItemStorage) MGetItemTurnResults(ctx context.Context, space, expt int64, ids []int64) ([]*entity.ExptTurnResult, error) {
+	rows, err := mysql.NewExptItemResultDAO(s.f.provider).MGetItemTurnResults(ctx, space, expt, ids)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*entity.ExptTurnResult, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, convert.NewExptTurnResultConvertor().PO2DO(row, nil))
 	}
 	return result, nil
 }
@@ -135,6 +147,18 @@ func (s *singleSetItemStorage) MGetItemRunLog(ctx context.Context, expt, run int
 func (s *singleSetRefStorage) GetByExptIDAndItemID(ctx context.Context, space, expt, item int64) (*entity.ExptItemRef, error) {
 	row, err := mysql.NewExptItemRefDAO(s.f.provider).GetByExptIDAndItemID(ctx, space, expt, item)
 	return convert.NewExptItemRefConvertor().PO2DO(row), err
+}
+
+func (s *singleSetRefStorage) MGetByExptIDAndItemIDs(ctx context.Context, space, expt int64, ids []int64) ([]*entity.ExptItemRef, error) {
+	rows, err := mysql.NewExptItemRefDAO(s.f.provider).MGetByExptIDAndItemIDs(ctx, space, expt, ids)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*entity.ExptItemRef, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, convert.NewExptItemRefConvertor().PO2DO(row))
+	}
+	return result, nil
 }
 
 func (s *singleSetTurnStorage) GetItemTurnResults(ctx context.Context, expt, item, space int64) ([]*entity.ExptTurnResult, error) {
@@ -157,6 +181,22 @@ func (s *singleSetTurnStorage) GetItemTurnRunLogs(ctx context.Context, expt, run
 		result = append(result, log)
 	}
 	return result, err
+}
+
+func (s *singleSetTurnStorage) MGetItemTurnRunLogs(ctx context.Context, expt, run int64, ids []int64, space int64) ([]*entity.ExptTurnResultRunLog, error) {
+	rows, err := mysql.NewExptTurnResultDAO(s.f.provider).MGetItemTurnRunLogs(ctx, expt, run, ids, space)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*entity.ExptTurnResultRunLog, 0, len(rows))
+	for _, row := range rows {
+		log, err := convert.NewExptTurnResultRunLogConvertor().PO2DO(row)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, log)
+	}
+	return result, nil
 }
 
 func (s *singleSetTurnStorage) BatchGetTurnEvaluatorResultRef(ctx context.Context, space int64, ids []int64) ([]*entity.ExptTurnEvaluatorResultRef, error) {
@@ -220,7 +260,6 @@ func singleSetRetryManager(t *testing.T, f *manualRetryFixture, port repo.IExptM
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	config := componentmocks.NewMockIConfiger(ctrl)
-	config.EXPECT().GetExptExecConf(gomock.Any(), f.space).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)}).AnyTimes()
 	locker := lockmocks.NewMockILocker(ctrl)
 	locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), 5*time.Second, 5*time.Minute).DoAndReturn(func(ctx context.Context, key string, ttl, renewal time.Duration) (bool, context.Context, func(), error) {
 		child, cancel := context.WithCancel(ctx)

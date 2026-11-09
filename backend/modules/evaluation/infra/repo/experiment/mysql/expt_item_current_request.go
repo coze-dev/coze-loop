@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	looplogs "github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 type currentRequestRow struct {
@@ -63,6 +64,10 @@ func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, space
 		if !validCurrentItemStatus(status) || !validCurrentItemStatus(entity.ItemRunState(row.CanonicalStatus)) || row.RetryTimes < 0 {
 			return nil, fmt.Errorf("invalid current item state")
 		}
+		// The scan row keeps the historical strict check: real legacy rows were
+		// written zero in every table, so an ambiguous one-sided version is not a
+		// schedulable observation and fails the whole scan instead of being
+		// silently dispatched. Direct source reads apply the zero matrix.
 		if row.ItemVersionID != row.CanonicalItemVersionID {
 			return nil, fmt.Errorf("canonical/run-log item version mismatch")
 		}
@@ -133,9 +138,15 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 				row.PublicationObserved = true
 				publication, err := readItemResultPublishSourceWithLocks(tx, spaceID, exptID, runID, row.ItemID, false)
 				if err != nil {
-					return err
-				}
-				if publication != nil && publication.Source.Current.RequestID == row.RequestID && publication.ItemLog.Status == int32(row.Status) && publication.ItemLog.ResultState == int32(row.ResultState) && publication.ItemLog.RetryTimes == row.RetryTimes && publication.ItemLog.UpdatedAt != nil && row.UpdatedAt != nil && publication.ItemLog.UpdatedAt.Equal(*row.UpdatedAt) {
+					if !isCurrentSourceInconsistent(err) {
+						return err
+					}
+					// A deterministic per-item snapshot inconsistency must not
+					// turn the whole run scan into MQ retry. Defer this item's
+					// publication to a later stable tick and keep observing it.
+					looplogs.CtxWarn(ctx, "current source inconsistent, defer item publication: space_id=%d expt_id=%d run_id=%d item_id=%d err=%v", spaceID, exptID, runID, row.ItemID, err)
+					row.Publication = nil
+				} else if publication != nil && publication.Source.Current.RequestID == row.RequestID && publication.ItemLog.Status == int32(row.Status) && publication.ItemLog.ResultState == int32(row.ResultState) && publication.ItemLog.RetryTimes == row.RetryTimes && publication.ItemLog.UpdatedAt != nil && row.UpdatedAt != nil && publication.ItemLog.UpdatedAt.Equal(*row.UpdatedAt) {
 					row.Publication = publication
 				}
 			}
@@ -146,7 +157,16 @@ func (dao *exptItemResultDAOImpl) ScanCurrentRequests(ctx context.Context, space
 			}
 			source, err := readItemRunSource(tx, spaceID, exptID, runID, row.ItemID, false, false)
 			if err != nil {
-				return err
+				if !isCurrentSourceInconsistent(err) {
+					return err
+				}
+				// Keep the occupied item visible (incomplete/slot-preserving) but
+				// isolate it from dispatch/zombie recovery until the next stable
+				// scan. DB/network errors above still fail the whole scan.
+				looplogs.CtxWarn(ctx, "current source inconsistent, isolate item this scan: space_id=%d expt_id=%d run_id=%d item_id=%d err=%v", spaceID, exptID, runID, row.ItemID, err)
+				row.ObservationUnstable = true
+				row.Source = nil
+				continue
 			}
 			if source == nil || !source.Current.Matches(runID, row.RequestID) || source.Current.ItemVersionID != row.ItemVersionID || source.Current.Status != row.Status || source.Current.RetryTimes != row.RetryTimes || source.Current.UpdatedAt == nil || row.UpdatedAt == nil || !source.Current.UpdatedAt.Equal(*row.UpdatedAt) {
 				continue
@@ -318,7 +338,8 @@ func (dao *exptItemResultDAOImpl) MarkProcessingIfCurrent(ctx context.Context, s
 			return err
 		}
 		if stats.PendingCnt <= 0 {
-			return fmt.Errorf("queueing stats underflow")
+			// 旧链路计数可能漂移；状态 CAS 才是防双跑闸门，计数由 finish 全量重算兜底。
+			looplogs.CtxWarn(ctx, "legacy queueing stats drift: space_id=%d expt_id=%d item_id=%d pending_cnt=%d", spaceID, exptID, itemID, stats.PendingCnt)
 		}
 		for _, row := range []struct {
 			value any
@@ -342,7 +363,7 @@ func (dao *exptItemResultDAOImpl) MarkProcessingIfCurrent(ctx context.Context, s
 				return err
 			}
 		}
-		if err := tx.Model(&model.ExptStats{}).Where("id=?", stats.ID).Updates(map[string]any{"pending_cnt": gorm.Expr("pending_cnt - 1"), "processing_cnt": gorm.Expr("processing_cnt + 1")}).Error; err != nil {
+		if err := tx.Model(&model.ExptStats{}).Where("id=?", stats.ID).Updates(map[string]any{"pending_cnt": gorm.Expr("GREATEST(pending_cnt - 1, 0)"), "processing_cnt": gorm.Expr("GREATEST(processing_cnt + 1, 0)")}).Error; err != nil {
 			return err
 		}
 		changed = true

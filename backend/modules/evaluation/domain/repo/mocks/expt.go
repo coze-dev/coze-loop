@@ -683,6 +683,21 @@ func (mr *MockIExptItemResultRepoMockRecorder) UpdateItemRunLogIfNotTerminal(ctx
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateItemRunLogIfNotTerminal", reflect.TypeOf((*MockIExptItemResultRepo)(nil).UpdateItemRunLogIfNotTerminal), ctx, exptID, exptRunID, itemID, ufields, spaceID)
 }
 
+// SetTerminalQuotaReservationState mocks base method.
+func (m *MockIExptItemResultRepo) SetTerminalQuotaReservationState(ctx context.Context, spaceID, exptID, exptRunID, itemID int64, expectedRequestID string, state entity.QuotaReservationState) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetTerminalQuotaReservationState", ctx, spaceID, exptID, exptRunID, itemID, expectedRequestID, state)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SetTerminalQuotaReservationState indicates an expected call of SetTerminalQuotaReservationState.
+func (mr *MockIExptItemResultRepoMockRecorder) SetTerminalQuotaReservationState(ctx, spaceID, exptID, exptRunID, itemID, expectedRequestID, state any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTerminalQuotaReservationState", reflect.TypeOf((*MockIExptItemResultRepo)(nil).SetTerminalQuotaReservationState), ctx, spaceID, exptID, exptRunID, itemID, expectedRequestID, state)
+}
+
 // UpdateItemsResult mocks base method.
 func (m *MockIExptItemResultRepo) UpdateItemsResult(ctx context.Context, spaceID, exptID int64, itemID []int64, ufields map[string]any) error {
 	m.ctrl.T.Helper()

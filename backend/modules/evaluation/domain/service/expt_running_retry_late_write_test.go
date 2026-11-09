@@ -77,8 +77,8 @@ func TestLateWriteConsumerOriginalResume(t *testing.T) {
 			svc := &ExptItemEventEvalServiceImpl{exptItemResultRepo: items, exptTurnResultRepo: turns, evaluatorRecordService: records, evaTargetService: target}
 			called := false
 			err := svc.HandleCurrentSource(func(context.Context, *entity.ExptItemEvalEvent) error { called = true; return nil })(context.Background(), event)
-			require.Equal(t, kind == "turn0" || kind == "builtin0", called, "noncurrent original invocation must have zero downstream side effects")
-			if kind == "reader_failure" || kind == "missing_legacy" || kind == "incomplete_record" || kind == "unknown_record" {
+			require.Equal(t, kind == "turn0" || kind == "builtin0" || kind == "missing_legacy", called, "stale original invocation must not continue; legacy events keep the old path")
+			if kind == "reader_failure" || kind == "incomplete_record" || kind == "unknown_record" {
 				require.True(t, errno.NeedMQRetry(err))
 			} else {
 				require.NoError(t, err)

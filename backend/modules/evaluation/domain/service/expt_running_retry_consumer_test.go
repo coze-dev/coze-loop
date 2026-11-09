@@ -13,6 +13,7 @@ import (
 	lockmocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
 	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -20,15 +21,78 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestCurrentRequestLockBusyBrokerRetry(t *testing.T) {
+func TestCurrentRequestLockBusyWithoutSourceProofStaysRetryable(t *testing.T) {
+	for _, requestID := range []string{"", "rq1"} {
+		t.Run("request_"+requestID, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mutex := lockmocks.NewMockILocker(ctrl)
+			mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
+			publisher := eventmocks.NewMockExptEventPublisher(ctrl) // must not be called
+			svc := &ExptItemEventEvalServiceImpl{mutex: mutex, publisher: publisher}
+			called := false
+			err := svc.HandleEventLock(func(context.Context, *entity.ExptItemEvalEvent) error { called = true; return nil })(context.Background(), &entity.ExptItemEvalEvent{RequestID: requestID, ExptID: 1, EvalSetItemID: 2})
+			require.True(t, errno.NeedMQRetry(err), "a busy delivery without a primary source reader must stay retryable")
+			require.False(t, called, "a delivery that loses the lock must not execute twice")
+		})
+	}
+}
+
+func TestCurrentRequestLockBusyFullChainRetriesPendingSource(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mutex := lockmocks.NewMockILocker(ctrl)
+	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil).Times(2)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl) // no defer/retry/re-publish expected
+	repo := &currentUnitRepo{MockIExptItemResultRepo: repomocks.NewMockIExptItemResultRepo(ctrl), MockIExptCurrentResultRepo: repomocks.NewMockIExptCurrentResultRepo(ctrl)}
+	svc := &ExptItemEventEvalServiceImpl{mutex: mutex, publisher: publisher, exptItemResultRepo: repo}
+	executed := false
+	handler := RecordEvalChain(svc.HandleEventErr, svc.HandleEventLock)(func(context.Context, *entity.ExptItemEvalEvent) error {
+		executed = true
+		return nil
+	})
+	for _, requestID := range []string{"", "rq1"} {
+		repo.MockIExptItemResultRepo.EXPECT().GetCurrentRequest(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).
+			Return(&entity.ExptItemCurrentRequest{RunID: 2, ItemID: 9, RequestID: requestID, Mode: entity.EvaluationModeFailRetry, Status: entity.ItemRunState_Queueing}, nil)
+		err := handler(context.Background(), &entity.ExptItemEvalEvent{RequestID: requestID, SpaceID: 3, ExptID: 1, ExptRunID: 2, EvalSetItemID: 9, ExptRunMode: entity.EvaluationModeFailRetry})
+		require.True(t, errno.NeedMQRetry(err), "a pending Queueing source must be retried, not ACKed")
+	}
+	require.False(t, executed)
+}
+
+func TestCurrentRequestLockBusyAcksCompletedSource(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mutex := lockmocks.NewMockILocker(ctrl)
 	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
-	svc := &ExptItemEventEvalServiceImpl{mutex: mutex}
-	called := false
-	err := svc.HandleEventLock(func(context.Context, *entity.ExptItemEvalEvent) error { called = true; return nil })(context.Background(), &entity.ExptItemEvalEvent{ExptID: 1, EvalSetItemID: 2})
-	require.True(t, errno.NeedMQRetry(err), "busy lock must reach broker, never ACK")
-	require.False(t, called)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	repo := &currentUnitRepo{MockIExptItemResultRepo: repomocks.NewMockIExptItemResultRepo(ctrl), MockIExptCurrentResultRepo: repomocks.NewMockIExptCurrentResultRepo(ctrl)}
+	svc := &ExptItemEventEvalServiceImpl{mutex: mutex, publisher: publisher, exptItemResultRepo: repo}
+	repo.MockIExptItemResultRepo.EXPECT().GetCurrentRequest(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).
+		Return(&entity.ExptItemCurrentRequest{RunID: 2, ItemID: 9, RequestID: "req", Mode: entity.EvaluationModeFailRetry, Status: entity.ItemRunState_Success, ResultState: entity.ExptItemResultStateLogged}, nil)
+	frozen := currentUnitSource()
+	frozen.Current.Status = entity.ItemRunState_Success
+	frozen.Current.ResultState = entity.ExptItemResultStateLogged
+	repo.MockIExptCurrentResultRepo.EXPECT().GetCurrentItemRunSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).Return(frozen, nil)
+	executed := false
+	err := svc.HandleEventLock(func(context.Context, *entity.ExptItemEvalEvent) error { executed = true; return nil })(context.Background(), currentUnitEvent())
+	require.NoError(t, err, "a completed and logged source is complete proof and may be ACKed")
+	require.False(t, executed)
+}
+
+func TestCurrentRequestLockBusyAcksNonCurrentSource(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mutex := lockmocks.NewMockILocker(ctrl)
+	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	repo := &currentUnitRepo{MockIExptItemResultRepo: repomocks.NewMockIExptItemResultRepo(ctrl), MockIExptCurrentResultRepo: repomocks.NewMockIExptCurrentResultRepo(ctrl)}
+	svc := &ExptItemEventEvalServiceImpl{mutex: mutex, publisher: publisher, exptItemResultRepo: repo}
+	repo.MockIExptItemResultRepo.EXPECT().GetCurrentRequest(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).
+		Return(&entity.ExptItemCurrentRequest{RunID: 2, ItemID: 9, RequestID: "superseded", Mode: entity.EvaluationModeFailRetry, Status: entity.ItemRunState_Processing}, nil)
+	frozen := currentUnitSource()
+	frozen.Current.RequestID = "superseded"
+	repo.MockIExptCurrentResultRepo.EXPECT().GetCurrentItemRunSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).Return(frozen, nil)
+	executed := false
+	err := svc.HandleEventLock(func(context.Context, *entity.ExptItemEvalEvent) error { executed = true; return nil })(context.Background(), currentUnitEvent())
+	require.NoError(t, err, "an event whose request is no longer current may be ACKed")
+	require.False(t, executed)
 }
 
 func TestCurrentRequestBrokerRetryBypassesBudget(t *testing.T) {

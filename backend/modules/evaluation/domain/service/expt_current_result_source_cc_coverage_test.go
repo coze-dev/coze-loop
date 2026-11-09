@@ -491,11 +491,11 @@ func TestCCCurrentSourceCoverageValidateResumeWithoutSource(t *testing.T) {
 		async  bool
 		asyncE bool
 		want   bool
-		retry  bool
 	}{
 		{name: "plain_legacy_event", want: true},
-		{name: "async_report_without_identity", async: true, retry: true},
-		{name: "async_evaluator_report_without_identity", asyncE: true, retry: true},
+		// 旧异步事件没有 ResumeSource 也按老路径继续执行，不再返回 MQ 重试错误。
+		{name: "async_report_without_identity", async: true, want: true},
+		{name: "async_evaluator_report_without_identity", asyncE: true, want: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := ccCurrentSourceCoverageNewResumeFixture(t, "target")
@@ -504,12 +504,7 @@ func TestCCCurrentSourceCoverageValidateResumeWithoutSource(t *testing.T) {
 			f.event.AsyncEvaluatorReportTrigger = tc.asyncE
 			valid, err := f.svc.validateResumeSource(context.Background(), f.event, f.current)
 			require.Equal(t, tc.want, valid)
-			if tc.retry {
-				require.True(t, errno.NeedMQRetry(err))
-				require.ErrorContains(t, err, "legacy async event lacks original recoverable invocation identity")
-			} else {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
 		})
 	}
 }
@@ -596,11 +591,21 @@ func TestCCCurrentSourceCoverageValidateResumeTurnBranches(t *testing.T) {
 		{name: "foreign_run", mutate: func(l *entity.ExptTurnResultRunLog) { l.ExptRunID = 8 }},
 		{name: "foreign_item", mutate: func(l *entity.ExptTurnResultRunLog) { l.ItemID = 12 }},
 		{name: "foreign_item_version", mutate: func(l *entity.ExptTurnResultRunLog) { l.ItemVersionID = 14 }},
+		// 旧 run log 版本号为 0：老数据跳过版本比较，不因版本为空判死。
+		{name: "legacy_zero_item_version", mutate: func(l *entity.ExptTurnResultRunLog) { l.ItemVersionID = 0 }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := ccCurrentSourceCoverageNewResumeFixture(t, "target")
 			turn := ccCurrentSourceCoverageResumeTurn()
 			tc.mutate(turn)
+			if tc.name == "legacy_zero_item_version" {
+				ccCurrentSourceCoverageExpectTarget(f, turn, 3, ccCurrentSourceCoverageTargetRecord(entity.EvalTargetRunStatusSuccess), nil)
+				f.manager.EXPECT().GetDetail(gomock.Any(), int64(5), int64(3), gomock.Any()).Return(&entity.Experiment{SpaceID: 3}, nil)
+				valid, err := f.svc.validateResumeSource(context.Background(), f.event, f.current)
+				require.NoError(t, err)
+				require.True(t, valid)
+				return
+			}
 			ccCurrentSourceCoverageExpectTurn(f, []*entity.ExptTurnResultRunLog{turn}, nil)
 			valid, err := f.svc.validateResumeSource(context.Background(), f.event, f.current)
 			require.False(t, valid)

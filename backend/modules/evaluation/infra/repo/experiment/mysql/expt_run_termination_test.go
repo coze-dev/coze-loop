@@ -96,6 +96,38 @@ func TestTerminateRawZeroVersionAndMissingLogs(t *testing.T) {
 	require.Equal(t, int32(entity.ExptItemResultStateLogged), gptr.Indirect(item.ResultState))
 }
 
+func TestTerminateMixedZeroVersionLogsAreUpdated(t *testing.T) {
+	f := newCurrentResultFixture(t, "")
+	for _, table := range []string{"expt_item_result_run_log", "expt_turn_result", "expt_turn_result_run_log"} {
+		require.NoError(t, f.conn.Table(table).Where("space_id=?", f.space).Update("item_version_id", 0).Error)
+	}
+	source := f.source()
+	require.NotZero(t, source.Current.ItemVersionID, "the canonical item keeps its authoritative nonzero version")
+	port := NewExptRunFinishDAO(f.provider).(repo.IExptRunTerminationRepo)
+	result, err := port.TerminateCurrentRun(context.Background(), &entity.ExptRunTerminationRequest{SpaceID: f.space, ExptID: f.expt, RunID: f.run, Items: []*entity.ExptCurrentItemRunSource{source}})
+	require.NoError(t, err)
+	require.True(t, result.Applied)
+
+	var itemLog model.ExptItemResultRunLog
+	require.NoError(t, f.conn.Where("space_id=? AND item_id=?", f.space, f.item).Take(&itemLog).Error)
+	require.Equal(t, int32(entity.ItemRunState_Terminal), itemLog.Status)
+	var turnLogs []model.ExptTurnResultRunLog
+	require.NoError(t, f.conn.Where("space_id=? AND item_id=?", f.space, f.item).Find(&turnLogs).Error)
+	require.NotEmpty(t, turnLogs)
+	for _, log := range turnLogs {
+		require.Equal(t, int32(entity.TurnRunState_Terminal), log.Status, "every accepted legacy turn log must terminate")
+	}
+	var turns []model.ExptTurnResult
+	require.NoError(t, f.conn.Where("space_id=? AND item_id=?", f.space, f.item).Find(&turns).Error)
+	require.NotEmpty(t, turns)
+	for _, turn := range turns {
+		require.Equal(t, int32(entity.TurnRunState_Terminal), turn.Status, "every accepted legacy canonical turn must terminate")
+	}
+	var item model.ExptItemResult
+	require.NoError(t, f.conn.Where("space_id=? AND item_id=?", f.space, f.item).Take(&item).Error)
+	require.Equal(t, int32(entity.ItemRunState_Terminal), item.Status)
+}
+
 func TestNewRunResetRemovesOnlyManualContextAtMigration(t *testing.T) {
 	f := newCurrentResultFixture(t, "9f6fe7ea-7db6-4d16-8f5b-2d1344556677")
 	replacement := f.run + 100

@@ -24,6 +24,158 @@ import (
 // 1 分钟到期会 cancel opCtx，失败项一多整批重试就会回滚。
 const manualRetryLockMaxHold = 5 * time.Minute
 
+// retryTerminalReservationReleaseBudget 改排提交后释放旧预占的整批预算。
+// 提交已经落库，释放失败不能回滚改排，只能尽力完成并留下可告警的证据；预算与仓内
+// 终态释放的 8s 一致，避免账本故障时把同步请求拖过 5 分钟 run 锁租约。
+const retryTerminalReservationReleaseBudget = 8 * time.Second
+
+// releaseRetriedTerminalReservations 在改排事务提交之后释放上一轮终态 item 的预占。
+//
+// 为什么必须后移：调度侧判占用读的是 run log（LoadDispatchRuntime 只算 Queueing/Processing）。
+// 先提交再放额度，任何时刻都不会出现「账本已退还、run log 却仍待派发」的窗口；反过来
+// 先释放后提交一旦事务回滚，额度已在账本里消失，item 却还停在终态，同一请求重试时
+// ReleaseTerminalReservation 只会返回 Absent 并被当成成功 —— 少扣一条预占且没有任何补偿路径。
+//
+// 为什么提交后仍然要释放：改排把 item 推回 Queueing，下一次派发会以**新** token 重新预占；
+// 上一轮的 token 若不释放就会与新预占叠加，把账本 used 抬高（少放行）。
+//
+// 提交后的释放失败无法回滚已提交的改排，因此只尽力释放、不向调用方报错：
+//   - 用 WithoutCancel：租约到期/调用方取消不能把「已提交的改排」拖成未释放的旧预占；
+//   - 永远只带上一轮的 token，绝不触碰新一次执行的 token，否则新执行会失去额度保护；
+//   - 残余偏差方向是账本多算（少放行），而不是少算（超发）。
+//
+// 这里刻意不加重试：没有持久化 release intent 时，重试只能降低偶发失败概率，不能提供
+// 恢复；反而会让账本故障时的同步耗时按 item 数放大。跨 run 旧预占不在调度器每拍
+// reap/对账的扫描范围内，真正的恢复手段是账本侧对账或运维全量重建。
+func (m *ExptMangerImpl) releaseRetriedTerminalReservations(ctx context.Context, expt *entity.Experiment, items []*entity.PreparedRetryItem, requestID string) {
+	releaseCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), retryTerminalReservationReleaseBudget)
+	defer cancel()
+	for index, item := range items {
+		if item == nil || item.SourceItem == nil {
+			continue
+		}
+		if err := releaseCtx.Err(); err != nil {
+			logs.CtxError(ctx, "manual retry reservation release budget exhausted, expt_id=%d, item_id=%d, previous_run_id=%d, previous_request_id=%s, retry_request_id=%s, remaining_items=%d, err=%v",
+				expt.ID, item.SourceItem.ItemID, item.PreviousRunID, item.PreviousRequestID, requestID, len(items)-index, err)
+			return
+		}
+		released, err := m.centralGuard.ReleaseTerminalReservation(releaseCtx, expt.SchedulerScope, item.PreviousRunID, item.SourceItem.ItemID, item.PreviousRequestID)
+		if err != nil {
+			logs.CtxError(ctx, "manual retry reservation release failed, expt_id=%d, run_id=%d, item_id=%d, previous_run_id=%d, previous_request_id=%s, retry_request_id=%s, err=%v",
+				expt.ID, expt.LatestRunID, item.SourceItem.ItemID, item.PreviousRunID, item.PreviousRequestID, requestID, err)
+			continue
+		}
+		switch released {
+		case component.TerminalReservationReleased, component.TerminalReservationAbsent:
+			// 幂等成功：Absent 只说明那条预占已不在账本里（此前已释放），改排本身不受影响。
+		case component.TerminalReservationMismatch:
+			// 账本里那条预占已不属于本次改排的来源（可能被并发释放/重建）。改排已经提交，
+			// 这里既不能回滚也不能误删别人的预占，留给账本对账处理。
+			logs.CtxWarn(ctx, "manual retry reservation mismatch left to ledger reconciliation, expt_id=%d, item_id=%d, previous_run_id=%d, previous_request_id=%s, retry_request_id=%s",
+				expt.ID, item.SourceItem.ItemID, item.PreviousRunID, item.PreviousRequestID, requestID)
+		default:
+			logs.CtxWarn(ctx, "manual retry reservation release returned unknown result %d, expt_id=%d, item_id=%d, previous_request_id=%s",
+				released, expt.ID, item.SourceItem.ItemID, item.PreviousRequestID)
+		}
+	}
+}
+
+type manualRetryPrepareBatch struct {
+	itemLogs    map[int64][]*entity.ExptItemResultRunLog
+	itemRefs    map[int64]*entity.ExptItemRef
+	turnResults map[int64][]*entity.ExptTurnResult
+	turnLogs    map[int64][]*entity.ExptTurnResultRunLog
+	refsByTurn  map[int64][]*entity.ExptTurnEvaluatorResultRef
+}
+
+func chunkManualRetryIDs(ids []int64, size int) [][]int64 {
+	if len(ids) == 0 {
+		return nil
+	}
+	chunks := make([][]int64, 0, (len(ids)+size-1)/size)
+	for start := 0; start < len(ids); start += size {
+		end := start + size
+		if end > len(ids) {
+			end = len(ids)
+		}
+		chunks = append(chunks, ids[start:end])
+	}
+	return chunks
+}
+
+// loadManualRetryPrepareBatch batches the frozen-source reads that used to be
+// issued once per item. The per-item loop below keeps the exact validation
+// order and rejection reasons, but every table is now read in bounded IN
+// chunks and reused through maps.
+func (m *ExptMangerImpl) loadManualRetryPrepareBatch(ctx context.Context, expt *entity.Experiment, runID int64, items []*entity.ExptItemResult) (*manualRetryPrepareBatch, error) {
+	batch := &manualRetryPrepareBatch{
+		itemLogs:    make(map[int64][]*entity.ExptItemResultRunLog, len(items)),
+		itemRefs:    make(map[int64]*entity.ExptItemRef, len(items)),
+		turnResults: make(map[int64][]*entity.ExptTurnResult, len(items)),
+		turnLogs:    make(map[int64][]*entity.ExptTurnResultRunLog, len(items)),
+		refsByTurn:  make(map[int64][]*entity.ExptTurnEvaluatorResultRef, len(items)),
+	}
+	itemIDs := make([]int64, 0, len(items))
+	for _, item := range items {
+		itemIDs = append(itemIDs, item.ItemID)
+	}
+	needRefs := expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig
+	turnResultIDs := make([]int64, 0, len(items))
+	for _, chunk := range chunkManualRetryIDs(itemIDs, 2000) {
+		logs, err := m.itemResultRepo.MGetItemRunLog(ctx, expt.ID, runID, chunk, expt.SpaceID)
+		if err != nil {
+			return nil, err
+		}
+		for _, log := range logs {
+			if log != nil {
+				batch.itemLogs[log.ItemID] = append(batch.itemLogs[log.ItemID], log)
+			}
+		}
+		if needRefs {
+			refs, err := m.itemRefRepo.MGetByExptIDAndItemIDs(ctx, expt.SpaceID, expt.ID, chunk)
+			if err != nil {
+				return nil, err
+			}
+			for _, ref := range refs {
+				if ref != nil {
+					batch.itemRefs[ref.ItemID] = ref
+				}
+			}
+		}
+		turns, err := m.itemResultRepo.MGetItemTurnResults(ctx, expt.SpaceID, expt.ID, chunk)
+		if err != nil {
+			return nil, err
+		}
+		for _, turn := range turns {
+			if turn != nil {
+				batch.turnResults[turn.ItemID] = append(batch.turnResults[turn.ItemID], turn)
+				turnResultIDs = append(turnResultIDs, turn.ID)
+			}
+		}
+		turnLogs, err := m.turnResultRepo.MGetItemTurnRunLogs(ctx, expt.ID, runID, chunk, expt.SpaceID)
+		if err != nil {
+			return nil, err
+		}
+		for _, log := range turnLogs {
+			if log != nil {
+				batch.turnLogs[log.ItemID] = append(batch.turnLogs[log.ItemID], log)
+			}
+		}
+	}
+	for _, chunk := range chunkManualRetryIDs(turnResultIDs, 2000) {
+		refs, err := m.turnResultRepo.BatchGetTurnEvaluatorResultRef(ctx, expt.SpaceID, chunk)
+		if err != nil {
+			return nil, err
+		}
+		for _, ref := range refs {
+			if ref != nil {
+				batch.refsByTurn[ref.ExptTurnResultID] = append(batch.refsByTurn[ref.ExptTurnResultID], ref)
+			}
+		}
+	}
+	return batch, nil
+}
+
 func (m *ExptMangerImpl) prepareTerminalCandidatesAndReusableRefs(ctx context.Context, expt *entity.Experiment, runID int64, mode entity.ExptRunMode, itemIDs []int64, records EvaluatorRecordService) (*entity.ManualRetryPreparation, error) {
 	ctx = contexts.WithCtxWriteDB(ctx)
 	plan := &entity.ManualRetryPreparation{SnapshotAtMS: time.Now().UnixMilli()}
@@ -88,6 +240,22 @@ func (m *ExptMangerImpl) prepareTerminalCandidatesAndReusableRefs(ctx context.Co
 		}
 	}
 	sort.Slice(items, func(i, j int) bool { return items[i].ItemID < items[j].ItemID })
+	candidates := make([]*entity.ExptItemResult, 0, len(items))
+	for _, item := range items {
+		if manualRetryTerminalReason(item.Status) == "" {
+			candidates = append(candidates, item)
+		}
+	}
+	// A single item needs no prefetch; larger selections take one batched
+	// snapshot per table and reuse it in the per-item validation loop below.
+	var preparedBatch *manualRetryPrepareBatch
+	if len(candidates) > 1 {
+		var err error
+		preparedBatch, err = m.loadManualRetryPrepareBatch(ctx, expt, runID, candidates)
+		if err != nil {
+			return nil, err
+		}
+	}
 	for _, item := range items {
 		reason := manualRetryTerminalReason(item.Status)
 		if reason != "" {
@@ -108,9 +276,14 @@ func (m *ExptMangerImpl) prepareTerminalCandidatesAndReusableRefs(ctx context.Co
 			}
 			prepared.PreviousRequestID = previous.RequestID
 		}
-		itemLogs, err := m.itemResultRepo.MGetItemRunLog(ctx, expt.ID, runID, []int64{item.ItemID}, expt.SpaceID)
-		if err != nil {
-			return nil, err
+		var itemLogs []*entity.ExptItemResultRunLog
+		if preparedBatch != nil {
+			itemLogs = preparedBatch.itemLogs[item.ItemID]
+		} else {
+			itemLogs, err = m.itemResultRepo.MGetItemRunLog(ctx, expt.ID, runID, []int64{item.ItemID}, expt.SpaceID)
+			if err != nil {
+				return nil, err
+			}
 		}
 		if len(itemLogs) > 1 {
 			return nil, fmt.Errorf("duplicate current item log")
@@ -151,9 +324,16 @@ func (m *ExptMangerImpl) prepareTerminalCandidatesAndReusableRefs(ctx context.Co
 				TargetSpaceID: expt.TargetSpaceID, TargetType: expt.TargetType,
 			}
 		case entity.ExptEvalSetSourceType_MultiSetConfig:
-			prepared.FrozenItemRef, err = m.itemRefRepo.GetByExptIDAndItemID(ctx, expt.SpaceID, expt.ID, item.ItemID)
-			if err != nil {
-				return nil, err
+			if preparedBatch != nil {
+				prepared.FrozenItemRef = preparedBatch.itemRefs[item.ItemID]
+			}
+			if prepared.FrozenItemRef == nil {
+				// Keep the original missing-ref error for the rare drift path;
+				// the normal path is fully served by the batch read above.
+				prepared.FrozenItemRef, err = m.itemRefRepo.GetByExptIDAndItemID(ctx, expt.SpaceID, expt.ID, item.ItemID)
+				if err != nil {
+					return nil, err
+				}
 			}
 			ref := prepared.FrozenItemRef
 			if ref == nil || ref.SpaceID != expt.SpaceID || ref.ExptID != expt.ID || ref.ItemID != item.ItemID || ref.ItemVersionID != item.ItemVersionID {
@@ -163,7 +343,7 @@ func (m *ExptMangerImpl) prepareTerminalCandidatesAndReusableRefs(ctx context.Co
 			return nil, fmt.Errorf("invalid retry evaluation set source type")
 		}
 		prepared.ItemVersionID = item.ItemVersionID
-		if err := m.prepareManualRetryTurns(ctx, expt, runID, mode, prepared, records); err != nil {
+		if err := m.prepareManualRetryTurns(ctx, expt, runID, mode, prepared, records, preparedBatch); err != nil {
 			return nil, err
 		}
 		plan.Items = append(plan.Items, prepared)
@@ -185,17 +365,32 @@ func manualRetryTerminalReason(status entity.ItemRunState) string {
 	}
 }
 
-func (m *ExptMangerImpl) prepareManualRetryTurns(ctx context.Context, expt *entity.Experiment, runID int64, mode entity.ExptRunMode, item *entity.PreparedRetryItem, records EvaluatorRecordService) error {
-	turns, err := m.turnResultRepo.GetItemTurnResults(ctx, expt.ID, item.SourceItem.ItemID, expt.SpaceID)
-	if err != nil {
-		return err
+func (m *ExptMangerImpl) prepareManualRetryTurns(ctx context.Context, expt *entity.Experiment, runID int64, mode entity.ExptRunMode, item *entity.PreparedRetryItem, records EvaluatorRecordService, batches ...*manualRetryPrepareBatch) error {
+	var batch *manualRetryPrepareBatch
+	if len(batches) > 0 {
+		batch = batches[0]
+	}
+	var turns []*entity.ExptTurnResult
+	var logs []*entity.ExptTurnResultRunLog
+	var err error
+	if batch != nil {
+		turns = batch.turnResults[item.SourceItem.ItemID]
+		logs = batch.turnLogs[item.SourceItem.ItemID]
+	} else {
+		turns, err = m.turnResultRepo.GetItemTurnResults(ctx, expt.ID, item.SourceItem.ItemID, expt.SpaceID)
+		if err != nil {
+			return err
+		}
+		if len(turns) == 0 {
+			return fmt.Errorf("frozen retry turns missing")
+		}
+		logs, err = m.turnResultRepo.GetItemTurnRunLogs(ctx, expt.ID, runID, item.SourceItem.ItemID, expt.SpaceID)
+		if err != nil {
+			return err
+		}
 	}
 	if len(turns) == 0 {
 		return fmt.Errorf("frozen retry turns missing")
-	}
-	logs, err := m.turnResultRepo.GetItemTurnRunLogs(ctx, expt.ID, runID, item.SourceItem.ItemID, expt.SpaceID)
-	if err != nil {
-		return err
 	}
 	byTurn := make(map[int64]*entity.ExptTurnResultRunLog)
 	for _, log := range logs {
@@ -206,14 +401,27 @@ func (m *ExptMangerImpl) prepareManualRetryTurns(ctx context.Context, expt *enti
 	}
 	ids := make([]int64, 0, len(turns))
 	for _, turn := range turns {
-		if turn == nil || turn.SpaceID != expt.SpaceID || turn.ExptID != expt.ID || turn.ItemID != item.SourceItem.ItemID || turn.ExptRunID != item.PreviousRunID || turn.ItemVersionID != item.ItemVersionID {
+		if turn == nil || turn.SpaceID != expt.SpaceID || turn.ExptID != expt.ID || turn.ItemID != item.SourceItem.ItemID || turn.ItemVersionID != item.ItemVersionID {
+			return fmt.Errorf("invalid frozen retry turn")
+		}
+		// FailRetry 保留的历史成功 turn 仍属于旧 run，这是既有语义；
+		// 与 expt_current_result.go / expt_item_dispatch.go 的读侧规则保持一致。
+		if turn.ExptRunID != item.PreviousRunID &&
+			(mode != entity.EvaluationModeFailRetry || entity.TurnRunState(turn.Status) != entity.TurnRunState_Success) {
 			return fmt.Errorf("invalid frozen retry turn")
 		}
 		ids = append(ids, turn.ID)
 	}
-	refs, err := m.turnResultRepo.BatchGetTurnEvaluatorResultRef(ctx, expt.SpaceID, ids)
-	if err != nil {
-		return err
+	var refs []*entity.ExptTurnEvaluatorResultRef
+	if batch != nil {
+		for _, id := range ids {
+			refs = append(refs, batch.refsByTurn[id]...)
+		}
+	} else {
+		refs, err = m.turnResultRepo.BatchGetTurnEvaluatorResultRef(ctx, expt.SpaceID, ids)
+		if err != nil {
+			return err
+		}
 	}
 	refsByTurn := make(map[int64][]*entity.ExptTurnEvaluatorResultRef)
 	for _, ref := range refs {
@@ -365,12 +573,6 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	if err := validateCurrentRunRetry(normalized); err != nil {
 		return nil, err
 	}
-	if m.configer == nil {
-		return nil, fmt.Errorf("manual retry configer unavailable")
-	}
-	if !m.configer.GetExptExecConf(ctx, normalized.SpaceID).IsRunningRetryEnabled() {
-		return nil, errorx.NewByCode(errno.ManualRetryDisabledCode)
-	}
 	ctx = contexts.WithCtxWriteDB(ctx)
 	expt, err := m.exptRepo.GetByID(ctx, normalized.ExptID, normalized.SpaceID)
 	if err != nil {
@@ -446,7 +648,7 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 		}
 		candidates = append(candidates, item)
 	}
-	checkLocks := func() error {
+	checkAllLocks := func() error {
 		if err := opCtx.Err(); err != nil {
 			return err
 		}
@@ -457,7 +659,21 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 		}
 		return nil
 	}
-	if err := checkLocks(); err != nil {
+	// The acceptance loop can run tens of thousands of releases. A full lock
+	// sweep per item is O(n^2); opCtx is canceled as soon as any per-item lease
+	// is lost, and a full sweep still guards every commit boundary.
+	releaseChecks := 0
+	checkLocks := func() error {
+		if err := opCtx.Err(); err != nil {
+			return err
+		}
+		releaseChecks++
+		if releaseChecks%1024 == 0 {
+			return checkAllLocks()
+		}
+		return nil
+	}
+	if err := checkAllLocks(); err != nil {
 		return nil, err
 	}
 	operator := ""
@@ -475,34 +691,30 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 		if err := checkLocks(); err != nil {
 			return nil, err
 		}
-		if expt.ExptDispatchMode == entity.ExptDispatchModeEnforce {
-			if m.centralGuard == nil || expt.SchedulerScope == "" {
-				return nil, fmt.Errorf("terminal reservation release unavailable")
-			}
-			released, err := m.centralGuard.ReleaseTerminalReservation(opCtx, expt.SchedulerScope, item.PreviousRunID, item.SourceItem.ItemID, item.PreviousRequestID)
-			if err != nil {
-				return nil, err
-			}
-			switch released {
-			case component.TerminalReservationReleased, component.TerminalReservationAbsent:
-			case component.TerminalReservationMismatch:
-				commit.RejectedItems = append(commit.RejectedItems, &entity.ManualRetryRejectedItem{ItemID: item.SourceItem.ItemID, Reason: "reservation_mismatch"})
-				continue
-			default:
-				return nil, fmt.Errorf("invalid terminal reservation release result")
-			}
-		}
 		commit.Items = append(commit.Items, item)
 	}
-	if err := checkLocks(); err != nil {
+	enforce := expt.ExptDispatchMode == entity.ExptDispatchModeEnforce
+	// fail-closed 必须在任何写之前：enforce 实验若没有可用的账本，改排出来的 item 会在
+	// 下一次派发时既拿不到与上一轮对齐的释放、也说不清旧预占归谁，宁可整笔拒绝。
+	if enforce && len(commit.Items) > 0 && (m.centralGuard == nil || expt.SchedulerScope == "") {
+		return nil, fmt.Errorf("terminal reservation release unavailable")
+	}
+	if err := checkAllLocks(); err != nil {
 		return nil, err
 	}
 	receipt, err := m.manualRetryRepo.RequeueTerminalItems(opCtx, commit)
 	if err != nil {
+		// 提交失败时账本没有任何副作用：旧预占仍归上一轮所有，同一请求重试可在提交成功后释放恰好一次。
 		return nil, err
 	}
+	// 改排已经提交：先归还 run/item 锁，再做与 DB 状态无关的账本补偿。
+	// 释放只带上一轮的 token，不会影响新一次执行的预占；把它留在锁内会让账本故障时的
+	// 同步耗时直接吃掉 manualRetryLockMaxHold。
 	cancel()
 	stop()
+	if enforce {
+		m.releaseRetriedTerminalReservations(opCtx, expt, commit.Items, commit.RequestID)
+	}
 	if err := m.wakeCurrentRetryRun(ctx, expt, run); err != nil {
 		logs.CtxWarn(ctx, "wake current retry run failed, expt_id=%d, run_id=%d, err=%v", expt.ID, run.ExptRunID, err)
 	}

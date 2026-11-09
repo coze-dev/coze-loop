@@ -97,11 +97,13 @@ func (d *ExptManualRetryDAOImpl) allocateRetryLogIDs(ctx context.Context, items 
 }
 
 type lockedManualRetryItem struct {
-	prepared *entity.PreparedRetryItem
-	item     *model.ExptItemResult
-	log      *model.ExptItemResultRunLog
-	ext      []byte
-	turns    []*lockedManualRetryTurn
+	prepared  *entity.PreparedRetryItem
+	item      *model.ExptItemResult
+	log       *model.ExptItemResultRunLog
+	ext       []byte
+	frozenRef *model.ExptItemRef
+	state     *manualRetryState
+	turns     []*lockedManualRetryTurn
 }
 
 type lockedManualRetryTurn struct {
@@ -157,11 +159,15 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 				return fmt.Errorf("invalid rejected retry item")
 			}
 		}
+		state, err := d.loadManualRetryState(ctx, request, prepared, opts)
+		if err != nil {
+			return err
+		}
 		for index, item := range prepared {
 			if index > 0 && item.SourceItem.ItemID == prepared[index-1].SourceItem.ItemID {
 				return fmt.Errorf("duplicate prepared retry item")
 			}
-			current, reason, err := d.lockManualRetryItem(ctx, request, item, opts)
+			current, reason, err := d.lockManualRetryItem(ctx, request, item, opts, state)
 			if err != nil {
 				return err
 			}
@@ -230,10 +236,8 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 				}
 			}
 		}
-		for _, item := range accepted {
-			if err := d.writeManualRetryItem(ctx, request, item, logIDs[item.prepared], opts); err != nil {
-				return err
-			}
+		if err := d.writeManualRetryItems(ctx, request, accepted, logIDs, opts); err != nil {
+			return err
 		}
 		if len(accepted) > 0 {
 			if err := NewExptStatsDAO(d.provider).ArithOperateCount(ctx, request.ExptID, request.SpaceID, &entity.StatsCntArithOp{OpStatusCnt: deltas}, opts...); err != nil {
@@ -273,15 +277,22 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 	return receipt, nil
 }
 
-func (d *ExptManualRetryDAOImpl) lockManualRetryItem(ctx context.Context, r *entity.RequeueTerminalItemsRequest, p *entity.PreparedRetryItem, opts []db.Option) (*lockedManualRetryItem, string, error) {
-	rows, err := NewExptItemResultDAO(d.provider).BatchGet(ctx, r.SpaceID, r.ExptID, []int64{p.SourceItem.ItemID}, opts...)
-	if err != nil {
-		return nil, "", err
+func (d *ExptManualRetryDAOImpl) lockManualRetryItem(ctx context.Context, r *entity.RequeueTerminalItemsRequest, p *entity.PreparedRetryItem, opts []db.Option, state *manualRetryState) (*lockedManualRetryItem, string, error) {
+	var current *model.ExptItemResult
+	if state != nil {
+		current = state.itemsByItemID[p.SourceItem.ItemID]
+	} else {
+		rows, err := NewExptItemResultDAO(d.provider).BatchGet(ctx, r.SpaceID, r.ExptID, []int64{p.SourceItem.ItemID}, opts...)
+		if err != nil {
+			return nil, "", err
+		}
+		if len(rows) != 0 {
+			current = rows[0]
+		}
 	}
-	if len(rows) == 0 {
+	if current == nil {
 		return nil, "not_found", nil
 	}
-	current := rows[0]
 	ext, err := entity.ParseExptItemResultExt(gptr.Indirect(current.Ext))
 	if err != nil {
 		return nil, "", err
@@ -311,12 +322,17 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryItem(ctx context.Context, r *ent
 	if current.ExptRunID != p.PreviousRunID || previousRequest != p.PreviousRequestID || !reflect.DeepEqual(source, p.SourceItem) {
 		return nil, "source_changed", nil
 	}
-	log, err := NewExptItemResultDAO(d.provider).GetItemRunLog(ctx, r.ExptID, r.RunID, current.ItemID, r.SpaceID, opts...)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, "", err
-	}
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		log = nil
+	var log *model.ExptItemResultRunLog
+	if state != nil {
+		log = state.itemLogsByItemID[current.ItemID]
+	} else {
+		log, err = NewExptItemResultDAO(d.provider).GetItemRunLog(ctx, r.ExptID, r.RunID, current.ItemID, r.SpaceID, opts...)
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, "", err
+		}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log = nil
+		}
 	}
 	if log == nil {
 		if p.CurrentItemLog != nil || current.ExptRunID == r.RunID {
@@ -337,7 +353,11 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryItem(ctx context.Context, r *ent
 	if err != nil {
 		return nil, "", err
 	}
-	return &lockedManualRetryItem{prepared: p, item: current, log: log, ext: merged}, "", nil
+	frozenRef := (*model.ExptItemRef)(nil)
+	if state != nil {
+		frozenRef = state.itemRefsByItemID[current.ItemID]
+	}
+	return &lockedManualRetryItem{prepared: p, item: current, log: log, ext: merged, frozenRef: frozenRef, state: state}, "", nil
 }
 
 func retryTerminalReason(status entity.ItemRunState) string {
@@ -357,9 +377,15 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 	if reason, err := d.lockManualRetrySource(ctx, r, item, expt, opts); err != nil || reason != "" {
 		return reason, err
 	}
-	turns, err := NewExptTurnResultDAO(d.provider).GetItemTurnResults(ctx, r.ExptID, item.item.ItemID, r.SpaceID, opts...)
-	if err != nil {
-		return "", err
+	var turns []*model.ExptTurnResult
+	var err error
+	if item.state != nil {
+		turns = item.state.turnsByItemID[item.item.ItemID]
+	} else {
+		turns, err = NewExptTurnResultDAO(d.provider).GetItemTurnResults(ctx, r.ExptID, item.item.ItemID, r.SpaceID, opts...)
+		if err != nil {
+			return "", err
+		}
 	}
 	if len(turns) != len(item.prepared.Turns) || len(turns) == 0 {
 		return "source_changed", nil
@@ -374,19 +400,31 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 	sort.Slice(turns, func(i, j int) bool { return turns[i].ID < turns[j].ID })
 	for _, turn := range turns {
 		p := expected[turn.TurnID]
-		if p == nil || turn.ExptRunID != item.prepared.PreviousRunID || turn.ItemVersionID != item.prepared.ItemVersionID || !reflect.DeepEqual(convert.NewExptTurnResultConvertor().PO2DO(turn, p.SourceTurn.EvaluatorResults), p.SourceTurn) {
+		if p == nil || turn.ItemVersionID != item.prepared.ItemVersionID || !reflect.DeepEqual(convert.NewExptTurnResultConvertor().PO2DO(turn, p.SourceTurn.EvaluatorResults), p.SourceTurn) {
 			return "source_changed", nil
 		}
-		var log model.ExptTurnResultRunLog
-		err := d.provider.NewSession(ctx, opts...).Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND item_id = ? AND turn_id = ?", r.SpaceID, r.ExptID, r.RunID, item.item.ItemID, turn.TurnID).First(&log).Error
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			return "", err
+		// FailRetry 保留的历史成功 turn 属于旧 run，与准备阶段读侧规则一致。
+		if turn.ExptRunID != item.prepared.PreviousRunID &&
+			(r.Mode != entity.EvaluationModeFailRetry || entity.TurnRunState(turn.Status) != entity.TurnRunState_Success) {
+			return "source_changed", nil
 		}
 		var currentLog *model.ExptTurnResultRunLog
-		if err == nil {
-			currentLog = &log
-		} else if p.CurrentRunLog != nil || item.log != nil {
-			return "source_changed", nil
+		if item.state != nil {
+			currentLog = item.state.turnLogsByItemID[item.item.ItemID][turn.TurnID]
+			if currentLog == nil && (p.CurrentRunLog != nil || item.log != nil) {
+				return "source_changed", nil
+			}
+		} else {
+			var log model.ExptTurnResultRunLog
+			err = d.provider.NewSession(ctx, opts...).Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND item_id = ? AND turn_id = ?", r.SpaceID, r.ExptID, r.RunID, item.item.ItemID, turn.TurnID).First(&log).Error
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				return "", err
+			}
+			if err == nil {
+				currentLog = &log
+			} else if p.CurrentRunLog != nil || item.log != nil {
+				return "source_changed", nil
+			}
 		}
 		var logDO *entity.ExptTurnResultRunLog
 		if currentLog != nil {
@@ -406,9 +444,14 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 		if !reflect.DeepEqual(logDO, p.CurrentRunLog) {
 			return "source_changed", nil
 		}
-		refs, err := NewExptTurnEvaluatorResultRefDAO(d.provider).BatchGet(ctx, r.SpaceID, []int64{turn.ID}, opts...)
-		if err != nil {
-			return "", err
+		var refs []*model.ExptTurnEvaluatorResultRef
+		if item.state != nil {
+			refs = item.state.refsByTurnResultID[turn.ID]
+		} else {
+			refs, err = NewExptTurnEvaluatorResultRefDAO(d.provider).BatchGet(ctx, r.SpaceID, []int64{turn.ID}, opts...)
+			if err != nil {
+				return "", err
+			}
 		}
 		actual := make(map[int64]*entity.ExptTurnEvaluatorResultRef)
 		for _, ref := range refs {
@@ -439,14 +482,23 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 		if source == nil || source.SpaceID != r.SpaceID || source.ExptID != r.ExptID || source.ItemID != item.item.ItemID {
 			return "", fmt.Errorf("invalid frozen retry source log")
 		}
-		var row model.ExptTurnResultRunLog
-		if err := d.provider.NewSession(ctx, opts...).Where("space_id=? AND expt_id=? AND expt_run_id=? AND id=?", r.SpaceID, r.ExptID, source.ExptRunID, source.ID).First(&row).Error; err != nil {
-			return "", err
+		var row *model.ExptTurnResultRunLog
+		if item.state != nil {
+			row = item.state.sourceLogsByID[source.ID]
+			if row == nil {
+				return "", gorm.ErrRecordNotFound
+			}
+		} else {
+			var fetched model.ExptTurnResultRunLog
+			if err := d.provider.NewSession(ctx, opts...).Where("space_id=? AND expt_id=? AND expt_run_id=? AND id=?", r.SpaceID, r.ExptID, source.ExptRunID, source.ID).First(&fetched).Error; err != nil {
+				return "", err
+			}
+			row = &fetched
 		}
 		if err := validateManualRetryTurnExt(row.Ext); err != nil {
 			return "", err
 		}
-		got, err := convert.NewExptTurnResultRunLogConvertor().PO2DO(&row)
+		got, err := convert.NewExptTurnResultRunLogConvertor().PO2DO(row)
 		if err != nil {
 			return "", err
 		}
@@ -459,10 +511,18 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 			if turn.log != nil {
 				continue
 			}
-			var source model.ExptTurnResultRunLog
-			err := d.provider.NewSession(ctx, opts...).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND turn_id=?", r.SpaceID, r.ExptID, item.prepared.PreviousRunID, item.item.ItemID, turn.turn.TurnID).First(&source).Error
-			if err != nil {
-				return "", err
+			var source *model.ExptTurnResultRunLog
+			if item.state != nil {
+				source = item.state.previousLogsByItemID[item.item.ItemID][turn.turn.TurnID]
+				if source == nil {
+					return "", gorm.ErrRecordNotFound
+				}
+			} else {
+				var fetched model.ExptTurnResultRunLog
+				if err := d.provider.NewSession(ctx, opts...).Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND turn_id=?", r.SpaceID, r.ExptID, item.prepared.PreviousRunID, item.item.ItemID, turn.turn.TurnID).First(&fetched).Error; err != nil {
+					return "", err
+				}
+				source = &fetched
 			}
 			if source.ItemVersionID != item.prepared.ItemVersionID {
 				return "source_changed", nil
@@ -470,88 +530,13 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 			if err := validateManualRetryTurnExt(source.Ext); err != nil {
 				return "", err
 			}
-			if _, err := convert.NewExptTurnResultRunLogConvertor().PO2DO(&source); err != nil {
+			if _, err := convert.NewExptTurnResultRunLogConvertor().PO2DO(source); err != nil {
 				return "", err
 			}
-			turn.sourceLog = &source
+			turn.sourceLog = source
 		}
 	}
 	return "", nil
-}
-
-func (d *ExptManualRetryDAOImpl) writeManualRetryItem(ctx context.Context, r *entity.RequeueTerminalItemsRequest, item *lockedManualRetryItem, ids *manualRetryLogIDs, opts []db.Option) error {
-	conn := func() *gorm.DB { return d.provider.NewSession(ctx, opts...) }
-	if err := conn().Model(&model.ExptItemResult{}).Where("space_id = ? AND expt_id = ? AND id = ?", r.SpaceID, r.ExptID, item.item.ID).Updates(map[string]any{"status": int32(entity.ItemRunState_Queueing), "expt_run_id": r.RunID, "err_msg": nil, "log_id": "", "ext": item.ext}).Error; err != nil {
-		return err
-	}
-	if item.log == nil {
-		id := ids.itemID
-		if err := conn().Create(&model.ExptItemResultRunLog{ID: id, SpaceID: r.SpaceID, ExptID: r.ExptID, ExptRunID: r.RunID, ItemID: item.item.ItemID, ItemVersionID: item.prepared.ItemVersionID, Status: int32(entity.ItemRunState_Queueing), ResultState: gptr.Of(int32(entity.ExptItemResultStateDefault)), QuotaReservationState: int32(entity.QuotaReservationStateNone)}).Error; err != nil {
-			return err
-		}
-	} else {
-		if err := conn().Model(&model.ExptItemResultRunLog{}).Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND id = ?", r.SpaceID, r.ExptID, r.RunID, item.log.ID).Updates(map[string]any{"status": int32(entity.ItemRunState_Queueing), "result_state": int32(entity.ExptItemResultStateDefault), "quota_reservation_state": int32(entity.QuotaReservationStateNone), "err_msg": nil, "log_id": ""}).Error; err != nil {
-			return err
-		}
-	}
-
-	for _, turn := range item.turns {
-		p := turn.prepared
-		canonicalFields := map[string]any{"expt_run_id": r.RunID}
-		logFields := map[string]any{"expt_run_id": r.RunID}
-		if !p.PreserveSuccess {
-			canonicalFields["status"] = int32(entity.TurnRunState_Queueing)
-			canonicalFields["target_result_id"] = p.TargetResultID
-			canonicalFields["weighted_score"] = nil
-			canonicalFields["err_msg"] = nil
-			canonicalFields["log_id"] = ""
-			canonicalFields["trace_id"] = int64(0)
-			results, err := p.EvaluatorResults.Serialize()
-			if err != nil {
-				return err
-			}
-			for field, value := range canonicalFields {
-				if field != "weighted_score" {
-					logFields[field] = value
-				}
-			}
-			logFields["evaluator_result_ids"] = results
-		}
-		if err := conn().Model(&model.ExptTurnResult{}).Where("space_id = ? AND expt_id = ? AND id = ?", r.SpaceID, r.ExptID, turn.turn.ID).Updates(canonicalFields).Error; err != nil {
-			return err
-		}
-		if turn.log == nil {
-			id := ids.turnIDs[turn.turn.TurnID]
-			results, err := p.EvaluatorResults.Serialize()
-			if err != nil {
-				return err
-			}
-			row := &model.ExptTurnResultRunLog{ID: id, SpaceID: r.SpaceID, ExptID: r.ExptID, ExptRunID: r.RunID, ItemID: item.item.ItemID, ItemVersionID: item.prepared.ItemVersionID, TurnID: turn.turn.TurnID, Status: int32(entity.TurnRunState_Queueing), TargetResultID: p.TargetResultID, EvaluatorResultIds: &results}
-			if turn.sourceLog != nil {
-				row.Ext = turn.sourceLog.Ext
-			}
-			if p.PreserveSuccess {
-				row.Status = turn.turn.Status
-				row.TraceID = turn.turn.TraceID
-				row.LogID = turn.turn.LogID
-				row.ErrMsg = turn.turn.ErrMsg
-			}
-			if err := conn().Create(row).Error; err != nil {
-				return err
-			}
-		} else {
-			if err := conn().Model(&model.ExptTurnResultRunLog{}).Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND id = ?", r.SpaceID, r.ExptID, r.RunID, turn.log.ID).Updates(logFields).Error; err != nil {
-				return err
-			}
-		}
-
-		if !p.PreserveSuccess {
-			if err := NewExptTurnEvaluatorResultRefDAO(d.provider).DeleteByTurnResultIDs(ctx, r.SpaceID, r.ExptID, []int64{turn.turn.ID}, p.KeepRefIDs, opts...); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 // Preflight reuses final source validation without allocating IDs or writing rows.
@@ -587,12 +572,16 @@ func (d *ExptManualRetryDAOImpl) PreflightTerminalItems(ctx context.Context, req
 			}
 		}
 		sort.Slice(items, func(i, j int) bool { return items[i].SourceItem.ItemID < items[j].SourceItem.ItemID })
+		state, err := d.loadManualRetryState(ctx, request, items, opts)
+		if err != nil {
+			return err
+		}
 		accepted := make([]*lockedManualRetryItem, 0, len(items))
 		for i, item := range items {
 			if i > 0 && item.SourceItem.ItemID == items[i-1].SourceItem.ItemID {
 				return fmt.Errorf("duplicate prepared retry item")
 			}
-			current, reason, err := d.lockManualRetryItem(ctx, request, item, opts)
+			current, reason, err := d.lockManualRetryItem(ctx, request, item, opts, state)
 			if err != nil {
 				return err
 			}

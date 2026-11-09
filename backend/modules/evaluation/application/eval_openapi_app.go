@@ -1344,6 +1344,7 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		logs.CtxInfo(ctx, "report target record, record_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v, item_id: %v", req.GetInvokeID(), req.GetWorkspaceID(), actx.Event.ExptID, actx.Event.ExptRunID, actx.Event.EvalSetItemID)
 	}
 	var resumeEvent *entity.ExptItemEvalEvent
+	terminalRetry := false
 	if actx.Event != nil {
 		// Prepare the original source before the terminal write, so a read failure
 		// can be retried while ReportInvokeRecords still accepts this invocation.
@@ -1354,27 +1355,37 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		if record == nil || record.ID != req.GetInvokeID() || record.TurnID < 0 {
 			return nil, errorx.New("target resume source unavailable, invoke_id: %v", req.GetInvokeID())
 		}
+		// A retry after an earlier callback already wrote a terminal result must
+		// still publish its resume source. ReportInvokeRecords rejects any record
+		// that is no longer AsyncInvoking, so re-issuing the write would return an
+		// error before the resume is published and strand the item until the
+		// zombie timeout. This is the target equivalent of the evaluator Conflict
+		// path: the result is not re-applied, the source identity is unchanged,
+		// and a duplicate resume event is dropped/reused by the item source guard.
+		terminalRetry = record.Status != nil && (*record.Status == entity.EvalTargetRunStatusSuccess || *record.Status == entity.EvalTargetRunStatusFail)
 		resumeEvent = actx.Event.CloneWithResumeSource("target", record.ID, record.TurnID)
 	}
 	outputData := target.ToInvokeOutputDataDO(req)
 	outputData.TimeConsumingMS = gptr.Of(time.Now().UnixMilli() - actx.AsyncUnixMS)
-	if err := e.targetSvc.ReportInvokeRecords(ctx, &entity.ReportTargetRecordParam{
-		SpaceID:                 req.GetWorkspaceID(),
-		RecordID:                req.GetInvokeID(),
-		OutputData:              outputData,
-		Status:                  target.ToTargetRunStatsDO(req.GetStatus()),
-		Session:                 actx.Session,
-		EnableExtractTrajectory: actx.EnableExtractTrajectory,
-		AsyncUnixMS:             actx.AsyncUnixMS,
-		// 沙箱 agent 评测对象加白:直接沿用上报方提供的错误文案,不再经过 ExptErrCtrl 归一化。
-		SkipErrMsgConvert: actx.Callee == sandboxAgentAsyncCallee,
-	}); err != nil {
-		return nil, err
-	}
+	if !terminalRetry {
+		if err := e.targetSvc.ReportInvokeRecords(ctx, &entity.ReportTargetRecordParam{
+			SpaceID:                 req.GetWorkspaceID(),
+			RecordID:                req.GetInvokeID(),
+			OutputData:              outputData,
+			Status:                  target.ToTargetRunStatsDO(req.GetStatus()),
+			Session:                 actx.Session,
+			EnableExtractTrajectory: actx.EnableExtractTrajectory,
+			AsyncUnixMS:             actx.AsyncUnixMS,
+			// 沙箱 agent 评测对象加白:直接沿用上报方提供的错误文案,不再经过 ExptErrCtrl 归一化。
+			SkipErrMsgConvert: actx.Callee == sandboxAgentAsyncCallee,
+		}); err != nil {
+			return nil, err
+		}
 
-	// 回调侧打点：evaluation_target_sandbox_agent.invoke_finished / invoke_duration
-	// 用 AsyncCtx.AsyncUnixMS 与当前时间差计算端到端异步耗时。仅对沙箱 agent 目标上报的调用生效。
-	e.emitSandboxAgentInvokeFinished(ctx, req, actx)
+		// 回调侧打点：evaluation_target_sandbox_agent.invoke_finished / invoke_duration
+		// 用 AsyncCtx.AsyncUnixMS 与当前时间差计算端到端异步耗时。仅对沙箱 agent 目标上报的调用生效。
+		e.emitSandboxAgentInvokeFinished(ctx, req, actx)
+	}
 
 	if resumeEvent != nil {
 		if err := e.publisher.PublishExptRecordEvalEvent(ctx, resumeEvent, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(req.GetWorkspaceID())+time.Second*35),
@@ -3831,9 +3842,15 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	if err != nil {
 		return nil, err
 	}
-	if outcome == entity.ReportEvaluatorResultConflict {
-		return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
-	}
+	// A Conflict is not a dead end: the record may already be terminal because an
+	// earlier Applied attempt succeeded but failed to publish its resume event (or
+	// the provider timed out after the publish). The provider then retries with a
+	// different terminal status and lands here. Returning success immediately would
+	// strand the item in Processing until the zombie timeout, so fall through to the
+	// same resume path. It re-derives the source from the stored record (identity
+	// checks unchanged), never re-applies a result and never re-dispatches the
+	// provider callback; a duplicate resume event is dropped by the item source
+	// guard and reuses existing turn refs instead of re-running target/evaluator.
 	var resumeErr error
 	if actx.Event != nil {
 		// Refresh readiness alone; source and notification settings stay frozen.
@@ -3866,7 +3883,8 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	}
 
 	// An Applied result only occurs once; deliver its best-effort notification
-	// before returning a recovery error that the provider may retry as Duplicate.
+	// before returning a recovery error that the provider may retry as Duplicate
+	// or Conflict.
 	if outcome == entity.ReportEvaluatorResultApplied && actx.CallbackURL != "" {
 		payload := &openapi.EvaluatorCallbackPayloadOApi{
 			InvokeID:           gptr.Of(req.GetInvokeID()),

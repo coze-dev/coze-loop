@@ -171,7 +171,7 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 						break
 					}
 				}
-				if c.RequestID != "" || prepared == nil || prepared.ID <= 0 || prepared.SpaceID != c.SpaceID || prepared.ExptID != c.ExptID || prepared.ExptRunID != c.RunID || prepared.ItemVersionID != c.ItemVersionID {
+				if c.RequestID != "" || prepared == nil || prepared.ID <= 0 || prepared.SpaceID != c.SpaceID || prepared.ExptID != c.ExptID || prepared.ExptRunID != c.RunID || (prepared.ItemVersionID != c.ItemVersionID && prepared.ItemVersionID != 0) {
 					return fmt.Errorf("raw termination turn preparation missing")
 				}
 				po, err := convert.NewExptTurnResultRunLogConvertor().DO2PO(prepared)
@@ -183,21 +183,21 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 				}
 			}
 			errBytes := []byte(errno.SerializeErr(errno.NewItemManuallyTerminatedErr()))
-			scope := "space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?"
-			args := []any{c.SpaceID, c.ExptID, c.RunID, c.ItemID, c.ItemVersionID}
+			scope := "space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?"
+			args := []any{c.SpaceID, c.ExptID, c.RunID, c.ItemID}
 			if !r.NoCompleteItemTurn {
-				if err := tx.Model(&model.ExptTurnResultRunLog{}).Where(scope, args...).Updates(map[string]any{"status": int32(entity.TurnRunState_Terminal), "err_msg": errBytes}).Error; err != nil {
+				if err := tx.Model(&model.ExptTurnResultRunLog{}).Where(scope, args...).Where("item_version_id IN ?", []int64{c.ItemVersionID, 0}).Updates(map[string]any{"status": int32(entity.TurnRunState_Terminal), "err_msg": errBytes}).Error; err != nil {
 					return err
 				}
-				if err := tx.Model(&model.ExptTurnResult{}).Where(scope, args...).Updates(map[string]any{"status": int32(entity.TurnRunState_Terminal)}).Error; err != nil {
+				if err := tx.Model(&model.ExptTurnResult{}).Where(scope, args...).Where("item_version_id IN ?", []int64{c.ItemVersionID, 0}).Updates(map[string]any{"status": int32(entity.TurnRunState_Terminal)}).Error; err != nil {
 					return err
 				}
 			}
-			if err := tx.Model(&model.ExptItemResultRunLog{}).Where(scope, args...).Updates(map[string]any{"status": int32(entity.ItemRunState_Terminal), "result_state": int32(entity.ExptItemResultStateLogged), "err_msg": errBytes}).Error; err != nil {
+			if err := tx.Model(&model.ExptItemResultRunLog{}).Where(scope, args...).Where("item_version_id IN ?", []int64{c.ItemVersionID, 0}).Updates(map[string]any{"status": int32(entity.ItemRunState_Terminal), "result_state": int32(entity.ExptItemResultStateLogged), "err_msg": errBytes}).Error; err != nil {
 				return err
 			}
 			if !r.NoCompleteItemTurn {
-				if err := tx.Model(&model.ExptItemResult{}).Where(scope, args...).Updates(map[string]any{"status": int32(entity.ItemRunState_Terminal), "err_msg": errBytes}).Error; err != nil {
+				if err := tx.Model(&model.ExptItemResult{}).Where(scope, args...).Where("item_version_id=?", c.ItemVersionID).Updates(map[string]any{"status": int32(entity.ItemRunState_Terminal), "err_msg": errBytes}).Error; err != nil {
 					return err
 				}
 			}
