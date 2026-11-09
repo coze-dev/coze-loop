@@ -1915,6 +1915,13 @@ func (e *ExptMangerImpl) Clone(ctx context.Context, exptID, spaceID int64, sessi
 	}
 
 	expt.ID = id
+	// runner_envs is write-only secret input. Cloning its ciphertext would make the
+	// new experiment silently reuse credentials the caller cannot read or replace.
+	if expt.EvalConf != nil {
+		clonedConf := *expt.EvalConf
+		clonedConf.RunnerEnvs = nil
+		expt.EvalConf = &clonedConf
+	}
 
 	return expt, e.Create(ctx, expt, session)
 }
