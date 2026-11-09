@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
@@ -107,6 +108,9 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 		}
 		if expt.LatestRunID != r.RunID {
 			result.NonCurrent = true
+			if r.Finalize && !r.Begin && !r.SetupAbort {
+				return d.completeHistoricalRun(ctx, tx, &expt, &run, r.Status, r.StatusMessage)
+			}
 			return nil
 		}
 		if expt.ExptType != int32(entity.ExptType_Offline) || run.Status == nil {
@@ -126,7 +130,15 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 			result.Applied = true
 			return ctx.Err()
 		}
-		if entity.IsExptFinished(entity.ExptStatus(expt.Status)) || entity.IsExptFinished(entity.ExptStatus(*run.Status)) {
+		runStatus := entity.ExptStatus(*run.Status)
+		// Decide under the SQL locks: the original legacy pair still owns these
+		// intermediate states, including explicit termination's two writes.
+		legacyCompleted := expt.Status == int32(entity.ExptStatus_Processing) && (runStatus == entity.ExptStatus_Success || runStatus == entity.ExptStatus_Failed)
+		legacyTerminating := r.Status == entity.ExptStatus_Terminated && (expt.Status == int32(entity.ExptStatus_Processing) && runStatus == entity.ExptStatus_Terminating || expt.Status == int32(entity.ExptStatus_Terminating) && runStatus == entity.ExptStatus_Terminated)
+		if legacyCompleted || legacyTerminating {
+			return errno.NewMQRetryErr("legacy current run completion pending")
+		}
+		if entity.IsExptFinished(entity.ExptStatus(expt.Status)) || entity.IsExptFinished(runStatus) {
 			if !r.Finalize || !entity.IsExptFinished(entity.ExptStatus(expt.Status)) || !entity.IsExptFinished(entity.ExptStatus(*run.Status)) || expt.EndAt == nil {
 				return fmt.Errorf("termination requires active current run")
 			}
@@ -285,6 +297,9 @@ func (d *ExptRunFinishDAOImpl) TerminateCurrentRun(ctx context.Context, r *entit
 			result.Experiment, err = convert.NewExptConverter().PO2DO(&expt, nil)
 			if err != nil {
 				return err
+			}
+			if !entity.IsExptFinished(runStatus) && r.BeforeCommit != nil {
+				return r.BeforeCommit(ctx, entity.ExptRunMode(gptr.Indirect(run.Mode)))
 			}
 		}
 		return ctx.Err()

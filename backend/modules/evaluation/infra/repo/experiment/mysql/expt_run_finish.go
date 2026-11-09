@@ -42,13 +42,21 @@ func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.E
 		}
 		if expt.LatestRunID != r.RunID {
 			result.Disposition = entity.ExptRunFinishNonCurrent
-			return nil
+			return d.completeHistoricalRun(ctx, tx, expt, run, 0, "")
 		}
 		if expt.ExptType != int32(entity.ExptType_Offline) {
 			return fmt.Errorf("natural current-run finish requires offline experiment")
 		}
-		runFinished := entity.IsExptFinished(entity.ExptStatus(gptr.Indirect(run.Status)))
+		runStatus := entity.ExptStatus(gptr.Indirect(run.Status))
+		runFinished := entity.IsExptFinished(runStatus)
 		exptFinished := entity.IsExptFinished(entity.ExptStatus(expt.Status))
+		// The old CompleteRun can commit after the manager's pre-read. Its
+		// in-flight CompleteExpt still owns completion and shared cleanup.
+		legacyCompleted := expt.Status == int32(entity.ExptStatus_Processing) && (runStatus == entity.ExptStatus_Success || runStatus == entity.ExptStatus_Failed)
+		if legacyCompleted {
+			result.Disposition = entity.ExptRunFinishPending
+			return nil
+		}
 		if runFinished || exptFinished {
 			if !runFinished || !exptFinished || expt.EndAt == nil {
 				return fmt.Errorf("inconsistent partially finished current run")
@@ -57,7 +65,7 @@ func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.E
 			result.Experiment, err = convert.NewExptConverter().PO2DO(expt, nil)
 			return err
 		}
-		if expt.Status != int32(entity.ExptStatus_Processing) || (gptr.Indirect(run.Status) != int64(entity.ExptStatus_Pending) && gptr.Indirect(run.Status) != int64(entity.ExptStatus_Processing)) {
+		if expt.Status != int32(entity.ExptStatus_Processing) || (runStatus != entity.ExptStatus_Pending && runStatus != entity.ExptStatus_Processing) {
 			return fmt.Errorf("finish requires active experiment and run")
 		}
 		session := d.provider.NewSession(ctx, opts...)
@@ -108,7 +116,7 @@ func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.E
 		if err := session.Where("space_id=? AND expt_id=?", r.SpaceID, r.ExptID).Take(&stats).Error; err != nil {
 			return err
 		}
-		runStatus := entity.ExptStatus_Success
+		runStatus = entity.ExptStatus_Success
 		// Preserve calculateRunLogStats: canonical turns across all runs, including
 		// unexecuted turns after an item failure. Those counts do not block finish.
 		if turnCounts.pending > 0 || turnCounts.fail > 0 {
@@ -133,12 +141,63 @@ func (d *ExptRunFinishDAOImpl) FinishCurrentRun(ctx context.Context, r *entity.E
 		expt.Status = int32(exptStatus)
 		expt.EndAt = &now
 		result.Experiment, err = convert.NewExptConverter().PO2DO(expt, nil)
-		return err
+		if err != nil {
+			return err
+		}
+		if r.BeforeCommit != nil {
+			return r.BeforeCommit(ctx, entity.ExptRunMode(gptr.Indirect(run.Mode)))
+		}
+		return nil
 	}, db.WithMaster())
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
+}
+
+func (d *ExptRunFinishDAOImpl) completeHistoricalRun(ctx context.Context, tx *gorm.DB, expt *model.Experiment, run *model.ExptRunLog, status entity.ExptStatus, message string) error {
+	if run.Status == nil {
+		return fmt.Errorf("historical run status missing")
+	}
+	if entity.IsExptFinished(entity.ExptStatus(*run.Status)) {
+		return nil
+	}
+	if expt.ExptType != int32(entity.ExptType_Offline) || expt.LatestRunID <= 0 || expt.LatestRunID == run.ExptRunID {
+		return fmt.Errorf("historical completion requires another current offline run")
+	}
+	var latest model.ExptRunLog
+	if err := tx.WithContext(ctx).Where("space_id=? AND expt_id=? AND expt_run_id=?", expt.SpaceID, expt.ID, expt.LatestRunID).Take(&latest).Error; err != nil {
+		return err
+	}
+	active := []int64{int64(entity.ExptStatus_Pending), int64(entity.ExptStatus_Processing), int64(entity.ExptStatus_Terminating)}
+	if *run.Status != active[0] && *run.Status != active[1] && *run.Status != active[2] {
+		return fmt.Errorf("invalid historical run status")
+	}
+	var turns []model.ExptTurnResultRunLog
+	if err := tx.WithContext(ctx).Select("status").Where("space_id=? AND expt_id=? AND expt_run_id=?", run.SpaceID, run.ExptID, run.ExptRunID).Find(&turns).Error; err != nil {
+		return err
+	}
+	var counts finishCounts
+	for _, turn := range turns {
+		counts.addTurn(entity.TurnRunState(turn.Status))
+	}
+	if status == 0 {
+		status = entity.ExptStatus_Success
+		if counts.pending > 0 || counts.fail > 0 {
+			status = entity.ExptStatus_Failed
+		}
+	} else if status != entity.ExptStatus_Failed && status != entity.ExptStatus_Terminated {
+		return fmt.Errorf("invalid historical explicit status")
+	}
+	// R2 owns canonical projections; only R1's historical log may be updated.
+	fields := counts.fields("status", int64(status))
+	fields["updated_at"] = time.Now()
+	if message != "" {
+		fields["status_message"] = []byte(message)
+	}
+	return tx.WithContext(ctx).Model(&model.ExptRunLog{}).
+		Where("space_id=? AND expt_id=? AND expt_run_id=? AND status IN ?", run.SpaceID, run.ExptID, run.ExptRunID, active).
+		UpdateColumns(fields).Error
 }
 
 // Counts follow the existing canonical projection readers. Item and turn

@@ -14,6 +14,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -553,6 +554,8 @@ func normalizeCurrentRunRetry(req *entity.RetryInCurrentRunRequest) (*entity.Ret
 }
 
 func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.RetryInCurrentRunRequest) (*entity.ManualRetryReceipt, error) {
+	ctx, finishWait := context.WithTimeout(ctx, 25*time.Second)
+	defer finishWait()
 	normalized, err := normalizeCurrentRunRetry(req)
 	if err != nil {
 		return nil, err
@@ -585,6 +588,83 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	if err != nil {
 		return nil, err
 	}
+
+	operator := ""
+	if normalized.Session != nil {
+		operator = normalized.Session.UserID
+	}
+	commit := &entity.RequeueTerminalItemsRequest{SpaceID: expt.SpaceID, ExptID: expt.ID, RunID: normalized.ExpectedRunID, RequestID: uuid.NewString(), Operator: operator, Mode: normalized.Mode, SnapshotAtMS: plan.SnapshotAtMS, Items: plan.Items, RejectedItems: plan.RejectedItems}
+	checked, err := m.manualRetryRepo.PreflightTerminalItems(ctx, commit)
+	if err != nil {
+		return nil, err
+	}
+	commit.Items, commit.RejectedItems = checked.Items, checked.RejectedItems
+	if len(commit.Items) == 0 {
+		receipt, err := m.manualRetryRepo.RequeueTerminalItems(ctx, commit)
+		if receipt != nil {
+			receipt.RunID = normalized.ExpectedRunID
+		}
+		if err == nil && expt.ExptDispatchMode == entity.ExptDispatchModeEnforce {
+			if wakeErr := m.wakeCurrentRetryRun(ctx, expt, nil); wakeErr != nil {
+				logs.CtxWarn(ctx, "wake current retry run failed, expt_id=%d, run_id=%d, err=%v", expt.ID, normalized.ExpectedRunID, wakeErr)
+			}
+		}
+		return receipt, err
+	}
+	pendingRepo, ok := m.manualRetryRepo.(repo.IExptManualRetryPendingRepo)
+	if !ok {
+		return nil, fmt.Errorf("pending manual retry repository unavailable")
+	}
+	deadline, _ := ctx.Deadline()
+	pending := &repo.ManualRetryPending{Request: commit, ExpiresAtMS: deadline.UnixMilli()}
+	if err := pendingRepo.RegisterPendingRetry(ctx, pending); err != nil {
+		if _, business := errorx.FromStatusError(err); business {
+			return nil, err
+		}
+		cancelCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
+		defer cancel()
+		receipt, cancelErr := pendingRepo.ResolvePendingRetry(cancelCtx, pending, true)
+		if receipt != nil {
+			return receipt, nil
+		}
+		if status, ok := errorx.FromStatusError(cancelErr); ok && status.Code() == errno.ManualRetryBusyCode {
+			return nil, err
+		}
+		return nil, errorx.Wrapf(cancelErr, "manual retry request %s registration/result unresolved", commit.RequestID)
+	}
+	poll := time.NewTicker(100 * time.Millisecond)
+	defer poll.Stop()
+	for {
+		current, err := pendingRepo.GetPendingRetry(ctx, commit.SpaceID, commit.ExptID, commit.RunID)
+		if err == nil && (current == nil || current.PreparedReceipt != nil) {
+			receipt, resolveErr := pendingRepo.ResolvePendingRetry(ctx, pending, false)
+			if resolveErr != nil || receipt != nil {
+				return receipt, resolveErr
+			}
+		}
+		if err != nil || ctx.Err() != nil {
+			cancelCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
+			defer cancel()
+			receipt, cancelErr := pendingRepo.ResolvePendingRetry(cancelCtx, pending, true)
+			if cancelErr != nil {
+				return nil, errorx.Wrapf(cancelErr, "manual retry request %s cancellation/result", commit.RequestID)
+			}
+			return receipt, nil
+		}
+		select {
+		case <-ctx.Done():
+		case <-poll.C:
+		}
+	}
+}
+
+func (m *ExptMangerImpl) applyPendingCurrentRetry(ctx context.Context, pending *repo.ManualRetryPending) (*entity.ManualRetryReceipt, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	commit := pending.Request
+	normalized := &entity.RetryInCurrentRunRequest{SpaceID: commit.SpaceID, ExptID: commit.ExptID, ExpectedRunID: commit.RunID, Mode: commit.Mode}
+	plan := &entity.ManualRetryPreparation{Items: append([]*entity.PreparedRetryItem(nil), commit.Items...), RejectedItems: append([]*entity.ManualRetryRejectedItem(nil), commit.RejectedItems...), SnapshotAtMS: commit.SnapshotAtMS}
 	if m.manualRetryLocker == nil {
 		return nil, fmt.Errorf("manual retry locker unavailable")
 	}
@@ -592,18 +672,8 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	if locker == nil {
 		return nil, fmt.Errorf("manual retry locker unavailable")
 	}
-	locked, lockCtx, cancel, err := locker.LockWithRenew(ctx, fmt.Sprintf("expt_run_exec_lock:%d:%d", expt.ID, normalized.ExpectedRunID), 5*time.Second, manualRetryLockMaxHold)
-	if err != nil {
-		return nil, err
-	}
-	if !locked {
-		return nil, errorx.NewByCode(errno.ManualRetryBusyCode)
-	}
-	defer cancel()
-	if err := lockCtx.Err(); err != nil {
-		return nil, err
-	}
-	expt, err = m.exptRepo.GetByID(lockCtx, normalized.ExptID, normalized.SpaceID)
+	lockCtx := contexts.WithCtxWriteDB(ctx)
+	expt, err := m.exptRepo.GetByID(lockCtx, normalized.ExptID, normalized.SpaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -676,11 +746,7 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	if err := checkAllLocks(); err != nil {
 		return nil, err
 	}
-	operator := ""
-	if normalized.Session != nil {
-		operator = normalized.Session.UserID
-	}
-	commit := &entity.RequeueTerminalItemsRequest{SpaceID: expt.SpaceID, ExptID: expt.ID, RunID: normalized.ExpectedRunID, RequestID: uuid.NewString(), Operator: operator, Mode: normalized.Mode, SnapshotAtMS: plan.SnapshotAtMS, Items: candidates, RejectedItems: plan.RejectedItems}
+	commit.Items, commit.RejectedItems = candidates, plan.RejectedItems
 	checked, err := m.manualRetryRepo.PreflightTerminalItems(opCtx, commit)
 	if err != nil {
 		return nil, err
@@ -707,16 +773,16 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 		// 提交失败时账本没有任何副作用：旧预占仍归上一轮所有，同一请求重试可在提交成功后释放恰好一次。
 		return nil, err
 	}
-	// 改排已经提交：先归还 run/item 锁，再做与 DB 状态无关的账本补偿。
-	// 释放只带上一轮的 token，不会影响新一次执行的预占；把它留在锁内会让账本故障时的
-	// 同步耗时直接吃掉 manualRetryLockMaxHold。
-	cancel()
+	// 改排提交后归还 item 锁；原 tick 保留 run 锁并负责后继。
+	// 账本补偿只带上一轮 token，并受独立释放预算约束。
 	stop()
 	if enforce {
 		m.releaseRetriedTerminalReservations(opCtx, expt, commit.Items, commit.RequestID)
 	}
-	if err := m.wakeCurrentRetryRun(ctx, expt, run); err != nil {
-		logs.CtxWarn(ctx, "wake current retry run failed, expt_id=%d, run_id=%d, err=%v", expt.ID, run.ExptRunID, err)
+	if enforce {
+		if err := m.wakeCurrentRetryRun(ctx, expt, run); err != nil {
+			logs.CtxWarn(ctx, "wake current retry run failed, expt_id=%d, run_id=%d, err=%v", expt.ID, run.ExptRunID, err)
+		}
 	}
 	if receipt != nil {
 		receipt.RunID = normalized.ExpectedRunID

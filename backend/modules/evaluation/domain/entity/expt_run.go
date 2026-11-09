@@ -120,6 +120,8 @@ const (
 )
 
 type ExptConsumerConf struct {
+	RetryCompleteEnabled bool `json:"retry_complete_enabled" mapstructure:"retry_complete_enabled"`
+
 	ExptExecWorkerNum     int `json:"expt_exec_worker_num" mapstructure:"expt_exec_worker_num"`
 	ExptItemEvalWorkerNum int `json:"expt_item_eval_worker_num" mapstructure:"expt_item_eval_worker_num"`
 

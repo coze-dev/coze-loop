@@ -4,6 +4,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -27,9 +28,11 @@ type finishTickMode struct {
 	entity.ExptSchedulerMode
 	startErr, scheduleErr, scanErr, endErr error
 	beforeEnd                              func()
+	startCalls, endCalls                   int
 }
 
 func (m *finishTickMode) ExptStart(context.Context, *entity.ExptScheduleEvent, *entity.Experiment) error {
+	m.startCalls++
 	return m.startErr
 }
 
@@ -42,6 +45,7 @@ func (m *finishTickMode) ScanEvalItems(context.Context, *entity.ExptScheduleEven
 }
 
 func (m *finishTickMode) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (bool, error) {
+	m.endCalls++
 	if m.beforeEnd != nil {
 		m.beforeEnd()
 	}
@@ -99,6 +103,9 @@ func newFinishTickFixture(t *testing.T, runMode entity.ExptRunMode, dispatch str
 	switch runMode {
 	case entity.EvaluationModeSubmit:
 		realMode = &ExptSubmitExec{manager: manager, idem: idem, configer: config, exptItemResultRepo: items, resultSvc: result, publisher: publisher}
+	case entity.EvaluationModeTrialRun:
+		expt.TrialRunItemCount = 2
+		realMode = &ExptTrialRunExec{ExptSubmitExec: &ExptSubmitExec{manager: manager, idem: idem, configer: config, exptItemResultRepo: items, resultSvc: result, publisher: publisher}}
 	case entity.EvaluationModeFailRetry:
 		realMode = &ExptFailRetryExec{manager: manager, idem: idem, configer: config, exptItemResultRepo: items, resultSvc: result, publisher: publisher}
 	case entity.EvaluationModeRetryAll:
@@ -120,7 +127,7 @@ func newFinishTickFixture(t *testing.T, runMode entity.ExptRunMode, dispatch str
 // Removing finish-error rearming strands the normal cadence even though calibration blocks completion.
 func TestFinishCalibrationTickLiveness(t *testing.T) {
 	for _, dispatch := range []string{entity.ExptDispatchModeLegacy, entity.ExptDispatchModeEnforce} {
-		for _, mode := range []entity.ExptRunMode{entity.EvaluationModeSubmit, entity.EvaluationModeFailRetry, entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems} {
+		for _, mode := range []entity.ExptRunMode{entity.EvaluationModeSubmit, entity.EvaluationModeTrialRun, entity.EvaluationModeFailRetry, entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems} {
 			t.Run(fmt.Sprintf("%s/mode%d", dispatch, mode), func(t *testing.T) {
 				f := newFinishTickFixture(t, mode, dispatch)
 				for _, state := range []string{"calibration_pending", "calibration_error", "finish_pending"} {
@@ -200,26 +207,76 @@ func TestFinishCalibrationTickBrokerFallback(t *testing.T) {
 	}
 }
 
+type finishTickHistoricalIdentityProbe struct {
+	*naturalFinishProbe
+	t       *testing.T
+	session *entity.Session
+	checked int
+}
+
+func (p *finishTickHistoricalIdentityProbe) CompleteExpt(ctx context.Context, expt int64, run *int64, space int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
+	p.t.Helper()
+	require.Equal(p.t, int64(1), expt)
+	require.NotNil(p.t, run)
+	require.Equal(p.t, int64(2), *run, "historical completion must use R1, even while Latest is 99")
+	require.Equal(p.t, int64(3), space)
+	require.Same(p.t, p.session, session)
+	p.checked++
+	return p.naturalFinishProbe.CompleteExpt(ctx, expt, run, space, session, opts...)
+}
+
 func TestFinishCalibrationTickExcludedModesAndOldManager(t *testing.T) {
-	for _, scope := range []string{"online", "append", "trial", "old_manager", "noncurrent"} {
+	for _, scope := range []string{"online", "append", "old_manager", "noncurrent"} {
 		t.Run(scope, func(t *testing.T) {
 			f := newFinishTickFixture(t, entity.EvaluationModeSubmit, entity.ExptDispatchModeLegacy)
 			retry := errno.NewMQRetryErr("typed end retry")
 			f.mode.endErr = retry
+			var history *finishTickHistoricalIdentityProbe
 			switch scope {
 			case "online":
 				f.event.ExptType = entity.ExptType_Online
 				f.expt.ExptType = entity.ExptType_Online
 			case "append":
 				f.event.ExptRunMode = entity.EvaluationModeAppend
-			case "trial":
-				f.event.ExptRunMode = entity.EvaluationModeTrialRun
 			case "old_manager":
 				f.scheduler.Manager = f.manager.IExptManager
 			case "noncurrent":
 				f.expt.LatestRunID = 99
+				f.manager.err = retry
+				history = &finishTickHistoricalIdentityProbe{naturalFinishProbe: f.manager, t: t, session: f.event.Session}
+				f.scheduler.Manager = history
 			}
+			beforeEvent, marshalErr := json.Marshal(f.event)
+			require.NoError(t, marshalErr)
+			beforeExpt := *f.expt
 			err := f.scheduler.HandleEventErr(f.scheduler.schedule)(context.Background(), f.event)
+			if scope == "noncurrent" {
+				require.True(t, errno.NeedMQRetry(err))
+				require.ErrorIs(t, err, retry)
+				require.ErrorContains(t, err, "typed end retry")
+				require.Equal(t, 1, f.manager.calls, "historical completion must receive the old event")
+				require.Equal(t, 1, history.checked)
+				require.Zero(t, f.mode.startCalls)
+				require.Zero(t, f.mode.endCalls)
+				require.Zero(t, f.result.calls)
+				afterEvent, marshalErr := json.Marshal(f.event)
+				require.NoError(t, marshalErr)
+				require.Equal(t, beforeEvent, afterEvent)
+				require.Equal(t, beforeExpt, *f.expt)
+				f.manager.err = nil
+				f.manager.disposition = entity.ExptRunFinishNonCurrent
+				require.NoError(t, f.scheduler.HandleEventErr(f.scheduler.schedule)(context.Background(), f.event), "healthy historical redelivery must ACK")
+				require.Equal(t, 2, f.manager.calls)
+				require.Equal(t, 2, history.checked)
+				require.Zero(t, f.mode.startCalls)
+				require.Zero(t, f.mode.endCalls)
+				require.Zero(t, f.result.calls)
+				afterEvent, marshalErr = json.Marshal(f.event)
+				require.NoError(t, marshalErr)
+				require.Equal(t, beforeEvent, afterEvent)
+				require.Equal(t, beforeExpt, *f.expt)
+				return
+			}
 			require.Same(t, retry, err)
 			require.Zero(t, f.manager.calls)
 		})

@@ -155,7 +155,15 @@ func TestGuardSourceMySQLManagerUsesObservedTokens(t *testing.T) {
 			manager := &ExptMangerImpl{centralGuard: guard, itemResultRepo: f.itemRepo()}
 			expt := &entity.Experiment{ID: f.expt, SpaceID: f.space, LatestRunID: f.run, SchedulerScope: testScope, ExptDispatchMode: entity.ExptDispatchModeEnforce}
 			before := f.snapshot()
-			manager.releaseCentralQuotaForRun(context.Background(), expt, &f.run, "run terminal", "test")
+			err := manager.releaseCentralQuotaForRun(context.Background(), expt, &f.run, "run terminal", "test")
+			switch kind {
+			case "moved":
+				require.ErrorContains(t, err, "incomplete canonical binding")
+			case "bad_ext":
+				require.ErrorContains(t, err, "parse manual retry context")
+			default:
+				require.NoError(t, err)
+			}
 			if kind == "original" || kind == "canonical_terminal" || kind == "terminal_run" {
 				require.Len(t, guard.releases(), 3)
 				for _, release := range guard.releases() {

@@ -74,7 +74,7 @@ func TestTrialFailureOldRunHasZeroActions(t *testing.T) {
 	before := p.f.snapshot()
 	err := (&ExptSchedulerImpl{Manager: p.manager}).HandleEventErr(func(context.Context, *entity.ExptScheduleEvent) error { return errors.New("old trial failure") })(context.Background(), p.event)
 	require.NoError(t, err)
-	require.Equal(t, before, p.f.snapshot())
+	requireHistoricalRunSnapshot(t, before, p.f.snapshot(), p.f.run, entity.ExptStatus_Failed, [5]int64{1, 0, 0, 0, 0}, "old trial failure")
 	require.Zero(t, p.resources.Load())
 	require.Zero(t, p.notifications.Load())
 }

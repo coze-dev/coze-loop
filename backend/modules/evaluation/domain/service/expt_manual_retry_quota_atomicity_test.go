@@ -36,7 +36,7 @@ type retryQuotaGuard struct {
 	releases []retryQuotaRelease
 	results  []component.TerminalReservationReleaseResult
 	errs     []error
-	// onRelease 在每次释放前执行，用于断言释放时 run 锁已经归还。
+	// onRelease 在每次释放前执行，用于断言原调度拍释放前仍持有 run 锁。
 	onRelease func()
 }
 
@@ -79,7 +79,11 @@ type retryQuotaHarness struct {
 
 // newRetryQuotaHarness 复用 admission 的 fake repo，但用真实记录的 fake guard，
 // 使「释放发生在提交之前还是之后」可以被直接断言。
-func newRetryQuotaHarness(t *testing.T, calls int) *retryQuotaHarness {
+func newRetryQuotaHarness(t *testing.T, calls int, consumerCalls ...int) *retryQuotaHarness {
+	consumerCount := calls
+	if len(consumerCalls) > 0 {
+		consumerCount = consumerCalls[0]
+	}
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	expts := repomocks.NewMockIExperimentRepo(ctrl)
@@ -96,7 +100,7 @@ func newRetryQuotaHarness(t *testing.T, calls int) *retryQuotaHarness {
 	h := &retryQuotaHarness{port: port, guard: guard, waker: waker}
 	expt := &entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline, ExptDispatchMode: entity.ExptDispatchModeEnforce, SchedulerScope: "test-scope", EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig, EvalConf: &entity.EvaluationConfiguration{ItemRetryNum: gptr.Of(3), ItemConcurNum: gptr.Of(4)}}
 	run := &entity.ExptRunLog{ID: 8, SpaceID: 9, ExptID: 7, ExptRunID: 8, Status: int64(entity.ExptStatus_Processing), Mode: int32(entity.EvaluationModeSubmit), CreatedBy: "original"}
-	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(expt, nil).Times(2 * calls)
+	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(expt, nil).Times(calls + consumerCount)
 	oldRun := int64(6)
 	source := &entity.ExptItemResult{ID: 101, SpaceID: 9, ExptID: 7, ExptRunID: oldRun, ItemID: 11, ItemVersionID: 91, Status: entity.ItemRunState_Fail, Ext: map[string]string{"other": "keep", entity.ManualRetryExtKey: `{"run_id":6,"request_id":"prior-request","mode":5,"operator":"old","accepted_at_ms":1}`}}
 	items.EXPECT().BatchGet(gomock.Any(), int64(9), int64(7), []int64{11}).Return([]*entity.ExptItemResult{source}, nil).Times(calls)
@@ -112,13 +116,13 @@ func newRetryQuotaHarness(t *testing.T, calls int) *retryQuotaHarness {
 			h.runLockReleased = true
 			cancel()
 		}, nil
-	}).Times(calls)
-	runs.EXPECT().Get(gomock.Any(), int64(7), int64(8)).Return(run, nil).Times(calls)
+	}).Times(consumerCount)
+	runs.EXPECT().Get(gomock.Any(), int64(7), int64(8)).Return(run, nil).Times(consumerCount)
 	mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:7:11", 5*time.Second, 5*time.Minute).DoAndReturn(func(parent context.Context, _ string, _, _ time.Duration) (bool, context.Context, func(), error) {
 		ctx, cancel := context.WithCancel(parent)
 		t.Cleanup(cancel)
 		return true, ctx, cancel, nil
-	}).Times(calls)
+	}).Times(consumerCount)
 	manager := &ExptMangerImpl{manualRetryRepo: port, exptRepo: expts, itemResultRepo: items, turnResultRepo: turns, itemRefRepo: refs, runLogRepo: runs, mutex: mutex, centralGuard: guard, publisher: publisher, currentRunWaker: waker, manualRetryLocker: func() lock.ILocker { return mutex }}
 	h.manager = manager
 	return h
@@ -140,11 +144,11 @@ func TestManualRetryReleasesReservationOnlyAfterRequeueCommit(t *testing.T) {
 	h.port.beforeCommit = func() {
 		require.Empty(t, h.guard.releases, "reservation released before requeue commit")
 	}
-	got, err := h.manager.RetryInCurrentRun(context.Background(), admissionRequest())
+	got, err := retryThroughOriginalTickForTest(t, h.manager, context.Background(), admissionRequest())
 	require.NoError(t, err)
 	require.EqualValues(t, 1, got.AcceptedCount)
 	require.Equal(t, []retryQuotaRelease{{scope: "test-scope", runID: 6, itemID: 11, token: "prior-request"}}, h.guard.releases)
-	require.Equal(t, 1, countRetryCalls(h.port.calls, "preflight"))
+	require.Equal(t, 2, countRetryCalls(h.port.calls, "preflight"))
 	require.Equal(t, 1, countRetryCalls(h.port.calls, "commit"))
 }
 
@@ -152,13 +156,13 @@ func TestManualRetryReleasesReservationOnlyAfterRequeueCommit(t *testing.T) {
 func TestManualRetryRequeueFailureKeepsReservationForRetry(t *testing.T) {
 	h := newRetryQuotaHarness(t, 2)
 	h.port.commitError = errors.New("requeue transaction failed")
-	_, err := h.manager.RetryInCurrentRun(context.Background(), admissionRequest())
+	_, err := retryThroughOriginalTickForTest(t, h.manager, context.Background(), admissionRequest())
 	require.ErrorIs(t, err, h.port.commitError)
 	require.Empty(t, h.guard.releases, "ledger entry disappeared although the requeue rolled back")
 	require.Empty(t, h.waker.calls)
 
 	h.port.commitError = nil
-	got, err := h.manager.RetryInCurrentRun(context.Background(), admissionRequest())
+	got, err := retryThroughOriginalTickForTest(t, h.manager, context.Background(), admissionRequest())
 	require.NoError(t, err)
 	require.EqualValues(t, 1, got.AcceptedCount)
 	require.Equal(t, []retryQuotaRelease{{scope: "test-scope", runID: 6, itemID: 11, token: "prior-request"}}, h.guard.releases)
@@ -170,7 +174,7 @@ func TestManualRetryRequeueFailureKeepsReservationForRetry(t *testing.T) {
 func TestManualRetryReleaseErrorDoesNotFailCommittedRequeue(t *testing.T) {
 	h := newRetryQuotaHarness(t, 1)
 	h.guard.errs = []error{errors.New("redis unavailable")}
-	got, err := h.manager.RetryInCurrentRun(context.Background(), admissionRequest())
+	got, err := retryThroughOriginalTickForTest(t, h.manager, context.Background(), admissionRequest())
 	require.NoError(t, err)
 	require.EqualValues(t, 1, got.AcceptedCount)
 	require.Len(t, h.guard.releases, 1)
@@ -183,7 +187,7 @@ func TestManualRetryReleaseErrorDoesNotFailCommittedRequeue(t *testing.T) {
 func TestManualRetryReleaseFailureNeverReleasesNewToken(t *testing.T) {
 	h := newRetryQuotaHarness(t, 1)
 	h.guard.errs = []error{errors.New("redis unavailable")}
-	got, err := h.manager.RetryInCurrentRun(context.Background(), admissionRequest())
+	got, err := retryThroughOriginalTickForTest(t, h.manager, context.Background(), admissionRequest())
 	require.NoError(t, err)
 	require.EqualValues(t, 1, got.AcceptedCount)
 	require.Len(t, h.guard.releases, 1)
@@ -198,7 +202,7 @@ func TestManualRetryReleaseFailureNeverReleasesNewToken(t *testing.T) {
 func TestManualRetryMismatchedReservationCompletesOnce(t *testing.T) {
 	h := newRetryQuotaHarness(t, 1)
 	h.guard.results = []component.TerminalReservationReleaseResult{component.TerminalReservationMismatch}
-	got, err := h.manager.RetryInCurrentRun(context.Background(), admissionRequest())
+	got, err := retryThroughOriginalTickForTest(t, h.manager, context.Background(), admissionRequest())
 	require.NoError(t, err)
 	require.EqualValues(t, 1, got.AcceptedCount)
 	require.Equal(t, []retryQuotaRelease{{scope: "test-scope", runID: 6, itemID: 11, token: "prior-request"}}, h.guard.releases)
@@ -209,19 +213,19 @@ func TestManualRetryMismatchedReservationCompletesOnce(t *testing.T) {
 func TestManualRetryEnforceWithoutLedgerWritesNothing(t *testing.T) {
 	h := newRetryQuotaHarness(t, 1)
 	h.manager.centralGuard = nil
-	_, err := h.manager.RetryInCurrentRun(context.Background(), admissionRequest())
+	_, err := retryThroughOriginalTickForTest(t, h.manager, context.Background(), admissionRequest())
 	require.ErrorContains(t, err, "terminal reservation release unavailable")
 	require.Equal(t, 0, countRetryCalls(h.port.calls, "commit"))
 }
 
 // 释放是改排提交后的补偿，不能继续持有 run 锁：账本故障时的同步释放耗时不能吃掉
 // manualRetryLockMaxHold(5min)，否则锁到期后同 run 的并发改排就可能重叠。
-func TestManualRetryReleaseDoesNotHoldRunLock(t *testing.T) {
+func TestManualRetryReleaseRetainsOriginalTickLock(t *testing.T) {
 	h := newRetryQuotaHarness(t, 1)
 	h.guard.onRelease = func() {
-		require.True(t, h.runLockReleased, "post-commit release still holds the run lock")
+		require.False(t, h.runLockReleased, "the original tick must remain responsible for its successor")
 	}
-	got, err := h.manager.RetryInCurrentRun(context.Background(), admissionRequest())
+	got, err := retryThroughOriginalTickForTest(t, h.manager, context.Background(), admissionRequest())
 	require.NoError(t, err)
 	require.EqualValues(t, 1, got.AcceptedCount)
 	require.Len(t, h.guard.releases, 1)
@@ -231,16 +235,16 @@ func TestManualRetryReleaseDoesNotHoldRunLock(t *testing.T) {
 // 预检会以 source_changed 拒收），而旧 run 的预占不在任何调度拍/对账的扫描范围内。
 // 这个用例记录的是当前方案的残余：调用方没有可重放路径，只能依赖人工全量重建账本。
 func TestManualRetryPostCommitReleaseFailureHasNoCallerReplay(t *testing.T) {
-	h := newRetryQuotaHarness(t, 2)
+	h := newRetryQuotaHarness(t, 2, 1)
 	h.guard.errs = []error{errors.New("redis unavailable")}
-	got, err := h.manager.RetryInCurrentRun(context.Background(), admissionRequest())
+	got, err := retryThroughOriginalTickForTest(t, h.manager, context.Background(), admissionRequest())
 	require.NoError(t, err)
 	require.EqualValues(t, 1, got.AcceptedCount)
 	require.Len(t, h.guard.releases, 1)
 
 	// 改排已落库，再次请求时 repository 会把它当成 queueing/source_changed 拒收。
 	h.port.preflightRejected = true
-	replay, err := h.manager.RetryInCurrentRun(context.Background(), admissionRequest())
+	replay, err := retryThroughOriginalTickForTest(t, h.manager, context.Background(), admissionRequest())
 	require.NoError(t, err)
 	require.EqualValues(t, 0, replay.AcceptedCount)
 	require.Len(t, h.guard.releases, 1,

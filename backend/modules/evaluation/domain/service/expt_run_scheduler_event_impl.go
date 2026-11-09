@@ -198,41 +198,19 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 		}
 
 		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
-			if event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && (status == entity.ExptStatus_Terminated || status == entity.ExptStatus_Failed) {
-				if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok {
-					options := []entity.CompleteExptOptionFn{entity.WithStatus(status)}
-					if status == entity.ExptStatus_Terminated {
-						options = append(options, entity.NoAggrCalculate())
-					}
-					_, err := terminate.TerminateCurrentRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, nil, options...)
-					return err
-				}
-			}
-			if status == entity.ExptStatus_Terminating && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
-				if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok {
-					_, err := terminate.TerminateCurrentRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, nil, entity.WithStatus(entity.ExptStatus_Terminated), entity.NoAggrCalculate())
-					return err
-				}
-			}
 			logs.CtxInfo(ctx, "ExptSchedulerConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-			if entity.IsExptFinished(status) && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun {
-				if finish, ok := e.Manager.(IExptNaturalRunFinisher); ok {
-					result, err := finish.FinishCurrentRun(ctx, event)
-					if err != nil {
-						return errno.WrapMQRetryErr(err)
-					}
-					if result == nil {
-						return errno.NewMQRetryErr("finish returned no disposition")
-					}
-					switch result.Disposition {
-					case entity.ExptRunFinishFinished, entity.ExptRunFinishAlreadyFinished, entity.ExptRunFinishNonCurrent:
-						return nil
-					case entity.ExptRunFinishPending:
-						return errno.NewMQRetryErr("current run finish pending")
-					default:
-						return errno.NewMQRetryErr("invalid finish disposition")
-					}
+			if event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+				options := []entity.CompleteExptOptionFn{}
+				if status == entity.ExptStatus_Terminating || status == entity.ExptStatus_Terminated {
+					options = append(options, entity.WithStatus(entity.ExptStatus_Terminated), entity.NoAggrCalculate())
 				}
+				if status == entity.ExptStatus_Failed {
+					options = append(options, entity.WithStatus(entity.ExptStatus_Failed))
+				}
+				if err := e.Manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, options...); err != nil {
+					return errno.WrapMQRetryErr(err)
+				}
+				return nil
 			}
 			return nil
 		}
@@ -253,7 +231,14 @@ func (e *ExptSchedulerImpl) makeExptRunExecLockKey(exptID, exptRunID int64) stri
 func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEndPoint {
 	return func(ctx context.Context, event *entity.ExptScheduleEvent) error {
 		key := e.makeExptRunExecLockKey(event.ExptID, event.ExptRunID)
-		locked, ctx, cancel, err := e.Mutex.LockBackoffWithRenew(ctx, key, time.Second*5, time.Second*60*5)
+		mutex := e.Mutex
+		if event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && e.itemLocker != nil {
+			// Each short tick uses a fresh existing locker owner. The shared
+			// lifecycle locker retains evaluation; late Unlock cannot erase the
+			// next tick's owner after TTL/cancellation hands off this key.
+			mutex = e.itemLocker()
+		}
+		locked, ctx, cancel, err := mutex.LockBackoffWithRenew(ctx, key, time.Second*5, time.Second*60*5)
 		if err != nil {
 			return err
 		}
@@ -262,17 +247,26 @@ func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEnd
 
 		if !locked {
 			logs.CtxWarn(ctx, "ExptSchedulerConsumer.HandleEventLock found locked expt eval event: %v. Abort event, err: %v", json.Jsonify(event), err)
+			if event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+				mode, err := e.schedulerModeFactory.NewSchedulerMode(event.ExptRunMode)
+				if err != nil {
+					return err
+				}
+				if err := mode.NextTick(ctx, event, true); err != nil {
+					return errno.WrapMQRetryErr(err)
+				}
+			}
 			return nil
 		}
 
 		defer func() {
 			cancel()
-			if _, err := e.Mutex.Unlock(key); err != nil {
+			if _, err := mutex.Unlock(key); err != nil {
 				logs.CtxWarn(ctx, "failed to unlock key: %v, err: %v", key, err)
 			}
 		}()
 
-		return next(ctx, event)
+		return next(withHeldCompleteTick(ctx, event.ExptID, event.ExptRunID, ctx), event)
 	}
 }
 
@@ -376,8 +370,8 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 				exptFinished = entity.IsExptFinished(current.Status)
 			}
 		}
-		if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok && !exptFinished && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
-			_, err := terminate.TerminateCurrentRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, nil, entity.WithStatus(entity.ExptStatus_Failed), entity.WithStatusMessage(userVisibleErrMsg(nextErr)))
+		if _, ok := e.Manager.(IExptCurrentRunTerminator); ok && !exptFinished && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+			err := e.Manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, entity.WithStatus(entity.ExptStatus_Failed), entity.WithStatusMessage(userVisibleErrMsg(nextErr)))
 			return err
 		}
 		// 业务逻辑错误：终止实验
@@ -457,6 +451,13 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	if err != nil {
 		return err
 	}
+	if _, current := e.Manager.(IExptNaturalRunFinisher); current && event.ExptType == entity.ExptType_Offline && exptDetail.ExptType == entity.ExptType_Offline &&
+		event.ExptRunMode != entity.EvaluationModeAppend && exptDetail.LatestRunID > 0 && exptDetail.LatestRunID != event.ExptRunID {
+		if err := e.Manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		return nil
+	}
 
 	mode, err := e.schedulerModeFactory.NewSchedulerMode(event.ExptRunMode)
 	if err != nil {
@@ -466,6 +467,11 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	err = mode.ExptStart(ctx, event, exptDetail)
 	if err != nil {
 		return err
+	}
+	if manager, ok := e.Manager.(*ExptMangerImpl); ok {
+		if err := manager.consumePendingCurrentRetry(ctx, event); err != nil {
+			return err
+		}
 	}
 
 	err = mode.ScheduleStart(ctx, event, exptDetail)
@@ -558,7 +564,7 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		if _, current := e.Manager.(IExptNaturalRunFinisher); current && errno.NeedMQRetry(err) &&
 			event.ExptType == entity.ExptType_Offline && exptDetail.ExptType == entity.ExptType_Offline &&
 			exptDetail.LatestRunID == event.ExptRunID &&
-			event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun {
+			event.ExptRunMode != entity.EvaluationModeAppend {
 			if ctxErr := ctx.Err(); ctxErr != nil {
 				return errno.WrapMQRetryErr(ctxErr)
 			}
@@ -1394,7 +1400,7 @@ func (e *ExptSchedulerImpl) emitSandboxZombieInvokeFinished(
 
 // sandboxAgentTargetTagsFromExpt 从实验的沙箱 agent 评测对象上取应用名称/id, 供 invoke_finished 打点使用。
 // 与 pickAgentName / pickApplicationID (etec 版本) 语义一致, 兼容 expt/target/version 任一层缺失。
-func sandboxAgentTargetTagsFromExpt(expt *entity.Experiment) (agentName string, applicationID string) {
+func sandboxAgentTargetTagsFromExpt(expt *entity.Experiment) (agentName, applicationID string) {
 	if expt == nil || expt.Target == nil {
 		return "", ""
 	}

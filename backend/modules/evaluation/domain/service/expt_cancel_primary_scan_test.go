@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 
@@ -193,7 +192,7 @@ func TestCancelPrimaryScanNewRunReleasesBothOriginalTokens(t *testing.T) {
 	require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(entity.ExptStatus_Terminated)).Error)
 	guard := &fakeGuard{}
 	p.manager.centralGuard = guard
-	_, err := p.manager.mutex.UnlockWithValue(context.Background(), p.manager.makeExptMutexLockKey(f.expt), strconv.FormatInt(f.run, 10))
+	_, err := p.manager.mutex.Unlock(p.manager.makeExptMutexLockKey(f.expt))
 	require.NoError(t, err)
 	metric := metricsmocks.NewMockExptMetric(gomock.NewController(t))
 	metric.EXPECT().EmitExptExecRun(f.space, int64(entity.EvaluationModeRetryAll))

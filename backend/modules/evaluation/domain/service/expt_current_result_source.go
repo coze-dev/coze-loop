@@ -26,12 +26,13 @@ var errExptNonCurrentSource = errors.New("execution source is no longer current"
 type currentItemSourceKey struct{}
 
 type currentItemExecution struct {
-	Source          *entity.ExptCurrentItemRunSource
-	LockLost        bool
-	Completed       bool
-	QuotaReleased   bool
-	SourceValidated bool
-	LogCtx          context.Context
+	Source             *entity.ExptCurrentItemRunSource
+	LockLost           bool
+	Completed          bool
+	QuotaReleased      bool
+	SourceValidated    bool
+	LogCtx             context.Context
+	LegacyContinuation bool
 }
 
 func executionSource(ctx context.Context) *currentItemExecution {

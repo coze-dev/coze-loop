@@ -15,7 +15,7 @@ import (
 
 var ExperimentRepoSet = wire.NewSet(
 	NewExptRepo,
-	NewExptManualRetryRepo,
+	NewExptManualRetryRepoWithPending,
 	NewExptResultPublishRepo,
 	NewExptSchedulerQueueRepo,
 	NewExptStatsRepo,

@@ -505,7 +505,8 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 		return nil, nil
 	}
 
-	if isTurnAsyncResume(etec, true) || (isTurnAsyncResume(etec, false) && len(etec.ExptTurnRunResult.EvaluatorResults) > 0) {
+	continuation := executionSource(ctx)
+	if (continuation == nil || !continuation.LegacyContinuation) && (isTurnAsyncResume(etec, true) || (isTurnAsyncResume(etec, false) && len(etec.ExptTurnRunResult.EvaluatorResults) > 0)) {
 		logs.CtxInfo(ctx, "CallEvaluators skip re-run due to async report trigger, return existing evaluator results: %d", len(etec.ExptTurnRunResult.EvaluatorResults))
 		return etec.ExptTurnRunResult.EvaluatorResults, nil
 	}

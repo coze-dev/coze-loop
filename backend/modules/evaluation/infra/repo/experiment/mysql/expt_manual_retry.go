@@ -135,6 +135,11 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 		if expt.SpaceID != request.SpaceID || run.SpaceID != request.SpaceID {
 			return errorx.NewByCode(errno.ManualRetryRunConflictCode)
 		}
+		if request.BeforeRequeue != nil {
+			if err := request.BeforeRequeue(ctx); err != nil {
+				return err
+			}
+		}
 		chunks, err := decodeManualRetryRunItems(run)
 		if err != nil {
 			return err
@@ -198,7 +203,7 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 		}
 		added := make([]int64, 0)
 		for _, item := range accepted {
-			if item.log == nil && !contained[item.item.ItemID] {
+			if gptr.Indirect(run.Mode) == int32(entity.EvaluationModeRetryItems) && !contained[item.item.ItemID] {
 				contained[item.item.ItemID] = true
 				added = append(added, item.item.ItemID)
 			}
@@ -266,10 +271,19 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 				}
 			}
 		}
-		if len(fields) == 0 {
-			return nil
+		if len(fields) > 0 {
+			if err := NewExptRunLogDAO(d.provider).Update(ctx, request.ExptID, request.RunID, request.SpaceID, fields, opts...); err != nil {
+				return err
+			}
 		}
-		return NewExptRunLogDAO(d.provider).Update(ctx, request.ExptID, request.RunID, request.SpaceID, fields, opts...)
+		if request.BeforeCommit != nil {
+			ids := make([]int64, 0, len(accepted))
+			for _, item := range accepted {
+				ids = append(ids, item.item.ItemID)
+			}
+			return request.BeforeCommit(ctx, receipt, ids)
+		}
+		return nil
 	}, db.WithMaster())
 	if err != nil {
 		return nil, err
@@ -319,7 +333,10 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryItem(ctx context.Context, r *ent
 	if current.ItemVersionID != p.ItemVersionID {
 		return nil, "source_changed", nil
 	}
-	if current.ExptRunID != p.PreviousRunID || previousRequest != p.PreviousRequestID || !reflect.DeepEqual(source, p.SourceItem) {
+	expectedSource := *p.SourceItem
+	source.UpdatedAt = canonicalManualRetrySnapshotTime(source.UpdatedAt)
+	expectedSource.UpdatedAt = canonicalManualRetrySnapshotTime(expectedSource.UpdatedAt)
+	if current.ExptRunID != p.PreviousRunID || previousRequest != p.PreviousRequestID || !reflect.DeepEqual(source, &expectedSource) {
 		return nil, "source_changed", nil
 	}
 	var log *model.ExptItemResultRunLog
@@ -345,7 +362,14 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryItem(ctx context.Context, r *ent
 		if gptr.Indirect(log.ResultState) != int32(entity.ExptItemResultStateResulted) {
 			return nil, "result_not_ready", nil
 		}
-		if !reflect.DeepEqual(convert.NewExptItemResultRunLogConverter().PO2DO(log), p.CurrentItemLog) {
+		if p.CurrentItemLog == nil {
+			return nil, "source_changed", nil
+		}
+		actualLog := convert.NewExptItemResultRunLogConverter().PO2DO(log)
+		expectedLog := *p.CurrentItemLog
+		actualLog.UpdatedAt = canonicalManualRetrySnapshotTime(actualLog.UpdatedAt)
+		expectedLog.UpdatedAt = canonicalManualRetrySnapshotTime(expectedLog.UpdatedAt)
+		if !reflect.DeepEqual(actualLog, &expectedLog) {
 			return nil, "source_changed", nil
 		}
 	}
@@ -441,7 +465,7 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 		if err != nil {
 			return "", err
 		}
-		if !reflect.DeepEqual(logDO, p.CurrentRunLog) {
+		if !sameManualRetryTurnLogSource(logDO, p.CurrentRunLog) {
 			return "source_changed", nil
 		}
 		var refs []*model.ExptTurnEvaluatorResultRef
@@ -502,7 +526,7 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 		if err != nil {
 			return "", err
 		}
-		if !reflect.DeepEqual(got, source) {
+		if !sameManualRetryTurnLogSource(got, source) {
 			return "source_changed", nil
 		}
 	}
@@ -537,6 +561,40 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 		}
 	}
 	return "", nil
+}
+
+// Pending JSON does not retain a time's location or monotonic clock.
+func canonicalManualRetrySnapshotTime(timestamp *time.Time) *time.Time {
+	if timestamp == nil {
+		return nil
+	}
+	return gptr.Of(timestamp.UTC())
+}
+
+// Pending JSON omits empty evaluator collections; keep nonempty and nil results distinct.
+func sameManualRetryTurnLogSource(a, b *entity.ExptTurnResultRunLog) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	canonical := func(log *entity.ExptTurnResultRunLog) entity.ExptTurnResultRunLog {
+		copy := *log
+		copy.UpdatedAt = log.UpdatedAt.UTC()
+		if log.EvaluatorResultIds != nil {
+			results := *log.EvaluatorResultIds
+			if len(results.EvalVerIDToResID) == 0 {
+				results.EvalVerIDToResID = nil
+			}
+			if len(results.Registered) == 0 {
+				results.Registered = nil
+			}
+			if len(results.Inline) == 0 {
+				results.Inline = nil
+			}
+			copy.EvaluatorResultIds = &results
+		}
+		return copy
+	}
+	return reflect.DeepEqual(canonical(a), canonical(b))
 }
 
 // Preflight reuses final source validation without allocating IDs or writing rows.
@@ -637,7 +695,7 @@ func (d *ExptManualRetryDAOImpl) PreflightTerminalItems(ctx context.Context, req
 		var added []int64
 		for _, item := range plan.Items {
 			id := item.SourceItem.ItemID
-			if item.CurrentItemLog == nil && !contained[id] {
+			if gptr.Indirect(run.Mode) == int32(entity.EvaluationModeRetryItems) && !contained[id] {
 				added = append(added, id)
 				contained[id] = true
 			}

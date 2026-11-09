@@ -6,8 +6,10 @@ package conf
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
@@ -54,4 +56,67 @@ func TestLegacyRunningRetryKeyIsIgnored(t *testing.T) {
 	encoded, err := json.Marshal(legacyTrue)
 	require.NoError(t, err)
 	require.NotContains(t, string(encoded), "running_retry_enabled")
+}
+
+func TestRetryCompleteConsumerConf(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		raw         string
+		want        bool
+		loaderError bool
+	}{
+		{name: "missing", raw: `{}`},
+		{name: "false", raw: `{"retry_complete_enabled":false}`},
+		{name: "true", raw: `{"retry_complete_enabled":true}`, want: true},
+		{name: "null", raw: `null`},
+		{name: "loader_error", loaderError: true},
+		{name: "decode_error", raw: `{"retry_complete_enabled":`},
+		{name: "old_name", raw: `{"running_retry_enabled":true,"enable_running_retry":true}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			loader := confmocks.NewMockIConfigLoader(gomock.NewController(t))
+			loader.EXPECT().UnmarshalKey(gomock.Any(), "expt_consumer_conf", gomock.Any()).DoAndReturn(func(_ context.Context, _ string, value any, _ ...conf.DecodeOptionFn) error {
+				if tc.loaderError {
+					return errors.New("configuration unavailable")
+				}
+				return json.Unmarshal([]byte(tc.raw), value)
+			})
+			c := &configer{loader: loader}
+			got := c.GetConsumerConf(context.Background())
+			if tc.name == "null" {
+				require.Nil(t, got)
+				return
+			}
+			require.NotNil(t, got)
+			encoded, err := json.Marshal(got)
+			require.NoError(t, err)
+			var decoded map[string]any
+			require.NoError(t, json.Unmarshal(encoded, &decoded))
+			require.Equal(t, tc.want, decoded["retry_complete_enabled"])
+		})
+	}
+}
+
+func TestRetryCompleteConsumerConfMapstructure(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		values map[string]any
+		want   bool
+	}{
+		{name: "missing", values: map[string]any{}},
+		{name: "false", values: map[string]any{"retry_complete_enabled": false}},
+		{name: "true", values: map[string]any{"retry_complete_enabled": true}, want: true},
+		{name: "space_override", values: map[string]any{"retry_complete_enabled": true, "space_expt_exec_conf": map[string]any{"9": map[string]any{}}}, want: true},
+		{name: "old_names", values: map[string]any{"running_retry_enabled": true, "enable_running_retry": true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			v := viper.New()
+			v.Set("expt_consumer_conf", tc.values)
+			var got *entity.ExptConsumerConf
+			require.NoError(t, v.UnmarshalKey("expt_consumer_conf", &got))
+			require.NotNil(t, got)
+			require.Equal(t, tc.want, got.RetryCompleteEnabled)
+		})
+	}
+	require.False(t, entity.DefaultExptConsumerConf().RetryCompleteEnabled)
 }

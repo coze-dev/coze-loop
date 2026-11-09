@@ -17,6 +17,7 @@ import (
 	domainexpt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
+	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -112,6 +113,8 @@ func TestOpenAPIRunningRetryRealExperimentApplication(t *testing.T) {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			manager := svcmocks.NewMockIExptManager(ctrl)
+			config := componentmocks.NewMockIConfiger(ctrl)
+			config.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{RetryCompleteEnabled: true})
 			auth := rpcmocks.NewMockIAuthProvider(ctrl)
 			auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 			auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *rpc.AuthorizationWithoutSPIParam) error {
@@ -150,7 +153,7 @@ func TestOpenAPIRunningRetryRealExperimentApplication(t *testing.T) {
 					}, nil
 				})
 			}
-			app := &EvalOpenAPIApplication{auth: auth, metric: &fakeOpenAPIMetric{}, experimentApp: &experimentApplication{manager: manager, auth: auth}}
+			app := &EvalOpenAPIApplication{auth: auth, metric: &fakeOpenAPIMetric{}, experimentApp: &experimentApplication{manager: manager, auth: auth, configer: config}}
 			resp, err := app.RetryExperimentOApi(context.Background(), &req)
 			if kind == "manager error" || kind == "negative expected_run_id" {
 				require.Error(t, err)

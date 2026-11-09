@@ -1,0 +1,178 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+package service
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/infra/lock"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+)
+
+type completeReleaseFaultLocker struct {
+	lock.ILocker
+	fault error
+	calls int
+}
+
+// Only detail loading is narrowed to primary SQL. Both Complete calls and the
+// Append draining body remain production implementations.
+type completeOnlineDetailManager struct {
+	*ExptMangerImpl
+	set *entity.EvaluationSet
+}
+
+func (m *completeOnlineDetailManager) GetDetail(ctx context.Context, expt, space int64, _ *entity.Session, _ ...entity.GetExptTupleOptionFn) (*entity.Experiment, error) {
+	current, err := m.exptRepo.GetByID(ctx, expt, space)
+	if current != nil {
+		current.EvalSet = m.set
+		current.EvalConf = &entity.EvaluationConfiguration{ItemConcurNum: gptr.Of(1)}
+	}
+	return current, err
+}
+
+func TestCompleteStandardOnlineDrainingFailureKeepsOriginalReleasePair(t *testing.T) {
+	p := newPendingRunFixture(t, entity.EvaluationModeSubmit)
+	p.publishSuccess(t, false)
+	f, ctx := p.f, context.Background()
+	require.NoError(t, f.conn.Model(&model.Experiment{}).Where("space_id=?", f.space).Updates(map[string]any{"expt_type": entity.ExptType_Online, "status": entity.ExptStatus_Draining}).Error)
+	require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("mode", entity.EvaluationModeAppend).Error)
+	ctrl := gomock.NewController(t)
+	result := svcmocks.NewMockExptResultService(ctrl)
+	failure := errors.New("online CalculateStats unavailable")
+	statsCalls := 0
+	result.EXPECT().CalculateStats(gomock.Any(), f.expt, f.space, gomock.Any()).DoAndReturn(func(context.Context, int64, int64, *entity.Session) (*entity.ExptCalculateStats, error) {
+		statsCalls++
+		return nil, failure
+	})
+	result.EXPECT().CalculateStats(gomock.Any(), f.expt, f.space, gomock.Any()).Return(&entity.ExptCalculateStats{SuccessItemCnt: 1}, nil)
+	result.EXPECT().GetIncompleteTurns(gomock.Any(), f.expt, f.space, gomock.Any()).Return(nil, nil)
+	p.manager.exptResultService = result
+	locker := &completeReleaseFaultLocker{ILocker: p.manager.mutex}
+	p.manager.mutex = locker
+	manager := &completeOnlineDetailManager{ExptMangerImpl: p.manager, set: p.startSet()}
+	event := *p.event
+	event.ExptType, event.ExptRunMode = entity.ExptType_Online, entity.EvaluationModeAppend
+	appendMode := &ExptAppendExec{manager: manager, idem: p.manager.idem, configer: p.manager.configer, exptItemResultRepo: f.itemRepo(), mutex: p.factory()}
+	next, err := appendMode.ExptEnd(ctx, &event, p.expt, 0, 0)
+	require.NoError(t, err, "existing Append daemon consumes the second-half completion error")
+	require.False(t, next)
+	require.Equal(t, 1, statsCalls, "the real CompleteExpt error path must have run")
+	key := p.manager.makeExptMutexLockKey(f.expt)
+	admitted, err := locker.Exists(ctx, key)
+	require.NoError(t, err)
+	require.False(t, admitted, "Online CompleteRun must have released admission before the failed second half")
+	require.Equal(t, 1, locker.calls)
+	run, err := p.manager.runLogRepo.Get(ctx, f.expt, f.run)
+	require.NoError(t, err)
+	require.Equal(t, int64(entity.ExptStatus_Success), run.Status)
+	// The Online terminal MQ acknowledges without running either completion body.
+	scheduler := &ExptSchedulerImpl{Manager: manager}
+	require.NoError(t, scheduler.HandleEventCheck(func(context.Context, *entity.ExptScheduleEvent) error {
+		t.Fatal("Online terminal message must keep its existing ACK behavior")
+		return nil
+	})(ctx, &event))
+	locked, _, err := locker.BackoffLockWithValue(ctx, key, "evaluation", time.Hour, time.Millisecond)
+	require.NoError(t, err)
+	require.True(t, locked)
+	require.NoError(t, p.manager.CompleteExpt(ctx, f.expt, &f.run, f.space, p.event.Session, entity.WithCID(fmt.Sprintf("exptexec:onend:%d", f.run))))
+	require.Equal(t, 1, locker.calls, "Online CompleteExpt must not release a second admission")
+	admitted, err = locker.Exists(ctx, key)
+	require.NoError(t, err)
+	require.True(t, admitted)
+	t.Log("REAL_MYSQL_ONLINE_DRAINING second_half_error_consumed=true complete_run_release_once=true terminal_mq_ack=true")
+}
+
+func (p *pendingRunFixture) startSet() *entity.EvaluationSet {
+	return &entity.EvaluationSet{ID: p.f.base + 80, EvaluationSetVersion: &entity.EvaluationSetVersion{ID: p.f.base + 81}}
+}
+
+func (l *completeReleaseFaultLocker) Unlock(key string) (bool, error) {
+	l.calls++
+	if l.fault != nil {
+		err := l.fault
+		l.fault = nil
+		return false, err
+	}
+	return l.ILocker.Unlock(key)
+}
+
+func (l *completeReleaseFaultLocker) UnlockWithContext(ctx context.Context, key string) (bool, error) {
+	l.calls++
+	if l.fault != nil {
+		err := l.fault
+		l.fault = nil
+		return false, err
+	}
+	return l.ILocker.UnlockWithContext(ctx, key)
+}
+
+type completeReleaseFaultRunRepo struct {
+	repo.IExptRunLogRepo
+	fault error
+}
+
+func (r *completeReleaseFaultRunRepo) Get(ctx context.Context, expt, run int64) (*entity.ExptRunLog, error) {
+	if r.fault != nil {
+		err := r.fault
+		r.fault = nil
+		return nil, err
+	}
+	return r.IExptRunLogRepo.Get(ctx, expt, run)
+}
+
+func TestCompleteStandardAdmissionFailureRemainsReplayable(t *testing.T) {
+	for _, fault := range []string{"run_read", "unlock"} {
+		t.Run(fault, func(t *testing.T) {
+			p := newPendingRunFixture(t, entity.EvaluationModeSubmit)
+			p.publishSuccess(t, false)
+			f, ctx := p.f, context.Background()
+			failure := errors.New("final admission release unavailable")
+			locker := &completeReleaseFaultLocker{ILocker: p.manager.mutex}
+			p.manager.mutex = locker
+			if fault == "unlock" {
+				locker.fault = failure
+			} else {
+				p.manager.runLogRepo = &completeReleaseFaultRunRepo{IExptRunLogRepo: p.manager.runLogRepo, fault: failure}
+			}
+			key := p.manager.makeExptMutexLockKey(f.expt)
+			cid := fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run)
+			initial := f.snapshot()
+			require.ErrorIs(t, p.manager.CompleteExpt(ctx, f.expt, &f.run, f.space, p.event.Session), failure)
+			require.Equal(t, initial, f.snapshot(), "release failure rolls back terminal SQL")
+			run, err := p.manager.runLogRepo.Get(ctx, f.expt, f.run)
+			require.NoError(t, err)
+			require.Equal(t, int64(entity.ExptStatus_Pending), run.Status)
+			admitted, err := p.manager.mutex.Exists(ctx, key)
+			require.NoError(t, err)
+			require.True(t, admitted)
+			seen, err := p.manager.idem.Exist(ctx, cid)
+			require.NoError(t, err)
+			require.False(t, seen, "failed final release must not be hidden by a completed CID")
+			require.NoError(t, p.manager.CompleteExpt(ctx, f.expt, &f.run, f.space, p.event.Session))
+			run, err = p.manager.runLogRepo.Get(ctx, f.expt, f.run)
+			require.NoError(t, err)
+			require.Equal(t, int64(entity.ExptStatus_Success), run.Status)
+			committed := f.snapshot()
+			admitted, err = p.manager.mutex.Exists(ctx, key)
+			require.NoError(t, err)
+			require.False(t, admitted)
+			calls, resources := locker.calls, p.resources.Load()
+			require.NoError(t, p.manager.CompleteExpt(ctx, f.expt, &f.run, f.space, p.event.Session))
+			require.Equal(t, committed, f.snapshot(), "completed replay preserves atomic completion data")
+			require.Equal(t, calls, locker.calls, "known successful release must not be attempted again")
+			require.Equal(t, resources, p.resources.Load())
+			t.Logf("REAL_MYSQL_FINAL_RELEASE_RECOVERY fault=%s terminal_data_unchanged=true duplicate_unlock=false", fault)
+		})
+	}
+}

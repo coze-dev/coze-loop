@@ -1518,10 +1518,14 @@ func (e *exptBaseExec) exptEnd(ctx context.Context, event *entity.ExptScheduleEv
 	}
 
 	if exist {
+		if _, current := e.Manager.(IExptNaturalRunFinisher); current && expt.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend &&
+			expt.LatestRunID > 0 && expt.LatestRunID != event.ExptRunID {
+			return e.Manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(fmt.Sprintf("exptexec:onend:%d", event.ExptRunID)))
+		}
 		return nil
 	}
 
-	if event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun && expt.ExptType != entity.ExptType_Online {
+	if event.ExptRunMode != entity.EvaluationModeAppend && expt.ExptType != entity.ExptType_Online {
 		if calibration, ok := e.resultSvc.(ExptManualRetryFilterService); ok {
 			ready, err := reconcileManualRetryFilterBeforeFinish(ctx, calibration, event.SpaceID, event.ExptID, event.ExptRunID)
 			if err != nil {
@@ -1535,41 +1539,16 @@ func (e *exptBaseExec) exptEnd(ctx context.Context, event *entity.ExptScheduleEv
 		}
 	}
 
-	if event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun && expt.ExptType != entity.ExptType_Online {
-		if finish, ok := e.Manager.(IExptNaturalRunFinisher); ok {
-			result, err := finish.FinishCurrentRunWithHeldTickLock(ctx, event)
-			if err != nil {
-				return errno.WrapMQRetryErr(err)
-			}
-			if result == nil {
-				return errno.NewMQRetryErr("finish returned no disposition")
-			}
-			switch result.Disposition {
-			case entity.ExptRunFinishPending:
-				return errno.NewMQRetryErr("current run finish pending")
-			case entity.ExptRunFinishNonCurrent:
-				return nil
-			case entity.ExptRunFinishFinished, entity.ExptRunFinishAlreadyFinished:
-				duration := time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second * 2
-				if err := e.idem.Set(ctx, idemKey, duration); err != nil {
-					logs.CtxWarn(ctx, "finish end idem set failed: %v", err)
-				}
-				return nil
-			default:
-				return errno.NewMQRetryErr("invalid finish disposition")
-			}
-		}
-		if _, current := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); current {
-			return errno.NewMQRetryErr("current run finisher missing")
-		}
+	if event.ExptRunMode != entity.EvaluationModeAppend && expt.ExptType != entity.ExptType_Online {
+		ctx = context.WithValue(ctx, completeCalibratedKey{}, true)
 	}
 
 	completeCID := fmt.Sprintf("exptexec:onend:%d", event.ExptRunID)
-	if err := e.Manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
+	if err := e.Manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(completeCID), entity.WithCompleteInterval(0)); err != nil {
 		return err
 	}
 
-	if err := e.Manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
+	if err := e.Manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(completeCID), entity.WithCompleteInterval(0)); err != nil {
 		return err
 	}
 

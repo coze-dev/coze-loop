@@ -8,17 +8,26 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
+	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 )
 
 type ExptManualRetryRepoImpl struct {
-	dao repo.IExptManualRetryRepo
+	dao      repo.IExptManualRetryRepo
+	provider db.Provider
+	cache    redis.Cmdable
 }
 
 func NewExptManualRetryRepo(provider db.Provider, generator idgen.IIDGenerator) repo.IExptManualRetryRepo {
-	return &ExptManualRetryRepoImpl{dao: mysql.NewExptManualRetryDAO(provider, generator)}
+	return &ExptManualRetryRepoImpl{dao: mysql.NewExptManualRetryDAO(provider, generator), provider: provider}
+}
+
+func NewExptManualRetryRepoWithPending(provider db.Provider, generator idgen.IIDGenerator, cache redis.Cmdable) repo.IExptManualRetryRepo {
+	r := NewExptManualRetryRepo(provider, generator).(*ExptManualRetryRepoImpl)
+	r.cache = cache
+	return r
 }
 
 func (r *ExptManualRetryRepoImpl) RequeueTerminalItems(ctx context.Context, request *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryReceipt, error) {
