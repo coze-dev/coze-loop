@@ -29,6 +29,13 @@ type ICentralItemLifecycle interface {
 	OnItemTerminal(ctx context.Context, item *entity.ExptItemResultRunLog) error
 }
 
+// ICentralHistoricalItemLifecycle resolves generations from immutable persistent bindings, never the current item or context RequestID.
+type ICentralHistoricalItemLifecycle interface {
+	// Called under the item lease after Terminal is re-read and all historical run/item attempts are strictly stopped.
+	// Missing/conflicting bindings or an unknown finalization outcome must return an error to block deletion.
+	OnHistoricalItemTerminal(ctx context.Context, item *entity.ExptItemResultRunLog) error
+}
+
 // ICentralSandboxTaskPolicy extends the Sandbox adapter at experiment Submit/Retry/Update; direct Init remains the budget-authorized entry.
 type ICentralSandboxTaskPolicy interface {
 	DeferSandboxTaskInit(ctx context.Context, exptID, spaceID int64) (bool, error)
