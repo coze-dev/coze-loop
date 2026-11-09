@@ -21139,6 +21139,20 @@ func (p *SubmitExperimentOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 101:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField101(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 102:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField102(buf[offset:])
@@ -21528,6 +21542,38 @@ func (p *SubmitExperimentOApiRequest) FastReadField100(buf []byte) (int, error) 
 	return offset, nil
 }
 
+func (p *SubmitExperimentOApiRequest) FastReadField101(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		var _val string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	p.RunnerEnvs = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentOApiRequest) FastReadField102(buf []byte) (int, error) {
 	offset := 0
 
@@ -21595,6 +21641,7 @@ func (p *SubmitExperimentOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 		offset += p.fastWriteField61(buf[offset:], w)
 		offset += p.fastWriteField62(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
+		offset += p.fastWriteField101(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -21626,6 +21673,7 @@ func (p *SubmitExperimentOApiRequest) BLength() int {
 		l += p.field61Length()
 		l += p.field62Length()
 		l += p.field100Length()
+		l += p.field101Length()
 		l += p.field102Length()
 		l += p.field254Length()
 		l += p.field255Length()
@@ -21843,6 +21891,23 @@ func (p *SubmitExperimentOApiRequest) fastWriteField100(buf []byte, w thrift.Noc
 		offset += thrift.Binary.MapBeginLength()
 		var length int
 		for k, v := range p.Ext {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRING, length)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentOApiRequest) fastWriteField101(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRunnerEnvs() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 101)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.RunnerEnvs {
 			length++
 			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
 			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
@@ -22086,6 +22151,21 @@ func (p *SubmitExperimentOApiRequest) field100Length() int {
 	return l
 }
 
+func (p *SubmitExperimentOApiRequest) field101Length() int {
+	l := 0
+	if p.IsSetRunnerEnvs() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.RunnerEnvs {
+			_, _ = k, v
+
+			l += thrift.Binary.StringLengthNocopy(k)
+			l += thrift.Binary.StringLengthNocopy(v)
+		}
+	}
+	return l
+}
+
 func (p *SubmitExperimentOApiRequest) field102Length() int {
 	l := 0
 	if p.IsSetRefGroupExperimentID() {
@@ -22304,6 +22384,23 @@ func (p *SubmitExperimentOApiRequest) DeepCopy(s interface{}) error {
 			}
 
 			p.Ext[_key] = _val
+		}
+	}
+
+	if src.RunnerEnvs != nil {
+		p.RunnerEnvs = make(map[string]string, len(src.RunnerEnvs))
+		for key, val := range src.RunnerEnvs {
+			var _key string
+			if key != "" {
+				_key = kutils.StringDeepCopy(key)
+			}
+
+			var _val string
+			if val != "" {
+				_val = kutils.StringDeepCopy(val)
+			}
+
+			p.RunnerEnvs[_key] = _val
 		}
 	}
 

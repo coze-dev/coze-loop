@@ -356,6 +356,7 @@ struct Experiment {
     118: optional ExpectedQuotaConsumption expected_quota_consumption
     119: optional VerificationConfig verification_config
     120: optional i64 latest_run_id (api.js_conv = 'true', go.tag = 'json:"latest_run_id,omitempty"')
+    121: optional map<string, string> runner_envs (api.body = "runner_envs")
 
     // 注: scheduler_scope **不进读模型**。它是不透明调度域 ID, 对调用方无可用语义却泄露部署拓扑;
     // 内部运维需要时直接查 experiment.scheduler_scope 列。

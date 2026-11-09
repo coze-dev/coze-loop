@@ -88,8 +88,10 @@ type CreateExperimentRequest struct {
 	// 通知配置
 	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,110,optional" frugal:"110,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
 	Ext              map[string]string          `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	Session          *common.Session            `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
-	Base             *base.Base                 `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 沙箱运行环境变量：key 明文，value 由商业层加密落库；开源仓只做存储搬运
+	RunnerEnvs map[string]string `thrift:"runner_envs,101,optional" frugal:"101,optional,map<string:string>" form:"runner_envs" json:"runner_envs,omitempty"`
+	Session    *common.Session   `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base       *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewCreateExperimentRequest() *CreateExperimentRequest {
@@ -574,6 +576,18 @@ func (p *CreateExperimentRequest) GetExt() (v map[string]string) {
 	return p.Ext
 }
 
+var CreateExperimentRequest_RunnerEnvs_DEFAULT map[string]string
+
+func (p *CreateExperimentRequest) GetRunnerEnvs() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRunnerEnvs() {
+		return CreateExperimentRequest_RunnerEnvs_DEFAULT
+	}
+	return p.RunnerEnvs
+}
+
 var CreateExperimentRequest_Session_DEFAULT *common.Session
 
 func (p *CreateExperimentRequest) GetSession() (v *common.Session) {
@@ -717,6 +731,9 @@ func (p *CreateExperimentRequest) SetNotificationConf(val *expt.ExptNotification
 func (p *CreateExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
+func (p *CreateExperimentRequest) SetRunnerEnvs(val map[string]string) {
+	p.RunnerEnvs = val
+}
 func (p *CreateExperimentRequest) SetSession(val *common.Session) {
 	p.Session = val
 }
@@ -765,6 +782,7 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	94:  "scheduler_mode",
 	110: "notification_conf",
 	100: "ext",
+	101: "runner_envs",
 	200: "session",
 	255: "Base",
 }
@@ -923,6 +941,10 @@ func (p *CreateExperimentRequest) IsSetNotificationConf() bool {
 
 func (p *CreateExperimentRequest) IsSetExt() bool {
 	return p.Ext != nil
+}
+
+func (p *CreateExperimentRequest) IsSetRunnerEnvs() bool {
+	return p.RunnerEnvs != nil
 }
 
 func (p *CreateExperimentRequest) IsSetSession() bool {
@@ -1268,6 +1290,14 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 101:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField101(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1824,6 +1854,35 @@ func (p *CreateExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	p.Ext = _field
 	return nil
 }
+func (p *CreateExperimentRequest) ReadField101(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.RunnerEnvs = _field
+	return nil
+}
 func (p *CreateExperimentRequest) ReadField200(iprot thrift.TProtocol) error {
 	_field := common.NewSession()
 	if err := _field.Read(iprot); err != nil {
@@ -2005,6 +2064,10 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField100(oprot); err != nil {
 			fieldId = 100
+			goto WriteFieldError
+		}
+		if err = p.writeField101(oprot); err != nil {
+			fieldId = 101
 			goto WriteFieldError
 		}
 		if err = p.writeField200(oprot); err != nil {
@@ -2805,6 +2868,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
+func (p *CreateExperimentRequest) writeField101(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRunnerEnvs() {
+		if err = oprot.WriteFieldBegin("runner_envs", thrift.MAP, 101); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.RunnerEnvs)); err != nil {
+			return err
+		}
+		for k, v := range p.RunnerEnvs {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
+}
 func (p *CreateExperimentRequest) writeField200(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSession() {
 		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
@@ -2974,6 +3066,9 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
+		return false
+	}
+	if !p.Field101DeepEqual(ano.RunnerEnvs) {
 		return false
 	}
 	if !p.Field200DeepEqual(ano.Session) {
@@ -3421,6 +3516,19 @@ func (p *CreateExperimentRequest) Field100DeepEqual(src map[string]string) bool 
 	}
 	return true
 }
+func (p *CreateExperimentRequest) Field101DeepEqual(src map[string]string) bool {
+
+	if len(p.RunnerEnvs) != len(src) {
+		return false
+	}
+	for k, v := range p.RunnerEnvs {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
 func (p *CreateExperimentRequest) Field200DeepEqual(src *common.Session) bool {
 
 	if !p.Session.DeepEqual(src) {
@@ -3728,6 +3836,8 @@ type SubmitExperimentRequest struct {
 	// 评测对象来源空间
 	TargetSharedOption *common.SharedResourceOption `thrift:"target_shared_option,81,optional" frugal:"81,optional,common.SharedResourceOption" form:"target_shared_option" json:"target_shared_option,omitempty"`
 	Ext                map[string]string            `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	// 沙箱运行环境变量：key 明文，value 由商业层加密落库；开源仓只做存储搬运
+	RunnerEnvs map[string]string `thrift:"runner_envs,101,optional" frugal:"101,optional,map<string:string>" form:"runner_envs" json:"runner_envs,omitempty"`
 	// 实验分组 key 默认为实验 id；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）
 	// 引用分组实验 id：填写时校验其为当前空间内的实验 id
 	RefGroupExperimentID *int64 `thrift:"ref_group_experiment_id,91,optional" frugal:"91,optional,i64" json:"ref_group_experiment_id" form:"ref_group_experiment_id" `
@@ -4192,6 +4302,18 @@ func (p *SubmitExperimentRequest) GetExt() (v map[string]string) {
 	return p.Ext
 }
 
+var SubmitExperimentRequest_RunnerEnvs_DEFAULT map[string]string
+
+func (p *SubmitExperimentRequest) GetRunnerEnvs() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRunnerEnvs() {
+		return SubmitExperimentRequest_RunnerEnvs_DEFAULT
+	}
+	return p.RunnerEnvs
+}
+
 var SubmitExperimentRequest_RefGroupExperimentID_DEFAULT int64
 
 func (p *SubmitExperimentRequest) GetRefGroupExperimentID() (v int64) {
@@ -4386,6 +4508,9 @@ func (p *SubmitExperimentRequest) SetTargetSharedOption(val *common.SharedResour
 func (p *SubmitExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
+func (p *SubmitExperimentRequest) SetRunnerEnvs(val map[string]string) {
+	p.RunnerEnvs = val
+}
 func (p *SubmitExperimentRequest) SetRefGroupExperimentID(val *int64) {
 	p.RefGroupExperimentID = val
 }
@@ -4446,6 +4571,7 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	80:  "eval_set_shared_option",
 	81:  "target_shared_option",
 	100: "ext",
+	101: "runner_envs",
 	91:  "ref_group_experiment_id",
 	92:  "priority_level",
 	93:  "expected_quota_consumption",
@@ -4597,6 +4723,10 @@ func (p *SubmitExperimentRequest) IsSetTargetSharedOption() bool {
 
 func (p *SubmitExperimentRequest) IsSetExt() bool {
 	return p.Ext != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetRunnerEnvs() bool {
+	return p.RunnerEnvs != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetRefGroupExperimentID() bool {
@@ -4938,6 +5068,14 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 101:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField101(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5498,6 +5636,35 @@ func (p *SubmitExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	p.Ext = _field
 	return nil
 }
+func (p *SubmitExperimentRequest) ReadField101(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.RunnerEnvs = _field
+	return nil
+}
 func (p *SubmitExperimentRequest) ReadField91(iprot thrift.TProtocol) error {
 
 	var _field *int64
@@ -5716,6 +5883,10 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField100(oprot); err != nil {
 			fieldId = 100
+			goto WriteFieldError
+		}
+		if err = p.writeField101(oprot); err != nil {
+			fieldId = 101
 			goto WriteFieldError
 		}
 		if err = p.writeField91(oprot); err != nil {
@@ -6479,6 +6650,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
+func (p *SubmitExperimentRequest) writeField101(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRunnerEnvs() {
+		if err = oprot.WriteFieldBegin("runner_envs", thrift.MAP, 101); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.RunnerEnvs)); err != nil {
+			return err
+		}
+		for k, v := range p.RunnerEnvs {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
+}
 func (p *SubmitExperimentRequest) writeField91(oprot thrift.TProtocol) (err error) {
 	if p.IsSetRefGroupExperimentID() {
 		if err = oprot.WriteFieldBegin("ref_group_experiment_id", thrift.I64, 91); err != nil {
@@ -6729,6 +6929,9 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
+		return false
+	}
+	if !p.Field101DeepEqual(ano.RunnerEnvs) {
 		return false
 	}
 	if !p.Field91DeepEqual(ano.RefGroupExperimentID) {
@@ -7153,6 +7356,19 @@ func (p *SubmitExperimentRequest) Field100DeepEqual(src map[string]string) bool 
 		return false
 	}
 	for k, v := range p.Ext {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field101DeepEqual(src map[string]string) bool {
+
+	if len(p.RunnerEnvs) != len(src) {
+		return false
+	}
+	for k, v := range p.RunnerEnvs {
 		_src := src[k]
 		if strings.Compare(v, _src) != 0 {
 			return false
