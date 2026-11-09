@@ -44,7 +44,7 @@ func TestFilterSourceErrorsDoNotAdvanceCursor(t *testing.T) {
 			switch stage {
 			case "experiments":
 				sql.ExpectQuery("SELECT .* FROM `experiment`").WithArgs(5, 20, 2).WillReturnError(fault)
-				page, err := scanner.ScanExperiments(context.Background(), entity.ExptFilterScanBounds{MaxExptID: 20}, 5, 2)
+				page, err := scanner.ScanExperiments(context.Background(), entity.ExptFilterScanBounds{MaxExptID: 20}, 5, 2, nil, nil)
 				require.ErrorIs(t, err, fault)
 				require.Empty(t, page.Scopes)
 				require.Zero(t, page.NextExptID)
@@ -69,7 +69,7 @@ func TestFilterSourceRejectsMalformedPagesAndScope(t *testing.T) {
 	t.Run("out_of_order_experiment_discards_prefix", func(t *testing.T) {
 		scanner, sql, _ := newFilterScanFailureFixture(t)
 		sql.ExpectQuery("SELECT .* FROM `experiment`").WithArgs(5, 20, 2).WillReturnRows(sqlmock.NewRows([]string{"id", "space_id"}).AddRow(6, 1).AddRow(4, 1))
-		page, err := scanner.ScanExperiments(context.Background(), entity.ExptFilterScanBounds{MaxExptID: 20}, 5, 2)
+		page, err := scanner.ScanExperiments(context.Background(), entity.ExptFilterScanBounds{MaxExptID: 20}, 5, 2, nil, nil)
 		require.Error(t, err)
 		require.Empty(t, page.Scopes)
 		require.Zero(t, page.NextExptID)
@@ -86,7 +86,7 @@ func TestFilterSourceRejectsMalformedPagesAndScope(t *testing.T) {
 	})
 	t.Run("invalid_bounds_or_scope_never_query", func(t *testing.T) {
 		scanner, sql, sessions := newFilterScanFailureFixture(t)
-		page, err := scanner.ScanExperiments(context.Background(), entity.ExptFilterScanBounds{MaxExptID: 5}, 6, 1)
+		page, err := scanner.ScanExperiments(context.Background(), entity.ExptFilterScanBounds{MaxExptID: 5}, 6, 1, nil, nil)
 		require.ErrorContains(t, err, "invalid filter scan bounds")
 		require.Empty(t, page.Scopes)
 		_, err = scanner.TurnUpperBound(context.Background(), entity.ExptFilterScope{})

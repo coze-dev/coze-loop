@@ -33,13 +33,20 @@ func validFilterScan(cursor, upper int64, limit int) error {
 	return nil
 }
 
-func (s *exptFilterSourceScanner) ScanExperiments(ctx context.Context, bounds entity.ExptFilterScanBounds, cursor int64, limit int) (entity.ExptFilterExperimentPage, error) {
+func (s *exptFilterSourceScanner) ScanExperiments(ctx context.Context, bounds entity.ExptFilterScanBounds, cursor int64, limit int, spaceIDs, exptIDs []int64) (entity.ExptFilterExperimentPage, error) {
 	page := entity.ExptFilterExperimentPage{}
 	if err := validFilterScan(cursor, bounds.MaxExptID, limit); err != nil {
 		return page, err
 	}
 	var rows []*model.Experiment
-	err := s.provider.NewSession(ctx, db.WithMaster()).Model(&model.Experiment{}).Select("id, space_id").Where("id > ? AND id <= ?", cursor, bounds.MaxExptID).Order("id ASC").Limit(limit).Find(&rows).Error
+	query := s.provider.NewSession(ctx, db.WithMaster()).Model(&model.Experiment{}).Select("id, space_id").Where("id > ? AND id <= ?", cursor, bounds.MaxExptID)
+	if len(spaceIDs) > 0 {
+		query = query.Where("space_id IN ?", spaceIDs)
+	}
+	if len(exptIDs) > 0 {
+		query = query.Where("id IN ?", exptIDs)
+	}
+	err := query.Order("id ASC").Limit(limit).Find(&rows).Error
 	if err != nil {
 		return page, err
 	}

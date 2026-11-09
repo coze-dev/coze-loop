@@ -20,9 +20,10 @@ type IExptFilterIndexRepo interface {
 // IExptFilterSourceScanner reads current non-deleted sources from the primary.
 // Empty pages mean exhaustion; lookup and decoding failures must return an error.
 // ID bounds are scan bounds, not transaction commit boundaries.
+// Non-empty experiment-page space/expt ID lists intersect; empty lists are unrestricted.
 type IExptFilterSourceScanner interface {
 	BeginScan(context.Context) (entity.ExptFilterScanBounds, error)
-	ScanExperiments(context.Context, entity.ExptFilterScanBounds, int64, int) (entity.ExptFilterExperimentPage, error)
+	ScanExperiments(context.Context, entity.ExptFilterScanBounds, int64, int, []int64, []int64) (entity.ExptFilterExperimentPage, error)
 	TurnUpperBound(context.Context, entity.ExptFilterScope) (int64, error)
 	ScanTurns(context.Context, entity.ExptFilterScope, int64, int64, int) ([]*entity.ExptTurnResult, int64, error)
 }
