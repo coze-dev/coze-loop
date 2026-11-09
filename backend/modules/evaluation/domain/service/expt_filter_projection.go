@@ -339,8 +339,20 @@ func (e ExptResultServiceImpl) projectionEvaluators(ctx context.Context, expt *e
 	ids := make([]int64, 0, len(refs))
 	byRecord := make(map[int64]*entity.ExptTurnEvaluatorResultRef)
 	instances := make(map[int64]map[string]bool)
+	emptyLegacyRefs := make(map[int64]bool)
 	for _, ref := range refs {
-		if ref == nil || ref.SpaceID != expt.SpaceID || ref.ExptID != expt.ID || turns[ref.ExptTurnResultID] == nil || ref.EvaluatorResultID <= 0 || ref.EvaluatorVersionID < 0 || byRecord[ref.EvaluatorResultID] != nil {
+		if ref == nil || ref.SpaceID != expt.SpaceID || ref.ExptID != expt.ID || turns[ref.ExptTurnResultID] == nil {
+			return nil, projectionContextError(expt, knownKey, "evaluator_refs", fmt.Errorf("invalid or duplicate evaluator reference"))
+		}
+		// Old SingleSet run logs could persist an empty {0:0} evaluator result.
+		if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_SingleSet && ref.SourceType == 0 && ref.EvaluatorVersionID == 0 && ref.EvaluatorResultID == 0 && ref.Alias == "" && ref.InlineKey == "" {
+			if emptyLegacyRefs[ref.ExptTurnResultID] {
+				return nil, projectionContextError(expt, knownKey, "evaluator_refs", fmt.Errorf("invalid or duplicate evaluator reference"))
+			}
+			emptyLegacyRefs[ref.ExptTurnResultID] = true
+			continue
+		}
+		if ref.EvaluatorResultID <= 0 || ref.EvaluatorVersionID < 0 || byRecord[ref.EvaluatorResultID] != nil {
 			return nil, projectionContextError(expt, knownKey, "evaluator_refs", fmt.Errorf("invalid or duplicate evaluator reference"))
 		}
 		key := entity.EncodeEvaluatorInstanceKey(ref.EvaluatorVersionID, ref.Alias)
@@ -613,19 +625,19 @@ func projectionAnnotation(row *entity.ExptTurnResultFilterEntity, key string, re
 		if valueID < 0 {
 			return fmt.Errorf("annotation option ID must be positive")
 		}
-		option := data.Option
-		if contentType == entity.TagContentTypeBoolean {
-			option = data.BoolValue
-		}
-		if option != nil {
-			parsedID, err := strconv.ParseInt(*option, 10, 64)
-			if err != nil || parsedID <= 0 {
-				return fmt.Errorf("annotation option requires a positive int64 ID")
+		// An explicit value ID is the identity; JSON may contain a display label.
+		if valueID == 0 {
+			option := data.Option
+			if contentType == entity.TagContentTypeBoolean {
+				option = data.BoolValue
 			}
-			if valueID != 0 && valueID != parsedID {
-				return fmt.Errorf("annotation option ID conflicts with JSON value")
+			if option != nil {
+				parsedID, err := strconv.ParseInt(*option, 10, 64)
+				if err != nil || parsedID <= 0 {
+					return fmt.Errorf("annotation option requires a positive int64 ID")
+				}
+				valueID = parsedID
 			}
-			valueID = parsedID
 		}
 		if valueID == 0 {
 			return fmt.Errorf("annotation option ID is missing")

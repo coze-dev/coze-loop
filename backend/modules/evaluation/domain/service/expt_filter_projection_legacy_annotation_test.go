@@ -46,17 +46,17 @@ func TestProjectionAnnotationLegacyJSON(t *testing.T) {
 		{name: "boolean JSON without denormalized id", payload: `{"BoolValue":"124","TagContentType":"boolean"}`, wantString: map[string]string{"80": "124"}},
 		{name: "matching categorical ids", payload: `{"Option":"123","TagContentType":"categorical"}`, tagValueID: 123, wantString: map[string]string{"80": "123"}},
 		{name: "matching boolean ids", payload: `{"BoolValue":"124","TagContentType":"boolean"}`, tagValueID: 124, wantString: map[string]string{"80": "124"}},
-		{name: "conflicting categorical ids", payload: `{"Option":"123","TagContentType":"categorical"}`, tagValueID: 125, wantErr: true},
-		{name: "conflicting boolean ids", payload: `{"BoolValue":"124","TagContentType":"boolean"}`, tagValueID: 125, wantErr: true},
+		{name: "numeric categorical label keeps explicit id", payload: `{"Option":"123","TagContentType":"categorical"}`, tagValueID: 125, wantString: map[string]string{"80": "125"}},
+		{name: "numeric boolean label keeps explicit id", payload: `{"BoolValue":"124","TagContentType":"boolean"}`, tagValueID: 125, wantString: map[string]string{"80": "125"}},
 		{name: "missing categorical id is not zero", payload: `{"TagContentType":"categorical"}`, wantErr: true},
 		{name: "missing boolean id is not zero", payload: `{"TagContentType":"boolean"}`, wantErr: true},
-		{name: "present empty option cannot fall back", payload: `{"Option":"","TagContentType":"categorical"}`, tagValueID: 123, wantErr: true},
+		{name: "empty display snapshot keeps explicit id", payload: `{"Option":"","TagContentType":"categorical"}`, tagValueID: 123, wantString: map[string]string{"80": "123"}},
 		{name: "zero option id rejected", payload: `{"Option":"0"}`, wantErr: true},
 		{name: "negative option id rejected", payload: `{"Option":"-1"}`, wantErr: true},
 		{name: "boolean label is not option id", payload: `{"BoolValue":"true"}`, wantErr: true},
 		{name: "option id overflow rejected", payload: `{"Option":"9223372036854775808"}`, wantErr: true},
 		{name: "negative record id cannot fall back", payload: `{"Option":"123","TagContentType":"categorical"}`, tagValueID: -1, wantErr: true},
-		{name: "invalid explicit JSON cannot fall back", payload: `{"Option":"invalid","TagContentType":"categorical"}`, tagValueID: 123, wantErr: true},
+		{name: "display label keeps explicit id", payload: `{"Option":"invalid","TagContentType":"categorical"}`, tagValueID: 123, wantString: map[string]string{"80": "123"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
