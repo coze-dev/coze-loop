@@ -59,7 +59,7 @@ func newRunConfEtec(itemConfig *entity.ExptItemConfig, runModeConfig *entity.Run
 }
 
 func TestCallTarget_SUAStageRunConfReachesExt(t *testing.T) {
-	const raw = `{"max_qa_turns":60,"sua_stage_conf":{"mode":"staged","initial_stage":"review","stages":[{"stage_id":"review","files":[],"future":{"id":9007199254740993}}]},"sua_resume_pe_template":"继续 {{eval_result}}","sua_qa_reply_template":"仅回答当前问题"}`
+	const raw = `{"sua_workdir":"/tmp/private-sua","sua_setup_script":"prepare\nworkspace\n","max_qa_turns":60,"sua_stage_conf":{"mode":"staged","initial_stage":"review","stages":[{"stage_id":"review","files":[],"future":{"id":9007199254740993}}]},"sua_resume_pe_template":"继续 {{eval_result}}","sua_qa_reply_template":"仅回答当前问题"}`
 	var conf entity.ItemRunConf
 	require.NoError(t, json.Unmarshal([]byte(raw), &conf))
 	ctrl := gomock.NewController(t)

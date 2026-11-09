@@ -14,7 +14,7 @@ import (
 )
 
 func TestExptItemRefConvertor_SUAStageRunConfPersists(t *testing.T) {
-	const input = `{"eval_target_conf":{"version_id":999,"run_conf":{"max_qa_turns":60,"sua_stage_conf":{"mode":"staged","stages":[{"stage_id":"delivery","files":[],"future":{"id":9007199254740993,"enabled":false}}]},"sua_resume_pe_template":"继续 {{eval_result}}","sua_qa_reply_template":"只回答当前问题"}}}`
+	const input = `{"eval_target_conf":{"version_id":999,"run_conf":{"sua_workdir":"/tmp/private-sua","sua_setup_script":"prepare\nworkspace\n","max_qa_turns":60,"sua_stage_conf":{"mode":"staged","stages":[{"stage_id":"delivery","files":[],"future":{"id":9007199254740993,"enabled":false}}]},"sua_resume_pe_template":"继续 {{eval_result}}","sua_qa_reply_template":"只回答当前问题"}}}`
 	var cfg entity.ExptItemConfig
 	require.NoError(t, json.Unmarshal([]byte(input), &cfg))
 	conv := NewExptItemRefConvertor()

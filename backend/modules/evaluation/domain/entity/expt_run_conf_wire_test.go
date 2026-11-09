@@ -95,6 +95,8 @@ func TestItemRunConf_WireTagsAreTheCrossRepoContract(t *testing.T) {
 		SuaPETemplate:            "tpl {{eval_result}}",
 		SuaResumePETemplate:      "resume",
 		SuaQAReplyTemplate:       "qa",
+		SuaWorkdir:               "/tmp/private-sua",
+		SuaSetupScript:           "prepare\nworkspace\n",
 		SuaStageConf:             &map[string]json.RawMessage{"mode": json.RawMessage(`"staged"`)},
 		EvaluatorTrigger:         "final_turn_only",
 		FixedQueryList: []*FixedQuery{{
@@ -115,6 +117,7 @@ func TestItemRunConf_WireTagsAreTheCrossRepoContract(t *testing.T) {
 			"max_turns", "max_qa_turns", "max_run_minutes", "fixed_query_list", "sua_goal", "sua_persona",
 			"sua_behavioral_constraints", "sua_pe_template", "evaluator_trigger",
 			"sua_resume_pe_template", "sua_qa_reply_template", "sua_stage_conf",
+			"sua_workdir", "sua_setup_script",
 		},
 		wireKeys(t, rc),
 		"ItemRunConf 的 wire tag 集合变了 —— 必须同步 runtime 的 testcase.RunConf, 否则单向丢字段")

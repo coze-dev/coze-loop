@@ -25,6 +25,8 @@ func TestItemRunConf_SUAStageWireRoundTrip(t *testing.T) {
 	for _, codec := range codecs {
 		t.Run(codec.name, func(t *testing.T) {
 			for _, input := range []string{
+				`{"sua_workdir":"/tmp/private-sua"}`,
+				`{"sua_setup_script":"prepare\nworkspace\n"}`,
 				`{"max_qa_turns":60}`,
 				`{"max_qa_turns":0}`,
 				`{"sua_resume_pe_template":"继续 {{goal}}\n{{eval_result}}"}`,
@@ -47,7 +49,7 @@ func TestItemRunConf_SUAStageWireRoundTrip(t *testing.T) {
 }
 
 func TestItemRunConf_SUAStageObjectAndDefaults(t *testing.T) {
-	for _, input := range []string{`{}`, `{"max_qa_turns":null}`, `{"sua_stage_conf":null}`, `{"sua_resume_pe_template":"","sua_qa_reply_template":""}`} {
+	for _, input := range []string{`{}`, `{"max_qa_turns":null}`, `{"sua_stage_conf":null}`, `{"sua_workdir":"","sua_setup_script":""}`, `{"sua_workdir":null,"sua_setup_script":null}`, `{"sua_resume_pe_template":"","sua_qa_reply_template":""}`} {
 		var rc ItemRunConf
 		require.NoError(t, loopjson.Unmarshal([]byte(input), &rc))
 		out, err := loopjson.Marshal(&rc)

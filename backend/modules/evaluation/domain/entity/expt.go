@@ -672,6 +672,8 @@ type ItemRunConf struct {
 	SuaPETemplate       string `json:"sua_pe_template,omitempty"`
 	SuaResumePETemplate string `json:"sua_resume_pe_template,omitempty"`
 	SuaQAReplyTemplate  string `json:"sua_qa_reply_template,omitempty"`
+	SuaWorkdir          string `json:"sua_workdir,omitempty"`
+	SuaSetupScript      string `json:"sua_setup_script,omitempty"`
 	// 阶段语义由 runtime 解释；保留未知子字段与精确数字，指针区分未配和空 object。
 	SuaStageConf *map[string]stdjson.RawMessage `json:"sua_stage_conf,omitempty"`
 	// EvaluatorTrigger 决定该题目**什么时候**跑评估器: never / after_each_turn /
