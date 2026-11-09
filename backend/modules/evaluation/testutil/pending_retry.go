@@ -37,13 +37,14 @@ func RetryRedis(t *testing.T) infraredis.Cmdable {
 
 type pendingTickMode struct{ entity.ExptSchedulerMode }
 
-var pendingConsumed = errors.New("test tick reached ScheduleStart after pending consumption")
+var errPendingConsumed = errors.New("test tick reached ScheduleStart after pending consumption")
 
 func (*pendingTickMode) ExptStart(context.Context, *entity.ExptScheduleEvent, *entity.Experiment) error {
 	return nil
 }
+
 func (*pendingTickMode) ScheduleStart(context.Context, *entity.ExptScheduleEvent, *entity.Experiment) error {
-	return pendingConsumed
+	return errPendingConsumed
 }
 func (*pendingTickMode) NextTick(context.Context, *entity.ExptScheduleEvent, bool) error { return nil }
 
@@ -86,7 +87,7 @@ func StartPendingTicks(t *testing.T, manager service.IExptManager, port repo.IEx
 			if ctx.Err() != nil {
 				return
 			}
-			require.ErrorIs(t, err, pendingConsumed, "real original tick must reach ScheduleStart, expt=%d run=%d", event.ExptID, event.ExptRunID)
+			require.ErrorIs(t, err, errPendingConsumed, "real original tick must reach ScheduleStart, expt=%d run=%d", event.ExptID, event.ExptRunID)
 		}
 	}()
 	t.Cleanup(func() {

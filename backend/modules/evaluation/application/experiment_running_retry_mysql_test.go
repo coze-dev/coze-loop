@@ -85,6 +85,7 @@ func (m *legacyApplicationManager) Run(context.Context, int64, int64, int64, int
 	m.runs.Add(1)
 	return nil
 }
+
 func (m *legacyApplicationManager) RetryItems(context.Context, int64, int64, int64, int, []int64, *entity.Session, map[string]string) error {
 	m.retryItems.Add(1)
 	return nil

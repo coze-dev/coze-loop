@@ -189,6 +189,7 @@ func (h *pendingReceiptFailureHook) DialHook(next redisc.DialHook) redisc.DialHo
 func (h *pendingReceiptFailureHook) ProcessPipelineHook(next redisc.ProcessPipelineHook) redisc.ProcessPipelineHook {
 	return next
 }
+
 func (h *pendingReceiptFailureHook) ProcessHook(next redisc.ProcessHook) redisc.ProcessHook {
 	return func(ctx context.Context, cmd redisc.Cmder) error {
 		if cmd.Name() == "set" && len(cmd.Args()) > 1 && fmt.Sprint(cmd.Args()[1]) == h.key && (h.persistent.Load() || h.fail.CompareAndSwap(true, false)) {
@@ -270,7 +271,9 @@ func TestPendingRetryUncommittedPrimaryReadErrorIsNotSuppressed(t *testing.T) {
 			// Obtain a real local MySQL error rather than returning a fake
 			// successful token read or a receipt-cache failure.
 			err := tx.Session(&gorm.Session{NewDB: true}).Exec("SELECT post070_missing_column FROM expt_item_result LIMIT 1").Error
-			tx.AddError(err)
+			if err := tx.AddError(err); err == nil {
+				t.Error("expected real MySQL error to be added to the transaction")
+			}
 		}
 	}))
 	recovered, err := port.ResolvePendingRetry(context.Background(), pending, false)
@@ -359,6 +362,7 @@ func (h *pendingReadFailureHook) DialHook(next redisc.DialHook) redisc.DialHook 
 func (h *pendingReadFailureHook) ProcessPipelineHook(next redisc.ProcessPipelineHook) redisc.ProcessPipelineHook {
 	return next
 }
+
 func (h *pendingReadFailureHook) ProcessHook(next redisc.ProcessHook) redisc.ProcessHook {
 	return func(ctx context.Context, cmd redisc.Cmder) error {
 		if cmd.Name() == "get" && len(cmd.Args()) > 1 && strings.HasPrefix(fmt.Sprint(cmd.Args()[1]), h.prefix) && h.fail.CompareAndSwap(true, false) {
@@ -410,6 +414,7 @@ func (h *pendingDeleteFailureHook) DialHook(next redisc.DialHook) redisc.DialHoo
 func (h *pendingDeleteFailureHook) ProcessPipelineHook(next redisc.ProcessPipelineHook) redisc.ProcessPipelineHook {
 	return next
 }
+
 func (h *pendingDeleteFailureHook) ProcessHook(next redisc.ProcessHook) redisc.ProcessHook {
 	return func(ctx context.Context, cmd redisc.Cmder) error {
 		if cmd.Name() == "eval" && len(cmd.Args()) > 3 && fmt.Sprint(cmd.Args()[3]) == h.key && strings.Contains(fmt.Sprint(cmd.Args()[1]), "Request.RequestID") && h.fail.CompareAndSwap(true, false) {
