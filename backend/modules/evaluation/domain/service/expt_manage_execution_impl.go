@@ -567,11 +567,7 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 			return errno.NewMQRetryErr("run cleanup lifecycle locker missing")
 		}
 		lockKey := e.makeExptMutexLockKey(exptID)
-		// Reuse the finish/termination migration: release this run's own value and
-		// take over a provably old pre-upgrade holder by value before acquiring.
-		if err := e.releasePreviousLifecycleHolder(ctx, cleanupLocker, lockKey, &entity.ExptScheduleEvent{
-			ExptID: exptID, ExptRunID: exptRunID, SpaceID: spaceID, Session: session,
-		}); err != nil {
+		if _, err := e.mutex.UnlockWithValue(ctx, lockKey, strconv.FormatInt(exptRunID, 10)); err != nil {
 			return errno.WrapMQRetryErr(err)
 		}
 		locked, cleanupCtx, cancel, err := cleanupLocker.LockWithRenew(ctx, lockKey, 5*time.Second, 5*time.Minute)

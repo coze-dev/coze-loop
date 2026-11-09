@@ -76,21 +76,21 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 	lwt := lwtmocks.NewMockILatestWriteTracker(ctrl)
 	mutex := lockmocks.NewMockILocker(ctrl)
 	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
-	// same-run 准入不再读取开关；显式 expected_run_id 时必须直接进入当前 run。
+	enabled := true
+	config.EXPECT().GetExptExecConf(gomock.Any(), space).DoAndReturn(func(context.Context, int64) *entity.ExptExecConf {
+		return &entity.ExptExecConf{RunningRetryEnabled: &enabled}
+	}).AnyTimes()
 	lwt.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), expt).Return(false).AnyTimes()
 	auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	// 4 次加锁：首次受理时 run exec lock + 被受理 item 的 eval lock；
-	// 之后两次重复请求（含开关门禁删除后新增的第三次调用）各自再取一次 run exec lock，
-	// 因此重复请求的拒绝原因只可能是队列/run 状态，而不是 disabled。
 	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), 5*time.Second, 5*time.Minute).DoAndReturn(func(ctx context.Context, _ string, _ time.Duration, _ time.Duration) (bool, context.Context, func(), error) {
 		c, cancel := context.WithCancel(ctx)
 		return true, c, cancel, nil
-	}).Times(4)
+	}).Times(3)
 	publisher.EXPECT().PublishExptScheduleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 	manager := service.NewExptManager(nil,
 		exptrepo.NewExptRepo(exptmysql.NewExptDAO(provider), exptmysql.NewExptEvaluatorRefDAO(provider), generator),
 		exptrepo.NewExptRunLogRepo(exptmysql.NewExptRunLogDAO(provider)), exptrepo.NewExptStatsRepo(exptmysql.NewExptStatsDAO(provider)), exptrepo.NewExptItemResultRepo(exptmysql.NewExptItemResultDAO(provider)), exptrepo.NewExptItemRefRepo(exptmysql.NewExptItemRefDAO(provider)), exptrepo.NewExptTurnResultRepo(generator, exptmysql.NewExptTurnResultDAO(provider), exptmysql.NewExptTurnEvaluatorResultRefDAO(provider)), config, nil, mutex, nil, publisher, nil, generator, nil, lwt, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, component.NewNoopCentralSchedulerScopeProvider(), component.NewNoopCentralAdmissionPolicy(), component.NewNoopCentralReservationGuard(), exptrepo.NewExptManualRetryRepo(provider, generator), nil, component.NewNoopCurrentRunSchedulerWaker(), func() lock.ILocker { return mutex })
-	app := &experimentApplication{manager: manager, auth: auth, idgen: generator}
+	app := &experimentApplication{manager: manager, auth: auth, idgen: generator, configer: config}
 	req := &exptpb.RetryExperimentRequest{WorkspaceID: &space, ExptID: &expt, ExpectedRunID: &run, RetryMode: gptr.Of(dexpt.ExptRetryMode_RetryTargetItems), ItemIds: []int64{item, item}, Ext: map[string]string{"caller": "identity"}}
 	response, err := app.RetryExperiment(context.Background(), req)
 	require.NoError(t, err)
@@ -120,14 +120,10 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 	require.Equal(t, "queueing", again.RejectedItems[0].GetReason())
 	require.Equal(t, item, again.RejectedItems[0].GetItemID())
 	require.Equal(t, run, again.GetRunID())
-	// 开关门禁删除后，重复请求的拒绝原因只由 run / 队列状态决定，配置读取不再发生。
-	gate := confmocks.NewMockIConfiger(ctrl)
-	gate.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Times(0)
-	app.configer = gate
-	third, err := app.RetryExperiment(context.Background(), req)
-	require.NoError(t, err)
-	require.Zero(t, third.GetAcceptedCount())
-	require.Equal(t, "queueing", third.RejectedItems[0].GetReason())
+	enabled = false
+	_, err = app.RetryExperiment(context.Background(), req)
+	require.ErrorContains(t, err, "disabled")
+	enabled = true
 	require.NoError(t, conn.Model(&model.Experiment{}).Where("id=?", expt).Update("status", entity.ExptStatus_Success).Error)
 	_, err = app.RetryExperiment(context.Background(), req)
 	require.ErrorContains(t, err, "run_finished")

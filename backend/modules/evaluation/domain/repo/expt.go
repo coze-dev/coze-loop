@@ -86,18 +86,6 @@ type IExptItemResultRepo interface {
 	// 用于「Terminal 是吸收态」的保证：行级终止后到达的在途执行结果 MUST NOT 回写 status。
 	// 未命中（全部已 Terminal）不返回 error —— 吸收态生效即预期结果。
 	UpdateItemRunLogIfNotTerminal(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64) error
-	// SetTerminalQuotaReservationState 以请求身份为条件，CAS 改写终态行的额度预占投影。
-	//
-	// 终止路径的资源释放与数据库提交不在同一事务里：提交已经成功、Release 失败时，
-	// 死终态行（终态 + reserved，或运行中终止的终态 + none）就把「账本仍持有该 item」
-	// 这件事藏了起来 —— 没有任何 item 事件会再来，B1 还会让 run 永不收口。
-	// 本方法给这种行提供唯一的可对账标记：
-	//   - Reserved：释放失败时打标，下一拍调度扫描到它；
-	//   - None：调度拍确认释放成功后清标（清完终态行不再占并发名额）。
-	// expectedRequestID 与 canonical 的 manual retry 上下文逐字比对，并限定同一 run、
-	// 终态行、CAS 旧值，因此不会命中新 run / 新 manual attempt 的 reservation。
-	// 行已不是本次观测的身份时返回 (false, nil)。
-	SetTerminalQuotaReservationState(ctx context.Context, spaceID, exptID, exptRunID, itemID int64, expectedRequestID string, state entity.QuotaReservationState) (bool, error)
 	GetItemRunLog(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) (*entity.ExptItemResultRunLog, error)
 	MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64) ([]*entity.ExptItemResultRunLog, error)
 }

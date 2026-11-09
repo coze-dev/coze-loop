@@ -1382,64 +1382,73 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		return d, repomocks.NewMockIExptManualRetryRepo(d.ctrl), componentmocks.NewMockIConfiger(d.ctrl), repomocks.NewMockIExptRunLogRepo(d.ctrl)
 	}
+	enabled := func(config *componentmocks.MockIConfiger) {
+		config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)}).AnyTimes()
+	}
+
 	t.Run("repo_missing", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		_, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
 		require.Error(t, err)
 	})
-	// 开关门禁删除后，configer nil 与存量关闭配置都必须照常准入，只在 run 锁竞争处被拒绝。
-	t.Run("config_independent_admission", func(t *testing.T) {
-		for _, kind := range []string{"configer_nil", "legacy_config"} {
-			t.Run(kind, func(t *testing.T) {
-				d, retryRepo, config, _ := newDeps(t)
-				d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil)
-				d.items.EXPECT().ScanItemResults(gomock.Any(), int64(1), int64(0), int64(500), []int32{int32(entity.ItemRunState_Fail)}, int64(3)).Return(nil, int64(0), nil)
-				d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
-				m := d.manager()
-				m.manualRetryRepo = retryRepo
-				if kind == "legacy_config" {
-					// 存量 TCC 里残留旧开关 key 时同样不得再被读取。
-					config.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Times(0)
-				}
-				_, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
-				require.ErrorContains(t, err, "retry_busy")
-			})
-		}
+	t.Run("config_required", func(t *testing.T) {
+		d, retryRepo, _, _ := newDeps(t)
+		m := d.manager()
+		m.manualRetryRepo = retryRepo
+		got, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
+		require.ErrorContains(t, err, "manual retry configer unavailable")
+		require.Nil(t, got)
+	})
+	t.Run("disabled", func(t *testing.T) {
+		d, retryRepo, config, _ := newDeps(t)
+		config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(false)})
+		m := d.manager()
+		m.manualRetryRepo = retryRepo
+		m.configer = config
+		_, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
+		require.Error(t, err)
 	})
 	t.Run("lock_busy", func(t *testing.T) {
-		d, retryRepo, _, _ := newDeps(t)
+		d, retryRepo, config, _ := newDeps(t)
+		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), int64(1), int64(0), int64(500), []int32{int32(entity.ItemRunState_Fail)}, int64(3)).Return(nil, int64(0), nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
+		m.configer = config
 		_, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
 		require.Error(t, err)
 	})
 	t.Run("run_finished", func(t *testing.T) {
-		d, retryRepo, _, runs := newDeps(t)
+		d, retryRepo, config, runs := newDeps(t)
+		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
 		runs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{SpaceID: 3, ExptID: 1, ExptRunID: 2, Status: int64(entity.ExptStatus_Success)}, nil)
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
+		m.configer = config
 		m.runLogRepo = runs
 		_, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
 		require.Error(t, err)
 	})
 	t.Run("prepare_error", func(t *testing.T) {
-		d, retryRepo, _, _ := newDeps(t)
+		d, retryRepo, config, _ := newDeps(t)
+		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("scan"))
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
+		m.configer = config
 		_, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
 		require.Error(t, err)
 	})
 	t.Run("happy_path_empty_plan", func(t *testing.T) {
-		d, retryRepo, _, runs := newDeps(t)
+		d, retryRepo, config, runs := newDeps(t)
+		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
@@ -1449,6 +1458,7 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 		retryRepo.EXPECT().RequeueTerminalItems(gomock.Any(), gomock.Any()).Return(receipt, nil)
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
+		m.configer = config
 		m.runLogRepo = runs
 		got, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
 		require.NoError(t, err)
@@ -1825,6 +1835,9 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 		d := newTermUnitDeps(t)
 		return d, repomocks.NewMockIExptManualRetryRepo(d.ctrl), componentmocks.NewMockIConfiger(d.ctrl), repomocks.NewMockIExptRunLogRepo(d.ctrl)
 	}
+	enabled := func(config *componentmocks.MockIConfiger) {
+		config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{RunningRetryEnabled: gptr.Of(true)}).AnyTimes()
+	}
 	req := func() *entity.RetryInCurrentRunRequest { return manualRetryUnitRequest() }
 
 	t.Run("latest_run_read_error", func(t *testing.T) {
@@ -1839,41 +1852,48 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 		require.ErrorIs(t, err, cause)
 	})
 	t.Run("locker_nil", func(t *testing.T) {
-		d, retryRepo, _, _ := newDeps(t)
+		d, retryRepo, config, _ := newDeps(t)
+		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
+		m.configer = config
 		m.manualRetryLocker = nil
 		_, err := m.RetryInCurrentRun(context.Background(), req())
 		require.Error(t, err)
 	})
 	t.Run("run_missing", func(t *testing.T) {
-		d, retryRepo, _, runs := newDeps(t)
+		d, retryRepo, config, runs := newDeps(t)
+		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
 		runs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(nil, nil)
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
+		m.configer = config
 		m.runLogRepo = runs
 		_, err := m.RetryInCurrentRun(context.Background(), req())
 		require.Error(t, err)
 	})
 	t.Run("run_mismatch", func(t *testing.T) {
-		d, retryRepo, _, runs := newDeps(t)
+		d, retryRepo, config, runs := newDeps(t)
+		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
 		runs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{SpaceID: 99, ExptID: 1, ExptRunID: 2}, nil)
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
+		m.configer = config
 		m.runLogRepo = runs
 		_, err := m.RetryInCurrentRun(context.Background(), req())
 		require.Error(t, err)
 	})
 	t.Run("preflight_error", func(t *testing.T) {
-		d, retryRepo, _, runs := newDeps(t)
+		d, retryRepo, config, runs := newDeps(t)
+		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
@@ -1881,12 +1901,14 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 		retryRepo.EXPECT().PreflightTerminalItems(gomock.Any(), gomock.Any()).Return(nil, errors.New("preflight"))
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
+		m.configer = config
 		m.runLogRepo = runs
 		_, err := m.RetryInCurrentRun(context.Background(), req())
 		require.Error(t, err)
 	})
 	t.Run("requeue_error", func(t *testing.T) {
-		d, retryRepo, _, runs := newDeps(t)
+		d, retryRepo, config, runs := newDeps(t)
+		enabled(config)
 		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
@@ -1895,6 +1917,7 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 		retryRepo.EXPECT().RequeueTerminalItems(gomock.Any(), gomock.Any()).Return(nil, errors.New("requeue"))
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
+		m.configer = config
 		m.runLogRepo = runs
 		_, err := m.RetryInCurrentRun(context.Background(), req())
 		require.Error(t, err)

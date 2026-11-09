@@ -128,22 +128,17 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 		if err != nil {
 			return false, err
 		}
-		// 与 buildExptTurnEvalCtx 的 History 赋值同源：非 manual retry 上下文不下发 history，
-		// 也就不为本轮多做一次大字段回捞（loadTargetHistoryOutput）或累积中间态。
-		feedHistory := etec.Event.RequestID != ""
 		if existing := etec.GetExistTurnResultRunLog(turn.ID); existing != nil && existing.Status == entity.TurnRunState_Success && !etec.Event.IgnoreExistedTargetResult() {
 			target := etec.ExptTurnRunResult.GetTargetResult()
 			if existing.TargetResultID > 0 && target == nil {
 				return false, fmt.Errorf("success turn target record %d missing during history resume", existing.TargetResultID)
 			}
-			if feedHistory {
-				if turnIndex+1 < len(eiec.EvalSetItem.Turns) {
-					if err := e.loadTargetHistoryOutput(ctx, target); err != nil {
-						return false, err
-					}
+			if turnIndex+1 < len(eiec.EvalSetItem.Turns) {
+				if err := e.loadTargetHistoryOutput(ctx, target); err != nil {
+					return false, err
 				}
-				history = append(history, buildHistoryMessage(ctx, etec.ExptTurnRunResult)...)
 			}
+			history = append(history, buildHistoryMessage(ctx, etec.ExptTurnRunResult)...)
 			continue
 		}
 
@@ -175,14 +170,12 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 		}
 		e.emitSandboxAgentE2EFinishedIfTerminal(ctx, etec, eiec.Event, turnRunRes, nil)
 
-		if feedHistory {
-			if turnIndex+1 < len(eiec.EvalSetItem.Turns) {
-				if err := e.loadTargetHistoryOutput(ctx, turnRunRes.GetTargetResult()); err != nil {
-					return false, err
-				}
+		if turnIndex+1 < len(eiec.EvalSetItem.Turns) {
+			if err := e.loadTargetHistoryOutput(ctx, turnRunRes.GetTargetResult()); err != nil {
+				return false, err
 			}
-			history = append(history, buildHistoryMessage(ctx, turnRunRes)...)
 		}
+		history = append(history, buildHistoryMessage(ctx, turnRunRes)...)
 	}
 
 	time.Sleep(time.Second * 1)
@@ -451,8 +444,7 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 			ExptItemEvalCtx:   &turnItemCtx,
 			Turn:              turn,
 			ExptTurnRunResult: &entity.ExptTurnRunResult{},
-			// History 默认不下发（与 bbab72c4^ 语义一致）；只有 manual retry 上下文才在
-			// ext 合并完成后赋值，见下方 RequestID 判断。
+			History:           history,
 		}
 	)
 	etec.Ext = make(map[string]string)
@@ -488,14 +480,6 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 	}
 	logs.CtxInfo(ctx, "[BuildEvalExt] buildExptTurnEvalCtx merged ext, expt_id: %v, item_id: %v, turn_id: %v, space_id: %v, build_eval_ext: %v, merged_etec_ext: %v",
 		eiec.Event.ExptID, eiec.Event.EvalSetItemID, turn.ID, spaceID, json.Jsonify(evalExt), json.Jsonify(etec.Ext))
-
-	// 多轮 HistoryMessages 只服务 manual retry（同 run 内重试已完成的 item：前序轮次的结果
-	// 只能从落库的 target 记录恢复，target 输入需要它才是同一段会话）。
-	// 普通 submit / fail-retry 保持旧路径语义（History 恒 nil）：本 MR 之前 history 从未真正下发，
-	// 若对普通执行一起打开，同一 run 跨越发布版本会出现前段无 history、后段有 history 的输入漂移。
-	if etec.Event.RequestID != "" {
-		etec.History = history
-	}
 
 	if existTurnRunResult == nil {
 		return etec, nil

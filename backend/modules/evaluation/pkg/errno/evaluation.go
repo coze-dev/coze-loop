@@ -536,6 +536,10 @@ const (
 	manualRetryBusyMessage           = "retry_busy"
 	manualRetryBusyNoAffectStability = true
 
+	ManualRetryDisabledCode              = 601204106 // same-run manual retry running retry disabled
+	manualRetryDisabledMessage           = "running retry disabled"
+	manualRetryDisabledNoAffectStability = true
+
 	ManualRetryIdentityRequiredCode              = 601204107 // same-run manual retry identity required
 	manualRetryIdentityRequiredMessage           = "identity_required"
 	manualRetryIdentityRequiredNoAffectStability = true
@@ -1337,6 +1341,12 @@ func init() {
 		ManualRetryBusyCode,
 		manualRetryBusyMessage,
 		code.WithAffectStability(!manualRetryBusyNoAffectStability),
+	)
+
+	code.Register(
+		ManualRetryDisabledCode,
+		manualRetryDisabledMessage,
+		code.WithAffectStability(!manualRetryDisabledNoAffectStability),
 	)
 
 	code.Register(

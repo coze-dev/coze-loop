@@ -426,13 +426,7 @@ func TestResultPublishLockCancellationNoWrites(t *testing.T) {
 			before := f.snapshot()
 			sent := false
 			applied, err := svc.PublishPreparedItemResult(ctx, p, func(context.Context, *entity.ExptItemResultPublishSource) error { sent = true; return nil })
-			if kind == "busy" {
-				// Busy is a benign per-item contention: skip this tick, retry on the
-				// next scan, never fail the whole scheduler tick into MQ retry.
-				require.NoError(t, err)
-			} else {
-				require.True(t, errno.NeedMQRetry(err))
-			}
+			require.True(t, errno.NeedMQRetry(err))
 			require.False(t, applied)
 			require.False(t, sent)
 			require.Equal(t, before, f.snapshot())

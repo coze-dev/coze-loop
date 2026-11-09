@@ -62,7 +62,7 @@ func TestHandleCurrentEventErrFrozenRetryBudget(t *testing.T) {
 		{name: "remaining_db_max", frozen: &entity.EvaluationConfiguration{ItemRetryNum: gptr.Of(3)}, space: 3, db: 1, want: 2, retry: true},
 		{name: "remaining_event_max", frozen: &entity.EvaluationConfiguration{ItemRetryNum: gptr.Of(3)}, space: 3, message: 1, want: 2, retry: true},
 		{name: "exhausted", frozen: &entity.EvaluationConfiguration{ItemRetryNum: gptr.Of(3)}, space: 3, db: 3, message: 1, want: 3},
-		{name: "run_budget_overrides_experiment_config", frozen: &entity.EvaluationConfiguration{ItemRetryNum: gptr.Of(3)}, eventLimit: 1, db: 1, want: 1},
+		{name: "frozen_overrides_positive_event", frozen: &entity.EvaluationConfiguration{ItemRetryNum: gptr.Of(3)}, eventLimit: 1, db: 1, want: 2, retry: true},
 		{name: "absent_evalconf_event_fallback", eventLimit: 1, space: 3, db: 1, want: 1},
 		{name: "absent_evalconf_space_fallback", space: 3, db: 1, want: 2, retry: true},
 		{name: "absent_pointer_event_fallback", frozen: &entity.EvaluationConfiguration{}, eventLimit: 3, db: 1, want: 2, retry: true},

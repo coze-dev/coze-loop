@@ -34,13 +34,9 @@ func (d *ExptManualRetryDAOImpl) lockManualRetrySource(ctx context.Context, r *e
 		return "", nil
 	}
 	// Preserve the original multi-set stored-ref check and its missing-ref error.
-	frozen := item.frozenRef
-	if frozen == nil {
-		var err error
-		frozen, err = NewExptItemRefDAO(d.provider).GetByExptIDAndItemID(ctx, r.SpaceID, r.ExptID, item.item.ItemID, opts...)
-		if err != nil {
-			return "", err
-		}
+	frozen, err := NewExptItemRefDAO(d.provider).GetByExptIDAndItemID(ctx, r.SpaceID, r.ExptID, item.item.ItemID, opts...)
+	if err != nil {
+		return "", err
 	}
 	if frozen.ItemConfig != nil {
 		var cfg *entity.ExptItemConfig

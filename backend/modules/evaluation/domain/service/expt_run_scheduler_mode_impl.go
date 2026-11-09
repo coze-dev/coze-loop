@@ -1391,9 +1391,6 @@ func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptSche
 	if err != nil {
 		return nil, nil, nil, errno.WrapMQRetryErr(err)
 	}
-	// 先对账再分类：终态 + reserved 的行如果拖到分类之后才释放，本拍仍会把它算成
-	// incomplete 而多发一次 nextTick（B1 的永久 incomplete 就是这样开始的）。
-	reconcileTerminalResourceDebt(ctx, e.Manager, event, expt, rows)
 	candidates := make([]*entity.ExptEvalItem, 0)
 	toSubmit = make([]*entity.ExptEvalItem, 0)
 	incomplete = make([]*entity.ExptEvalItem, 0)
@@ -2946,32 +2943,4 @@ func extractTagFilter(f *entity.ExptItemFilter) *entity.TagFilter {
 		relation = entity.TagFilterRelationAnd
 	}
 	return &entity.TagFilter{TagNames: tagNames, Relation: relation}
-}
-
-// reconcileTerminalResourceDebt 在扫描分类前对账终态行的资源债务。
-//
-// 失败只告警、不返回错误：对账是收尾工作，让它把整个调度拍打失败会把
-// "残留一次释放"升级成"run 不推进"。债务标记仍在，下一拍自然重试。
-// 只有真正清掉投影的行才会被本拍按 complete 处理（见 ScanEvalItems）。
-func reconcileTerminalResourceDebt(ctx context.Context, manager IExptManager, event *entity.ExptScheduleEvent, expt *entity.Experiment, rows []*entity.ExptItemCurrentRequest) {
-	reconciler, ok := manager.(ITerminalResourceDebtReconciler)
-	if !ok {
-		return
-	}
-	cleared := reconciler.ReconcileTerminalResourceDebt(ctx, event, expt, rows)
-	if len(cleared) == 0 {
-		return
-	}
-	released := make(map[int64]struct{}, len(cleared))
-	for _, id := range cleared {
-		released[id] = struct{}{}
-	}
-	for _, row := range rows {
-		if row == nil {
-			continue
-		}
-		if _, ok := released[row.ItemID]; ok {
-			row.QuotaReservationState = entity.QuotaReservationStateNone
-		}
-	}
 }

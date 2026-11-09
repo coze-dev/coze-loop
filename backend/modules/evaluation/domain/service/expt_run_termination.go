@@ -182,13 +182,8 @@ func (e *ExptMangerImpl) terminateCurrentItems(ctx context.Context, expt, run, s
 		}
 		resourceCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
 		defer cancel()
-		debt, releaseErr := e.releaseTerminationResourcesWithDebt(resourceCtx, current, run, sources, false, session)
-		if len(debt) > 0 {
-			// 行级终止后实验仍在跑：把欠释放的 item 落成持久标记，由后续调度拍对账。
-			e.retainTerminalResourceDebt(ctx, current, run, debt)
-		}
-		if releaseErr != nil {
-			return releaseErr
+		if err := e.releaseTerminationResources(resourceCtx, current, run, sources, false, session); err != nil {
+			return err
 		}
 		return nil
 	})
@@ -269,39 +264,22 @@ func (e *ExptMangerImpl) TerminateCurrentRun(ctx context.Context, expt, run, spa
 	return applied, err
 }
 
-// releaseTerminationResources 保持原有"只返回错误"的契约（存量调用方与单测依赖它）。
-// 需要拿到"仍欠释放"的 item 的调用方用 releaseTerminationResourcesWithDebt。
 func (e *ExptMangerImpl) releaseTerminationResources(ctx context.Context, expt *entity.Experiment, run int64, sources []*entity.ExptCurrentItemRunSource, whole bool, session *entity.Session) error {
-	_, err := e.releaseTerminationResourcesWithDebt(ctx, expt, run, sources, whole, session)
-	return err
-}
-
-// releaseTerminationResourcesWithDebt 释放已提交终态的 item 所持有的外部资源（额度账本 + 沙箱）。
-//
-// 第二个返回值是**本次没能释放成功、因而仍然欠一次释放**的 item 来源。调用方必须把它
-// 落成持久标记（见 retainTerminalResourceDebt）：DB 提交已经发生，错误不能只回给调用方
-// 就被忘掉，否则账本 reservation 会随进程一起消失（R8-A / R8-B2）。
-func (e *ExptMangerImpl) releaseTerminationResourcesWithDebt(ctx context.Context, expt *entity.Experiment, run int64, sources []*entity.ExptCurrentItemRunSource, whole bool, session *entity.Session) ([]*entity.ExptCurrentItemRunSource, error) {
 	seen := map[int64]bool{}
 	records := []int64{}
-	// eligible 保持与 sources 相同的顺序；出错时从当前位置起的剩余项都是"欠释放"。
-	eligible := make([]*entity.ExptCurrentItemRunSource, 0, len(sources))
 	for _, source := range sources {
 		if source == nil {
-			return nil, fmt.Errorf("termination resource source missing")
+			return fmt.Errorf("termination resource source missing")
 		}
 		if !whole && (source.Current.Status == entity.ItemRunState_Success || source.Current.Status == entity.ItemRunState_Fail) {
 			continue
 		}
-		eligible = append(eligible, source)
-	}
-	for index, source := range eligible {
 		if err := ctx.Err(); err != nil {
-			return eligible[index:], errno.WrapMQRetryErr(err)
+			return errno.WrapMQRetryErr(err)
 		}
 		if e.centralGuard != nil && entity.IsCentralDispatch(expt.ExptDispatchMode) {
 			if expt.SchedulerScope == "" {
-				return eligible[index:], fmt.Errorf("termination scope missing")
+				return fmt.Errorf("termination scope missing")
 			}
 			// Each ledger IO has its own budget; a healthy large run must reach
 			// its tail. The caller's lease/cancellation still bounds the loop.
@@ -312,8 +290,7 @@ func (e *ExptMangerImpl) releaseTerminationResourcesWithDebt(ctx context.Context
 			}
 			cancel()
 			if err != nil {
-				// 不回滚、不跳过：后面的 item 也还没释放，全部交给对账。
-				return eligible[index:], errno.WrapMQRetryErr(err)
+				return errno.WrapMQRetryErr(err)
 			}
 		}
 		if whole || !entity.IsItemRunFinished(source.Current.Status) || source.Current.Status == entity.ItemRunState_Terminal {
@@ -333,64 +310,22 @@ func (e *ExptMangerImpl) releaseTerminationResourcesWithDebt(ctx context.Context
 	}
 	if e.evalTargetService != nil && len(records) > 0 {
 		releaseCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
-		targetErr := e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(releaseCtx, resolveLoadSpaceID(expt.SpaceID, expt.TargetSpaceID), records, int32(errno.AsyncEvalTargetTerminatedCode), "async eval target terminated: experiment cancelled", false)
-		releaseErr := releaseCtx.Err()
+		_ = e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(releaseCtx, resolveLoadSpaceID(expt.SpaceID, expt.TargetSpaceID), records, int32(errno.AsyncEvalTargetTerminatedCode), "async eval target terminated: experiment cancelled", false)
+		err := releaseCtx.Err()
 		cancel()
-		if targetErr != nil {
-			// 以前这里是 `_ =`：错误既不进日志也不触发任何重试，沙箱只能靠平台侧巡检。
-			// 现在至少留痕，并把整批标记成"仍欠资源"，由调度拍重放。
-			logs.CtxWarn(ctx, "[Termination] terminate async target records failed, sandbox cleanup deferred to reconcile, expt_id: %v, expt_run_id: %v, records: %v, err: %v",
-				expt.ID, run, records, targetErr)
-			// 契约不变：沙箱是 best-effort，不让它把整次终止判失败；
-			// 但错误不再被丢弃 —— 债务标记 + Warn 才是可观测、可重放的信号。
-			return eligible, nil
-		}
-		if releaseErr != nil {
-			return eligible, errno.WrapMQRetryErr(releaseErr)
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
 		}
 	}
 	if err := ctx.Err(); err != nil {
-		return eligible, errno.WrapMQRetryErr(err)
+		return errno.WrapMQRetryErr(err)
 	}
 	if whole && e.quotaRepo != nil {
 		releaseCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
 		defer cancel()
-		if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(releaseCtx, expt.ID, expt.SpaceID, session); err != nil {
-			return eligible, err
-		}
+		return NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(releaseCtx, expt.ID, expt.SpaceID, session)
 	}
-	return nil, nil
-}
-
-// retainTerminalResourceDebt 把"终态行仍欠一次资源释放"写成持久标记。
-//
-// 为什么必须落库而不是只记日志：终止事务已经提交（status=Terminal），此后不会再有
-// 任何 item 事件，账本和沙箱都不会再有人看这条 item。标记就是终止路径与调度拍之间
-// 唯一的交接物。写入本身带 request identity + 终态 + CAS，写不进去说明该行已经被
-// 新 run / 新 manual attempt 取代，此时**不能**碰它的投影。
-func (e *ExptMangerImpl) retainTerminalResourceDebt(ctx context.Context, expt *entity.Experiment, run int64, sources []*entity.ExptCurrentItemRunSource) {
-	// 只有带账本的中心调度实验才需要这个标记。legacy 从不预占，给它打 reserved 会让
-	// ScanEvalItems 永久把该行算成 incomplete，而对账入口对 legacy / 无 scope 直接 no-op
-	// —— 那会把"资源没释放"变成"run 永不结束"，比原问题更糟。
-	// 无 scheduler_scope 时同样无处可释放，标记也无人可清，一律不打。
-	if len(sources) == 0 || expt == nil || !entity.IsCentralDispatch(expt.ExptDispatchMode) || expt.SchedulerScope == "" {
-		return
-	}
-	markCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
-	defer cancel()
-	for _, source := range sources {
-		if source == nil {
-			continue
-		}
-		marked, err := e.itemResultRepo.SetTerminalQuotaReservationState(markCtx, source.Current.SpaceID, source.Current.ExptID, run, source.Current.ItemID, source.Current.RequestID, entity.QuotaReservationStateReserved)
-		if err != nil {
-			logs.CtxWarn(ctx, "[Termination] retain terminal resource debt failed, item will rely on ledger expiry, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
-				source.Current.ExptID, run, source.Current.ItemID, err)
-			continue
-		}
-		logs.CtxWarn(ctx, "[Termination] terminal resource debt retained for scheduler reconcile, expt_id: %v, expt_run_id: %v, item_id: %v, request_id: %v, marked: %v",
-			source.Current.ExptID, run, source.Current.ItemID, source.Current.RequestID, marked)
-	}
+	return nil
 }
 
 func (e *ExptMangerImpl) cleanupTerminatedRun(ctx context.Context, event *entity.ExptScheduleEvent, finished *entity.Experiment, sources []*entity.ExptCurrentItemRunSource, opt *entity.CompleteExptOption) error {
@@ -439,15 +374,7 @@ func (e *ExptMangerImpl) cleanupTerminatedRun(ctx context.Context, event *entity
 	if !entity.IsExptFinished(current.Status) {
 		return errno.NewMQRetryErr("termination cleanup observed active run")
 	}
-	debt, releaseErr := e.releaseTerminationResourcesWithDebt(leaseCtx, current, event.ExptRunID, sources, true, event.Session)
-	if len(debt) > 0 {
-		// 整 run 终止后实验已是终态，调度拍不再扫描该 run。这里不写标记（写了也不会有人清），
-		// 残留债务由 TerminateCurrentRun 的重放路径覆盖：它按 run 重新扫描包含终态行的
-		// 全部 item，再走一次本函数释放。日志是这条重放链路的唯一触发线索。
-		logs.CtxWarn(ctx, "[Termination] whole-run resource release incomplete, retry TerminateCurrentRun to reclaim, expt_id: %v, expt_run_id: %v, residual_items: %v",
-			event.ExptID, event.ExptRunID, len(debt))
-	}
-	if releaseErr != nil {
+	if err := e.releaseTerminationResources(leaseCtx, current, event.ExptRunID, sources, true, event.Session); err != nil {
 		if ctx.Err() != nil {
 			cancel()
 			if _, unlockErr := locker.Unlock(key); unlockErr != nil {
@@ -455,7 +382,7 @@ func (e *ExptMangerImpl) cleanupTerminatedRun(ctx context.Context, event *entity
 			}
 			return e.cleanupCancelledTerminationResources(ctx, event, current, sources)
 		}
-		return releaseErr
+		return err
 	}
 	if err := ctx.Err(); err != nil {
 		return errno.WrapMQRetryErr(err)
@@ -544,13 +471,8 @@ func (e *ExptMangerImpl) cleanupCancelledTerminationResources(ctx context.Contex
 	if current.LatestRunID != event.ExptRunID {
 		return errno.WrapMQRetryErr(ctx.Err())
 	}
-	debt, releaseErr := e.releaseTerminationResourcesWithDebt(leaseCtx, frozen, event.ExptRunID, sources, true, event.Session)
-	if len(debt) > 0 {
-		logs.CtxWarn(ctx, "[Termination] cancelled cleanup left residual resources, retry TerminateCurrentRun to reclaim, expt_id: %v, expt_run_id: %v, residual_items: %v",
-			event.ExptID, event.ExptRunID, len(debt))
-	}
-	if releaseErr != nil {
-		return releaseErr
+	if err := e.releaseTerminationResources(leaseCtx, frozen, event.ExptRunID, sources, true, event.Session); err != nil {
+		return err
 	}
 	return errno.WrapMQRetryErr(ctx.Err())
 }
@@ -865,128 +787,4 @@ func updateNewRunItemResults(ctx context.Context, manager IExptManager, items re
 		return reset.ResetItemsForNewRun(ctx, event.SpaceID, event.ExptID, event.ExptRunID, ids, fields)
 	}
 	return items.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, ids, fields)
-}
-
-// ITerminalResourceDebtReconciler 让调度拍在不新增异步任务系统的前提下，
-// 对账"终止事务已提交、但资源没释放成功"的终态行。
-//
-// 为什么入口在调度拍而不是 item 事件：终态 item 不会再有事件，MQ 重投也不会回来。
-// 调度拍是唯一还会为这个 run 周期性运行的执行者。
-//
-// rows 是本次拍已经校验过的当前 run 观测（ScanCurrentRequests 的结果），
-// 复用它可以避免同一拍再扫一遍主表。返回被成功清掉债务的 itemID；调用方据此
-// 把本拍内存里的投影改成 none，从而在同一拍就能收口（B1 不再永久 incomplete）。
-type ITerminalResourceDebtReconciler interface {
-	ReconcileTerminalResourceDebt(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, rows []*entity.ExptItemCurrentRequest) []int64
-}
-
-// ReconcileTerminalResourceDebt 释放并清除终态行残留的额度预占 / 沙箱资源。
-//
-// 触发条件只有一种：终态行仍然投影为 reserved。reserved 在这里的含义被扩成
-// "该行仍欠一次资源释放"——
-//   - 已准入未启动就被终止的行本来是 reserved（B1）；
-//   - 运行中被终止（投影 none）但 Release 失败的行，由终止路径用
-//     retainTerminalResourceDebt 主动打回 reserved（B2），否则账本泄漏无从发现。
-//
-// 幂等与身份保证：
-//   - guard.Release 自带 expectedRequestID 原子比对，重复拍是 no-op，不会重复扣减；
-//   - 清投影走 SetTerminalQuotaReservationState：同 run + 同 request identity + 终态 + CAS，
-//     新 run / 新 manual attempt 的行不会被误改；
-//   - 只有账本释放与沙箱重放都成功才清投影；任何一步失败都保留标记，下一拍再来。
-func (e *ExptMangerImpl) ReconcileTerminalResourceDebt(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, rows []*entity.ExptItemCurrentRequest) []int64 {
-	if e.centralGuard == nil || event == nil || expt == nil || !entity.IsCentralDispatch(expt.ExptDispatchMode) {
-		return nil
-	}
-	if expt.SchedulerScope == "" {
-		logs.CtxWarn(ctx, "[TerminationRecovery] enforce experiment without scheduler_scope, cannot reconcile, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-		return nil
-	}
-	var cleared []int64
-	for _, row := range rows {
-		if row == nil || row.ObservationUnstable || row.RunID != event.ExptRunID {
-			continue
-		}
-		if !entity.IsItemRunFinished(row.Status) || !row.QuotaReservationState.IsQuotaReserved() {
-			continue
-		}
-		if err := e.releaseTerminalResourceDebt(ctx, expt, row); err != nil {
-			logs.CtxWarn(ctx, "[TerminationRecovery] terminal resource debt not cleared, retained for next tick, expt_id: %v, expt_run_id: %v, item_id: %v, request_id: %v, err: %v",
-				event.ExptID, event.ExptRunID, row.ItemID, row.RequestID, err)
-			continue
-		}
-		cleared = append(cleared, row.ItemID)
-	}
-	if len(cleared) > 0 {
-		logs.CtxWarn(ctx, "[TerminationRecovery] terminal resource debt reconciled, expt_id: %v, expt_run_id: %v, items: %v", event.ExptID, event.ExptRunID, cleared)
-	}
-	return cleared
-}
-
-func (e *ExptMangerImpl) releaseTerminalResourceDebt(ctx context.Context, expt *entity.Experiment, row *entity.ExptItemCurrentRequest) error {
-	// 1) 账本：identity 比对在 guard 内部原子完成，重复调用是 no-op。
-	releaseCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
-	err := e.centralGuard.Release(releaseCtx, expt.SchedulerScope, row.RunID, row.ItemID, row.RequestID, "terminal item residual reservation")
-	if err == nil {
-		err = releaseCtx.Err()
-	}
-	cancel()
-	if err != nil {
-		return errno.WrapMQRetryErr(err)
-	}
-	// 2) 沙箱：sweepTerminatedSandboxItems 只巡检 Processing 的 item，终态行永远进不去，
-	//    所以沙箱销毁失败在终止路径之外没有第二个执行者。这里补上。
-	if e.evalTargetService != nil && isSandboxAgentExpt(expt) {
-		if err := e.replayTerminalSandboxCleanup(ctx, expt, row); err != nil {
-			return err
-		}
-	}
-	// 3) 两者都确认完成才清标记。CAS 不命中（行已推进 / 已被清）不算失败，但也不当作成功，
-	//    避免把内存投影改错。
-	cleared, err := e.itemResultRepo.SetTerminalQuotaReservationState(ctx, row.SpaceID, row.ExptID, row.RunID, row.ItemID, row.RequestID, entity.QuotaReservationStateNone)
-	if err != nil {
-		return errno.WrapMQRetryErr(err)
-	}
-	if !cleared {
-		return errno.NewMQRetryErr("terminal reservation projection advanced or already cleared")
-	}
-	return nil
-}
-
-// replayTerminalSandboxCleanup 对终态 item 关联的异步评测对象重放一次销毁。
-//
-// 为什么用 waitForDestroy=true：初始终止调用是 best-effort（wait=false），
-// TerminateAsyncRecordsAndDestroySandbox 只对 AsyncInvoking 的记录生效，且异步销毁的
-// 失败被内部 goroutine 吞掉 —— 那一跳既拿不到错误、也没有记录状态可供下一拍判断。
-// 同步路径（wait=true）相反：销毁失败直接返回错误且**不落** Fail，记录保持 AsyncInvoking，
-// 因此下一拍真的会再试一次。这正是"真实重放"，代价是每次最多一个重试预算（10s），
-// 只发生在极少数带债务标记的行上。
-//
-// 重复重放安全：已落 Fail 的记录被该接口整体跳过；仍未销毁的记录重复销毁是平台侧的幂等操作。
-func (e *ExptMangerImpl) replayTerminalSandboxCleanup(ctx context.Context, expt *entity.Experiment, row *entity.ExptItemCurrentRequest) error {
-	if e.turnResultRepo == nil {
-		return errno.NewMQRetryErr("terminal sandbox replay source missing")
-	}
-	turnLogs, err := e.turnResultRepo.MGetItemTurnRunLogs(ctx, row.ExptID, row.RunID, []int64{row.ItemID}, row.SpaceID)
-	if err != nil {
-		return errno.WrapMQRetryErr(err)
-	}
-	seen := map[int64]bool{}
-	records := make([]int64, 0, len(turnLogs))
-	for _, turnLog := range turnLogs {
-		if turnLog == nil || turnLog.TargetResultID <= 0 || seen[turnLog.TargetResultID] {
-			continue
-		}
-		seen[turnLog.TargetResultID] = true
-		records = append(records, turnLog.TargetResultID)
-	}
-	if len(records) == 0 {
-		return nil
-	}
-	err = e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(ctx, resolveLoadSpaceID(row.SpaceID, expt.TargetSpaceID), records, int32(errno.AsyncEvalTargetTerminatedCode), "async eval target terminated: experiment cancelled", false, true)
-	if err != nil {
-		logs.CtxWarn(ctx, "[TerminationRecovery] sandbox destroy replay failed, keep debt marker, expt_id: %v, expt_run_id: %v, item_id: %v, records: %v, err: %v",
-			row.ExptID, row.RunID, row.ItemID, records, err)
-		return errno.WrapMQRetryErr(err)
-	}
-	return nil
 }

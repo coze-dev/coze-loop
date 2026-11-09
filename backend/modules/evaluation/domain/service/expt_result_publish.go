@@ -240,14 +240,7 @@ func (e *ExptResultServiceImpl) PublishPreparedItemResult(ctx context.Context, p
 		return false, errno.WrapMQRetryErr(err)
 	}
 	if !locked {
-		// Busy is ordinary per-item contention, same as submitCurrentItem: skip
-		// this tick and let the next scan retry the still-Logged item. Returning
-		// an MQ retry here amplifies one item into a whole-scheduler-tick retry.
-		if cancel != nil {
-			cancel()
-		}
-		logs.CtxWarn(ctx, "[ExptEval] publication item lock busy, skip this tick, expt_id: %v, item_id: %v", c.ExptID, c.ItemID)
-		return false, nil
+		return false, errno.NewMQRetryErr("publication item lock busy")
 	}
 	defer cancel()
 	defer func() {

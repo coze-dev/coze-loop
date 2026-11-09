@@ -81,14 +81,6 @@ func resumeEvaluator(id, versionID, turnID int64, alias string) *entity.Evaluato
 	return &entity.EvaluatorRecord{ID: id, ExperimentID: 1, ExperimentRunID: 103, SpaceID: 3, ItemID: 10, TurnID: turnID, EvaluatorVersionID: versionID, Alias: alias, SourceType: entity.EvaluatorRecordSourceTypeBuiltin, Status: entity.EvaluatorRunStatusSuccess}
 }
 
-// withManualRetryContext 把执行上下文标记为 manual retry 请求（新需求作用域）。
-// 多轮 HistoryMessages 只在这个作用域下发；普通 submit / fail-retry 保持旧路径语义。
-func withManualRetryContext(f *turnResumeFixture) {
-	f.item.Event.Ext = map[string]string{
-		entity.ManualRetryExtKey: `{"run_id":103,"request_id":"RQ1","mode":5,"operator":"u","accepted_at_ms":1}`,
-	}
-}
-
 func TestRunningRetryTurnResume_SourceCallbackDoesNotMarkTargetCalled(t *testing.T) {
 	for _, turnID := range []int64{0, 20} {
 		t.Run(string(rune('a'+turnID)), func(t *testing.T) {
@@ -256,7 +248,6 @@ func TestRunningRetryTurnResume_SuccessTurnOnlyFeedsHistory(t *testing.T) {
 	for _, score := range []string{"zero", "absent"} {
 		t.Run(score, func(t *testing.T) {
 			f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, 0, 20)
-			withManualRetryContext(f)
 			first := f.item.ExistItemEvalResult.TurnResultRunLogs[0]
 			first.Status = entity.TurnRunState_Success
 			first.TargetResultID = 201
@@ -293,41 +284,6 @@ func TestRunningRetryTurnResume_SuccessTurnOnlyFeedsHistory(t *testing.T) {
 			assert.Equal(t, int64(301), first.EvaluatorResultIds.Registered[0].RecordID)
 		})
 	}
-}
-
-func TestRunningRetryHistoryOutput_ManualRequestIDSurvivesCanonicalExtReadFailure(t *testing.T) {
-	f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, 0, 20)
-	f.item.Event.RequestID = "RQ1"
-	f.item.Event.Ext = nil
-	items := repomocks.NewMockIExptItemResultRepo(gomock.NewController(t))
-	items.EXPECT().GetItemRunLog(gomock.Any(), int64(1), int64(103), int64(10), int64(3)).Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Processing)}, nil).AnyTimes()
-	items.EXPECT().BatchGet(gomock.Any(), int64(3), int64(1), []int64{10}).Return(nil, errors.New("canonical ext read failed")).AnyTimes()
-	f.items = items
-	f.executor.ItemResultRepo = items
-
-	first := f.item.ExistItemEvalResult.TurnResultRunLogs[0]
-	first.Status = entity.TurnRunState_Success
-	first.TargetResultID = 201
-	first.EvaluatorResultIds = &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{{VersionID: 401, RecordID: 301}, {VersionID: 402, RecordID: 302}}}
-	f.target.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(201)).Return(resumeTarget(201, 0), nil)
-	f.records.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{301, 302}, false, false).Return([]*entity.EvaluatorRecord{resumeEvaluator(301, 401, 0, ""), resumeEvaluator(302, 402, 0, "")}, nil)
-	f.benefit.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil).Times(2)
-	f.target.EXPECT().ExecuteTarget(gomock.Any(), int64(3), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, _ int64, _ int64, exec *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
-		require.Equal(t, int64(20), exec.TurnID)
-		require.Len(t, input.HistoryMessages, 1, "a validated manual request must not lose history when the secondary ext read fails")
-		assert.Equal(t, "previous answer", input.HistoryMessages[0].Content.GetText())
-		return resumeTarget(202, 20), nil
-	})
-	f.evaluator.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil).Times(2)
-	f.evaluator.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
-		require.Equal(t, int64(20), r.TurnID)
-		return resumeEvaluator(1000+r.EvaluatorVersionID, r.EvaluatorVersionID, 20, ""), nil
-	}).Times(2)
-	f.turns.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-
-	abort, err := f.executor.EvalTurns(ctxcache.Init(context.Background()), f.item)
-	require.NoError(t, err)
-	assert.False(t, abort)
 }
 
 func TestRunningRetryTurnResume_ManualRetryExtNeverReachesActors(t *testing.T) {
@@ -381,7 +337,6 @@ func TestRunningRetryTurnResume_CallbackFlagsOnlyAffectMiddleTurn(t *testing.T) 
 	for _, kind := range []string{"target", "evaluator"} {
 		t.Run(kind, func(t *testing.T) {
 			f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, 0, 20, 30)
-			withManualRetryContext(f)
 			f.item.Event.AsyncReportTrigger = kind == "target"
 			f.item.Event.AsyncEvaluatorReportTrigger = kind == "evaluator"
 			f.item.Event.ResumeSource = &entity.ExptResumeSource{Kind: kind, TurnID: 20, RecordID: 202, InvokeID: "202"}
@@ -606,7 +561,6 @@ func TestRunningRetryHistoryOutput_LoadsFullSuccessOutputBeforeNextTarget(t *tes
 	for _, source := range []string{"same space", "frozen target space", "frozen item target space"} {
 		t.Run(source, func(t *testing.T) {
 			f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, 0, 20)
-			withManualRetryContext(f)
 			spaceID := int64(3)
 			switch source {
 			case "frozen target space":
@@ -680,7 +634,6 @@ func TestRunningRetryHistoryOutput_IncompleteSuccessStopsBeforeNextTurn(t *testi
 	for _, failure := range []string{"missing target record", "storage read error", "still omitted", "field removed", "nil field", "nil output data"} {
 		t.Run(failure, func(t *testing.T) {
 			f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, 0, 20)
-			withManualRetryContext(f)
 			first := f.item.ExistItemEvalResult.TurnResultRunLogs[0]
 			first.Status = entity.TurnRunState_Success
 			first.TargetResultID = 201
@@ -747,13 +700,10 @@ func TestRunningRetryHistoryOutput_ShortNontextAndTargetFreeRemainCompatible(t *
 	}
 }
 
-// R2 回归：普通 submit（非 manual retry 上下文）首轮执行必须保持 bbab72c4^ 的输入语义 ——
-// 即使上一轮 target 输出被存储裁剪成 preview，也不能为下一轮回捞大字段或下发 HistoryMessages。
-func TestRunningRetryHistoryOutput_FreshSubmitKeepsLegacyNoHistory(t *testing.T) {
+func TestRunningRetryHistoryOutput_FreshOmittedTurnLoadsBeforeNextTarget(t *testing.T) {
 	f := newTurnResumeFixture(t, entity.EvaluationModeSubmit, 0, 20)
-	f.item.Event.RequestID = ""
 	// ExecuteTarget persists before returning; storage mutates the returned
-	// Content to a preview. Ordinary execution must neither reload it nor pass it on.
+	// Content to a preview. With no evaluators, nothing else hydrates it.
 	f.item.Expt.EvalConf.ConnectorConf.EvaluatorsConf = nil
 	full := strings.Repeat("complete fresh answer ", 11000)
 	first := resumeTarget(201, 0)
@@ -761,42 +711,25 @@ func TestRunningRetryHistoryOutput_FreshSubmitKeepsLegacyNoHistory(t *testing.T)
 	require.True(t, first.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey].IsContentOmitted())
 	f.benefit.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil).Times(2)
 	f.target.EXPECT().ExecuteTarget(gomock.Any(), int64(3), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, _ int64, _ int64, exec *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
-		assert.Empty(t, input.HistoryMessages, "turn %d must not receive history on a plain submit", exec.TurnID)
 		if exec.TurnID == 0 {
+			assert.Empty(t, input.HistoryMessages)
 			return first, nil
 		}
+		require.Len(t, input.HistoryMessages, 1)
+		assert.Equal(t, full, input.HistoryMessages[0].Content.GetText())
+		assert.False(t, input.HistoryMessages[0].Content.IsContentOmitted())
 		return resumeTarget(202, 20), nil
 	}).Times(2)
+	f.target.EXPECT().LoadRecordOutputFields(gomock.Any(), gomock.Any(), []string{consts.OutputSchemaKey}).DoAndReturn(func(_ context.Context, got *entity.EvalTargetRecord, _ []string) error {
+		require.Same(t, first, got)
+		got.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey].Text = gptr.Of(full)
+		return nil
+	}).Times(1)
 	f.turns.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(2)
 	abort, err := f.executor.EvalTurns(ctxcache.Init(context.Background()), f.item)
 	require.NoError(t, err)
 	assert.False(t, abort)
 	assert.Equal(t, int64(2), f.evalCalls.Load())
-}
-
-// R2 回归：非 manual 上下文的 resume（fail-retry 重入已成功轮次）保持旧路径语义，
-// 既不做大字段回捞，也不把前序 target 输出作为 history 下发。
-func TestRunningRetryHistoryOutput_NonManualResumeKeepsLegacyNoHistory(t *testing.T) {
-	f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, 0, 20)
-	f.item.Event.RequestID = ""
-	f.item.Expt.EvalConf.ConnectorConf.EvaluatorsConf = nil
-	first := f.item.ExistItemEvalResult.TurnResultRunLogs[0]
-	first.Status = entity.TurnRunState_Success
-	first.TargetResultID = 201
-	target := resumeTarget(201, 0)
-	target.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey] = &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("preview..."), ContentOmitted: gptr.Of(true), FullContent: &entity.ObjectStorage{URI: gptr.Of("eval_record/resume-history")}, FullContentBytes: gptr.Of(int32(240000))}
-	f.target.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(201)).Return(target, nil)
-	f.benefit.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
-	f.target.EXPECT().ExecuteTarget(gomock.Any(), int64(3), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, _ int64, _ int64, exec *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
-		assert.Equal(t, int64(20), exec.TurnID)
-		assert.Empty(t, input.HistoryMessages, "non-manual resume must keep the legacy empty history input")
-		return resumeTarget(202, 20), nil
-	}).Times(1)
-	f.turns.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-	abort, err := f.executor.EvalTurns(ctxcache.Init(context.Background()), f.item)
-	require.NoError(t, err)
-	assert.False(t, abort)
-	assert.Equal(t, int64(1), f.evalCalls.Load())
 }
 
 func TestRunningRetryHistoryOutput_FreshFinalTurnDoesNotLoadUnusedHistory(t *testing.T) {
@@ -819,7 +752,6 @@ func TestRunningRetryHistoryIsolation_ThreeTurnsSurviveActualRecordStorage(t *te
 	for _, reused := range []bool{true, false} {
 		t.Run(map[bool]string{true: "reused success", false: "fresh output"}[reused], func(t *testing.T) {
 			f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, 0, 20, 30)
-			withManualRetryContext(f)
 			f.item.Expt.TargetSpaceID = 9
 			f.item.Expt.EvalConf.ConnectorConf.EvaluatorsConf = nil
 			f.config.EXPECT().GetEvaluationRecordStorage(gomock.Any()).Return(&component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 204800}}}).AnyTimes()

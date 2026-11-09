@@ -217,9 +217,10 @@ func (s *SchedulerAbortCtrl) Abort(spaceID, exptID int64, userID string, exptTyp
 }
 
 type ExptExecConf struct {
-	DaemonIntervalSecond int `json:"daemon_interval_second" mapstructure:"daemon_interval_second"`
-	ZombieIntervalSecond int `json:"expt_zombie_second" mapstructure:"expt_zombie_second"`
-	SpaceExptConcurLimit int `json:"space_expt_concur_limit" mapstructure:"space_expt_concur_limit"`
+	RunningRetryEnabled  *bool `json:"running_retry_enabled,omitempty" mapstructure:"running_retry_enabled"`
+	DaemonIntervalSecond int   `json:"daemon_interval_second" mapstructure:"daemon_interval_second"`
+	ZombieIntervalSecond int   `json:"expt_zombie_second" mapstructure:"expt_zombie_second"`
+	SpaceExptConcurLimit int   `json:"space_expt_concur_limit" mapstructure:"space_expt_concur_limit"`
 
 	ExptItemEvalConf *ExptItemEvalConf `json:"expt_item_eval_conf" mapstructure:"expt_item_eval_conf"`
 
@@ -797,4 +798,8 @@ func (e *EvalAsyncCtx) Clone() *EvalAsyncCtx {
 		cloned.EnableExtractTrajectory = &enabled
 	}
 	return &cloned
+}
+
+func (e *ExptExecConf) IsRunningRetryEnabled() bool {
+	return e != nil && e.RunningRetryEnabled != nil && *e.RunningRetryEnabled
 }

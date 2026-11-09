@@ -151,14 +151,6 @@ func (e ExptItemResultRepoImpl) UpdateItemRunLogIfNotTerminal(ctx context.Contex
 	return nil
 }
 
-func (e ExptItemResultRepoImpl) SetTerminalQuotaReservationState(ctx context.Context, spaceID, exptID, exptRunID, itemID int64, expectedRequestID string, state entity.QuotaReservationState) (bool, error) {
-	changed, err := e.exptItemResultDAO.SetTerminalQuotaReservationState(ctx, spaceID, exptID, exptRunID, itemID, expectedRequestID, state)
-	if err != nil {
-		return false, errorx.Wrapf(err, "SetTerminalQuotaReservationState fail, expt_id: %v, expt_run_id: %v, item_id: %v, state: %v", exptID, exptRunID, itemID, state)
-	}
-	return changed, nil
-}
-
 func (e ExptItemResultRepoImpl) ScanItemResults(ctx context.Context, exptID, cursor, limit int64, status []int32, spaceID int64) (results []*entity.ExptItemResult, ncursor int64, err error) {
 	pos, ncursor, err := e.exptItemResultDAO.ScanItemResults(ctx, exptID, cursor, limit, status, spaceID)
 	if err != nil {

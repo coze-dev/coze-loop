@@ -319,7 +319,7 @@ func TestRunningRetryFilterSync_ProducerDoesNotReenter(t *testing.T) {
 	config := componentmocks.NewMockIConfiger(ctrl)
 	config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{})
 	result := &ExptResultServiceImpl{ExptTurnResultRepo: turns, resultPublishLocker: func() lock.ILocker { return filterRealTestLocker(client) }}
-	scheduler := &ExptSchedulerImpl{ExptItemResultRepo: items, Publisher: publisher, Configer: config, ResultSvc: result, itemLocker: func() lock.ILocker { return filterRealTestLocker(client) }}
+	scheduler := &ExptSchedulerImpl{ExptItemResultRepo: items, Publisher: publisher, Configer: config, ResultSvc: result}
 	require.NoError(t, scheduler.submitCurrentItem(context.Background(), &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2}, &entity.ExptEvalItem{ItemID: 10}, filterRealTestLocker(client)))
 	require.Equal(t, int32(1), reads.Load(), "producer must refresh under its existing lock without reacquiring it")
 }
