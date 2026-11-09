@@ -13,8 +13,10 @@ import (
 
 const RetryRuntimeParamExtKey = "retry_runtime_param"
 
-var retryBinaryVersionPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
-var retryCUASHA256Pattern = regexp.MustCompile(`^[A-Fa-f0-9]{64}$`)
+var (
+	retryBinaryVersionPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
+	retryCUASHA256Pattern     = regexp.MustCompile(`^[A-Fa-f0-9]{64}$`)
+)
 
 // Only artifact selection may change for a retry; model and task settings stay frozen.
 func ParseRetryRuntimeOverride(ext map[string]string) (map[string]string, error) {
