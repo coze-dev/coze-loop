@@ -6,11 +6,12 @@ package service
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/bytedance/gg/gptr"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	"go.uber.org/mock/gomock"
-	"testing"
-	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -63,6 +64,7 @@ func (p *retryPendingUnitPort) RegisterPendingRetry(ctx context.Context, pending
 func (p *retryPendingUnitPort) GetPendingRetry(context.Context, int64, int64, int64) (*repo.ManualRetryPending, error) {
 	return p.pending, nil
 }
+
 func (p *retryPendingUnitPort) ResolvePendingRetry(_ context.Context, _ *repo.ManualRetryPending, cancel bool) (*entity.ManualRetryReceipt, error) {
 	if p.receipt != nil || p.resultErr != nil {
 		return p.receipt, p.resultErr
@@ -73,12 +75,15 @@ func (p *retryPendingUnitPort) ResolvePendingRetry(_ context.Context, _ *repo.Ma
 	}
 	return nil, nil
 }
+
 func (p *retryPendingUnitPort) PreparePendingRetryCommit(context.Context, *repo.ManualRetryPending, *entity.ManualRetryReceipt, []int64) error {
 	return nil
 }
+
 func (p *retryPendingUnitPort) CheckPendingRetry(context.Context, *repo.ManualRetryPending) error {
 	return nil
 }
+
 func (p *retryPendingUnitPort) CompletePendingRetry(_ context.Context, pending *repo.ManualRetryPending, receipt *entity.ManualRetryReceipt, cause error) error {
 	p.pending = nil
 	p.receipt, p.resultErr = receipt, cause
