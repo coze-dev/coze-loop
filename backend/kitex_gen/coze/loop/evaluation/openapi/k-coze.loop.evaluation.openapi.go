@@ -29367,6 +29367,20 @@ func (p *RetryExperimentOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -29479,6 +29493,20 @@ func (p *RetryExperimentOApiRequest) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *RetryExperimentOApiRequest) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ExpectedRunID = _field
+	return offset, nil
+}
+
 func (p *RetryExperimentOApiRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -29532,6 +29560,7 @@ func (p *RetryExperimentOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocopy
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
@@ -29548,6 +29577,7 @@ func (p *RetryExperimentOApiRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 		l += p.field100Length()
 		l += p.field255Length()
 	}
@@ -29594,6 +29624,15 @@ func (p *RetryExperimentOApiRequest) fastWriteField4(buf []byte, w thrift.Nocopy
 			offset += thrift.Binary.WriteI64(buf[offset:], v)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I64, length)
+	}
+	return offset
+}
+
+func (p *RetryExperimentOApiRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExpectedRunID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 5)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.ExpectedRunID)
 	}
 	return offset
 }
@@ -29662,6 +29701,15 @@ func (p *RetryExperimentOApiRequest) field4Length() int {
 	return l
 }
 
+func (p *RetryExperimentOApiRequest) field5Length() int {
+	l := 0
+	if p.IsSetExpectedRunID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
 func (p *RetryExperimentOApiRequest) field100Length() int {
 	l := 0
 	if p.IsSetExt() {
@@ -29714,6 +29762,11 @@ func (p *RetryExperimentOApiRequest) DeepCopy(s interface{}) error {
 			_elem = elem
 			p.ItemIds = append(p.ItemIds, _elem)
 		}
+	}
+
+	if src.ExpectedRunID != nil {
+		tmp := *src.ExpectedRunID
+		p.ExpectedRunID = &tmp
 	}
 
 	if src.Ext != nil {
@@ -30055,6 +30108,48 @@ func (p *RetryExperimentOpenAPIData) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -30087,6 +30182,59 @@ func (p *RetryExperimentOpenAPIData) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *RetryExperimentOpenAPIData) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.AcceptedCount = _field
+	return offset, nil
+}
+
+func (p *RetryExperimentOpenAPIData) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*experiment.RetryRejectedItem, 0, size)
+	values := make([]experiment.RetryRejectedItem, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.RejectedItems = _field
+	return offset, nil
+}
+
+func (p *RetryExperimentOpenAPIData) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SnapshotAtMs = _field
+	return offset, nil
+}
+
 func (p *RetryExperimentOpenAPIData) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -30095,6 +30243,9 @@ func (p *RetryExperimentOpenAPIData) FastWriteNocopy(buf []byte, w thrift.Nocopy
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -30104,6 +30255,9 @@ func (p *RetryExperimentOpenAPIData) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field3Length()
+		l += p.field5Length()
+		l += p.field6Length()
+		l += p.field7Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -30118,9 +30272,74 @@ func (p *RetryExperimentOpenAPIData) fastWriteField3(buf []byte, w thrift.Nocopy
 	return offset
 }
 
+func (p *RetryExperimentOpenAPIData) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAcceptedCount() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 5)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.AcceptedCount)
+	}
+	return offset
+}
+
+func (p *RetryExperimentOpenAPIData) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRejectedItems() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 6)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.RejectedItems {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *RetryExperimentOpenAPIData) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSnapshotAtMs() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 7)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.SnapshotAtMs)
+	}
+	return offset
+}
+
 func (p *RetryExperimentOpenAPIData) field3Length() int {
 	l := 0
 	if p.IsSetRunID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *RetryExperimentOpenAPIData) field5Length() int {
+	l := 0
+	if p.IsSetAcceptedCount() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *RetryExperimentOpenAPIData) field6Length() int {
+	l := 0
+	if p.IsSetRejectedItems() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.RejectedItems {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *RetryExperimentOpenAPIData) field7Length() int {
+	l := 0
+	if p.IsSetSnapshotAtMs() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I64Length()
 	}
@@ -30136,6 +30355,31 @@ func (p *RetryExperimentOpenAPIData) DeepCopy(s interface{}) error {
 	if src.RunID != nil {
 		tmp := *src.RunID
 		p.RunID = &tmp
+	}
+
+	if src.AcceptedCount != nil {
+		tmp := *src.AcceptedCount
+		p.AcceptedCount = &tmp
+	}
+
+	if src.RejectedItems != nil {
+		p.RejectedItems = make([]*experiment.RetryRejectedItem, 0, len(src.RejectedItems))
+		for _, elem := range src.RejectedItems {
+			var _elem *experiment.RetryRejectedItem
+			if elem != nil {
+				_elem = &experiment.RetryRejectedItem{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.RejectedItems = append(p.RejectedItems, _elem)
+		}
+	}
+
+	if src.SnapshotAtMs != nil {
+		tmp := *src.SnapshotAtMs
+		p.SnapshotAtMs = &tmp
 	}
 
 	return nil

@@ -272,6 +272,7 @@ struct Experiment {
     118: optional ExpectedQuotaConsumption expected_quota_consumption
     // 从 experiment.eval_conf 回显；缺省表示普通评测。
     119: optional VerificationConfig verification_config
+    120: optional i64 latest_run_id (api.js_conv='true', go.tag='json:"latest_run_id,omitempty"')
 
     // 沙箱运行环境变量回显：key 明文，value 由商业层掩码；开源仓原样带出
     121: optional map<string, string> runner_envs
