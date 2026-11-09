@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	redisc "github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
@@ -34,7 +35,20 @@ import (
 type pendingRetryTestPort struct {
 	repo.IExptManualRetryRepo
 	repo.IExptManualRetryPendingRepo
-	calls atomic.Int64
+	calls          atomic.Int64
+	preflights     []int
+	afterPreflight func(*entity.ManualRetryPreparation)
+}
+
+func (p *pendingRetryTestPort) PreflightTerminalItems(ctx context.Context, r *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryPreparation, error) {
+	plan, err := p.IExptManualRetryRepo.PreflightTerminalItems(ctx, r)
+	if err == nil {
+		p.preflights = append(p.preflights, len(plan.Items))
+		if p.afterPreflight != nil {
+			p.afterPreflight(plan)
+		}
+	}
+	return plan, err
 }
 
 func (p *pendingRetryTestPort) RequeueTerminalItems(ctx context.Context, r *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryReceipt, error) {
@@ -88,9 +102,72 @@ func TestPendingRetryCanceledCachedRequestCannotCommit(t *testing.T) {
 	require.Equal(t, before, p.f.snapshot(), "cancel wins before any item/turn/stat mutation")
 }
 
+func TestPendingRetryEmptyEvaluatorCollectionsSurviveJSONRoundTrip(t *testing.T) {
+	for _, encoded := range []string{`{"EvalVerIDToResID":{}}`, `{"registered":[]}`, `{"inline":[]}`} {
+		t.Run(encoded, func(t *testing.T) {
+			p, port, _ := newPendingRetryTestFixture(t)
+			require.NoError(t, p.f.conn.Model(&model.ExptTurnResultRunLog{}).
+				Where("space_id=? AND expt_run_id=? AND item_id=? AND turn_id=0", p.f.space, p.f.run, p.f.item).
+				Update("evaluator_result_ids", []byte(encoded)).Error)
+			port.afterPreflight = func(plan *entity.ManualRetryPreparation) {
+				var stored []byte
+				require.NoError(t, p.f.conn.Table("expt_turn_result_run_log").Select("evaluator_result_ids").
+					Where("space_id=? AND expt_run_id=? AND item_id=? AND turn_id=0", p.f.space, p.f.run, p.f.item).Row().Scan(&stored))
+				require.JSONEq(t, encoded, string(stored), "SQL source must remain unchanged across both preflights")
+				reason := ""
+				if len(plan.RejectedItems) > 0 {
+					reason = plan.RejectedItems[0].Reason
+				}
+				t.Logf("PENDING_EMPTY_PREFLIGHT input=%s sql_unchanged=true accepted=%d rejection=%s", encoded, len(plan.Items), reason)
+			}
+			receipt, err := retryThroughRealTickForTest(t, p.manager, context.Background(), p.request(entity.EvaluationModeRetryItems))
+			require.NoError(t, err)
+			t.Logf("PENDING_EMPTY_JSON input=%s preflight_accepted=%v receipt=%+v", encoded, port.preflights, receipt)
+			require.Equal(t, []int{1, 1}, port.preflights, "unchanged SQL source must pass before and after real pending Redis serialization")
+			require.Equal(t, int32(1), receipt.AcceptedCount)
+			require.Empty(t, receipt.RejectedItems)
+		})
+	}
+}
+
+func TestPendingRetryJSONRoundTripStillRejectsChangedSource(t *testing.T) {
+	for _, change := range []string{"nonempty_evaluator", "version", "source_run"} {
+		t.Run(change, func(t *testing.T) {
+			p, port, _ := newPendingRetryTestFixture(t)
+			pending := preparePendingRetryTestRequest(t, p, port)
+			checked, err := port.PreflightTerminalItems(context.Background(), pending.Request)
+			require.NoError(t, err)
+			require.Len(t, checked.Items, 1)
+			fields := map[string]any{}
+			switch change {
+			case "nonempty_evaluator":
+				fields["evaluator_result_ids"] = []byte(`{"EvalVerIDToResID":{"123":456}}`)
+			case "version":
+				fields["item_version_id"] = p.f.version + 1
+			case "source_run":
+				fields["expt_run_id"] = p.oldRun + 1
+			}
+			require.NoError(t, p.f.conn.Model(&model.ExptTurnResultRunLog{}).
+				Where("space_id=? AND expt_run_id=? AND item_id=? AND turn_id=0", p.f.space, p.f.run, p.f.item).Updates(fields).Error)
+			before := p.f.snapshot()
+			cached, err := port.GetPendingRetry(context.Background(), p.f.space, p.f.expt, p.f.run)
+			require.NoError(t, err)
+			checked, err = port.PreflightTerminalItems(context.Background(), cached.Request)
+			require.NoError(t, err)
+			require.Empty(t, checked.Items)
+			require.Len(t, checked.RejectedItems, 1)
+			require.Equal(t, "source_changed", checked.RejectedItems[0].Reason)
+			require.Equal(t, before, p.f.snapshot())
+			t.Logf("PENDING_SOURCE_CAS change=%s rejected=%s unchanged_after_preflight=true", change, checked.RejectedItems[0].Reason)
+		})
+	}
+}
+
 type pendingReceiptFailureHook struct {
-	key  string
-	fail atomic.Bool
+	key        string
+	fail       atomic.Bool
+	persistent atomic.Bool
+	failures   atomic.Int64
 }
 
 func (h *pendingReceiptFailureHook) DialHook(next redisc.DialHook) redisc.DialHook { return next }
@@ -99,11 +176,112 @@ func (h *pendingReceiptFailureHook) ProcessPipelineHook(next redisc.ProcessPipel
 }
 func (h *pendingReceiptFailureHook) ProcessHook(next redisc.ProcessHook) redisc.ProcessHook {
 	return func(ctx context.Context, cmd redisc.Cmder) error {
-		if cmd.Name() == "set" && len(cmd.Args()) > 1 && fmt.Sprint(cmd.Args()[1]) == h.key && h.fail.CompareAndSwap(true, false) {
+		if cmd.Name() == "set" && len(cmd.Args()) > 1 && fmt.Sprint(cmd.Args()[1]) == h.key && (h.persistent.Load() || h.fail.CompareAndSwap(true, false)) {
+			h.failures.Add(1)
 			return errors.New("controlled receipt Redis timeout")
 		}
 		return next(ctx, cmd)
 	}
+}
+
+func TestPendingRetryPersistentReceiptSetFailureReturnsCommittedAPIReceipt(t *testing.T) {
+	p, port, raw := newPendingRetryTestFixture(t)
+	hook := &pendingReceiptFailureHook{}
+	// Discover the generated result key from the real Redis registration. Only
+	// result SET fails; pending GET/SET and primary SQL remain available.
+	observer := &pendingRegistrationObserver{pendingRetryTestPort: port, registered: make(chan *repo.ManualRetryPending, 1), hook: hook}
+	p.manager.manualRetryRepo = observer
+	raw.AddHook(hook)
+	type outcome struct {
+		receipt *entity.ManualRetryReceipt
+		err     error
+	}
+	done := make(chan outcome, 1)
+	go func() {
+		receipt, err := p.manager.RetryInCurrentRun(context.Background(), p.request(entity.EvaluationModeRetryItems))
+		done <- outcome{receipt, err}
+	}()
+	pending := <-observer.registered
+	require.NoError(t, p.manager.consumePendingCurrentRetry(context.Background(), p.event))
+	result := <-done
+	t.Logf("PENDING_PERSISTENT_SET failures=%d receipt=%+v err=%v requeue=%d", hook.failures.Load(), result.receipt, result.err, port.calls.Load())
+	require.GreaterOrEqual(t, hook.failures.Load(), int64(2), "postcommit and recovery SET must both actually fail")
+	require.NoError(t, result.err)
+	require.Equal(t, int32(1), result.receipt.AcceptedCount)
+	require.Equal(t, pending.Request.RequestID, result.receipt.RequestID)
+	for i := 0; i < 2; i++ {
+		require.NoError(t, p.manager.consumePendingCurrentRetry(context.Background(), p.event))
+	}
+	require.Equal(t, int64(1), port.calls.Load())
+	current, err := p.f.experimentRepo().GetByID(context.Background(), p.f.expt, p.f.space)
+	require.NoError(t, err)
+	require.Equal(t, entity.ExptStatus_Processing, current.Status)
+	cached, err := port.GetPendingRetry(context.Background(), p.f.space, p.f.expt, p.f.run)
+	require.NoError(t, err)
+	require.Equal(t, pending.Request.RequestID, cached.Request.RequestID, "failed result caching must retain recovery evidence")
+	receipt, err := port.ResolvePendingRetry(context.Background(), pending, true)
+	require.NoError(t, err, "cancellation recovery must return the SQL-proven receipt during the same persistent failure")
+	require.Equal(t, result.receipt, receipt)
+	hook.persistent.Store(false)
+	receipt, err = port.ResolvePendingRetry(context.Background(), pending, true)
+	require.NoError(t, err)
+	require.Equal(t, result.receipt, receipt)
+	// Recover the old request from SQL again with a new registered owner and
+	// no result cache hit. The conditional cleanup must preserve that owner.
+	require.NoError(t, raw.Del(context.Background(), hook.key).Err())
+	p.completeAndPublish(t, p.f.item, entity.ItemRunState_Success)
+	second := preparePendingRetryTestRequest(t, p, port)
+	receipt, err = port.ResolvePendingRetry(context.Background(), cached, false)
+	require.NoError(t, err)
+	require.Equal(t, pending.Request.RequestID, receipt.RequestID)
+	currentPending, err := port.GetPendingRetry(context.Background(), p.f.space, p.f.expt, p.f.run)
+	require.NoError(t, err)
+	require.Equal(t, second.Request.RequestID, currentPending.Request.RequestID)
+	t.Logf("PENDING_COMMITTED_RECOVERY persistent_SET_failures=%d cancel_receipt=true old_SQL_recovery_preserves_new_owner=true", hook.failures.Load())
+}
+
+func TestPendingRetryUncommittedPrimaryReadErrorIsNotSuppressed(t *testing.T) {
+	p, port, _ := newPendingRetryTestFixture(t)
+	pending := preparePendingRetryTestRequest(t, p, port)
+	receipt := &entity.ManualRetryReceipt{RunID: p.f.run, RequestID: pending.Request.RequestID, AcceptedCount: 1}
+	// Persist precommit intent while leaving the SQL source tokens unchanged.
+	require.NoError(t, port.PreparePendingRetryCommit(context.Background(), pending, receipt, []int64{p.f.item}))
+	before := p.f.snapshot()
+	var failed atomic.Bool
+	callback := "post070_primary_read_failure"
+	require.NoError(t, p.f.conn.Callback().Query().Before("gorm:query").Register(callback, func(tx *gorm.DB) {
+		if tx.Statement.Table == "expt_item_result" {
+			failed.Store(true)
+			// Obtain a real local MySQL error rather than returning a fake
+			// successful token read or a receipt-cache failure.
+			err := tx.Session(&gorm.Session{NewDB: true}).Exec("SELECT post070_missing_column FROM expt_item_result LIMIT 1").Error
+			tx.AddError(err)
+		}
+	}))
+	recovered, err := port.ResolvePendingRetry(context.Background(), pending, false)
+	require.NoError(t, p.f.conn.Callback().Query().Remove(callback))
+	require.True(t, failed.Load())
+	require.Nil(t, recovered)
+	require.ErrorContains(t, err, "1054")
+	require.ErrorContains(t, err, "post070_missing_column")
+	require.Equal(t, before, p.f.snapshot())
+	t.Logf("PENDING_UNCOMMITTED_PRIMARY_ERROR receipt_nil=true source_unchanged=true err=%v", err)
+}
+
+type pendingRegistrationObserver struct {
+	*pendingRetryTestPort
+	registered chan *repo.ManualRetryPending
+	hook       *pendingReceiptFailureHook
+}
+
+func (p *pendingRegistrationObserver) RegisterPendingRetry(ctx context.Context, pending *repo.ManualRetryPending) error {
+	p.hook.key = fmt.Sprintf("[experiment]pending_manual_retry:%d:%d:%d:%s", pending.Request.SpaceID, pending.Request.ExptID, pending.Request.RunID, pending.Request.RequestID)
+	p.hook.persistent.Store(true)
+	if err := p.pendingRetryTestPort.RegisterPendingRetry(ctx, pending); err != nil {
+		return err
+	}
+	p.registered <- pending
+	return nil
 }
 
 func TestPendingRetryCommittedTokenRecoversAfterRunFinishedAndOldSave(t *testing.T) {

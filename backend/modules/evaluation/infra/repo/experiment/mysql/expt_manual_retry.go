@@ -455,7 +455,7 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 		if err != nil {
 			return "", err
 		}
-		if !reflect.DeepEqual(logDO, p.CurrentRunLog) {
+		if !sameManualRetryTurnLogSource(logDO, p.CurrentRunLog) {
 			return "source_changed", nil
 		}
 		var refs []*model.ExptTurnEvaluatorResultRef
@@ -516,7 +516,7 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 		if err != nil {
 			return "", err
 		}
-		if !reflect.DeepEqual(got, source) {
+		if !sameManualRetryTurnLogSource(got, source) {
 			return "source_changed", nil
 		}
 	}
@@ -551,6 +551,33 @@ func (d *ExptManualRetryDAOImpl) lockManualRetryTurns(ctx context.Context, r *en
 		}
 	}
 	return "", nil
+}
+
+// Pending JSON omits empty evaluator collections. Compare their canonical
+// shape without changing the source snapshot or its other identity/result
+// fields; nonempty references and a missing EvaluatorResults still differ.
+func sameManualRetryTurnLogSource(a, b *entity.ExptTurnResultRunLog) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	canonical := func(log *entity.ExptTurnResultRunLog) entity.ExptTurnResultRunLog {
+		copy := *log
+		if log.EvaluatorResultIds != nil {
+			results := *log.EvaluatorResultIds
+			if len(results.EvalVerIDToResID) == 0 {
+				results.EvalVerIDToResID = nil
+			}
+			if len(results.Registered) == 0 {
+				results.Registered = nil
+			}
+			if len(results.Inline) == 0 {
+				results.Inline = nil
+			}
+			copy.EvaluatorResultIds = &results
+		}
+		return copy
+	}
+	return reflect.DeepEqual(canonical(a), canonical(b))
 }
 
 // Preflight reuses final source validation without allocating IDs or writing rows.

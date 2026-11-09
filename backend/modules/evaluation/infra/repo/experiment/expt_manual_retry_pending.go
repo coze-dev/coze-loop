@@ -260,7 +260,14 @@ func (r *ExptManualRetryRepoImpl) ResolvePendingRetry(ctx context.Context, p *re
 					return fmt.Errorf("manual retry commit evidence is incomplete")
 				}
 				receipt = p.PreparedReceipt
-				return r.CompletePendingRetry(ctx, p, receipt, nil)
+				// Primary SQL tokens prove the commit. Cache/cleanup failures
+				// cannot turn it into a failed API response or block the tick.
+				// Complete retains pending evidence if the result SET fails;
+				// after a successful SET it only deletes this request's slot.
+				if err := r.CompletePendingRetry(ctx, p, receipt, nil); err != nil {
+					logs.CtxWarn(ctx, "committed manual retry receipt cache/cleanup failed, request_id=%s, err=%v", p.Request.RequestID, err)
+				}
+				return nil
 			}
 			if unchanged != len(p.AcceptedItemIDs) {
 				return fmt.Errorf("manual retry request %s result cannot be proven from its primary source token", p.Request.RequestID)
