@@ -23,6 +23,7 @@ type resourceItemStore struct {
 	run          *entity.ExptItemResultRunLog
 	writeErr     error
 	writeContext context.Context
+	requestID    string
 }
 
 func (s *resourceItemStore) GetItemRunLog(context.Context, int64, int64, int64, int64) (*entity.ExptItemResultRunLog, error) {
@@ -32,18 +33,26 @@ func (s *resourceItemStore) BatchGet(context.Context, int64, int64, []int64) ([]
 	return nil, nil
 }
 
+func (s *resourceItemStore) GetCurrentRequest(context.Context, int64, int64, int64, int64) (*entity.ExptItemCurrentRequest, error) {
+	return &entity.ExptItemCurrentRequest{SpaceID: s.run.SpaceID, ExptID: s.run.ExptID, RunID: s.run.ExptRunID, ItemID: s.run.ItemID,
+		RequestID: s.requestID, Mode: entity.EvaluationModeSubmit, Status: entity.ItemRunState(s.run.Status), RetryTimes: s.run.RetryTimes}, nil
+}
+
 type resourceDispatchStore struct {
 	repo.IExptItemDispatchRepo
 	item *resourceItemStore
 }
 
-func (s *resourceDispatchStore) StartReservedItem(context.Context, int64, int64, int64, int64) (bool, error) {
+func (s *resourceDispatchStore) StartReservedItem(_ context.Context, _, _, _, _ int64, requestID string) (repo.StartReservedItemResult, error) {
+	if requestID != s.item.requestID || entity.IsItemRunFinished(entity.ItemRunState(s.item.run.Status)) {
+		return repo.StartReservedItemResult{}, nil
+	}
 	if entity.ItemRunState(s.item.run.Status) != entity.ItemRunState_Queueing {
-		return false, nil
+		return repo.StartReservedItemResult{CurrentRequest: true}, nil
 	}
 	s.item.run.Status = int32(entity.ItemRunState_Processing)
 	s.item.run.QuotaReservationState = entity.QuotaReservationStateNone
-	return true, nil
+	return repo.StartReservedItemResult{CurrentRequest: true, Started: true}, nil
 }
 func (s *resourceDispatchStore) MGetDispatchObservations(context.Context, int64, int64, int64, []int64) ([]*repo.ExptDispatchObservation, error) {
 	return nil, nil
@@ -58,7 +67,7 @@ type resourceGuard struct {
 	prepareContext  func(context.Context) context.Context
 }
 
-func (g *resourceGuard) ConfirmRunning(context.Context, string, int64, int64) (bool, error) {
+func (g *resourceGuard) ConfirmRunning(context.Context, string, int64, int64, string) (bool, error) {
 	return true, nil
 }
 func (g *resourceGuard) ConfirmItemRunning(_ context.Context, _ *entity.Experiment, item *entity.ExptItemResultRunLog) (bool, error) {
@@ -90,7 +99,7 @@ func resourceFixture() (*ExptItemEventEvalServiceImpl, *resourceItemStore, *reso
 	item := &resourceItemStore{run: &entity.ExptItemResultRunLog{ID: 41, SpaceID: 3, ExptID: 1, ExptRunID: 2, ItemID: 4, Status: int32(entity.ItemRunState_Queueing), QuotaReservationState: entity.QuotaReservationStateReserved}}
 	guard := &resourceGuard{}
 	svc := &ExptItemEventEvalServiceImpl{centralGuard: guard, exptItemResultRepo: item, dispatchRepo: &resourceDispatchStore{item: item}, mutex: cancellationMutex{}, experimentRepo: &cancellationExptStore{expt: &entity.Experiment{ID: 1, SpaceID: 3, Status: entity.ExptStatus_Processing, ExptDispatchMode: entity.ExptDispatchModeEnforce, SchedulerScope: testScope}}}
-	event := &entity.ExptItemEvalEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2, EvalSetItemID: 4}
+	event := &entity.ExptItemEvalEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2, EvalSetItemID: 4, ExptRunMode: entity.EvaluationModeSubmit}
 	ctx := ctxcache.Init(context.Background())
 	event.WithCtxCentralAdmittedExpt(ctx, &entity.Experiment{ID: 1, SpaceID: 3, ExptDispatchMode: entity.ExptDispatchModeEnforce, SchedulerScope: testScope})
 	return svc, item, guard, event, ctx

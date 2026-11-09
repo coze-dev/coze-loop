@@ -1045,10 +1045,6 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 		return nil, nil, err
 	}
 
-	if _, resourceProtocol := e.centralGuard.(component.ICentralItemLifecycle); resourceProtocol {
-		e.releaseCentralQuotaForItems(ctx, expt, event.ExptRunID, zombieItemIDs, "item zombie timeout")
-	}
-
 	// 主表 expt_item_result 只补 err_msg，供 MGetExperimentResult 构造 ItemSystemInfo 时读取。
 	// **不**预写 status=Fail: RecordItemRunLogs 里 statsCntOp 会读当前 items_result.Status
 	// 做「-1」，若这里预写 Fail，Processing 的减项就丢了，实验 stats 上 Processing 永远归不了零。
@@ -1315,9 +1311,6 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 		"err_msg":      errBytes,
 	}, event.SpaceID); err != nil {
 		return nil, nil, err
-	}
-	if _, resourceProtocol := e.centralGuard.(component.ICentralItemLifecycle); resourceProtocol {
-		e.releaseCentralQuotaForItems(ctx, expt, event.ExptRunID, terminatedItemIDs, "sandbox terminated before report")
 	}
 	if err := e.ExptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, terminatedItemIDs, map[string]any{
 		"err_msg": errBytes,

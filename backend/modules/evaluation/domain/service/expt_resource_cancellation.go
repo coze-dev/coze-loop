@@ -108,14 +108,24 @@ func (e *ExptMangerImpl) cancelCentralItem(ctx context.Context, expt *entity.Exp
 		}
 	}
 	// Retrying Terminal items must retry physical stop; Terminal alone cannot release running budget.
+	if err := e.stopCentralItemResources(ctx, expt, row.ExptRunID, row.ItemID); err != nil {
+		return err
+	}
+	notifyCentralItemTerminal(ctx, e.centralGuard, e.itemResultRepo, expt.SpaceID, expt.ID, row.ExptRunID, row.ItemID, true)
+	return nil
+}
+
+func (e *ExptMangerImpl) stopCentralItemResources(ctx context.Context, expt *entity.Experiment, runID, itemID int64) error {
+	if _, ok := e.centralGuard.(component.ICentralItemLifecycle); !ok {
+		return fmt.Errorf("central item lifecycle not wired")
+	}
 	if _, ok := e.evalTargetService.(interface {
 		TerminateSandboxAttemptsForRunItems(context.Context, int64, int64, []int64, ...bool) error
 	}); !ok {
 		return fmt.Errorf("central sandbox attempt discovery not wired")
 	}
-	if err := e.terminateSandboxExecutesForCancelledItems(ctx, expt.SpaceID, expt.TargetSpaceID, expt.ID, &row.ExptRunID, []int64{row.ItemID}, true, true); err != nil {
+	if err := e.terminateSandboxExecutesForCancelledItems(ctx, expt.SpaceID, expt.TargetSpaceID, expt.ID, &runID, []int64{itemID}, true, true); err != nil {
 		return err
 	}
-	notifyCentralItemTerminal(ctx, e.centralGuard, e.itemResultRepo, expt.SpaceID, expt.ID, row.ExptRunID, row.ItemID, true)
 	return nil
 }

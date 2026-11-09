@@ -13,6 +13,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -322,7 +323,9 @@ func (e *ExptItemEventEvalServiceImpl) handleCurrentEventErr(ctx context.Context
 			write.RetryTimes++
 			write.RetryOnly = true
 			write.FailPendingTurns = false
-			if event.Ext[entity.RetryYieldExtKey] == "true" {
+			_, resourceProtocol := e.centralGuard.(component.ICentralItemExecution)
+			_, centralAdmitted := event.CtxCentralAdmittedExpt(ctx)
+			if event.Ext[entity.RetryYieldExtKey] == "true" && !(resourceProtocol && centralAdmitted) {
 				write.RetryOnly = false
 				write.Yield = true
 			}

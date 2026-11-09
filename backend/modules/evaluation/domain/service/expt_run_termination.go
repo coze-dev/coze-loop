@@ -299,6 +299,18 @@ func (e *ExptMangerImpl) releaseTerminationResourcesWithDebt(ctx context.Context
 		if err := ctx.Err(); err != nil {
 			return eligible[index:], errno.WrapMQRetryErr(err)
 		}
+		if e.usesCentralResourceProtocol(expt) {
+			if err := e.stopCentralItemResources(ctx, expt, run, source.Current.ItemID); err != nil {
+				return eligible[index:], errno.WrapMQRetryErr(err)
+			}
+			if err := notifyCentralItemTerminal(ctx, e.centralGuard, e.itemResultRepo, expt.SpaceID, expt.ID, run, source.Current.ItemID, true); err != nil {
+				if whole {
+					return eligible[index:], errno.WrapMQRetryErr(err)
+				}
+				return eligible[index:], nil
+			}
+			continue
+		}
 		if e.centralGuard != nil && entity.IsCentralDispatch(expt.ExptDispatchMode) {
 			if expt.SchedulerScope == "" {
 				return eligible[index:], fmt.Errorf("termination scope missing")
@@ -923,21 +935,30 @@ func (e *ExptMangerImpl) ReconcileTerminalResourceDebt(ctx context.Context, even
 }
 
 func (e *ExptMangerImpl) releaseTerminalResourceDebt(ctx context.Context, expt *entity.Experiment, row *entity.ExptItemCurrentRequest) error {
-	// 1) 账本：identity 比对在 guard 内部原子完成，重复调用是 no-op。
-	releaseCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
-	err := e.centralGuard.Release(releaseCtx, expt.SchedulerScope, row.RunID, row.ItemID, row.RequestID, "terminal item residual reservation")
-	if err == nil {
-		err = releaseCtx.Err()
-	}
-	cancel()
-	if err != nil {
-		return errno.WrapMQRetryErr(err)
-	}
-	// 2) 沙箱：sweepTerminatedSandboxItems 只巡检 Processing 的 item，终态行永远进不去，
-	//    所以沙箱销毁失败在终止路径之外没有第二个执行者。这里补上。
-	if e.evalTargetService != nil && isSandboxAgentExpt(expt) {
-		if err := e.replayTerminalSandboxCleanup(ctx, expt, row); err != nil {
-			return err
+	if e.usesCentralResourceProtocol(expt) {
+		if err := e.stopCentralItemResources(ctx, expt, row.RunID, row.ItemID); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		if err := notifyCentralItemTerminal(ctx, e.centralGuard, e.itemResultRepo, row.SpaceID, row.ExptID, row.RunID, row.ItemID, true); err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+	} else {
+		// 1) 账本：identity 比对在 guard 内部原子完成，重复调用是 no-op。
+		releaseCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
+		err := e.centralGuard.Release(releaseCtx, expt.SchedulerScope, row.RunID, row.ItemID, row.RequestID, "terminal item residual reservation")
+		if err == nil {
+			err = releaseCtx.Err()
+		}
+		cancel()
+		if err != nil {
+			return errno.WrapMQRetryErr(err)
+		}
+		// 2) 沙箱：sweepTerminatedSandboxItems 只巡检 Processing 的 item，终态行永远进不去，
+		//    所以沙箱销毁失败在终止路径之外没有第二个执行者。这里补上。
+		if e.evalTargetService != nil && isSandboxAgentExpt(expt) {
+			if err := e.replayTerminalSandboxCleanup(ctx, expt, row); err != nil {
+				return err
+			}
 		}
 	}
 	// 3) 两者都确认完成才清标记。CAS 不命中（行已推进 / 已被清）不算失败，但也不当作成功，

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -23,6 +24,16 @@ type reviewArchiveItems struct {
 	log  entity.ExptItemResultRunLog
 	main entity.ExptItemResult
 	turn entity.ExptTurnResult
+}
+
+func (s *reviewArchiveItems) ScanCurrentRequests(context.Context, int64, int64, int64, bool) ([]*entity.ExptItemCurrentRequest, error) {
+	return []*entity.ExptItemCurrentRequest{{SpaceID: s.log.SpaceID, ExptID: s.log.ExptID, RunID: s.log.ExptRunID, ItemID: s.log.ItemID,
+		Mode: entity.EvaluationModeSubmit, Status: entity.ItemRunState(s.log.Status), ResultState: entity.ExptItemResultState(s.log.ResultState),
+		QuotaReservationState: s.log.QuotaReservationState, UpdatedAt: s.log.UpdatedAt}}, nil
+}
+
+func (s *reviewArchiveItems) ScanManualRetryFilterItems(context.Context, int64, int64, int64, int64, int) ([]int64, int64, error) {
+	return nil, 0, nil
 }
 
 func (s *reviewArchiveItems) ScanItemRunLogs(_ context.Context, _, _ int64, f *entity.ExptItemRunLogFilter, _, _, _ int64) ([]*entity.ExptItemResultRunLog, int64, error) {
@@ -39,6 +50,27 @@ func (s *reviewArchiveItems) ScanItemRunLogs(_ context.Context, _, _ int64, f *e
 func (s *reviewArchiveItems) GetItemRunLog(context.Context, int64, int64, int64, int64) (*entity.ExptItemResultRunLog, error) {
 	copy := s.log
 	return &copy, nil
+}
+
+func (s *reviewArchiveItems) GetItemResultPublishSource(context.Context, int64, int64, int64, int64) (*entity.ExptItemResultPublishSource, error) {
+	log, main, turn := s.log, s.main, s.turn
+	current := entity.ExptItemCurrentRequest{SpaceID: log.SpaceID, ExptID: log.ExptID, RunID: log.ExptRunID, ItemID: log.ItemID,
+		Mode: entity.EvaluationModeSubmit, Status: entity.ItemRunState(log.Status), ResultState: entity.ExptItemResultState(log.ResultState)}
+	source := &entity.ExptCurrentItemRunSource{Current: current, CanonicalTurns: []*entity.ExptTurnResult{&turn},
+		Turns: map[int64]*entity.ExptTurnResultRunLog{turn.TurnID: {ID: 51, SpaceID: log.SpaceID, ExptID: log.ExptID,
+			ExptRunID: log.ExptRunID, ItemID: log.ItemID, TurnID: turn.TurnID, Status: entity.TurnRunState_Fail}}}
+	return &entity.ExptItemResultPublishSource{Source: source, Item: &main, ItemLog: &log}, nil
+}
+
+func (s *reviewArchiveItems) IsItemResultPublishSourceCurrent(_ context.Context, source *entity.ExptItemResultPublishSource) (bool, error) {
+	return source.Source.Current.RunID == s.log.ExptRunID && source.ItemLog.ResultState == s.log.ResultState, nil
+}
+
+func (s *reviewArchiveItems) CommitItemResult(_ context.Context, publication *entity.ExptItemResultPublication) (bool, error) {
+	s.main.Status = entity.ItemRunState(publication.Source.ItemLog.Status)
+	s.turn = *publication.Turns[0]
+	s.log.ResultState = int32(entity.ExptItemResultStateResulted)
+	return true, nil
 }
 func (s *reviewArchiveItems) BatchGet(context.Context, int64, int64, []int64) ([]*entity.ExptItemResult, error) {
 	copy := s.main
@@ -154,7 +186,8 @@ func TestReviewLastRejectedCandidateArchivesBeforeExperimentEnd(t *testing.T) {
 	config := reviewArchiveConfig{}
 	pub := &reviewArchivePublisher{}
 	turns := reviewArchiveTurns{items: items}
-	result := reviewArchiveResults{ExptResultServiceImpl: &ExptResultServiceImpl{ExptItemResultRepo: items, ExptTurnResultRepo: turns, ExptStatsRepo: reviewArchiveStats{}}}
+	result := reviewArchiveResults{ExptResultServiceImpl: &ExptResultServiceImpl{ExptItemResultRepo: items, ExptTurnResultRepo: turns, ExptStatsRepo: reviewArchiveStats{},
+		resultPublishRepo: items, resultPublishLocker: func() lock.ILocker { return cancellationMutex{} }}}
 	mode := &DefaultSchedulerModeFactory{manager: manager, exptItemResultRepo: items, idem: reviewArchiveIdem{startKey: makeStartIdemKey(event)}, configer: config, publisher: pub, resultSvc: result}
 	svc := &ExptSchedulerImpl{Manager: manager, ExptItemResultRepo: items, ExptTurnResultRepo: turns, Configer: config, Publisher: pub, ResultSvc: result, schedulerModeFactory: mode, centralGuard: reviewArchiveDispatcher{items: items}}
 	svc.Endpoints = svc.HandleEventEndpoint(func(context.Context, *entity.ExptScheduleEvent) error { return nil })

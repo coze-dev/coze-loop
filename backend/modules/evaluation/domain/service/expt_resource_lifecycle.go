@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
@@ -14,29 +15,31 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-func notifyCentralItemTerminal(ctx context.Context, guard component.ICentralReservationGuard, items repo.IExptItemResultRepo, spaceID, exptID, runID, itemID int64, stoppedAndStartPrevented ...bool) {
+func notifyCentralItemTerminal(ctx context.Context, guard component.ICentralReservationGuard, items repo.IExptItemResultRepo, spaceID, exptID, runID, itemID int64, stoppedAndStartPrevented ...bool) error {
 	lifecycle, ok := guard.(component.ICentralItemLifecycle)
 	if !ok || items == nil {
-		return
+		return nil
 	}
 	callbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
 	defer cancel()
 	item, err := items.GetItemRunLog(contexts.WithCtxWriteDB(callbackCtx), exptID, runID, itemID, spaceID)
 	if err != nil {
 		logs.CtxWarn(callbackCtx, "[EvaluationResource] terminal read failed, expt_id=%d run_id=%d item_id=%d err=%v", exptID, runID, itemID, err)
-		return
+		return err
 	}
 	if item == nil || !entity.IsItemRunFinished(entity.ItemRunState(item.Status)) {
-		return
+		return nil
 	}
 	if item.ID <= 0 || item.SpaceID != spaceID || item.ExptID != exptID || item.ExptRunID != runID || item.ItemID != itemID {
-		return
+		return fmt.Errorf("central terminal item identity mismatch")
 	}
 	// Terminal is a start barrier, not evidence that a running Sandbox has stopped.
 	if entity.ItemRunState(item.Status) == entity.ItemRunState_Terminal && (len(stoppedAndStartPrevented) == 0 || !stoppedAndStartPrevented[0]) {
-		return
+		return nil
 	}
 	if err := lifecycle.OnItemTerminal(callbackCtx, item); err != nil {
 		logs.CtxWarn(callbackCtx, "[EvaluationResource] finalization failed, item_run_log_id=%d status=%d err=%v", item.ID, item.Status, err)
+		return err
 	}
+	return callbackCtx.Err()
 }

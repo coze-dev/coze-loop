@@ -646,6 +646,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 		if errors.Is(nextErr, errExptNonCurrentSource) {
 			return nil
 		}
+		if errors.Is(nextErr, errCentralItemAdmission) || errors.Is(nextErr, errCentralRetryPublication) {
+			return errno.WrapMQRetryErr(nextErr)
+		}
 		if execution.LockLost {
 			return errno.NewMQRetryErr("item execution lock lost")
 		}
@@ -1881,7 +1884,13 @@ func (e *ExptItemEventEvalServiceImpl) HandleCurrentSource(next RecordEvalEndPoi
 		if event.RetryTimes < 0 {
 			return errno.NewMQRetryErr("invalid event retry count")
 		}
-		if int(source.RetryTimes) > event.RetryTimes {
+		_, resourceProtocol := e.centralGuard.(component.ICentralItemExecution)
+		_, centralAdmitted := event.CtxCentralAdmittedExpt(ctx)
+		if resourceProtocol && centralAdmitted && !event.AsyncReportTrigger && !event.AsyncEvaluatorReportTrigger {
+			if event.RetryTimes > int(source.RetryTimes) {
+				return nil
+			}
+		} else if int(source.RetryTimes) > event.RetryTimes {
 			event.RetryTimes = int(source.RetryTimes)
 		}
 		if source.Status == entity.ItemRunState_Queueing {
