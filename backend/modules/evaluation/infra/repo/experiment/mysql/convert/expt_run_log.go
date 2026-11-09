@@ -34,7 +34,6 @@ func (ExptTurnResultRunLogConvertor) DO2PO(log *entity.ExptTurnResultRunLog) (*m
 		ItemVersionID:      log.ItemVersionID, // ★
 		TurnID:             log.TurnID,
 		Status:             int32(log.Status),
-		TraceID:            log.TraceID,
 		LogID:              log.LogID,
 		TargetResultID:     log.TargetResultID,
 		EvaluatorResultIds: gptr.Of(evalResIDs),
@@ -78,7 +77,6 @@ func (ExptTurnResultRunLogConvertor) PO2DO(log *model.ExptTurnResultRunLog) (*en
 		ItemVersionID:      log.ItemVersionID, // ★
 		TurnID:             log.TurnID,
 		Status:             entity.TurnRunState(log.Status),
-		TraceID:            log.TraceID,
 		LogID:              log.LogID,
 		TargetResultID:     log.TargetResultID,
 		EvaluatorResultIds: evalResIDs,
@@ -98,7 +96,7 @@ func (ExptRunLogConvertor) DO2PO(log *entity.ExptRunLog) (*model.ExptRunLog, err
 	if log == nil {
 		return nil, nil
 	}
-	itemIDsBytes, err := entity.EncodeExptRunLogItems(log.ItemIds)
+	itemIDsBytes, err := json.Marshal(log.ItemIds)
 	if err != nil {
 		return nil, errorx.Wrapf(err, "ExptRunLogItems list json marshal fail")
 	}

@@ -2366,16 +2366,14 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 				event := &entity.ExptItemEvalEvent{}
 				actx := &entity.EvalAsyncCtx{AsyncUnixMS: time.Now().Add(-150 * time.Millisecond).UnixMilli(), Event: event, Session: session}
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(publisherErrorReq.GetInvokeID(), 10)).Return(actx, nil)
-				targetSvc.EXPECT().GetRecordByID(gomock.Any(), publisherErrorReq.GetWorkspaceID(), publisherErrorReq.GetInvokeID()).Return(&entity.EvalTargetRecord{ID: publisherErrorReq.GetInvokeID(), TurnID: 909}, nil)
 				targetSvc.EXPECT().ReportInvokeRecords(gomock.Any(), gomock.AssignableToTypeOf(&entity.ReportTargetRecordParam{})).DoAndReturn(func(_ context.Context, param *entity.ReportTargetRecordParam) error {
 					assert.Equal(t, session, param.Session)
 					return nil
 				})
 				conf := &entity.TargetTrajectoryConf{}
 				configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(conf)
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration, _ func(*entity.ExptItemEvalEvent)) error {
-					assert.NotSame(t, event, evt)
-					assertCallbackResumeSource(t, evt, "target", publisherErrorReq.GetInvokeID(), 909)
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration, _ func(*entity.ExptItemEvalEvent)) error {
+					assert.Equal(t, event, evt)
 					if assert.NotNil(t, duration) {
 						assert.Equal(t, 50*time.Second, *duration)
 					}
@@ -2405,23 +2403,18 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 				event := &entity.ExptItemEvalEvent{SpaceID: 44, ExptID: 1, ExptRunID: 2, EvalSetItemID: 3}
 				actx := &entity.EvalAsyncCtx{AsyncUnixMS: time.Now().Add(-100 * time.Millisecond).UnixMilli(), Event: event}
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "404").Return(actx, nil)
-				read := targetSvc.EXPECT().GetRecordByID(gomock.Any(), int64(44), int64(404)).Return(&entity.EvalTargetRecord{ID: 404, TurnID: 0}, nil)
 				report := targetSvc.EXPECT().ReportInvokeRecords(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *entity.ReportTargetRecordParam) error {
 					assert.Equal(t, int64(44), param.SpaceID)
 					assert.Equal(t, int64(404), param.RecordID)
 					assert.Equal(t, entity.EvalTargetRunStatusSuccess, param.Status)
 					return nil
-				}).After(read)
+				})
 				configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(&entity.TargetTrajectoryConf{})
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(report).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration, option func(*entity.ExptItemEvalEvent)) error {
-					assert.NotSame(t, event, evt)
-					assert.Equal(t, event.ExptRunID, evt.ExptRunID)
-					assertCallbackResumeSource(t, evt, "target", 404, 0)
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).After(report).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration, option func(*entity.ExptItemEvalEvent)) error {
 					require.NotNil(t, duration)
 					assert.Equal(t, 50*time.Second, *duration)
 					option(evt)
 					assert.True(t, evt.AsyncReportTrigger)
-					assert.False(t, event.AsyncReportTrigger)
 					return nil
 				})
 			},
@@ -2434,7 +2427,6 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 				event := &entity.ExptItemEvalEvent{}
 				actx := &entity.EvalAsyncCtx{AsyncUnixMS: time.Now().Add(-120 * time.Millisecond).UnixMilli(), Event: event, Session: session}
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(failedReq.GetInvokeID(), 10)).Return(actx, nil)
-				targetSvc.EXPECT().GetRecordByID(gomock.Any(), failedReq.GetWorkspaceID(), failedReq.GetInvokeID()).Return(&entity.EvalTargetRecord{ID: failedReq.GetInvokeID(), TurnID: 909}, nil)
 				targetSvc.EXPECT().ReportInvokeRecords(gomock.Any(), gomock.AssignableToTypeOf(&entity.ReportTargetRecordParam{})).DoAndReturn(func(_ context.Context, param *entity.ReportTargetRecordParam) error {
 					assert.Equal(t, entity.EvalTargetRunStatusFail, param.Status)
 					if assert.NotNil(t, param.OutputData) {
@@ -2448,9 +2440,8 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 				})
 				conf := &entity.TargetTrajectoryConf{}
 				configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(conf)
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration, _ func(*entity.ExptItemEvalEvent)) error {
-					assert.NotSame(t, event, evt)
-					assertCallbackResumeSource(t, evt, "target", failedReq.GetInvokeID(), 909)
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration, _ func(*entity.ExptItemEvalEvent)) error {
+					assert.Equal(t, event, evt)
 					if assert.NotNil(t, duration) {
 						assert.Equal(t, 50*time.Second, *duration)
 					}
@@ -6831,7 +6822,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					}
 					return entity.ReportEvaluatorResultApplied, nil
 				})
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Not(gomock.Nil()), gomock.Any()).DoAndReturn(
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), resumeEvent, gomock.Not(gomock.Nil()), gomock.Any()).DoAndReturn(
 					func(_ context.Context, ev *entity.ExptItemEvalEvent, _ *time.Duration, modifyFunc func(*entity.ExptItemEvalEvent)) error {
 						modifyFunc(ev)
 						assert.True(t, ev.AsyncEvaluatorReportTrigger)
@@ -7070,7 +7061,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 						EvaluatorVersionID: 9,
 					}, nil),
 				)
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Not(gomock.Nil()), gomock.Any()).Return(nil)
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Not(gomock.Nil()), gomock.Any()).Return(nil)
 			},
 		},
 		{
@@ -7110,12 +7101,12 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					Event: event, ResumeReady: true, EvaluatorVersionID: 9, CallbackURL: "https://cb.example.com/hook",
 				}, nil)
 				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(entity.ReportEvaluatorResultDuplicate, nil)
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).Return(nil)
 				dispatcher.EXPECT().Dispatch(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
 		{
-			name: "conflicting terminal callback republishes recovery but does not redispatch external callback",
+			name: "conflicting terminal callback does not republish or redispatch",
 			req: &openapi.ReportEvaluatorInvokeResultRequest{
 				WorkspaceID: gptr.Of(workspaceID),
 				InvokeID:    gptr.Of(invokeID),
@@ -7130,7 +7121,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					Event: event, ResumeReady: true, EvaluatorVersionID: 9, CallbackURL: "https://cb.example.com/hook",
 				}, nil)
 				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(entity.ReportEvaluatorResultConflict, nil)
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				dispatcher.EXPECT().Dispatch(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
@@ -7286,20 +7277,17 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 			auth := rpcmocks.NewMockIAuthProvider(ctrl)
 			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
 			evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
-			recordSvc := servicemocks.NewMockEvaluatorRecordService(ctrl)
-			recordSvc.EXPECT().GetEvaluatorRecord(gomock.Any(), invokeID, false).Return(&entity.EvaluatorRecord{ID: invokeID, TurnID: 909, Status: entity.EvaluatorRunStatusSuccess}, nil).AnyTimes()
 			publisher := eventmocks.NewMockExptEventPublisher(ctrl)
 			callbackDispatcher := servicemocks.NewMockIEvaluatorCallbackDispatcher(ctrl)
 			metric := &fakeOpenAPIMetric{}
 
 			app := &EvalOpenAPIApplication{
-				auth:                   auth,
-				asyncRepo:              asyncRepo,
-				evaluatorService:       evaluatorSvc,
-				evaluatorRecordService: recordSvc,
-				publisher:              publisher,
-				callbackDispatcher:     callbackDispatcher,
-				metric:                 metric,
+				auth:               auth,
+				asyncRepo:          asyncRepo,
+				evaluatorService:   evaluatorSvc,
+				publisher:          publisher,
+				callbackDispatcher: callbackDispatcher,
+				metric:             metric,
 			}
 
 			tc.setup(auth, asyncRepo, evaluatorSvc, publisher, callbackDispatcher)

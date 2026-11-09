@@ -11,7 +11,6 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"gorm.io/gorm"
-	"gorm.io/plugin/dbresolver"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
@@ -31,7 +30,7 @@ type IExptDAO interface {
 
 	Update(ctx context.Context, expt *model.Experiment) error
 
-	UpdateFields(ctx context.Context, id int64, ufields map[string]any, opts ...db.Option) error
+	UpdateFields(ctx context.Context, id int64, ufields map[string]any) error
 
 	Delete(ctx context.Context, id int64) error
 
@@ -41,7 +40,7 @@ type IExptDAO interface {
 
 	GetByName(ctx context.Context, name string, spaceID int64) (*model.Experiment, error)
 
-	GetByID(ctx context.Context, id int64, opts ...db.Option) (*model.Experiment, error)
+	GetByID(ctx context.Context, id int64) (*model.Experiment, error)
 
 	MGetByID(ctx context.Context, ids []int64) ([]*model.Experiment, error)
 
@@ -59,10 +58,6 @@ type IExptDAO interface {
 	ScanSchedulerQueue(ctx context.Context, param *entity.SchedulerQueueScanParam) ([]*model.Experiment, error)
 }
 
-type IExptCurrentRunCompletionDAO interface {
-	UpdateIfLatestRun(ctx context.Context, expt *model.Experiment, expectedRunID int64) (bool, error)
-}
-
 func NewExptDAO(db db.Provider) IExptDAO {
 	return &exptDAOImpl{
 		db:    db,
@@ -77,8 +72,8 @@ type exptDAOImpl struct {
 	query *query.Query
 }
 
-func (d *exptDAOImpl) UpdateFields(ctx context.Context, id int64, ufields map[string]any, opts ...db.Option) error {
-	q := query.Use(d.db.NewSession(ctx, opts...)).Experiment
+func (d *exptDAOImpl) UpdateFields(ctx context.Context, id int64, ufields map[string]any) error {
+	q := query.Use(d.db.NewSession(ctx)).Experiment
 	_, err := q.WithContext(ctx).
 		Where(q.ID.Eq(id)).
 		UpdateColumns(ufields)
@@ -120,28 +115,6 @@ func (d *exptDAOImpl) Update(ctx context.Context, expt *model.Experiment) error 
 		return errorx.Wrapf(err, "update expt fail, expt_id: %v, updated: %v", expt.ID, json.Jsonify(expt))
 	}
 	return nil
-}
-
-func (d *exptDAOImpl) UpdateIfLatestRun(ctx context.Context, expt *model.Experiment, expectedRunID int64) (bool, error) {
-	result := d.db.NewSession(ctx).Model(&model.Experiment{}).
-		Where("id = ? AND space_id = ? AND latest_run_id = ?", expt.ID, expt.SpaceID, expectedRunID).
-		Omit(schedulingFrozenColumns...).
-		Updates(expt)
-	if result.Error != nil {
-		return false, errorx.Wrapf(result.Error, "update current experiment completion failed, expt_id: %v, run_id: %v", expt.ID, expectedRunID)
-	}
-	if result.RowsAffected > 0 {
-		return true, nil
-	}
-	// MySQL can report zero for an idempotent rewrite. Distinguish that from a
-	// replacement run without treating a successful CAS as a conflict.
-	var count int64
-	if err := d.db.NewSession(ctx).Clauses(dbresolver.Write).Model(&model.Experiment{}).
-		Where("id = ? AND space_id = ? AND latest_run_id = ? AND status = ?", expt.ID, expt.SpaceID, expectedRunID, expt.Status).
-		Count(&count).Error; err != nil {
-		return false, errorx.Wrapf(err, "verify current experiment completion failed, expt_id: %v, run_id: %v", expt.ID, expectedRunID)
-	}
-	return count == 1, nil
 }
 
 func (d *exptDAOImpl) Delete(ctx context.Context, id int64) error {
@@ -416,8 +389,8 @@ func (d *exptDAOImpl) GetByName(ctx context.Context, name string, spaceID int64)
 	return found, nil
 }
 
-func (d *exptDAOImpl) GetByID(ctx context.Context, id int64, opts ...db.Option) (*model.Experiment, error) {
-	expt := query.Use(d.db.NewSession(ctx, opts...)).Experiment
+func (d *exptDAOImpl) GetByID(ctx context.Context, id int64) (*model.Experiment, error) {
+	expt := d.query.Experiment
 	q := expt.WithContext(ctx)
 	if contexts.CtxWriteDB(ctx) {
 		q = q.WriteDB()

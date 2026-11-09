@@ -12,8 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/infra/lock"
-
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 
 	"github.com/stretchr/testify/assert"
@@ -125,7 +123,7 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) { // Modification: add ctrl parameter
 				f.configer.EXPECT().GetSchedulerAbortCtrl(gomock.Any()).Return(&entity.SchedulerAbortCtrl{}).AnyTimes()
-				f.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), args.event.Session).Return(mockExpt, nil).AnyTimes()
+				f.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), args.event.Session).Return(mockExpt, nil).Times(1)
 				f.manager.EXPECT().GetRunLog(gomock.Any(), int64(1), int64(2), int64(3), args.event.Session).Return(&entity.ExptRunLog{}, nil).Times(1)
 				f.mutex.EXPECT().LockBackoffWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, args.ctx, func() {}, nil).Times(1)
 				f.mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
@@ -175,7 +173,7 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) { // Modification: add ctrl parameter
 				f.configer.EXPECT().GetSchedulerAbortCtrl(gomock.Any()).Return(&entity.SchedulerAbortCtrl{}).AnyTimes()
-				f.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), args.event.Session).Return(mockExpt, nil).AnyTimes()
+				f.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), args.event.Session).Return(mockExpt, nil).Times(1)
 				f.manager.EXPECT().GetRunLog(gomock.Any(), int64(1), int64(2), int64(3), args.event.Session).Return(&entity.ExptRunLog{}, nil).Times(1)
 				f.mutex.EXPECT().LockBackoffWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, args.ctx, func() {}, nil).Times(1)
 				f.mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
@@ -364,7 +362,6 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 		publisher          *eventmocks.MockExptEventPublisher
 		metric             *metricsmocks.MockExptMetric
 		resultSvc          *svcmocks.MockExptResultService
-		mutex              *lockmocks.MockILocker
 	}
 
 	type args struct {
@@ -405,10 +402,9 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 				},
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) { // Modification: add ctrl parameter
-				f.mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, args.ctx, func() {}, nil).Times(2)
-				f.mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).Times(2)
-				f.exptItemResultRepo.EXPECT().GetCurrentRequest(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, int64(3)).Return(&entity.ExptItemCurrentRequest{RunID: args.event.ExptRunID, ItemID: 3, Status: entity.ItemRunState_Queueing, Mode: entity.EvaluationModeSubmit}, nil)
-				f.exptItemResultRepo.EXPECT().MarkProcessingIfCurrent(gomock.Any(), args.event.SpaceID, args.event.ExptID, args.event.ExptRunID, int64(3), "").Return(true, nil)
+				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				f.exptItemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{}, nil).AnyTimes()
 				f.exptTurnResultRepo.EXPECT().UpdateTurnResultsWithItemIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.exptTurnResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{}, nil).AnyTimes()
 				f.publisher.EXPECT().BatchPublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -443,7 +439,6 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 				publisher:          eventmocks.NewMockExptEventPublisher(ctrl),
 				metric:             metricsmocks.NewMockExptMetric(ctrl),
 				resultSvc:          svcmocks.NewMockExptResultService(ctrl),
-				mutex:              lockmocks.NewMockILocker(ctrl),
 			}
 
 			if tt.prepareMock != nil {
@@ -458,7 +453,6 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 				Publisher:          f.publisher,
 				Metric:             f.metric,
 				ResultSvc:          f.resultSvc,
-				itemLocker:         func() lock.ILocker { return f.mutex },
 			}
 
 			err := svc.handleToSubmits(tt.args.ctx, tt.args.event, tt.args.toSubmits)
@@ -593,7 +587,7 @@ func TestExptSchedulerImpl_HandleEventLock(t *testing.T) {
 			wantNil: false,
 		},
 		{
-			name: "Lock busy schedules the next tick without calling next",
+			name: "Return nil directly if lock is not obtained",
 			args: lockArgs{
 				event:   &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2},
 				locked:  false,
@@ -611,13 +605,6 @@ func TestExptSchedulerImpl_HandleEventLock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			unlockCalled := false
 			mutex.EXPECT().LockBackoffWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.args.locked, context.Background(), func() { unlockCalled = true }, tt.args.lockErr)
-			if !tt.args.locked && tt.args.lockErr == nil {
-				mode := entitymocks.NewMockExptSchedulerMode(ctrl)
-				factory := svcmocks.NewMockSchedulerModeFactory(ctrl)
-				factory.EXPECT().NewSchedulerMode(tt.args.event.ExptRunMode).Return(mode, nil)
-				mode.EXPECT().NextTick(gomock.Any(), tt.args.event, true).Return(nil)
-				svc.schedulerModeFactory = factory
-			}
 			if tt.args.locked && tt.args.lockErr == nil {
 				mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil)
 			}
@@ -709,7 +696,6 @@ func TestExptSchedulerImpl_HandleEventCheck(t *testing.T) {
 			},
 			preparemock: func() {
 				manager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Success)}, nil).Times(1)
-				manager.EXPECT().GetDetail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{ExptType: entity.ExptType_Online}, nil).Times(1)
 			},
 			wantErr: false,
 		},
@@ -727,7 +713,6 @@ func TestExptSchedulerImpl_HandleEventCheck(t *testing.T) {
 			},
 			preparemock: func() {
 				manager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Terminating)}, nil).Times(1)
-				manager.EXPECT().GetDetail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{ExptType: entity.ExptType_Online}, nil).Times(1)
 			},
 			wantErr: false,
 		},
@@ -745,7 +730,6 @@ func TestExptSchedulerImpl_HandleEventCheck(t *testing.T) {
 			},
 			preparemock: func() {
 				manager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Draining)}, nil).Times(1)
-				manager.EXPECT().GetDetail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{ExptType: entity.ExptType_Online}, nil).Times(1)
 			},
 			wantErr: false,
 		},
@@ -1752,9 +1736,6 @@ func TestExptSchedulerImpl_HandleEventErr(t *testing.T) {
 				manager:   svcmocks.NewMockIExptManager(ctrl),
 				publisher: eventmocks.NewMockExptEventPublisher(ctrl),
 			}
-			// Legacy events without ExptType are backfilled from the primary experiment.
-			f.manager.EXPECT().GetDetail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-				Return(&entity.Experiment{ExptType: entity.ExptType_Online}, nil).AnyTimes()
 			tt.prepareMock(f)
 
 			svc := &ExptSchedulerImpl{
@@ -2925,11 +2906,7 @@ func TestExptSchedulerImpl_handleToSubmits_BackfillRetryTimes(t *testing.T) {
 	metric := metricsmocks.NewMockExptMetric(ctrl)
 	resultSvc := svcmocks.NewMockExptResultService(ctrl)
 
-	mutex := lockmocks.NewMockILocker(ctrl)
-	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil).Times(4)
-	mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).Times(4)
 	svc := &ExptSchedulerImpl{
-		itemLocker:         func() lock.ILocker { return mutex },
 		ExptItemResultRepo: itemRepo,
 		ExptTurnResultRepo: turnRepo,
 		ExptStatsRepo:      statsRepo,
@@ -2946,18 +2923,19 @@ func TestExptSchedulerImpl_handleToSubmits_BackfillRetryTimes(t *testing.T) {
 	var captured []*entity.ExptItemEvalEvent
 	publisher.EXPECT().BatchPublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, events []*entity.ExptItemEvalEvent, _ *time.Duration) error {
-			captured = append(captured, events...)
+			captured = events
 			return nil
-		}).Times(2)
-	for _, source := range []*entity.ExptItemCurrentRequest{{RunID: 2, ItemID: 10, Mode: entity.EvaluationModeSubmit, Status: entity.ItemRunState_Queueing, RetryTimes: 0}, {RunID: 2, ItemID: 11, Mode: entity.EvaluationModeSubmit, Status: entity.ItemRunState_Queueing, RetryTimes: 3}} {
-		itemRepo.EXPECT().GetCurrentRequest(gomock.Any(), int64(3), int64(1), int64(2), source.ItemID).Return(source, nil)
-		itemRepo.EXPECT().MarkProcessingIfCurrent(gomock.Any(), int64(3), int64(1), int64(2), source.ItemID, "").Return(true, nil)
-	}
-	resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
-	metric.EXPECT().EmitItemExecEval(gomock.Any(), gomock.Any(), gomock.Any()).Times(2)
+		})
+	itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	itemRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{}, nil)
+	turnRepo.EXPECT().UpdateTurnResultsWithItemIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	statsRepo.EXPECT().ArithOperateCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	metric.EXPECT().EmitItemExecEval(gomock.Any(), gomock.Any(), gomock.Any())
 
 	event := &entity.ExptScheduleEvent{
-		ExptID: 1, ExptRunID: 2, SpaceID: 3, ItemRetryTimes: 5, ExptRunMode: entity.EvaluationModeSubmit,
+		ExptID: 1, ExptRunID: 2, SpaceID: 3, ItemRetryTimes: 5,
 		Ext: map[string]string{entity.RetryYieldExtKey: "true"},
 	}
 	toSubmits := []*entity.ExptEvalItem{
@@ -3002,117 +2980,4 @@ func TestExptSchedulerImpl_handleZombies_SkipQueueing(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, zombies, "queueing (yielded) row must never be treated as zombie")
 	assert.Empty(t, alives, "queueing row is filtered out by State==Processing guard, not counted as alive either")
-}
-
-func TestShouldPublishProcessingStart(t *testing.T) {
-	assert.True(t, shouldPublishProcessingStart(entity.ExptStatus_Success, entity.ExptStatus_Processing))
-	assert.True(t, shouldPublishProcessingStart(entity.ExptStatus_Processing, entity.ExptStatus_Pending), "partial retry initialization must still publish start on redelivery")
-	assert.False(t, shouldPublishProcessingStart(entity.ExptStatus_Processing, entity.ExptStatus_Processing))
-	assert.Equal(t, "expt_1_2_to_3", makeProcessingStartIdemKey(1, 2), "retry start key must not change with the observed source status")
-}
-
-func TestExptSchedulerImpl_Schedule_CompletionResume(t *testing.T) {
-	for _, tc := range []struct {
-		name     string
-		startErr error
-		endErr   error
-		nextTick bool
-	}{
-		{name: "schedule_start_error", startErr: errors.New("start failed")},
-		{name: "end_error", endErr: errors.New("end failed")},
-		{name: "finish_after_resume", nextTick: true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			manager := svcmocks.NewMockIExptManager(ctrl)
-			factory := svcmocks.NewMockSchedulerModeFactory(ctrl)
-			mode := entitymocks.NewMockExptSchedulerMode(ctrl)
-			s := &ExptSchedulerImpl{Manager: manager, schedulerModeFactory: factory}
-			event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, ExptRunMode: entity.EvaluationModeSubmit}
-			expt := &entity.Experiment{ID: 1}
-			manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), event.Session).Return(expt, nil)
-			factory.EXPECT().NewSchedulerMode(event.ExptRunMode).Return(mode, nil)
-			mode.EXPECT().ScheduleStart(gomock.Any(), event, expt).Return(tc.startErr)
-			if tc.startErr != nil {
-				assert.Error(t, s.schedule(withCompletionResume(context.Background()), event))
-				return
-			}
-			mode.EXPECT().ExptEnd(gomock.Any(), event, expt, 0, 0).Return(tc.nextTick, tc.endErr)
-			if tc.endErr != nil || !tc.nextTick {
-				assert.Error(t, s.schedule(withCompletionResume(context.Background()), event))
-				return
-			}
-			mode.EXPECT().NextTick(gomock.Any(), event, true).Return(nil)
-			assert.NoError(t, s.schedule(withCompletionResume(context.Background()), event))
-		})
-	}
-}
-
-func TestExptSchedulerImpl_HandleEventCheck_ZombieCompletionResumeErrors(t *testing.T) {
-	for _, tc := range []struct {
-		name      string
-		detailErr error
-		existErr  error
-		started   bool
-	}{
-		{name: "detail_error", detailErr: errors.New("primary read unavailable")},
-		{name: "idem_error", existErr: errors.New("redis down")},
-		{name: "started_completion_resumes", started: true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			manager := svcmocks.NewMockIExptManager(ctrl)
-			config := configmocks.NewMockIConfiger(ctrl)
-			idm := idemmocks.NewMockIdempotentService(ctrl)
-			s := &ExptSchedulerImpl{Manager: manager, Configer: config, Idem: idm}
-			event := &entity.ExptScheduleEvent{
-				ExptID: 1, ExptRunID: 2, SpaceID: 3,
-				ExptRunMode: entity.EvaluationModeSubmit,
-				CreatedAt:   time.Now().Add(-time.Hour).Unix(),
-			}
-			manager.EXPECT().GetRunLog(gomock.Any(), int64(1), int64(2), int64(3), event.Session).
-				Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Processing)}, nil)
-			config.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{ZombieIntervalSecond: 1})
-			if tc.detailErr != nil {
-				manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), event.Session).Return(nil, tc.detailErr)
-			} else {
-				manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), event.Session).Return(&entity.Experiment{
-					ID: 1, SpaceID: 3, ExptType: entity.ExptType_Offline,
-					LatestRunID: 2, Status: entity.ExptStatus_Success,
-				}, nil)
-				idm.EXPECT().Exist(gomock.Any(), "CompleteExpt:exptexec:onend:2").Return(tc.started, tc.existErr)
-			}
-
-			nextCalled := false
-			err := s.HandleEventCheck(func(context.Context, *entity.ExptScheduleEvent) error {
-				nextCalled = true
-				return nil
-			})(context.Background(), event)
-			if tc.started {
-				assert.NoError(t, err)
-				assert.True(t, nextCalled, "a started completion must resume instead of zombie-failing")
-				return
-			}
-			assert.True(t, errno.NeedMQRetry(err), "unreadable completion state must stay retryable, got %v", err)
-			assert.False(t, nextCalled)
-		})
-	}
-}
-
-func TestExptSchedulerImpl_HandleEventLock_ReschedulesWhenModeFactoryFails(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mutex := lockmocks.NewMockILocker(ctrl)
-	factory := svcmocks.NewMockSchedulerModeFactory(ctrl)
-	s := &ExptSchedulerImpl{Mutex: mutex, schedulerModeFactory: factory}
-	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
-
-	mutex.EXPECT().LockBackoffWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", gomock.Any(), gomock.Any()).
-		Return(false, context.Background(), func() {}, nil)
-	factory.EXPECT().NewSchedulerMode(event.ExptRunMode).Return(nil, errors.New("unsupported mode"))
-
-	err := s.HandleEventLock(func(context.Context, *entity.ExptScheduleEvent) error { return nil })(context.Background(), event)
-	assert.Error(t, err)
 }

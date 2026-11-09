@@ -29,12 +29,6 @@ type IExperimentRepo interface {
 	GetEvaluatorRefByExptIDs(ctx context.Context, exptID []int64, spaceID int64) ([]*entity.ExptEvaluatorRef, error)
 }
 
-// IExptCurrentRunCompletionRepo persists a terminal experiment state only while
-// the expected run is still current. Legacy repositories may keep Update.
-type IExptCurrentRunCompletionRepo interface {
-	UpdateIfLatestRun(ctx context.Context, expt *entity.Experiment, expectedRunID int64) (bool, error)
-}
-
 //go:generate mockgen -destination=mocks/expt_scheduler_queue.go -package=mocks . IExperimentSchedulerQueueRepo
 
 // IExperimentSchedulerQueueRepo 中心调度的候选实验扫描，单方法窄接口。
@@ -64,22 +58,7 @@ type IExptStatsRepo interface {
 	Save(ctx context.Context, stats *entity.ExptStats) error
 }
 
-type IExptCurrentRunStatsRepo interface {
-	UpdateByExptIDIfLatestRun(ctx context.Context, exptID, spaceID int64, stats *entity.ExptStats, expectedRunID int64) (bool, error)
-}
-
-// IExptStatsReconcileRepo rejects a reconciliation write when the stats row
-// changed after its counts were read.
-type IExptStatsReconcileRepo interface {
-	UpdateByExptIDIfMatch(ctx context.Context, exptID, spaceID int64, expected, stats *entity.ExptStats) (bool, error)
-}
-
 type IExptItemResultRepo interface {
-	// Resource cleanup uses the same strict primary dispatch observation, including terminal runs.
-	ScanIncompleteDispatchObservations(ctx context.Context, spaceID, exptID, runID int64) ([]*ExptDispatchObservation, error)
-	ScanCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, retryFirst bool) ([]*entity.ExptItemCurrentRequest, error)
-	GetCurrentRequest(ctx context.Context, spaceID, exptID, runID, itemID int64) (*entity.ExptItemCurrentRequest, error)
-	MarkProcessingIfCurrent(ctx context.Context, spaceID, exptID, runID, itemID int64, requestID string) (bool, error)
 	BatchGet(ctx context.Context, spaceID, exptID int64, itemIDs []int64) ([]*entity.ExptItemResult, error)
 	BatchCreateNX(ctx context.Context, itemResults []*entity.ExptItemResult) error
 	ScanItemResults(ctx context.Context, exptID, cursor, limit int64, status []int32, spaceID int64) (results []*entity.ExptItemResult, ncursor int64, err error)
@@ -102,18 +81,6 @@ type IExptItemResultRepo interface {
 	// 用于「Terminal 是吸收态」的保证：行级终止后到达的在途执行结果 MUST NOT 回写 status。
 	// 未命中（全部已 Terminal）不返回 error —— 吸收态生效即预期结果。
 	UpdateItemRunLogIfNotTerminal(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64) error
-	// SetTerminalQuotaReservationState 以请求身份为条件，CAS 改写终态行的额度预占投影。
-	//
-	// 终止路径的资源释放与数据库提交不在同一事务里：提交已经成功、Release 失败时，
-	// 死终态行（终态 + reserved，或运行中终止的终态 + none）就把「账本仍持有该 item」
-	// 这件事藏了起来 —— 没有任何 item 事件会再来，B1 还会让 run 永不收口。
-	// 本方法给这种行提供唯一的可对账标记：
-	//   - Reserved：释放失败时打标，下一拍调度扫描到它；
-	//   - None：调度拍确认释放成功后清标（清完终态行不再占并发名额）。
-	// expectedRequestID 与 canonical 的 manual retry 上下文逐字比对，并限定同一 run、
-	// 终态行、CAS 旧值，因此不会命中新 run / 新 manual attempt 的 reservation。
-	// 行已不是本次观测的身份时返回 (false, nil)。
-	SetTerminalQuotaReservationState(ctx context.Context, spaceID, exptID, exptRunID, itemID int64, expectedRequestID string, state entity.QuotaReservationState) (bool, error)
 	GetItemRunLog(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) (*entity.ExptItemResultRunLog, error)
 	MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64) ([]*entity.ExptItemResultRunLog, error)
 }
@@ -151,20 +118,6 @@ type IExptRunLogRepo interface {
 	Save(ctx context.Context, exptRunLog *entity.ExptRunLog) error
 	Update(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any) error
 	Get(ctx context.Context, exptID, exptRunID int64) (*entity.ExptRunLog, error)
-	AppendRunItemIDs(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDs []int64) error
-	UpdateRunStats(ctx context.Context, exptID, exptRunID, spaceID int64, runLog *entity.ExptRunLog, stats *entity.ExptStats) error
-}
-
-// IExptRunLogLatestRunUpdater persists run-log fields only while the expected run
-// still owns the experiment. Legacy repositories may keep the plain Update.
-type IExptRunLogLatestRunUpdater interface {
-	UpdateIfLatestRun(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any) (bool, error)
-}
-
-// IExptRunLogTerminalUpdater makes terminal state absorption explicit: a late
-// writer may not overwrite a status committed after its own read.
-type IExptRunLogTerminalUpdater interface {
-	UpdateStatusIfCurrent(ctx context.Context, exptID, exptRunID, spaceID, expectedStatus, status int64) (bool, error)
 }
 
 type IExptAggrResultRepo interface {

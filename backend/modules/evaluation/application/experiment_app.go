@@ -1772,43 +1772,6 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return nil, err
 	}
 
-	// expected_run_id 可省略：运行中的离线 Processing 实验由服务端解析当前 run，
-	// 该行为是固定契约，不依赖任何配置开关/空间白名单。
-	// RetryAll 语义是「整份重跑」，仍在跑的实验必须走原有起新 run 的链路；
-	// 当前 run 内重排只接受 RetryFailure / RetryTargetItems。
-	if runMode != entity.EvaluationModeRetryAll && (req.ExpectedRunID != nil || (got.ExptType == entity.ExptType_Offline && got.Status == entity.ExptStatus_Processing)) {
-		if req.GetExpectedRunID() < 0 {
-			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid current run retry identity"))
-		}
-		receipt, err := e.manager.RetryInCurrentRun(ctx, &entity.RetryInCurrentRunRequest{SpaceID: req.GetWorkspaceID(), ExptID: req.GetExptID(), ExpectedRunID: req.GetExpectedRunID(), Mode: runMode, ItemIDs: req.GetItemIds(), Ext: req.GetExt(), Session: session})
-		if err != nil {
-			return nil, err
-		}
-		rejected := make([]*expt.RetryRejectedItem, 0, len(receipt.RejectedItems))
-		for _, item := range receipt.RejectedItems {
-			rejected = append(rejected, &expt.RetryRejectedItem{ItemID: gptr.Of(item.ItemID), Reason: gptr.Of(item.Reason)})
-		}
-		runID := receipt.RunID
-		if runID == 0 {
-			runID = req.GetExpectedRunID()
-		}
-		return &expt.RetryExperimentResponse{RunID: gptr.Of(runID), AcceptedCount: gptr.Of(receipt.AcceptedCount), RejectedItems: rejected, SnapshotAtMs: gptr.Of(receipt.SnapshotAtMS), BaseResp: base.NewBaseResp()}, nil
-	}
-
-	// 显式声明了 expected_run_id 却不在当前-run 重排语义内：先拒绝，再考虑沙箱/新 run，
-	// 不能把并发保护静默丢掉后执行另一个操作。
-	if req.ExpectedRunID != nil {
-		if req.GetExpectedRunID() < 0 {
-			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid current run retry identity"))
-		}
-		if runMode != entity.EvaluationModeFailRetry && runMode != entity.EvaluationModeRetryItems {
-			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("unsupported manual retry mode"))
-		}
-		if got.LatestRunID != req.GetExpectedRunID() {
-			return nil, errorx.NewByCode(errno.ManualRetryRunConflictCode)
-		}
-	}
-
 	// SandboxAgent 评测对象：重试前重新初始化沙箱任务。
 	// 首次运行结束后每条 execute 已被 destroy，沙箱侧任务不再持有可用 execute，Retry 必须重跑一次 Init 才能继续 SandboxRun。
 	// 与 Submit 保持一致：并发度先归一化，再按实际 task 的 execution 数分别计算。
@@ -2183,10 +2146,6 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 	}
 
 	kill := func(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
-		if terminate, ok := e.manager.(service.IExptCurrentRunTerminator); ok && got.ExptType == entity.ExptType_Offline {
-			_, err := terminate.TerminateCurrentRun(ctx, exptID, exptRunID, spaceID, session, nil, entity.WithStatus(entity.ExptStatus_Terminated), entity.NoAggrCalculate())
-			return err
-		}
 		if err := e.manager.CompleteRun(ctx, exptID, exptRunID, spaceID, session, entity.WithStatus(entity.ExptStatus_Terminated)); err != nil {
 			return err
 		}
@@ -2195,16 +2154,10 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 	}
 
 	goroutine.Go(ctx, func() {
-		// Cleanup stays blocked until a fresh legacy lifecycle holder ages past the
-		// migration grace, so the retry window must outlast that grace. The request
-		// ctx is canceled once the response is written, so detach from it.
-		window := service.LegacyLifecycleMigrationGrace + 2*time.Minute
-		retryCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), window+time.Minute)
-		defer cancel()
-		if err := backoff.RetryWithElapsedTime(retryCtx, window, func() error {
-			return kill(retryCtx, req.GetExptID(), got.LatestRunID, req.GetWorkspaceID(), session)
+		if err := backoff.RetryWithElapsedTime(ctx, time.Minute*3, func() error {
+			return kill(ctx, req.GetExptID(), got.LatestRunID, req.GetWorkspaceID(), session)
 		}); err != nil {
-			logs.CtxInfo(retryCtx, "kill expt failed, expt_id: %v, err: %v", req.GetExptID(), err)
+			logs.CtxInfo(ctx, "kill expt failed, expt_id: %v, err: %v", req.GetExptID(), err)
 		}
 	})
 

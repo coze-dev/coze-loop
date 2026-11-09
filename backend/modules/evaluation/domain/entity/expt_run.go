@@ -226,9 +226,6 @@ type ExptExecConf struct {
 	// RetryYield 失败重试"让位降权"改造的灰度开关；nil / 默认关 → 保持改造前行为(执行侧重投 MQ + id asc 排序)。
 	// 值在实验运行发起时读一次并固化进 ExptScheduleEvent.Ext, 运行中不再现读, 详见技术方案 §9.3.1。
 	RetryYield *RetryYieldConf `json:"retry_yield" mapstructure:"retry_yield"`
-
-	// RetryCompleteEnabled 运行中 RetryComplete 的发布门：仅显式 true 开启，缺省/未配置/显式 false 均关闭。
-	RetryCompleteEnabled bool `json:"retry_complete_enabled" mapstructure:"retry_complete_enabled"`
 }
 
 // RetryYieldConf 让位降权改造的灰度开关：全局布尔 + 空间白名单两级。
@@ -316,11 +313,6 @@ func (e *ExptExecConf) GetRetryYieldConf() *RetryYieldConf {
 		return e.RetryYield
 	}
 	return nil
-}
-
-// GetRetryCompleteEnabled nil-safe；仅显式 true 开启，nil/未配置/显式 false 均关闭。
-func (e *ExptExecConf) GetRetryCompleteEnabled() bool {
-	return e != nil && e.RetryCompleteEnabled
 }
 
 type ExptItemEvalConf struct {
@@ -786,23 +778,4 @@ type EvalAsyncCtx struct {
 	AgentName string
 	// ApplicationID 沙箱 agent 应用 id (即 EvalTarget.SourceTargetID, AgentKit application_id), 供 invoke_finished 打点复用。
 	ApplicationID string
-}
-
-// Clone isolates the saved event, reporting session and optional trajectory flag
-// without serializing away any of the existing AsyncCtx fields.
-func (e *EvalAsyncCtx) Clone() *EvalAsyncCtx {
-	if e == nil {
-		return nil
-	}
-	cloned := *e
-	cloned.Event = e.Event.Clone()
-	if e.Session != nil {
-		session := *e.Session
-		cloned.Session = &session
-	}
-	if e.EnableExtractTrajectory != nil {
-		enabled := *e.EnableExtractTrajectory
-		cloned.EnableExtractTrajectory = &enabled
-	}
-	return &cloned
 }

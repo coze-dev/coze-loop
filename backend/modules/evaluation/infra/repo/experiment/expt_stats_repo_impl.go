@@ -10,7 +10,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
-	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 func NewExptStatsRepo(exptStatsDAO mysql.IExptStatsDAO) repo.IExptStatsRepo {
@@ -52,22 +51,6 @@ func (e *exptStatsRepo) UpdateByExptID(ctx context.Context, exptID, spaceID int6
 		return err
 	}
 	return nil
-}
-
-func (e *exptStatsRepo) UpdateByExptIDIfMatch(ctx context.Context, exptID, spaceID int64, expected, stats *entity.ExptStats) (bool, error) {
-	reconciler, ok := e.exptStatsDAO.(mysql.IExptStatsReconcileDAO)
-	if !ok {
-		return false, errorx.New("stats reconcile DAO missing")
-	}
-	return reconciler.UpdateByExptIDIfMatch(ctx, exptID, spaceID, convert.NewExptStatsConverter().DO2PO(expected), convert.NewExptStatsConverter().DO2PO(stats))
-}
-
-func (e *exptStatsRepo) UpdateByExptIDIfLatestRun(ctx context.Context, exptID, spaceID int64, stats *entity.ExptStats, expectedRunID int64) (bool, error) {
-	current, ok := e.exptStatsDAO.(mysql.IExptCurrentRunStatsDAO)
-	if !ok {
-		return false, errorx.New("current run stats DAO missing")
-	}
-	return current.UpdateByExptIDIfLatestRun(ctx, exptID, spaceID, convert.NewExptStatsConverter().DO2PO(stats), expectedRunID)
 }
 
 func (e *exptStatsRepo) ArithOperateCount(ctx context.Context, exptID, spaceID int64, cntArithOp *entity.StatsCntArithOp) error {

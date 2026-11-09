@@ -292,20 +292,12 @@ func (e ExptEvalItems) GetItemIDs() []int64 {
 }
 
 type ExptEvalItem struct {
-	PublicationObserved bool
-	Publication         *ExptItemResultPublishSource
-	Source              *ExptCurrentItemRunSource
-	RequestID           string
-	Mode                ExptRunMode
-	ExptID              int64
-	EvalSetVersionID    int64
-	ItemID              int64
-	State               ItemRunState
-	RetryTimes          int32 // ★ 本轮 expt_run 内该 item 已被系统自动重试的次数; 供 handleToSubmits 回填事件
-	UpdatedAt           *time.Time
-	// ObservationUnstable marks a row whose concurrent read changed. It still
-	// occupies a slot, but Source-dependent recovery must not touch it.
-	ObservationUnstable bool
+	ExptID           int64
+	EvalSetVersionID int64
+	ItemID           int64
+	State            ItemRunState
+	RetryTimes       int32 // ★ 本轮 expt_run 内该 item 已被系统自动重试的次数; 供 handleToSubmits 回填事件
+	UpdatedAt        *time.Time
 }
 
 func (e *ExptEvalItem) SetState(state ItemRunState) *ExptEvalItem {
@@ -365,7 +357,6 @@ func (tr *ExptTurnResult) ToRunLogDO() *ExptTurnResultRunLog {
 		ExptID:             tr.ExptID,
 		ExptRunID:          tr.ExptRunID,
 		ItemID:             tr.ItemID,
-		ItemVersionID:      tr.ItemVersionID,
 		TurnID:             tr.TurnID,
 		Status:             TurnRunState(tr.Status),
 		TraceID:            tr.TraceID,

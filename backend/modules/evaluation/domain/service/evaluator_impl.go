@@ -1109,8 +1109,7 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 		return e.failAsyncEvaluatorRecord(ctx, recordDO, err)
 	}
 
-	providerCtx := contexts.WithCtxExptSpaceID(ctx, request.SpaceID)
-	asyncRunExt, traceID, err := evaluatorSourceService.AsyncRun(providerCtx, evaluatorDO, request.InputData, request.EvaluatorRunConf, resourceSpaceID, invokeID)
+	asyncRunExt, traceID, err := evaluatorSourceService.AsyncRun(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, resourceSpaceID, invokeID)
 	if err != nil {
 		logs.CtxError(ctx, "[AsyncRunEvaluator] AsyncRun fail, invokeID: %d, err: %v", invokeID, err)
 		return e.failAsyncEvaluatorRecord(ctx, recordDO, err)
@@ -1245,8 +1244,7 @@ func (e *EvaluatorServiceImpl) AsyncDebugEvaluator(ctx context.Context, request 
 	}
 	if err == nil {
 		var ext map[string]string
-		providerCtx := contexts.WithCtxExptSpaceID(ctx, request.SpaceID)
-		ext, record.TraceID, err = source.AsyncDebug(providerCtx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
+		ext, record.TraceID, err = source.AsyncDebug(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
 		record.EvaluatorOutputData.Ext = ext
 		if record.TraceID != "" || len(ext) > 0 {
 			// Trace metadata remains useful on dispatch errors; it must not replace the original error.
@@ -1373,13 +1371,10 @@ func (e *EvaluatorServiceImpl) ArmEvaluatorResume(ctx context.Context, recordID 
 	if record == nil {
 		return errorx.NewByCode(errno.EvaluatorRecordNotFoundCode, errorx.WithExtraMsg("evaluator record not found"))
 	}
-	if record.ID != recordID || record.TurnID < 0 {
-		return errorx.New("evaluator resume source unavailable, invoke_id: %v", recordID)
-	}
 	if record.Status == entity.EvaluatorRunStatusAsyncInvoking {
 		return nil
 	}
-	return e.publishEvaluatorResumeEvent(ctx, actx.Event.CloneWithResumeSource("evaluator", record.ID, record.TurnID))
+	return e.publishEvaluatorResumeEvent(ctx, actx.Event)
 }
 
 func (e *EvaluatorServiceImpl) publishEvaluatorResumeEvent(ctx context.Context, event *entity.ExptItemEvalEvent) error {
@@ -1398,7 +1393,7 @@ func (e *EvaluatorServiceImpl) publishEvaluatorResumeEvent(ctx context.Context, 
 			case <-timer.C:
 			}
 		}
-		lastErr = e.exptEventPublisher.PublishExptRecordEvalEvent(ctx, event.Clone(), gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
+		lastErr = e.exptEventPublisher.PublishExptRecordEvalEvent(ctx, event, gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
 			event.AsyncEvaluatorReportTrigger = true
 		})
 		if lastErr == nil {
