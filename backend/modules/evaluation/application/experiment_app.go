@@ -1763,6 +1763,19 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return nil, err
 	}
 
+	override, err := entity.ParseRetryRuntimeOverride(req.GetExt())
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
+	if len(override) > 0 {
+		if !isSandboxAgentExperiment(got) {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("retry runtime overrides require a sandbox agent experiment"))
+		}
+		if req.ExpectedRunID != nil || (got.Status != entity.ExptStatus_Success && got.Status != entity.ExptStatus_Failed && got.Status != entity.ExptStatus_Terminated && got.Status != entity.ExptStatus_SystemTerminated) {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("retry runtime overrides require a completed experiment and a new run"))
+		}
+	}
+
 	// expected_run_id 可省略：运行中的离线 Processing 实验由服务端解析当前 run，
 	// 该行为是固定契约，不依赖任何配置开关/空间白名单。
 	// RetryAll 语义是「整份重跑」，仍在跑的实验必须走原有起新 run 的链路；

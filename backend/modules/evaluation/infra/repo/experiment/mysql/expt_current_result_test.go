@@ -785,3 +785,25 @@ func TestCurrentResultFrozenTurnCoverageMySQL(t *testing.T) {
 		t.Log("REAL_MYSQL_FROZEN_TURN case=publication_fail_closed writes=0")
 	})
 }
+
+func TestCurrentRetryBudgetRefreshesZombieClockOnce(t *testing.T) {
+	f := newCurrentResultFixture(t, "")
+	old := time.Now().Add(-9 * time.Hour).Truncate(time.Second)
+	require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).UpdateColumn("updated_at", old).Error)
+	source := f.source()
+	applied, err := f.port.CompleteCurrentItemRun(context.Background(), source, &entity.ExptCurrentItemRunWrite{RetryOnly: true, RetryTimes: source.Current.RetryTimes + 1})
+	require.NoError(t, err)
+	require.True(t, applied)
+	current := f.source()
+	require.True(t, current.Current.UpdatedAt.After(old))
+	require.Equal(t, entity.ItemRunState_Processing, current.Current.Status)
+	first := *current.Current.UpdatedAt
+	// Fix the DB clock at an earlier value to detect even a duplicate same-second UPDATE.
+	require.NoError(t, f.conn.Model(&model.ExptItemResultRunLog{}).Where("space_id=? AND item_id=?", f.space, f.item).UpdateColumn("updated_at", old).Error)
+	current = f.source()
+	applied, err = f.port.CompleteCurrentItemRun(context.Background(), current, &entity.ExptCurrentItemRunWrite{RetryOnly: true, RetryTimes: current.Current.RetryTimes})
+	require.NoError(t, err)
+	require.True(t, applied)
+	require.True(t, f.source().Current.UpdatedAt.Equal(old), "duplicate retry must not extend the zombie clock")
+	require.True(t, first.After(old))
+}
