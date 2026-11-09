@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 
@@ -129,18 +130,42 @@ func TestWithTerminationRunLockBranches(t *testing.T) {
 		locker := lockmocks.NewMockILocker(ctrl)
 		cancelled, cancel := context.WithCancel(context.Background())
 		cancel()
-		locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, cancelled, func() {}, nil)
+		cancelCalls := 0
+		gomock.InOrder(
+			locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, cancelled, func() { cancelCalls++ }, nil),
+			locker.EXPECT().Unlock("expt_run_exec_lock:1:2").DoAndReturn(func(string) (bool, error) {
+				require.Equal(t, 1, cancelCalls)
+				return true, nil
+			}),
+		)
 		m := &ExptMangerImpl{manualRetryLocker: func() lock.ILocker { return locker }}
-		require.True(t, errno.NeedMQRetry(m.withTerminationRunLock(context.Background(), 1, 2, func(context.Context) error { return nil })))
+		called := false
+		err := m.withTerminationRunLock(context.Background(), 1, 2, func(context.Context) error { called = true; return nil })
+		require.True(t, errno.NeedMQRetry(err))
+		require.ErrorIs(t, err, context.Canceled)
+		require.False(t, called)
+		require.Equal(t, 1, cancelCalls)
 	})
 	t.Run("success", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		locker := lockmocks.NewMockILocker(ctrl)
-		locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		m := &ExptMangerImpl{manualRetryLocker: func() lock.ILocker { return locker }}
 		called := false
+		cancelCalls := 0
+		gomock.InOrder(
+			locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {
+				require.True(t, called)
+				cancelCalls++
+			}, nil),
+			locker.EXPECT().Unlock("expt_run_exec_lock:1:2").DoAndReturn(func(string) (bool, error) {
+				require.True(t, called)
+				require.Equal(t, 1, cancelCalls)
+				return true, nil
+			}),
+		)
+		m := &ExptMangerImpl{manualRetryLocker: func() lock.ILocker { return locker }}
 		require.NoError(t, m.withTerminationRunLock(context.Background(), 1, 2, func(context.Context) error { called = true; return nil }))
 		require.True(t, called)
+		require.Equal(t, 1, cancelCalls)
 	})
 }
 
@@ -152,29 +177,41 @@ func TestBeginCurrentRunTermination(t *testing.T) {
 	t.Run("terminate_error", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(nil, errors.New("db down"))
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), &entity.ExptRunTerminationRequest{SpaceID: 3, ExptID: 1, RunID: 2, Begin: true}).Return(nil, errors.New("db down")),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		require.True(t, errno.NeedMQRetry(m.beginCurrentRunTermination(context.Background(), 1, 2, 3)))
 	})
 	t.Run("nil_result", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(nil, nil)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), &entity.ExptRunTerminationRequest{SpaceID: 3, ExptID: 1, RunID: 2, Begin: true}).Return(nil, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		require.True(t, errno.NeedMQRetry(m.beginCurrentRunTermination(context.Background(), 1, 2, 3)))
 	})
 	t.Run("non_current", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{NonCurrent: true}, nil)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), &entity.ExptRunTerminationRequest{SpaceID: 3, ExptID: 1, RunID: 2, Begin: true}).Return(&entity.ExptRunTerminationResult{NonCurrent: true}, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		require.True(t, errno.NeedMQRetry(m.beginCurrentRunTermination(context.Background(), 1, 2, 3)))
 	})
 	t.Run("success", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{Applied: true}, nil)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), &entity.ExptRunTerminationRequest{SpaceID: 3, ExptID: 1, RunID: 2, Begin: true}).Return(&entity.ExptRunTerminationResult{Applied: true}, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		require.NoError(t, m.beginCurrentRunTermination(context.Background(), 1, 2, 3))
 	})
 }
@@ -286,51 +323,71 @@ func TestTerminateCurrentItems(t *testing.T) {
 	t.Run("experiment_read_error", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, errors.New("read failed"))
+		gomock.InOrder(
+			d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil),
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, errors.New("read failed")),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		require.True(t, errno.NeedMQRetry(m.terminateCurrentItems(context.Background(), 1, 2, 3, []int64{9}, &entity.Session{})))
 	})
 	t.Run("experiment_missing", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, nil)
+		gomock.InOrder(
+			d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil),
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		require.True(t, errno.NeedMQRetry(m.terminateCurrentItems(context.Background(), 1, 2, 3, []int64{9}, &entity.Session{})))
 	})
 	t.Run("non_current_run", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil)
+		gomock.InOrder(
+			d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil),
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		require.NoError(t, m.terminateCurrentItems(context.Background(), 1, 2, 3, []int64{9}, &entity.Session{}))
 	})
 	t.Run("unsupported_experiment", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Online}, nil)
+		gomock.InOrder(
+			d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil),
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Online}, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		require.True(t, errno.NeedMQRetry(m.terminateCurrentItems(context.Background(), 1, 2, 3, []int64{9}, &entity.Session{})))
 	})
 	t.Run("success", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil)
-		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{Applied: true}, nil)
+		gomock.InOrder(
+			d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil),
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil),
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:1:9", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{Applied: true}, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		require.NoError(t, m.terminateCurrentItems(context.Background(), 1, 2, 3, []int64{9}, &entity.Session{}))
 	})
 	t.Run("non_current_result", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil)
-		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{NonCurrent: true}, nil)
+		gomock.InOrder(
+			d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil),
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil),
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:1:9", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{NonCurrent: true}, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		require.NoError(t, m.terminateCurrentItems(context.Background(), 1, 2, 3, []int64{9}, &entity.Session{}))
 	})
 }
@@ -353,8 +410,11 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 	t.Run("experiment_read_error", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, errors.New("read"))
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, errors.New("read")),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
 		require.True(t, errno.NeedMQRetry(err))
@@ -362,8 +422,11 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 	t.Run("experiment_missing", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, nil)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
 		require.True(t, errno.NeedMQRetry(err))
@@ -371,8 +434,11 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 	t.Run("non_current_run", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99}, nil)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99}, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
 		require.NoError(t, err)
@@ -380,9 +446,12 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 	t.Run("expected_source_error", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
-		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).Return(nil, errors.New("read"))
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil),
+			d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).Return(nil, errors.New("read")),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, termUnitSource(9, entity.ItemRunState_Processing))
 		require.False(t, applied)
 		require.True(t, errno.NeedMQRetry(err))
@@ -390,11 +459,14 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 	t.Run("expected_source_changed", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
 		changed := termUnitSource(9, entity.ItemRunState_Processing)
 		changed.Current.RequestID = "other"
-		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).Return(changed, nil)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil),
+			d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).Return(changed, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, termUnitSource(9, entity.ItemRunState_Processing))
 		require.False(t, applied)
 		require.NoError(t, err)
@@ -402,9 +474,12 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 	t.Run("scan_error", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
-		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(0), int64(500), int64(3)).Return(nil, int64(0), errors.New("scan"))
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil),
+			d.items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(0), int64(500), int64(3)).Return(nil, int64(0), errors.New("scan")),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
 		require.True(t, errno.NeedMQRetry(err))
@@ -412,9 +487,12 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 	t.Run("nil_log", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
-		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{nil}, int64(0), nil)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil),
+			d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{nil}, int64(0), nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
 		require.True(t, errno.NeedMQRetry(err))
@@ -422,12 +500,15 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 	t.Run("scan_cursor_stalled", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
-		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(0), nil)
-		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
-		d.expectLock(true, context.Background())
-		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{Applied: true, NonCurrent: true}, nil)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil),
+			d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(0), nil),
+			d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil),
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:1:9", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{Applied: true, NonCurrent: true}, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.False(t, applied)
 		require.True(t, errno.NeedMQRetry(err))
@@ -435,10 +516,13 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 	t.Run("cleanup_failure_after_apply", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
-		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
-		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{Applied: true, Experiment: &entity.Experiment{ID: 99}}, nil)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil),
+			d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil),
+			d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{Applied: true, Experiment: &entity.Experiment{ID: 99}}, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.True(t, applied)
 		require.True(t, errno.NeedMQRetry(err))
@@ -446,12 +530,15 @@ func TestTerminateCurrentRunUnit(t *testing.T) {
 	t.Run("non_current_with_expected", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
 		expected := termUnitSource(9, entity.ItemRunState_Processing)
-		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
-		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
-		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{NonCurrent: true}, nil)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil),
+			d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), int64(3), int64(1), int64(2), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil),
+			d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil),
+			d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{NonCurrent: true}, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		applied, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, expected)
 		require.False(t, applied)
 		require.NoError(t, err)
@@ -736,6 +823,10 @@ func TestRefreshTerminatedRunFiltersUnit(t *testing.T) {
 }
 
 func TestCleanupCurrentUnscheduledRunUnit(t *testing.T) {
+	const (
+		executionLockKey = "expt_run_exec_lock:1:2"
+		admissionLockKey = "expt_run_mutex_lock:1"
+	)
 	t.Run("invalid_run", func(t *testing.T) {
 		m := &ExptMangerImpl{}
 		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 0, 3, errors.New("cause")))
@@ -744,56 +835,122 @@ func TestCleanupCurrentUnscheduledRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(true, nil)
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, errors.New("read"))
-		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
+		quota := repomocks.NewMockQuotaRepo(d.ctrl)
+		m.quotaRepo = quota
+		quota.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Times(0)
+		readErr := errors.New("read")
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), executionLockKey, gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, readErr),
+			d.locker.EXPECT().Unlock(executionLockKey).Return(true, nil),
+			d.locker.EXPECT().UnlockWithValue(gomock.Any(), admissionLockKey, "2").Return(true, nil),
+		)
+		err := m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause"))
+		require.Error(t, err)
+		require.ErrorIs(t, err, readErr)
 	})
 	t.Run("latest_run_finished", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
 		runLogs := repomocks.NewMockIExptRunLogRepo(d.ctrl)
-		runLogs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Success)}, nil)
 		m.runLogRepo = runLogs
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Success}, nil)
+		quota := repomocks.NewMockQuotaRepo(d.ctrl)
+		m.quotaRepo = quota
+		current := &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Success, ExptType: entity.ExptType_Offline}
+		runLogs.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Times(0)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), executionLockKey, gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(current, nil),
+			runLogs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Success)}, nil),
+			d.locker.EXPECT().UnlockWithValue(gomock.Any(), admissionLockKey, "2").Return(true, nil),
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), admissionLockKey, gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(current, nil),
+			quota.EXPECT().CreateOrUpdate(gomock.Any(), int64(3), gomock.Any(), &entity.Session{}).DoAndReturn(func(_ context.Context, _ int64, update func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
+				next, changed, err := update(&entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{1: 123, 9: 456}})
+				require.NoError(t, err)
+				require.True(t, changed)
+				require.Equal(t, map[int64]int64{9: 456}, next.ExptID2RunTime)
+				return nil
+			}),
+			d.locker.EXPECT().Unlock(admissionLockKey).Return(true, nil),
+			d.locker.EXPECT().Unlock(executionLockKey).Return(true, nil),
+			d.locker.EXPECT().UnlockWithValue(gomock.Any(), admissionLockKey, "2").Return(false, nil),
+		)
 		require.NoError(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
 	})
 	t.Run("online_legacy_cleanup", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		runLogs := repomocks.NewMockIExptRunLogRepo(d.ctrl)
-		runLogs.EXPECT().Update(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).Return(nil)
 		m := d.manager()
 		m.mutex = d.locker
 		m.runLogRepo = runLogs
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Online}, nil)
+		quota := repomocks.NewMockQuotaRepo(d.ctrl)
+		m.quotaRepo = quota
+		quota.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Times(0)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), executionLockKey, gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Online}, nil),
+			runLogs.EXPECT().Update(gomock.Any(), int64(1), int64(2), int64(3), map[string]any{"status": int64(entity.ExptStatus_Failed), "status_message": []byte("cause")}).Return(nil),
+			d.locker.EXPECT().UnlockWithValue(gomock.Any(), admissionLockKey, "2").Return(true, nil),
+			d.locker.EXPECT().Unlock(executionLockKey).Return(true, nil),
+			d.locker.EXPECT().UnlockWithValue(gomock.Any(), admissionLockKey, "2").Return(false, nil),
+		)
 		require.NoError(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
 	})
 	t.Run("pending_setup_abort", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Pending, ExptType: entity.ExptType_Offline}, nil)
-		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *entity.ExptRunTerminationRequest) (*entity.ExptRunTerminationResult, error) {
-			require.True(t, req.SetupAbort)
-			return &entity.ExptRunTerminationResult{}, nil
-		})
+		quota := repomocks.NewMockQuotaRepo(d.ctrl)
+		m.quotaRepo = quota
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), executionLockKey, gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Pending, ExptType: entity.ExptType_Offline}, nil),
+			d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *entity.ExptRunTerminationRequest) (*entity.ExptRunTerminationResult, error) {
+				require.True(t, req.SetupAbort)
+				require.Equal(t, &entity.ExptRunTerminationRequest{SpaceID: 3, ExptID: 1, RunID: 2, SetupAbort: true, StatusMessage: "cause"}, req)
+				return &entity.ExptRunTerminationResult{}, nil
+			}),
+			d.locker.EXPECT().UnlockWithValue(gomock.Any(), admissionLockKey, "2").Return(true, nil),
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), admissionLockKey, gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Failed, ExptType: entity.ExptType_Offline}, nil),
+			quota.EXPECT().CreateOrUpdate(gomock.Any(), int64(3), gomock.Any(), &entity.Session{}).DoAndReturn(func(_ context.Context, _ int64, update func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
+				next, changed, err := update(&entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{1: 123, 9: 456}})
+				require.NoError(t, err)
+				require.True(t, changed)
+				require.Equal(t, map[int64]int64{9: 456}, next.ExptID2RunTime)
+				return nil
+			}),
+			d.locker.EXPECT().Unlock(admissionLockKey).Return(true, nil),
+			d.locker.EXPECT().Unlock(executionLockKey).Return(true, nil),
+			d.locker.EXPECT().UnlockWithValue(gomock.Any(), admissionLockKey, "2").Return(false, nil),
+		)
 		require.NoError(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
 	})
 	t.Run("unlock_error_joined", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, errors.New("unlock"))
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99}, nil)
-		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
+		quota := repomocks.NewMockQuotaRepo(d.ctrl)
+		m.quotaRepo = quota
+		quota.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Times(0)
+		executionUnlockErr := errors.New("execution unlock")
+		admissionUnlockErr := errors.New("admission unlock")
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), executionLockKey, gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 99, ExptType: entity.ExptType_Offline}, nil),
+			d.locker.EXPECT().Unlock(executionLockKey).Return(false, executionUnlockErr),
+			d.locker.EXPECT().UnlockWithValue(gomock.Any(), admissionLockKey, "2").Return(false, admissionUnlockErr),
+		)
+		err := m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause"))
+		require.Error(t, err)
+		require.ErrorIs(t, err, executionUnlockErr)
+		require.ErrorIs(t, err, admissionUnlockErr)
 	})
 }
 
@@ -1044,50 +1201,67 @@ func TestTerminationRemainingBranches(t *testing.T) {
 	t.Run("terminate_current_items_release_error", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline, ExptDispatchMode: entity.ExptDispatchModeEnforce}, nil)
-		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{Applied: true}, nil)
+		gomock.InOrder(
+			d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil),
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline, ExptDispatchMode: entity.ExptDispatchModeEnforce}, nil),
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:1:9", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{Applied: true}, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		require.Error(t, m.terminateCurrentItems(context.Background(), 1, 2, 3, []int64{9}, &entity.Session{}))
 	})
 	t.Run("scan_cursor_advance_then_stall", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
-		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(0), int64(500), int64(3)).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(5), nil)
-		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(5), int64(500), int64(3)).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(5), nil)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil),
+			d.items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(0), int64(500), int64(3)).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(5), nil),
+			d.items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(5), int64(500), int64(3)).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(5), nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		_, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.True(t, errno.NeedMQRetry(err))
 	})
 	t.Run("capture_error", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
-		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(0), nil)
-		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(nil, errors.New("read"))
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil),
+			d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(0), nil),
+			d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(nil, errors.New("read")),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		_, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.True(t, errno.NeedMQRetry(err))
 	})
 	t.Run("commit_error", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
-		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(0), nil)
-		d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil)
-		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(nil, errors.New("commit"))
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil),
+			d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{{ItemID: 9}}, int64(0), nil),
+			d.termination.EXPECT().GetTerminationItemSource(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(9)).Return(termUnitSource(9, entity.ItemRunState_Processing), nil),
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_item_eval_run_lock:1:9", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(nil, errors.New("commit")),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		_, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.True(t, errno.NeedMQRetry(err))
 	})
 	t.Run("terminated_experiment_missing", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil)
-		d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
-		d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{Applied: true}, nil)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2}, nil),
+			d.items.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil),
+			d.termination.EXPECT().TerminateCurrentRun(gomock.Any(), gomock.Any()).Return(&entity.ExptRunTerminationResult{Applied: true}, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+		)
 		_, err := m.TerminateCurrentRun(context.Background(), 1, 2, 3, &entity.Session{}, nil)
 		require.True(t, errno.NeedMQRetry(err))
 	})
@@ -1204,28 +1378,40 @@ func TestTerminationRemainingBranches(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, nil)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(nil, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+			d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(true, nil),
+		)
 		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
 	})
 	t.Run("unscheduled_pending_port_missing", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := &ExptMangerImpl{runFinishRepo: d.finish, manualRetryLocker: func() lock.ILocker { return d.locker }, exptRepo: d.expts, mutex: d.locker}
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.expectLock(true, context.Background())
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Pending, ExptType: entity.ExptType_Offline}, nil)
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Pending, ExptType: entity.ExptType_Offline}, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+			d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(true, nil),
+		)
 		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
 	})
 	t.Run("unscheduled_processing_terminates", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
-		d.locker.EXPECT().UnlockWithValue(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil, nil, errors.New("second lock"))
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil)
-		require.Error(t, m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause")))
+		secondLockErr := errors.New("second lock")
+		gomock.InOrder(
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil),
+			d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil),
+			d.locker.EXPECT().Unlock("expt_run_exec_lock:1:2").Return(true, nil),
+			d.locker.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:1:2", 5*time.Second, 5*time.Minute).Return(false, nil, nil, secondLockErr),
+			d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(true, nil),
+		)
+		err := m.cleanupCurrentUnscheduledRun(context.Background(), 1, 2, 3, errors.New("cause"))
+		require.Error(t, err)
+		require.ErrorIs(t, err, secondLockErr)
 	})
 	t.Run("superseded_port_missing", func(t *testing.T) {
 		d := newTermUnitDeps(t)

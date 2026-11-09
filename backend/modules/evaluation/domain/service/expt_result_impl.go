@@ -489,6 +489,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		return nil, err
 	}
 
+	res.Total = total
 	if len(turnResultDAOs) == 0 {
 		return res, nil
 	}
@@ -654,7 +655,6 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 	}
 
 	res.ItemResults = itemResults
-	res.Total = total
 	// ★ 跨空间共享脱敏: 冻结 access_level=execute 的评测集为黑盒, 抹评测集题目内容 (列定义 + 每条 Payload.EvalSet),
 	// 保留 evaluator/target/system 列. per-set 判定: 单评测集看主表冻结级别, 多评测集看对应 EvalSetConfig.
 	desensitizeSharedEvalSetResult(res, exptMap)
@@ -837,6 +837,11 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 			items, iTotal, err := e.ExptItemResultRepo.ListItemResultsByExptID(ctx, baseExptID, spaceID, page, desc)
 			if err != nil {
 				logs.CtxError(ctx, "ListItemResultsByExptID exptID: %v failed: %v", baseExptID, err)
+				return nil, nil, 0, err
+			}
+			// Empty IDs mean no filter to the turn repo, not an empty item page.
+			if len(items) == 0 {
+				return nil, nil, iTotal, nil
 			}
 			page = entity.Page{}
 			for _, item := range items {
@@ -894,7 +899,7 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 			total = totalTurn
 		}
 		if len(turnResultDAOs) == 0 {
-			return nil, nil, 0, nil
+			return nil, nil, total, nil
 		}
 
 		// 按 ItemIdx 排序
@@ -938,7 +943,7 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 		}
 
 		if len(turnResultDAOs) == 0 {
-			return nil, nil, 0, nil
+			return nil, nil, total, nil
 		}
 
 		// 按 ItemIdx 排序

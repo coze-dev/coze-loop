@@ -179,17 +179,17 @@ func (e *exptEventPublisher) batchSendWithTag(ctx context.Context, pk, tag strin
 	return e.batchSendWithTagAndKeys(ctx, pk, tag, events, duration, nil)
 }
 
-func (e *exptEventPublisher) batchSendWithTagAndKeys(ctx context.Context, pk, tag string, events []any, duration *time.Duration, keys []string) error {
+func (e *exptEventPublisher) batchSendWithTagAndKeys(ctx context.Context, pk, tag string, payloads []any, duration *time.Duration, keys []string) error {
 	p, ok := e.producers[pk]
 	if !ok {
-		return fmt.Errorf("rmq producer not found %v", pk)
+		return fmt.Errorf("%w: rmq producer not found %v", events.ErrPublishNotSent, pk)
 	}
 
-	msgs := make([]*mq.Message, 0, len(events))
-	for _, e := range events {
+	msgs := make([]*mq.Message, 0, len(payloads))
+	for _, e := range payloads {
 		bytes, err := json.Marshal(e)
 		if err != nil {
-			return errorx.Wrapf(err, "json marshal fail")
+			return fmt.Errorf("%w: json marshal fail: %w", events.ErrPublishNotSent, err)
 		}
 
 		var msg *mq.Message

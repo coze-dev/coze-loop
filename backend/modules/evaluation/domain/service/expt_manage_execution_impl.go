@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -425,6 +426,12 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 	// 消费侧/调度侧只读事件里的值, 运行中不再现读配置(§9.3.1)。
 	ext = withRetryYieldExt(ext, e.configer.GetRetryYieldEnabled(ctx, spaceID))
 
+	// Cancellation before calling the publisher proves this run was not sent.
+	if err := ctx.Err(); err != nil && expt.ExptType == entity.ExptType_Offline && e.runFinishRepo != nil {
+		e.cleanupUnscheduledRun(ctx, exptID, runID, spaceID, err)
+		return err
+	}
+
 	if err := e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
 		SpaceID:        spaceID,
 		ExptID:         exptID,
@@ -436,6 +443,9 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 		Session:        session,
 		Ext:            ext,
 	}, gptr.Of(time.Second*3)); err != nil {
+		if expt.ExptType == entity.ExptType_Offline && e.runFinishRepo != nil && errors.Is(err, events.ErrPublishNotSent) {
+			e.cleanupUnscheduledRun(ctx, exptID, runID, spaceID, err)
+		}
 		return err
 	}
 
@@ -513,6 +523,12 @@ func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID 
 	// 让位降权灰度开关: 发起处读一次并固化进 ext(§9.3.1)。
 	ext = withRetryYieldExt(ext, e.configer.GetRetryYieldEnabled(ctx, spaceID))
 
+	// Unmarked publisher errors, including context errors, may follow delivery.
+	if err := ctx.Err(); err != nil && expt.ExptType == entity.ExptType_Offline && e.runFinishRepo != nil {
+		e.cleanupUnscheduledRun(ctx, exptID, runID, spaceID, err)
+		return err
+	}
+
 	if err := e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
 		SpaceID:            spaceID,
 		ExptID:             exptID,
@@ -525,6 +541,9 @@ func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID 
 		Session:            session,
 		Ext:                ext,
 	}, gptr.Of(time.Second*3)); err != nil {
+		if expt.ExptType == entity.ExptType_Offline && e.runFinishRepo != nil && errors.Is(err, events.ErrPublishNotSent) {
+			e.cleanupUnscheduledRun(ctx, exptID, runID, spaceID, err)
+		}
 		return err
 	}
 

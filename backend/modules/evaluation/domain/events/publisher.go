@@ -5,10 +5,15 @@ package events
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
+
+// ErrPublishNotSent marks a failure before any send attempt. Publishers may wrap
+// it with the cause; send/delegate errors must not acquire this marker.
+var ErrPublishNotSent = errors.New("event publication not sent")
 
 //go:generate mockgen -destination mocks/expt_event_publisher_mock.go -package mocks . ExptEventPublisher
 type ExptEventPublisher interface {
