@@ -1330,31 +1330,6 @@ func TestExptExecConf_GetExptItemEvalConf(t *testing.T) {
 	}
 }
 
-func TestExptExecConf_GetRetryCompleteEnabled(t *testing.T) {
-	tests := []struct {
-		name     string
-		conf     *ExptExecConf
-		expected bool
-	}{
-		{name: "nil关闭", conf: nil, expected: false},
-		{name: "未配置关闭", conf: &ExptExecConf{}, expected: false},
-		{name: "显式false关闭", conf: &ExptExecConf{RetryCompleteEnabled: false}, expected: false},
-		{name: "显式true开启", conf: &ExptExecConf{RetryCompleteEnabled: true}, expected: true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var result bool
-			if tt.conf != nil {
-				result = tt.conf.GetRetryCompleteEnabled()
-			} else {
-				result = (*ExptExecConf)(nil).GetRetryCompleteEnabled()
-			}
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestDefaultExptConsumerConf(t *testing.T) {
 	conf := DefaultExptConsumerConf()
 	assert.NotNil(t, conf)

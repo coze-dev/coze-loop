@@ -9,13 +9,11 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"gorm.io/gorm"
-	"gorm.io/plugin/dbresolver"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/query"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -29,16 +27,6 @@ type IExptRunLogDAO interface {
 	Get(ctx context.Context, exptID, exptRunID int64, opts ...db.Option) (*model.ExptRunLog, error)
 	AppendRunItemIDs(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDs []int64) error
 	UpdateRunStats(ctx context.Context, exptID, exptRunID, spaceID int64, fields map[string]any, stats *model.ExptStats) error
-}
-
-// IExptRunLogLatestRunDAO is the narrow CAS write used by completion paths.
-// Kept separate from IExptRunLogDAO so existing implementations and mocks stay valid.
-type IExptRunLogLatestRunDAO interface {
-	UpdateIfLatestRun(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any, opts ...db.Option) (bool, error)
-}
-
-type IExptRunLogTerminalDAO interface {
-	UpdateStatusIfCurrent(ctx context.Context, exptID, exptRunID, spaceID, expectedStatus, status int64) (bool, error)
 }
 
 func (dao *ExptRunLogDAOImpl) UpdateRunStats(ctx context.Context, exptID, exptRunID, spaceID int64, fields map[string]any, stats *model.ExptStats) error {
@@ -79,9 +67,6 @@ func NewExptRunLogDAO(db db.Provider) IExptRunLogDAO {
 func (dao *ExptRunLogDAOImpl) Get(ctx context.Context, exptID, exptRunID int64, opts ...db.Option) (*model.ExptRunLog, error) {
 	var exptRunLog model.ExptRunLog
 	db := dao.provider.NewSession(ctx, opts...)
-	if contexts.CtxWriteDB(ctx) {
-		db = db.Clauses(dbresolver.Write)
-	}
 	cond := db.WithContext(ctx).Where("id = ?", exptRunID)
 	// exptID 未知时只按 run id 查：destroy 链路要按 run id 反查 expt（resolveSandboxTaskIDByRunID 传 0），
 	// 这里再要求 expt_id 相等会让查询恒空、taskID 变空串，双沙箱的 -orch 销毁请求被丢弃。
@@ -152,35 +137,4 @@ func (dao *ExptRunLogDAOImpl) Update(ctx context.Context, exptID, exptRunID, spa
 	}
 	logs.CtxInfo(ctx, "update expt_run_log success, expt_id: %v, expt_run_id: %v, ufields: %v", exptID, exptRunID, ufields)
 	return nil
-}
-
-func (dao *ExptRunLogDAOImpl) UpdateStatusIfCurrent(ctx context.Context, exptID, exptRunID, spaceID, expectedStatus, status int64) (bool, error) {
-	result := dao.provider.NewSession(ctx).Clauses(dbresolver.Write).Model(&model.ExptRunLog{}).
-		Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND status = ?", spaceID, exptID, exptRunID, expectedStatus).
-		UpdateColumns(map[string]any{"status": status, "updated_at": time.Now()})
-	if result.Error != nil {
-		return false, errorx.Wrapf(result.Error, "cas expt_run_log terminal status fail, expt_id: %v, expt_run_id: %v", exptID, exptRunID)
-	}
-	return result.RowsAffected > 0, nil
-}
-
-func (dao *ExptRunLogDAOImpl) UpdateIfLatestRun(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any, opts ...db.Option) (bool, error) {
-	owned := func(q *gorm.DB) *gorm.DB {
-		return q.Where("space_id = ? AND expt_id = ? AND expt_run_id = ?", spaceID, exptID, exptRunID).
-			Where("EXISTS (SELECT 1 FROM experiment WHERE id = ? AND space_id = ? AND latest_run_id = ?)", exptID, spaceID, exptRunID)
-	}
-	result := owned(dao.provider.NewSession(ctx, opts...).Model(&model.ExptRunLog{})).UpdateColumns(ufields)
-	if result.Error != nil {
-		return false, errorx.Wrapf(result.Error, "update expt_run_log if latest run fail, expt_id: %v, expt_run_id: %v, ufields: %v", exptID, exptRunID, ufields)
-	}
-	if result.RowsAffected > 0 {
-		return true, nil
-	}
-	// MySQL reports zero affected rows for an idempotent same-values rewrite.
-	// Distinguish that from a replacement run owning the experiment.
-	var count int64
-	if err := owned(dao.provider.NewSession(ctx, opts...).Clauses(dbresolver.Write).Model(&model.ExptRunLog{})).Count(&count).Error; err != nil {
-		return false, errorx.Wrapf(err, "verify expt_run_log latest run fail, expt_id: %v, expt_run_id: %v", exptID, exptRunID)
-	}
-	return count == 1, nil
 }

@@ -4,10 +4,7 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
@@ -69,7 +66,7 @@ func TestTrialFailureRealSchedulerExplicitFailed(t *testing.T) {
 	}
 }
 
-func TestTrialFailureOldRunWritesOnlyOwnTerminal(t *testing.T) {
+func TestTrialFailureOldRunHasZeroActions(t *testing.T) {
 	p := newCancelTrialFixture(t)
 	next := p.f.run + 100
 	require.NoError(t, p.f.conn.Create(&model.ExptRunLog{ID: next, SpaceID: p.f.space, ExptID: p.f.expt, ExptRunID: next, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(entity.EvaluationModeTrialRun))}).Error)
@@ -77,31 +74,7 @@ func TestTrialFailureOldRunWritesOnlyOwnTerminal(t *testing.T) {
 	before := p.f.snapshot()
 	err := (&ExptSchedulerImpl{Manager: p.manager}).HandleEventErr(func(context.Context, *entity.ExptScheduleEvent) error { return errors.New("old trial failure") })(context.Background(), p.event)
 	require.NoError(t, err)
-	after := p.f.snapshot()
-	for table, snapshot := range before {
-		if table != "expt_run_log" {
-			require.Equal(t, snapshot, after[table], table)
-		}
-	}
-	var beforeLogs, afterLogs []map[string]any
-	decodeLogs := func(raw string, logs *[]map[string]any) {
-		decoder := json.NewDecoder(strings.NewReader(raw))
-		decoder.UseNumber()
-		require.NoError(t, decoder.Decode(logs))
-	}
-	decodeLogs(before["expt_run_log"], &beforeLogs)
-	decodeLogs(after["expt_run_log"], &afterLogs)
-	require.Len(t, beforeLogs, len(afterLogs))
-	for i, afterRun := range afterLogs {
-		t.Logf("TRIAL_OLD_FAILURE run_id=%v status=%v", afterRun["expt_run_id"], afterRun["status"])
-		beforeRun := beforeLogs[i]
-		if afterRun["expt_run_id"].(json.Number).String() == strconv.FormatInt(p.f.run, 10) {
-			require.Equal(t, json.Number(strconv.FormatInt(int64(entity.ExptStatus_Failed), 10)), afterRun["status"])
-			beforeRun["status"] = afterRun["status"]
-			beforeRun["updated_at"] = afterRun["updated_at"]
-		}
-		require.Equal(t, beforeRun, afterRun)
-	}
+	require.Equal(t, before, p.f.snapshot())
 	require.Zero(t, p.resources.Load())
 	require.Zero(t, p.notifications.Load())
 }

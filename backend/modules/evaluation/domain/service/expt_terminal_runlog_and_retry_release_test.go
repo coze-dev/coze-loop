@@ -336,8 +336,7 @@ func TestLogRetryItemsRun_SkipsReleaseWhenRunAlive(t *testing.T) {
 	mgr.mutex.(*lockMocks.MockILocker).EXPECT().
 		BackoffLockWithValue(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(false, "200", nil)
-	mgr.mutex.(*lockMocks.MockILocker).EXPECT().Lock(gomock.Any(), "expt_completing_mutex_lock:100:200", 3*time.Minute).Return(true, nil)
-	mgr.mutex.(*lockMocks.MockILocker).EXPECT().Unlock("expt_completing_mutex_lock:100:200").Return(true, nil)
+	mgr.mutex.(*lockMocks.MockILocker).EXPECT().Exists(gomock.Any(), gomock.Any()).Return(false, nil)
 	mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().AppendRunItemIDs(gomock.Any(), exptID, aliveRunID, spaceID, []int64{11}).Return(nil)
 	// 刻意不声明 GetByID / ScanItemRunLogs：真去查就是 unexpected call。
 

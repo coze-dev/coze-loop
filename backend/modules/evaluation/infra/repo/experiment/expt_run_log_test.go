@@ -201,31 +201,3 @@ func TestExptRunLogImpl_Update(t *testing.T) {
 		})
 	}
 }
-
-func TestExptRunLogImpl_TerminalCASRequiresCapableDAO(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	repo := &ExptRunLogImpl{exptRunLogDAO: mocks.NewMockIExptRunLogDAO(ctrl)}
-
-	applied, err := repo.UpdateStatusIfCurrent(context.Background(), 1, 2, 3, 4, 5)
-	assert.False(t, applied)
-	assert.Error(t, err)
-}
-
-// Legacy DAOs keep the unconditional write so old deployments still finish runs.
-func TestExptRunLogImpl_UpdateIfLatestRunLegacyFallback(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockDAO := mocks.NewMockIExptRunLogDAO(ctrl)
-	repo := &ExptRunLogImpl{exptRunLogDAO: mockDAO}
-
-	mockDAO.EXPECT().Update(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).Return(nil)
-	applied, err := repo.UpdateIfLatestRun(context.Background(), 1, 2, 3, map[string]any{"status": 1})
-	assert.True(t, applied)
-	assert.NoError(t, err)
-
-	mockDAO.EXPECT().Update(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).Return(errors.New("legacy update failed"))
-	applied, err = repo.UpdateIfLatestRun(context.Background(), 1, 2, 3, map[string]any{"status": 1})
-	assert.False(t, applied)
-	assert.Error(t, err)
-}

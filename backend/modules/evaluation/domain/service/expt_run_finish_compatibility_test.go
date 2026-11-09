@@ -24,13 +24,12 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestFinishedScheduleEventDoesNotReplayNaturalFinish(t *testing.T) {
+func TestRunFinishCheckDisposition(t *testing.T) {
 	for _, kind := range []string{"pending", "nil_result", "already", "noncurrent", "finished", "error"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			manager := svcmocks.NewMockIExptManager(ctrl)
 			manager.EXPECT().GetRunLog(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Success)}, nil)
-			manager.EXPECT().CompleteExpt(gomock.Any(), int64(1), gomock.Any(), int64(3), gomock.Any(), gomock.Any()).Return(nil)
 			probe := &checkFinishProbe{IExptManager: manager, result: &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishAlreadyFinished}}
 			switch kind {
 			case "pending":
@@ -49,8 +48,11 @@ func TestFinishedScheduleEventDoesNotReplayNaturalFinish(t *testing.T) {
 				t.Fatal("finished event reached execution")
 				return nil
 			})(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, ExptType: entity.ExptType_Offline, ExptRunMode: entity.EvaluationModeSubmit})
-			require.NoError(t, err)
-			require.Zero(t, probe.calls, "terminal events must not acquire a new cleanup obligation")
+			if kind == "pending" || kind == "nil_result" || kind == "error" {
+				require.True(t, errno.NeedMQRetry(err))
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
@@ -59,16 +61,13 @@ type checkFinishProbe struct {
 	IExptManager
 	result *entity.ExptRunFinishResult
 	err    error
-	calls  int
 }
 
 func (p *checkFinishProbe) FinishCurrentRun(context.Context, *entity.ExptScheduleEvent) (*entity.ExptRunFinishResult, error) {
-	p.calls++
 	return p.result, p.err
 }
 
 func (p *checkFinishProbe) FinishCurrentRunWithHeldTickLock(context.Context, *entity.ExptScheduleEvent) (*entity.ExptRunFinishResult, error) {
-	p.calls++
 	return p.result, p.err
 }
 

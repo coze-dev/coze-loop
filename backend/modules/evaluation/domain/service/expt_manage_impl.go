@@ -1683,12 +1683,7 @@ func (e *ExptMangerImpl) InjectExptConfTimeRange(ctx context.Context, exptID int
 		ex.EvalConf = &entity.EvaluationConfiguration{}
 	}
 	ex.EvalConf.TimeRange = timeRange
-	bytes, err := json.Marshal(ex.EvalConf)
-	if err != nil {
-		logs.CtxError(ctx, "[InjectExptConfTimeRange] marshal eval conf fail, expt_id: %d, err: %v", exptID, err)
-		return
-	}
-	if err := e.exptRepo.UpdateFields(ctx, exptID, map[string]any{"eval_conf": &bytes}); err != nil {
+	if err := e.exptRepo.Update(ctx, ex); err != nil {
 		logs.CtxError(ctx, "[InjectExptConfTimeRange] update expt fail, expt_id: %d, err: %v", exptID, err)
 	}
 }

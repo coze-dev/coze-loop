@@ -573,10 +573,6 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	if err := validateCurrentRunRetry(normalized); err != nil {
 		return nil, err
 	}
-	// RetryComplete 发布门：配置未显式打开时在候选准备、锁与任何写之前直接拒绝。
-	if !m.configer.GetExptExecConf(ctx, normalized.SpaceID).GetRetryCompleteEnabled() {
-		return nil, errorx.NewByCode(errno.ExperimentRunningExistedCode)
-	}
 	ctx = contexts.WithCtxWriteDB(ctx)
 	expt, err := m.exptRepo.GetByID(ctx, normalized.ExptID, normalized.SpaceID)
 	if err != nil {

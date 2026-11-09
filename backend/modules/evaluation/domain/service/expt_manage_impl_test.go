@@ -2518,14 +2518,10 @@ func TestExptMangerImpl_InjectExptConfTimeRange(t *testing.T) {
 			MGetBasicByID(gomock.Any(), []int64{1}).
 			Return([]*entity.Experiment{expt}, nil)
 		mockExptRepo.EXPECT().
-			UpdateFields(gomock.Any(), int64(1), gomock.Any()).
-			DoAndReturn(func(_ context.Context, _ int64, fields map[string]any) error {
-				require.Len(t, fields, 1)
-				raw, ok := fields["eval_conf"].(*[]byte)
-				require.True(t, ok)
-				var conf entity.EvaluationConfiguration
-				require.NoError(t, json.Unmarshal(*raw, &conf))
-				assert.Equal(t, tr, conf.TimeRange)
+			Update(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, ex *entity.Experiment) error {
+				assert.NotNil(t, ex.EvalConf)
+				assert.Equal(t, tr, ex.EvalConf.TimeRange)
 				return nil
 			})
 
@@ -2548,15 +2544,10 @@ func TestExptMangerImpl_InjectExptConfTimeRange(t *testing.T) {
 			MGetBasicByID(gomock.Any(), []int64{1}).
 			Return([]*entity.Experiment{expt}, nil)
 		mockExptRepo.EXPECT().
-			UpdateFields(gomock.Any(), int64(1), gomock.Any()).
-			DoAndReturn(func(_ context.Context, _ int64, fields map[string]any) error {
-				require.Len(t, fields, 1)
-				raw, ok := fields["eval_conf"].(*[]byte)
-				require.True(t, ok)
-				var conf entity.EvaluationConfiguration
-				require.NoError(t, json.Unmarshal(*raw, &conf))
-				assert.Equal(t, gptr.Of(5), conf.ItemConcurNum)
-				assert.Equal(t, tr, conf.TimeRange)
+			Update(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, ex *entity.Experiment) error {
+				assert.Equal(t, gptr.Of(5), ex.EvalConf.ItemConcurNum)
+				assert.Equal(t, tr, ex.EvalConf.TimeRange)
 				return nil
 			})
 
@@ -2576,7 +2567,7 @@ func TestExptMangerImpl_InjectExptConfTimeRange(t *testing.T) {
 			MGetBasicByID(gomock.Any(), []int64{1}).
 			Return([]*entity.Experiment{expt}, nil)
 		mockExptRepo.EXPECT().
-			UpdateFields(gomock.Any(), int64(1), gomock.Any()).
+			Update(gomock.Any(), gomock.Any()).
 			Return(errors.New("update error"))
 
 		mgr.InjectExptConfTimeRange(context.Background(), 1, tr)

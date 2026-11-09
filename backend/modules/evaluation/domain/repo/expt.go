@@ -29,12 +29,6 @@ type IExperimentRepo interface {
 	GetEvaluatorRefByExptIDs(ctx context.Context, exptID []int64, spaceID int64) ([]*entity.ExptEvaluatorRef, error)
 }
 
-// IExptCurrentRunCompletionRepo persists a terminal experiment state only while
-// the expected run is still current. Legacy repositories may keep Update.
-type IExptCurrentRunCompletionRepo interface {
-	UpdateIfLatestRun(ctx context.Context, expt *entity.Experiment, expectedRunID int64) (bool, error)
-}
-
 //go:generate mockgen -destination=mocks/expt_scheduler_queue.go -package=mocks . IExperimentSchedulerQueueRepo
 
 // IExperimentSchedulerQueueRepo 中心调度的候选实验扫描，单方法窄接口。
@@ -62,16 +56,6 @@ type IExptStatsRepo interface {
 	UpdateByExptID(ctx context.Context, exptID, spaceID int64, stats *entity.ExptStats) error
 	ArithOperateCount(ctx context.Context, exptID, spaceID int64, cntArithOp *entity.StatsCntArithOp) error
 	Save(ctx context.Context, stats *entity.ExptStats) error
-}
-
-type IExptCurrentRunStatsRepo interface {
-	UpdateByExptIDIfLatestRun(ctx context.Context, exptID, spaceID int64, stats *entity.ExptStats, expectedRunID int64) (bool, error)
-}
-
-// IExptStatsReconcileRepo rejects a reconciliation write when the stats row
-// changed after its counts were read.
-type IExptStatsReconcileRepo interface {
-	UpdateByExptIDIfMatch(ctx context.Context, exptID, spaceID int64, expected, stats *entity.ExptStats) (bool, error)
 }
 
 type IExptItemResultRepo interface {
@@ -153,18 +137,6 @@ type IExptRunLogRepo interface {
 	Get(ctx context.Context, exptID, exptRunID int64) (*entity.ExptRunLog, error)
 	AppendRunItemIDs(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDs []int64) error
 	UpdateRunStats(ctx context.Context, exptID, exptRunID, spaceID int64, runLog *entity.ExptRunLog, stats *entity.ExptStats) error
-}
-
-// IExptRunLogLatestRunUpdater persists run-log fields only while the expected run
-// still owns the experiment. Legacy repositories may keep the plain Update.
-type IExptRunLogLatestRunUpdater interface {
-	UpdateIfLatestRun(ctx context.Context, exptID, exptRunID, spaceID int64, ufields map[string]any) (bool, error)
-}
-
-// IExptRunLogTerminalUpdater makes terminal state absorption explicit: a late
-// writer may not overwrite a status committed after its own read.
-type IExptRunLogTerminalUpdater interface {
-	UpdateStatusIfCurrent(ctx context.Context, exptID, exptRunID, spaceID, expectedStatus, status int64) (bool, error)
 }
 
 type IExptAggrResultRepo interface {

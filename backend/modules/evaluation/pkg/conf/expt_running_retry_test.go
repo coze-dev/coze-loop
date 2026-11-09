@@ -55,34 +55,3 @@ func TestLegacyRunningRetryKeyIsIgnored(t *testing.T) {
 	require.NoError(t, err)
 	require.NotContains(t, string(encoded), "running_retry_enabled")
 }
-
-// retry_complete_enabled 是运行中 RetryComplete 的发布门：JSON 结构里
-// 缺省 / false / true 与空间级覆盖必须按原语义解析，只有显式 true 才开启。
-func TestRetryCompleteEnabledParsing(t *testing.T) {
-	loader := confmocks.NewMockIConfigLoader(gomock.NewController(t))
-	raw := `{"expt_exec_conf":{"retry_complete_enabled":true,"daemon_interval_second":7},` +
-		`"space_expt_exec_conf":{"9":{"retry_complete_enabled":false},"10":{"retry_complete_enabled":true},"11":{}}}`
-	loader.EXPECT().UnmarshalKey(gomock.Any(), "expt_consumer_conf", gomock.Any()).DoAndReturn(func(_ context.Context, _ string, value any, _ ...conf.DecodeOptionFn) error {
-		return json.Unmarshal([]byte(raw), value)
-	}).AnyTimes()
-	c := &configer{loader: loader}
-
-	// 未命中空间覆盖时回落全局配置。
-	require.True(t, c.GetExptExecConf(context.Background(), 12).GetRetryCompleteEnabled())
-
-	// 空间级显式 false / true 覆盖全局。
-	require.False(t, c.GetExptExecConf(context.Background(), 9).GetRetryCompleteEnabled())
-	require.True(t, c.GetExptExecConf(context.Background(), 10).GetRetryCompleteEnabled())
-
-	// 空间配置存在但缺该字段 → 关闭。
-	spaceAbsent := c.GetExptExecConf(context.Background(), 11)
-	require.NotNil(t, spaceAbsent)
-	require.False(t, spaceAbsent.GetRetryCompleteEnabled())
-
-	// 直接按 JSON 结构解析时缺省与显式 false 均为关闭。
-	absent, explicitFalse := &entity.ExptExecConf{}, &entity.ExptExecConf{}
-	require.NoError(t, json.Unmarshal([]byte(`{}`), absent))
-	require.NoError(t, json.Unmarshal([]byte(`{"retry_complete_enabled":false}`), explicitFalse))
-	require.False(t, absent.GetRetryCompleteEnabled())
-	require.False(t, explicitFalse.GetRetryCompleteEnabled())
-}

@@ -152,8 +152,7 @@ func TestLogRetryItemsPersistenceFailurePreservesExistingRun(t *testing.T) {
 			const exptID, existingRunID, proposedRunID, spaceID = int64(1), int64(2), int64(3), int64(4)
 			mgr.idgenerator.(*idgenMocks.MockIIDGenerator).EXPECT().GenID(ctx).Return(proposedRunID, nil)
 			mgr.mutex.(*lockMocks.MockILocker).EXPECT().BackoffLockWithValue(ctx, mgr.makeExptMutexLockKey(exptID), "3", gomock.Any(), gomock.Any()).Return(false, "2", nil)
-			mgr.mutex.(*lockMocks.MockILocker).EXPECT().Lock(ctx, "expt_completing_mutex_lock:1:2", 3*time.Minute).Return(true, nil)
-			mgr.mutex.(*lockMocks.MockILocker).EXPECT().Unlock("expt_completing_mutex_lock:1:2").Return(true, nil)
+			mgr.mutex.(*lockMocks.MockILocker).EXPECT().Exists(ctx, gomock.Any()).Return(false, nil)
 			stored := &entity.ExptRunLog{ExptID: exptID, ExptRunID: existingRunID, Status: int64(entity.ExptStatus_Processing)}
 			writeErr := errors.New("append failed")
 			mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).EXPECT().AppendRunItemIDs(ctx, exptID, existingRunID, spaceID, []int64{5}).

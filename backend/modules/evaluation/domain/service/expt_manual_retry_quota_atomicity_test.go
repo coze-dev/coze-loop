@@ -15,7 +15,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	lockmocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
-	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 
@@ -121,9 +120,6 @@ func newRetryQuotaHarness(t *testing.T, calls int) *retryQuotaHarness {
 		return true, ctx, cancel, nil
 	}).Times(calls)
 	manager := &ExptMangerImpl{manualRetryRepo: port, exptRepo: expts, itemResultRepo: items, turnResultRepo: turns, itemRefRepo: refs, runLogRepo: runs, mutex: mutex, centralGuard: guard, publisher: publisher, currentRunWaker: waker, manualRetryLocker: func() lock.ILocker { return mutex }}
-	configer := componentmocks.NewMockIConfiger(ctrl)
-	configer.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RetryCompleteEnabled: true}).AnyTimes()
-	manager.configer = configer
 	h.manager = manager
 	return h
 }

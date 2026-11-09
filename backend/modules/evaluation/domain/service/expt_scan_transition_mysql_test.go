@@ -190,8 +190,6 @@ func TestScanTransitionStorageErrorBrokerBoundary(t *testing.T) {
 func TestScanTransitionBusinessErrorKeepsFinishPolicy(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	manager := svcmocks.NewMockIExptManager(ctrl)
-	manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).
-		Return(&entity.Experiment{ExptType: entity.ExptType_Online}, nil).AnyTimes()
 	event := &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2, ExptRunMode: entity.EvaluationModeUnknown}
 	want := errors.New("unknown expt mode: 0")
 	manager.EXPECT().CompleteRun(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)

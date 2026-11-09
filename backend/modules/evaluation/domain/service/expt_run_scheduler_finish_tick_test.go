@@ -123,9 +123,9 @@ func TestFinishCalibrationTickLiveness(t *testing.T) {
 		for _, mode := range []entity.ExptRunMode{entity.EvaluationModeSubmit, entity.EvaluationModeFailRetry, entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems} {
 			t.Run(fmt.Sprintf("%s/mode%d", dispatch, mode), func(t *testing.T) {
 				f := newFinishTickFixture(t, mode, dispatch)
-				for _, state := range []string{"calibration_pending", "calibration_error"} {
+				for _, state := range []string{"calibration_pending", "calibration_error", "finish_pending"} {
 					t.Run(state, func(t *testing.T) {
-						f.result.ready = false
+						f.result.ready = state == "finish_pending"
 						f.result.err = nil
 						if state == "calibration_error" {
 							f.result.err = errors.New("projection unavailable")
@@ -145,11 +145,13 @@ func TestFinishCalibrationTickLiveness(t *testing.T) {
 						require.NotNil(t, published)
 						require.Equal(t, before, *f.event)
 						require.Equal(t, entity.ExptStatus_Processing, f.expt.Status)
-						require.Zero(t, f.manager.calls, "calibration must block the original completion path")
+						if state != "finish_pending" {
+							require.Zero(t, f.manager.calls, "calibration must block the finish transaction")
+						}
 					})
 				}
-				require.Equal(t, 2, f.result.calls)
-				require.Zero(t, f.manager.calls)
+				require.Equal(t, 3, f.result.calls)
+				require.Equal(t, 1, f.manager.calls, "only calibrated pending may reach finish composition")
 			})
 		}
 	}

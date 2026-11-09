@@ -198,7 +198,7 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 		}
 		added := make([]int64, 0)
 		for _, item := range accepted {
-			if entity.ExptRunMode(gptr.Indirect(run.Mode)) == entity.EvaluationModeRetryItems && !contained[item.item.ItemID] {
+			if item.log == nil && !contained[item.item.ItemID] {
 				contained[item.item.ItemID] = true
 				added = append(added, item.item.ItemID)
 			}
@@ -637,7 +637,7 @@ func (d *ExptManualRetryDAOImpl) PreflightTerminalItems(ctx context.Context, req
 		var added []int64
 		for _, item := range plan.Items {
 			id := item.SourceItem.ItemID
-			if entity.ExptRunMode(gptr.Indirect(run.Mode)) == entity.EvaluationModeRetryItems && !contained[id] {
+			if item.CurrentItemLog == nil && !contained[id] {
 				added = append(added, id)
 				contained[id] = true
 			}

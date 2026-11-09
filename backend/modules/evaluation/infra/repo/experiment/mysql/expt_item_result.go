@@ -162,9 +162,6 @@ func (dao *exptItemResultDAOImpl) CountItemsByStatus(ctx context.Context, spaceI
 	}
 	var rows []*row
 	session := dao.provider.NewSession(ctx, opts...)
-	if contexts.CtxWriteDB(ctx) {
-		session = session.Clauses(dbresolver.Write)
-	}
 	if err := session.Model(&model.ExptItemResult{}).
 		Select("status, count(*) as cnt").
 		Where("space_id = ? AND expt_id = ?", spaceID, exptID).
