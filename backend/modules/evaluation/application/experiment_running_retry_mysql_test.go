@@ -6,6 +6,7 @@ package application
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -37,6 +38,14 @@ import (
 )
 
 func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
+	for _, mode := range []entity.ExptRunMode{entity.EvaluationModeSubmit, entity.EvaluationModeFailRetry, entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems} {
+		t.Run(fmt.Sprint(mode), func(t *testing.T) {
+			testRunningRetryMySQLApplicationAdmission(t, mode)
+		})
+	}
+}
+
+func testRunningRetryMySQLApplicationAdmission(t *testing.T, mode entity.ExptRunMode) {
 	dsn := os.Getenv("EXPT_RETRY_MYSQL_DSN")
 	if dsn == "" {
 		t.Skip("EXPT_RETRY_MYSQL_DSN not configured")
@@ -62,7 +71,7 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 	require.NoError(t, conn.Exec("INSERT INTO experiment(id,space_id,latest_run_id,status,expt_type,created_by,eval_conf,eval_set_id,eval_set_version_id) VALUES(?,?,?,?,?,?,?,?,?)", expt, space, run, entity.ExptStatus_Processing, entity.ExptType_Offline, "original", `{"item_retry_num":3,"item_concur_num":4}`, base+80, base+81).Error)
 	raw, err := json.Marshal([]entity.ExptRunLogItems{{ItemIDs: []int64{item}}})
 	require.NoError(t, err)
-	require.NoError(t, conn.Create(&model.ExptRunLog{ID: run, SpaceID: space, ExptID: expt, ExptRunID: run, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(entity.EvaluationModeSubmit)), CreatedBy: "original", ItemIds: &raw, FailCnt: 1}).Error)
+	require.NoError(t, conn.Create(&model.ExptRunLog{ID: run, SpaceID: space, ExptID: expt, ExptRunID: run, Status: gptr.Of(int64(entity.ExptStatus_Processing)), Mode: gptr.Of(int32(mode)), CreatedBy: "original", ItemIds: &raw, FailCnt: 1}).Error)
 	require.NoError(t, conn.Create(&model.ExptStats{ID: base + 4, SpaceID: space, ExptID: expt, FailCnt: 1}).Error)
 	require.NoError(t, conn.Create(&model.ExptItemResult{ID: base + 12, SpaceID: space, ExptID: expt, ExptRunID: run, ItemID: item, ItemVersionID: base + 91, Status: 3, Ext: gptr.Of([]byte(`{"business":"keep"}`))}).Error)
 	require.NoError(t, conn.Create(&model.ExptItemResultRunLog{ID: base + 13, SpaceID: space, ExptID: expt, ExptRunID: run, ItemID: item, ItemVersionID: base + 91, Status: 3, ResultState: gptr.Of(int32(1)), RetryTimes: 3}).Error)
@@ -71,21 +80,21 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 	require.NoError(t, conn.Create(&model.ExptTurnResultRunLog{ID: base + 16, SpaceID: space, ExptID: expt, ExptRunID: run, ItemID: item, ItemVersionID: base + 91, TurnID: base + 21, Status: 2, TargetResultID: 123, EvaluatorResultIds: gptr.Of([]byte(`null`)), Ext: []byte(`{"other":"keep"}`)}).Error)
 	ctrl := gomock.NewController(t)
 	config := confmocks.NewMockIConfiger(ctrl)
+	config.EXPECT().GetExptExecConf(gomock.Any(), space).Return(&entity.ExptExecConf{RetryCompleteEnabled: true}).AnyTimes()
 	auth := rpcmocks.NewMockIAuthProvider(ctrl)
 	generator := idmocks.NewMockIIDGenerator(ctrl)
 	lwt := lwtmocks.NewMockILatestWriteTracker(ctrl)
 	mutex := lockmocks.NewMockILocker(ctrl)
 	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
-	// same-run 准入不再读取开关；显式 expected_run_id 时必须直接进入当前 run。
+	// 发布门显式开启；expected_run_id 指向当前 run。
 	lwt.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), expt).Return(false).AnyTimes()
 	auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	// 4 次加锁：首次受理时 run exec lock + 被受理 item 的 eval lock；
-	// 之后两次重复请求（含开关门禁删除后新增的第三次调用）各自再取一次 run exec lock，
-	// 因此重复请求的拒绝原因只可能是队列/run 状态，而不是 disabled。
+	// 首次、两次重复请求和补范围请求分别获取 run/item 锁。
+	lockCalls := 6
 	mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), 5*time.Second, 5*time.Minute).DoAndReturn(func(ctx context.Context, _ string, _ time.Duration, _ time.Duration) (bool, context.Context, func(), error) {
 		c, cancel := context.WithCancel(ctx)
 		return true, c, cancel, nil
-	}).Times(4)
+	}).Times(lockCalls)
 	publisher.EXPECT().PublishExptScheduleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 	manager := service.NewExptManager(nil,
 		exptrepo.NewExptRepo(exptmysql.NewExptDAO(provider), exptmysql.NewExptEvaluatorRefDAO(provider), generator),
@@ -120,7 +129,7 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 	require.Equal(t, "queueing", again.RejectedItems[0].GetReason())
 	require.Equal(t, item, again.RejectedItems[0].GetItemID())
 	require.Equal(t, run, again.GetRunID())
-	// 开关门禁删除后，重复请求的拒绝原因只由 run / 队列状态决定，配置读取不再发生。
+	// 门禁开启后的重复请求仍只由 run / 队列状态决定。
 	gate := confmocks.NewMockIConfiger(ctrl)
 	gate.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Times(0)
 	app.configer = gate
@@ -128,6 +137,31 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 	require.NoError(t, err)
 	require.Zero(t, third.GetAcceptedCount())
 	require.Equal(t, "queueing", third.RejectedItems[0].GetReason())
+	{
+		outsideItem := base + 112
+		require.NoError(t, conn.Create(&model.ExptItemResult{ID: base + 112, SpaceID: space, ExptID: expt, ExptRunID: run, ItemID: outsideItem, ItemVersionID: base + 91, Status: 3, Ext: gptr.Of([]byte(`{"business":"keep"}`))}).Error)
+		require.NoError(t, conn.Create(&model.ExptItemResultRunLog{ID: base + 113, SpaceID: space, ExptID: expt, ExptRunID: run, ItemID: outsideItem, ItemVersionID: base + 91, Status: 3, ResultState: gptr.Of(int32(1))}).Error)
+		require.NoError(t, conn.Create(&model.ExptItemRef{ID: base + 114, SpaceID: space, ExptID: expt, ItemID: outsideItem, ItemVersionID: base + 91, ItemConfig: gptr.Of([]byte(`{}`))}).Error)
+		require.NoError(t, conn.Create(&model.ExptTurnResult{ID: base + 115, SpaceID: space, ExptID: expt, ExptRunID: run, ItemID: outsideItem, ItemVersionID: base + 91, TurnID: base + 21, Status: 2, TargetResultID: 123, WeightedScore: gptr.Of(0.0)}).Error)
+		require.NoError(t, conn.Create(&model.ExptTurnResultRunLog{ID: base + 116, SpaceID: space, ExptID: expt, ExptRunID: run, ItemID: outsideItem, ItemVersionID: base + 91, TurnID: base + 21, Status: 2, TargetResultID: 123, EvaluatorResultIds: gptr.Of([]byte(`null`)), Ext: []byte(`{"other":"keep"}`)}).Error)
+		outsideReq := &exptpb.RetryExperimentRequest{WorkspaceID: &space, ExptID: &expt, ExpectedRunID: &run, RetryMode: gptr.Of(dexpt.ExptRetryMode_RetryTargetItems), ItemIds: []int64{outsideItem}}
+		require.NoError(t, conn.Model(&model.ExptStats{}).Where("id=?", base+4).Update("fail_cnt", 2).Error)
+		require.NoError(t, conn.Model(&model.ExptRunLog{}).Where("id=?", run).Update("fail_cnt", 2).Error)
+		outsideResp, retryErr := app.RetryExperiment(context.Background(), outsideReq)
+		require.NoError(t, retryErr)
+		require.Equal(t, int32(1), outsideResp.GetAcceptedCount())
+		require.NoError(t, conn.First(&runLog, "id=?", run).Error)
+		var chunks []entity.ExptRunLogItems
+		require.NoError(t, json.Unmarshal(*runLog.ItemIds, &chunks))
+		wantItems := []int64{item}
+		if mode == entity.EvaluationModeRetryItems {
+			wantItems = append(wantItems, outsideItem)
+		}
+		require.ElementsMatch(t, wantItems, (&entity.ExptRunLog{ItemIds: chunks}).GetItemIDs())
+		var requeued model.ExptItemResult
+		require.NoError(t, conn.First(&requeued, "id=?", base+112).Error)
+		require.Zero(t, requeued.Status)
+	}
 	require.NoError(t, conn.Model(&model.Experiment{}).Where("id=?", expt).Update("status", entity.ExptStatus_Success).Error)
 	_, err = app.RetryExperiment(context.Background(), req)
 	require.ErrorContains(t, err, "run_finished")
@@ -135,6 +169,12 @@ func TestRunningRetryMySQLApplicationAdmission(t *testing.T) {
 	_, err = app.RetryExperiment(context.Background(), req)
 	require.ErrorContains(t, err, "run_finished")
 	require.NoError(t, conn.First(&runLog, "id=?", run).Error)
-	require.JSONEq(t, string(raw), string(*runLog.ItemIds))
+	if mode == entity.EvaluationModeRetryItems {
+		var chunks []entity.ExptRunLogItems
+		require.NoError(t, json.Unmarshal(*runLog.ItemIds, &chunks))
+		require.ElementsMatch(t, []int64{item, base + 112}, (&entity.ExptRunLog{ItemIds: chunks}).GetItemIDs())
+	} else {
+		require.JSONEq(t, string(raw), string(*runLog.ItemIds))
+	}
 	t.Log("REAL_MYSQL_APPLICATION_RESULT_VERIFIED same-run reset, budget preserved, duplicate rejected, no persisted receipt")
 }

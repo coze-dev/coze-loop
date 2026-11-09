@@ -169,6 +169,17 @@ func (e *ExptSchedulerImpl) Schedule(ctx context.Context, event *entity.ExptSche
 
 type SchedulerEndPoint func(ctx context.Context, event *entity.ExptScheduleEvent) error
 
+type completionResumeContextKey struct{}
+
+func withCompletionResume(ctx context.Context) context.Context {
+	return context.WithValue(ctx, completionResumeContextKey{}, true)
+}
+
+func completionResumeRequested(ctx context.Context) bool {
+	resume, _ := ctx.Value(completionResumeContextKey{}).(bool)
+	return resume
+}
+
 type SchedulerMiddleware func(next SchedulerEndPoint) SchedulerEndPoint
 
 func SchedulerChain(mws ...SchedulerMiddleware) SchedulerMiddleware {
@@ -190,6 +201,23 @@ func (e *ExptSchedulerImpl) SysOps(next SchedulerEndPoint) SchedulerEndPoint {
 	}
 }
 
+// resolveEventExptType backfills ExptType=0 events from the primary experiment so legacy
+// schedule messages use the same Offline determination as newly produced events.
+func (e *ExptSchedulerImpl) resolveEventExptType(ctx context.Context, event *entity.ExptScheduleEvent) (entity.ExptType, error) {
+	exptType := event.ExptType
+	if exptType != 0 || event.ExptRunMode == entity.EvaluationModeAppend {
+		return exptType, nil
+	}
+	current, err := e.Manager.GetDetail(contexts.WithCtxWriteDB(ctx), event.ExptID, event.SpaceID, event.Session)
+	if err != nil {
+		return 0, errno.WrapMQRetryErr(err)
+	}
+	if current != nil {
+		exptType = current.ExptType
+	}
+	return exptType, nil
+}
+
 func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEndPoint {
 	return func(ctx context.Context, event *entity.ExptScheduleEvent) error {
 		runLog, err := e.Manager.GetRunLog(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session)
@@ -198,7 +226,11 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 		}
 
 		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
-			if event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && (status == entity.ExptStatus_Terminated || status == entity.ExptStatus_Failed) {
+			exptType, err := e.resolveEventExptType(ctx, event)
+			if err != nil {
+				return err
+			}
+			if exptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && (status == entity.ExptStatus_Terminated || status == entity.ExptStatus_Failed) {
 				if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok {
 					options := []entity.CompleteExptOptionFn{entity.WithStatus(status)}
 					if status == entity.ExptStatus_Terminated {
@@ -208,37 +240,38 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 					return err
 				}
 			}
-			if status == entity.ExptStatus_Terminating && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+			if status == entity.ExptStatus_Terminating && exptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
 				if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok {
 					_, err := terminate.TerminateCurrentRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, nil, entity.WithStatus(entity.ExptStatus_Terminated), entity.NoAggrCalculate())
 					return err
 				}
 			}
 			logs.CtxInfo(ctx, "ExptSchedulerConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-			if entity.IsExptFinished(status) && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun {
-				if finish, ok := e.Manager.(IExptNaturalRunFinisher); ok {
-					result, err := finish.FinishCurrentRun(ctx, event)
-					if err != nil {
-						return errno.WrapMQRetryErr(err)
-					}
-					if result == nil {
-						return errno.NewMQRetryErr("finish returned no disposition")
-					}
-					switch result.Disposition {
-					case entity.ExptRunFinishFinished, entity.ExptRunFinishAlreadyFinished, entity.ExptRunFinishNonCurrent:
-						return nil
-					case entity.ExptRunFinishPending:
-						return errno.NewMQRetryErr("current run finish pending")
-					default:
-						return errno.NewMQRetryErr("invalid finish disposition")
-					}
-				}
+			if status == entity.ExptStatus_Success && exptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+				return e.Manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(fmt.Sprintf("exptexec:onend:%d", event.ExptRunID)))
 			}
 			return nil
 		}
 
 		interval := int64(e.Configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond())
 		if time.Now().Unix()-event.CreatedAt >= interval {
+			if event.ExptRunMode != entity.EvaluationModeAppend {
+				current, err := e.Manager.GetDetail(contexts.WithCtxWriteDB(ctx), event.ExptID, event.SpaceID, event.Session)
+				if err != nil {
+					return errno.WrapMQRetryErr(err)
+				}
+				if current != nil && current.ExptType == entity.ExptType_Offline && current.LatestRunID == event.ExptRunID && entity.IsExptFinished(current.Status) {
+					if e.Idem != nil {
+						started, err := e.Idem.Exist(ctx, fmt.Sprintf("CompleteExpt:exptexec:onend:%d", event.ExptRunID))
+						if err != nil {
+							return errno.WrapMQRetryErr(err)
+						}
+						if started {
+							return next(withCompletionResume(ctx), event)
+						}
+					}
+				}
+			}
 			return errno.NewExptZombieTimeoutErr(interval, event.ExptID, event.ExptRunID)
 		}
 
@@ -261,8 +294,12 @@ func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEnd
 		logs.CtxInfo(ctx, "ExptSchedulerConsumer.HandleEventLock locked expt eval event: %v, key: %v", json.Jsonify(event), key)
 
 		if !locked {
-			logs.CtxWarn(ctx, "ExptSchedulerConsumer.HandleEventLock found locked expt eval event: %v. Abort event, err: %v", json.Jsonify(event), err)
-			return nil
+			logs.CtxWarn(ctx, "ExptSchedulerConsumer.HandleEventLock found locked expt eval event: %v. Reschedule event, err: %v", json.Jsonify(event), err)
+			mode, modeErr := e.schedulerModeFactory.NewSchedulerMode(event.ExptRunMode)
+			if modeErr != nil {
+				return modeErr
+			}
+			return mode.NextTick(ctx, event, true)
 		}
 
 		defer func() {
@@ -329,6 +366,11 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 
 		logs.CtxError(ctx, "[ExptEval] HandleEventErr found error: %v, event: %v", nextErr, json.Jsonify(event))
 
+		exptType, err := e.resolveEventExptType(ctx, event)
+		if err != nil {
+			return err
+		}
+
 		// 基础设施类错误（Redis抖动、MQ发送失败、context cancel等）：尝试用新ctx重新调度，不直接终止实验
 		if isSchedulerInfraError(nextErr) {
 			maxInfraRetry := 10
@@ -340,7 +382,7 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 				logs.CtxWarn(ctx, "[ExptEval] infra error detected, attempting reschedule (%d/%d), expt_id: %v, expt_run_id: %v, err: %v",
 					event.InfraErrorRetryTimes+1, maxInfraRetry, event.ExptID, event.ExptRunID, nextErr)
 
-				if _, current := e.Manager.(IExptCurrentRunTerminator); current && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+				if _, current := e.Manager.(IExptCurrentRunTerminator); current && exptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
 					if err := ctx.Err(); err != nil {
 						return errno.WrapMQRetryErr(err)
 					}
@@ -376,7 +418,7 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 				exptFinished = entity.IsExptFinished(current.Status)
 			}
 		}
-		if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok && !exptFinished && event.ExptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+		if terminate, ok := e.Manager.(IExptCurrentRunTerminator); ok && !exptFinished && exptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
 			_, err := terminate.TerminateCurrentRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, nil, entity.WithStatus(entity.ExptStatus_Failed), entity.WithStatusMessage(userVisibleErrMsg(nextErr)))
 			return err
 		}
@@ -384,6 +426,16 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 		completeCID := fmt.Sprintf("exptexec:onerr:%d", event.ExptRunID)
 
 		if exptFinished {
+			// A started completion owns the terminal outcome; recovery errors must not rewrite it as Failed.
+			if e.Idem != nil && exptType == entity.ExptType_Offline && event.ExptRunMode != entity.EvaluationModeAppend {
+				started, err := e.Idem.Exist(ctx, fmt.Sprintf("CompleteExpt:exptexec:onend:%d", event.ExptRunID))
+				if err != nil {
+					return errno.WrapMQRetryErr(err)
+				}
+				if started {
+					return errno.WrapMQRetryErr(nextErr)
+				}
+			}
 			if err := e.Manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session,
 				entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2),
 				entity.WithStatus(entity.ExptStatus_Failed), entity.WithStatusMessage(userVisibleErrMsg(nextErr))); err != nil {
@@ -461,6 +513,16 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	mode, err := e.schedulerModeFactory.NewSchedulerMode(event.ExptRunMode)
 	if err != nil {
 		return err
+	}
+	if completionResumeRequested(ctx) {
+		if err := mode.ScheduleStart(ctx, event, exptDetail); err != nil {
+			return err
+		}
+		nextTick, err := mode.ExptEnd(ctx, event, exptDetail, 0, 0)
+		if err != nil || !nextTick {
+			return err
+		}
+		return mode.NextTick(ctx, event, true)
 	}
 
 	err = mode.ExptStart(ctx, event, exptDetail)
@@ -1481,7 +1543,7 @@ const exptStatsReconcileInterval = 5 * time.Minute
 // （见 expt_result_impl.go），要能修正它就必须以同一张表为准；拿 turn 表对账会在多轮实验上
 // 得出另一套数字。CalculateStats 走的是 turn 表，所以这里不复用它。
 //
-// 代价是一条 GROUP BY（走 (space_id, expt_id) 前缀），每实验每拍一次，可接受。
+// 代价是最多两条 GROUP BY（走 (space_id, expt_id) 前缀），每实验每五分钟一次，可接受。
 //
 // 失败只告警：对账是自愈机制，它自己不能成为调度中断的理由。
 func (e *ExptSchedulerImpl) reconcileExptStats(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) {
@@ -1515,6 +1577,12 @@ func (e *ExptSchedulerImpl) reconcileExptStats(ctx context.Context, event *entit
 		}
 	}
 
+	reconciler, ok := e.ExptStatsRepo.(repo.IExptStatsReconcileRepo)
+	if !ok {
+		logs.CtxWarn(ctx, "[ExptStatsReconcile] conditional stats writer missing, skip this tick, expt_id: %v", event.ExptID)
+		return
+	}
+	ctx = contexts.WithCtxWriteDB(ctx)
 	actual, err := e.ExptItemResultRepo.CountItemsByStatus(ctx, event.SpaceID, event.ExptID)
 	if err != nil {
 		logs.CtxWarn(ctx, "[ExptStatsReconcile] count items by status failed, skip this tick, expt_id: %v: %v", event.ExptID, err)
@@ -1532,6 +1600,17 @@ func (e *ExptSchedulerImpl) reconcileExptStats(ctx context.Context, event *entit
 		return
 	}
 	if got == nil {
+		return
+	}
+
+	// The first count may already be stale. Recompute after reading the stats
+	// version so the CAS below cannot overwrite a newly committed item delta.
+	actual, err = e.ExptItemResultRepo.CountItemsByStatus(ctx, event.SpaceID, event.ExptID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptStatsReconcile] recount items by status failed, skip this tick, expt_id: %v: %v", event.ExptID, err)
+		return
+	}
+	if len(actual) == 0 {
 		return
 	}
 
@@ -1556,7 +1635,12 @@ func (e *ExptSchedulerImpl) reconcileExptStats(ctx context.Context, event *entit
 		got.PendingItemCnt, got.SuccessItemCnt, got.FailItemCnt, got.ProcessingItemCnt, got.TerminatedItemCnt,
 		want.PendingItemCnt, want.SuccessItemCnt, want.FailItemCnt, want.ProcessingItemCnt, want.TerminatedItemCnt)
 
-	if err := e.ExptStatsRepo.UpdateByExptID(ctx, event.ExptID, event.SpaceID, want); err != nil {
-		logs.CtxWarn(ctx, "[ExptStatsReconcile] correct expt stats failed, expt_id: %v: %v", event.ExptID, err)
+	applied, err := reconciler.UpdateByExptIDIfMatch(ctx, event.ExptID, event.SpaceID, got, want)
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptStatsReconcile] cas correct expt stats failed, skip this tick, expt_id: %v: %v", event.ExptID, err)
+		return
+	}
+	if !applied {
+		logs.CtxWarn(ctx, "[ExptStatsReconcile] stats changed during reconciliation, skip stale write, expt_id: %v", event.ExptID)
 	}
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"gorm.io/gorm"
+	"gorm.io/plugin/dbresolver"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
@@ -56,6 +57,10 @@ type IExptDAO interface {
 	// 但 scheduler_scope 必须带：它是调度所有权边界（线上/各 PPE 泳道共库）。
 	// 走 idx_scheduler_queue，keyset 分页保证翻页不重不漏。
 	ScanSchedulerQueue(ctx context.Context, param *entity.SchedulerQueueScanParam) ([]*model.Experiment, error)
+}
+
+type IExptCurrentRunCompletionDAO interface {
+	UpdateIfLatestRun(ctx context.Context, expt *model.Experiment, expectedRunID int64) (bool, error)
 }
 
 func NewExptDAO(db db.Provider) IExptDAO {
@@ -115,6 +120,28 @@ func (d *exptDAOImpl) Update(ctx context.Context, expt *model.Experiment) error 
 		return errorx.Wrapf(err, "update expt fail, expt_id: %v, updated: %v", expt.ID, json.Jsonify(expt))
 	}
 	return nil
+}
+
+func (d *exptDAOImpl) UpdateIfLatestRun(ctx context.Context, expt *model.Experiment, expectedRunID int64) (bool, error) {
+	result := d.db.NewSession(ctx).Model(&model.Experiment{}).
+		Where("id = ? AND space_id = ? AND latest_run_id = ?", expt.ID, expt.SpaceID, expectedRunID).
+		Omit(schedulingFrozenColumns...).
+		Updates(expt)
+	if result.Error != nil {
+		return false, errorx.Wrapf(result.Error, "update current experiment completion failed, expt_id: %v, run_id: %v", expt.ID, expectedRunID)
+	}
+	if result.RowsAffected > 0 {
+		return true, nil
+	}
+	// MySQL can report zero for an idempotent rewrite. Distinguish that from a
+	// replacement run without treating a successful CAS as a conflict.
+	var count int64
+	if err := d.db.NewSession(ctx).Clauses(dbresolver.Write).Model(&model.Experiment{}).
+		Where("id = ? AND space_id = ? AND latest_run_id = ? AND status = ?", expt.ID, expt.SpaceID, expectedRunID, expt.Status).
+		Count(&count).Error; err != nil {
+		return false, errorx.Wrapf(err, "verify current experiment completion failed, expt_id: %v, run_id: %v", expt.ID, expectedRunID)
+	}
+	return count == 1, nil
 }
 
 func (d *exptDAOImpl) Delete(ctx context.Context, id int64) error {

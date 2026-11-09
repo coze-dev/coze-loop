@@ -1535,35 +1535,6 @@ func (e *exptBaseExec) exptEnd(ctx context.Context, event *entity.ExptScheduleEv
 		}
 	}
 
-	if event.ExptRunMode != entity.EvaluationModeAppend && event.ExptRunMode != entity.EvaluationModeTrialRun && expt.ExptType != entity.ExptType_Online {
-		if finish, ok := e.Manager.(IExptNaturalRunFinisher); ok {
-			result, err := finish.FinishCurrentRunWithHeldTickLock(ctx, event)
-			if err != nil {
-				return errno.WrapMQRetryErr(err)
-			}
-			if result == nil {
-				return errno.NewMQRetryErr("finish returned no disposition")
-			}
-			switch result.Disposition {
-			case entity.ExptRunFinishPending:
-				return errno.NewMQRetryErr("current run finish pending")
-			case entity.ExptRunFinishNonCurrent:
-				return nil
-			case entity.ExptRunFinishFinished, entity.ExptRunFinishAlreadyFinished:
-				duration := time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second * 2
-				if err := e.idem.Set(ctx, idemKey, duration); err != nil {
-					logs.CtxWarn(ctx, "finish end idem set failed: %v", err)
-				}
-				return nil
-			default:
-				return errno.NewMQRetryErr("invalid finish disposition")
-			}
-		}
-		if _, current := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); current {
-			return errno.NewMQRetryErr("current run finisher missing")
-		}
-	}
-
 	completeCID := fmt.Sprintf("exptexec:onend:%d", event.ExptRunID)
 	if err := e.Manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
 		return err
@@ -1588,7 +1559,7 @@ func (e *exptBaseExec) exptEnd(ctx context.Context, event *entity.ExptScheduleEv
 // 直接查 DB 是否仍有 Queueing/Processing 的 item(不受并发名额门控影响)，limit 1 即可，
 // 仅在准备收工这条冷路径触发，成本可控。
 func (e *exptBaseExec) hasPendingAfterRescan(ctx context.Context, event *entity.ExptScheduleEvent) (bool, error) {
-	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{
+	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(contexts.WithCtxWriteDB(ctx), event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{
 		Status: []entity.ItemRunState{entity.ItemRunState_Queueing, entity.ItemRunState_Processing},
 	}, 0, 1, event.SpaceID)
 	if err != nil {
@@ -1603,7 +1574,7 @@ func (e *exptBaseExec) hasPendingAfterRescan(ctx context.Context, event *entity.
 	// Production also rescans Logged so publication can retry before calibration.
 	if _, current := e.exptItemResultRepo.(repo.IExptCurrentResultRepo); current {
 		logged := entity.ExptItemResultStateLogged
-		logs, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{ResultState: &logged}, 0, 1, event.SpaceID)
+		logs, _, err := e.exptItemResultRepo.ScanItemRunLogs(contexts.WithCtxWriteDB(ctx), event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{ResultState: &logged}, 0, 1, event.SpaceID)
 		if err != nil {
 			return false, err
 		}
@@ -2417,7 +2388,7 @@ func (e *ExptRetryItemsExec) ExptEnd(ctx context.Context, event *entity.ExptSche
 
 	logs.CtxInfo(ctx, "[ExptEval] expt daemon finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 
-	got, err := e.exptRunLogRepo.Get(ctx, event.ExptID, event.ExptRunID)
+	got, err := e.exptRunLogRepo.Get(contexts.WithCtxWriteDB(ctx), event.ExptID, event.ExptRunID)
 	if err != nil {
 		return false, err
 	}

@@ -213,7 +213,7 @@ func (e *ExptMangerImpl) TerminateCurrentRun(ctx context.Context, expt, run, spa
 			return errno.NewMQRetryErr("termination experiment missing")
 		}
 		if current.LatestRunID != run {
-			return nil
+			return e.finishSupersededRunLog(ctx, expt, run, space, opts...)
 		}
 		if expected != nil {
 			s, err := port.GetTerminationItemSource(ctx, space, expt, run, expected.Current.ItemID)

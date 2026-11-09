@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -65,6 +64,9 @@ func TestManualRetryAdmissionUsesLatestRunID(t *testing.T) {
 				return &entity.ManualRetryReceipt{RejectedItems: r.RejectedItems, SnapshotAtMS: r.SnapshotAtMS}, nil
 			}).Times(2)
 			manager := &ExptMangerImpl{manualRetryRepo: port, exptRepo: expts, itemResultRepo: items, runLogRepo: runs, manualRetryLocker: func() lock.ILocker { return mutex }}
+			config := componentmocks.NewMockIConfiger(ctrl)
+			config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RetryCompleteEnabled: true}).AnyTimes()
+			manager.configer = config
 			for i := 0; i < 2; i++ {
 				got, err := manager.RetryInCurrentRun(context.Background(), req)
 				require.NoError(t, err)
@@ -127,6 +129,9 @@ func TestManualRetryAdmissionHistoricalReceiptCannotBypassDependencies(t *testin
 	cause := errors.New("dependency read unavailable")
 	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(nil, cause).Times(2)
 	manager := &ExptMangerImpl{manualRetryRepo: port, exptRepo: expts}
+	config := componentmocks.NewMockIConfiger(ctrl)
+	config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RetryCompleteEnabled: true}).AnyTimes()
+	manager.configer = config
 	for _, ext := range []map[string]string{nil, {"business": "changed"}} {
 		req.Ext = ext
 		got, err := manager.RetryInCurrentRun(context.Background(), req)
@@ -158,6 +163,9 @@ func TestManualRetryAdmissionGuards(t *testing.T) {
 			mutex := lockmocks.NewMockILocker(ctrl)
 			port := &admissionReceiptRepo{}
 			manager := &ExptMangerImpl{manualRetryRepo: port, exptRepo: expts, itemResultRepo: items, mutex: mutex, manualRetryLocker: func() lock.ILocker { return mutex }}
+			config := componentmocks.NewMockIConfiger(ctrl)
+			config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RetryCompleteEnabled: true}).AnyTimes()
+			manager.configer = config
 			req := admissionRequest()
 			got := &entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}
 			shape := false
@@ -243,33 +251,41 @@ func TestManualRetryAdmissionGuards(t *testing.T) {
 	}
 }
 
-// running_retry_enabled 门禁删除后，configer nil / 存量 false / 存量 true 三种形态都必须
-// 走完准入并抵达 run 锁，不再返回任何 disabled 错误，也不再读取执行配置。
-func TestManualRetryAdmissionIgnoresLegacyRunningRetryConfig(t *testing.T) {
-	for _, kind := range []string{"configer_nil", "legacy_false", "legacy_true"} {
+// retry_complete_enabled 发布门：缺省 / 显式 false 关闭时必须在候选准备、锁与写之前拒绝；
+// 只有显式 true 才放行到原有准入流程。
+func TestManualRetryAdmissionRetryCompleteGate(t *testing.T) {
+	for _, kind := range []string{"absent", "false", "true"} {
 		t.Run(kind, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			expts := repomocks.NewMockIExperimentRepo(ctrl)
 			items := repomocks.NewMockIExptItemResultRepo(ctrl)
 			mutex := lockmocks.NewMockILocker(ctrl)
-			manager := &ExptMangerImpl{manualRetryRepo: &admissionReceiptRepo{}, exptRepo: expts, itemResultRepo: items, mutex: mutex, manualRetryLocker: func() lock.ILocker { return mutex }}
-			if kind != "configer_nil" {
-				legacy := &entity.ExptExecConf{}
-				require.NoError(t, json.Unmarshal([]byte(`{"running_retry_enabled":`+strings.TrimPrefix(kind, "legacy_")+`}`), legacy))
-				config := componentmocks.NewMockIConfiger(ctrl)
-				config.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Times(0)
-				manager.configer = config
+			config := componentmocks.NewMockIConfiger(ctrl)
+			execConf := &entity.ExptExecConf{}
+			if kind == "false" {
+				execConf.RetryCompleteEnabled = false
 			}
-			expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(&entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil)
-			items.EXPECT().BatchGet(gomock.Any(), int64(9), int64(7), []int64{11}).Return(nil, nil)
-			mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:7:8", gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
+			if kind == "true" {
+				execConf.RetryCompleteEnabled = true
+			}
+			config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(execConf)
+			manager := &ExptMangerImpl{manualRetryRepo: &admissionReceiptRepo{}, exptRepo: expts, itemResultRepo: items, mutex: mutex, manualRetryLocker: func() lock.ILocker { return mutex }, configer: config}
+			if kind == "true" {
+				expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(&entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil)
+				items.EXPECT().BatchGet(gomock.Any(), int64(9), int64(7), []int64{11}).Return(nil, nil)
+				mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:7:8", gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
+			}
 			receipt, err := manager.RetryInCurrentRun(context.Background(), admissionRequest())
 			require.Nil(t, receipt)
-			// 抵达 run 锁说明门禁已放行，只剩并发占用这一正常拒绝原因。
-			require.ErrorContains(t, err, "retry_busy")
 			biz, ok := kerrors.FromBizStatusError(err)
 			require.True(t, ok)
-			require.Equal(t, int32(601204105), biz.BizStatusCode())
+			if kind == "true" {
+				// 放行后只剩并发占用这一正常拒绝原因，说明门禁确实没有拦截。
+				require.ErrorContains(t, err, "retry_busy")
+				require.Equal(t, int32(601204105), biz.BizStatusCode())
+				return
+			}
+			require.Equal(t, int32(601204002), biz.BizStatusCode())
 		})
 	}
 }
@@ -385,6 +401,9 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 			req := admissionRequest()
 			req.Ext = map[string]string{"business": "unchanged"}
 			manager := &ExptMangerImpl{manualRetryRepo: port, exptRepo: expts, itemResultRepo: items, turnResultRepo: turns, itemRefRepo: refs, runLogRepo: runs, mutex: mutex, centralGuard: guard, publisher: publisher, currentRunWaker: waker, manualRetryLocker: func() lock.ILocker { return mutex }}
+			config := componentmocks.NewMockIConfiger(ctrl)
+			config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RetryCompleteEnabled: true}).AnyTimes()
+			manager.configer = config
 			expt := &entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline, EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig, EvalConf: &entity.EvaluationConfiguration{ItemRetryNum: gptr.Of(3), ItemConcurNum: gptr.Of(4)}}
 			enforce := kind == "released" || kind == "absent" || kind == "mismatch" || kind == "release_error" || kind == "preflight_capacity" || kind == "preflight_source_changed" || kind == "lost_after_release" || kind == "wake_error"
 			if enforce {
@@ -543,6 +562,9 @@ func TestManualRetryAdmissionUsesIndependentLocker(t *testing.T) {
 	shared := lockmocks.NewMockILocker(ctrl)
 	owned := lockmocks.NewMockILocker(ctrl)
 	manager := &ExptMangerImpl{manualRetryRepo: &admissionReceiptRepo{}, exptRepo: expts, itemResultRepo: items, mutex: shared}
+	config := componentmocks.NewMockIConfiger(ctrl)
+	config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RetryCompleteEnabled: true})
+	manager.configer = config
 	req := admissionRequest()
 	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(&entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil)
 	items.EXPECT().BatchGet(gomock.Any(), int64(9), int64(7), []int64{11}).Return(nil, nil)
@@ -608,6 +630,9 @@ func TestManualRetryDependencyErrorRetainsCause(t *testing.T) {
 	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(nil, cause)
 	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(nil, nil)
 	manager := &ExptMangerImpl{manualRetryRepo: &admissionReceiptRepo{}, exptRepo: expts}
+	config := componentmocks.NewMockIConfiger(ctrl)
+	config.EXPECT().GetExptExecConf(gomock.Any(), int64(9)).Return(&entity.ExptExecConf{RetryCompleteEnabled: true}).AnyTimes()
+	manager.configer = config
 	_, err := manager.RetryInCurrentRun(context.Background(), admissionRequest())
 	require.Same(t, cause, err)
 	_, ok := kerrors.FromBizStatusError(err)

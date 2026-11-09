@@ -805,3 +805,13 @@ func TestNewExptSchedulerQueueRepo(t *testing.T) {
 	assert.NotNil(t, impl.exptDAO)
 	assert.NotNil(t, impl.exptEvaluatorRefDAO)
 }
+
+func TestExptRepoImpl_UpdateIfLatestRunRequiresCapableDAO(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repo, _, _, _ := newRepo(ctrl)
+
+	applied, err := repo.UpdateIfLatestRun(context.Background(), &entity.Experiment{}, 1)
+	assert.False(t, applied)
+	assert.Error(t, err)
+}

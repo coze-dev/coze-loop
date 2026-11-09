@@ -734,7 +734,9 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					BackoffLockWithValue(ctx, gomock.Any(), "1002", gomock.Any(), time.Second).
 					Return(false, "1001", nil)
 				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(false, nil)
+					EXPECT().Lock(ctx, "expt_completing_mutex_lock:123:1001", 3*time.Minute).Return(true, nil)
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().Unlock("expt_completing_mutex_lock:123:1001").Return(true, nil)
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().AppendRunItemIDs(ctx, exptID, int64(1001), spaceID, itemIDs).Return(nil)
 			},
@@ -784,7 +786,9 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					BackoffLockWithValue(ctx, gomock.Any(), "1005", gomock.Any(), time.Second).
 					Return(false, "1001", nil)
 				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(false, nil)
+					EXPECT().Lock(ctx, "expt_completing_mutex_lock:123:1001", 3*time.Minute).Return(true, nil)
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().Unlock("expt_completing_mutex_lock:123:1001").Return(true, nil)
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().AppendRunItemIDs(ctx, exptID, int64(1001), spaceID, itemIDs).
 					Return(errors.New("get run log failed"))
@@ -817,7 +821,7 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					BackoffLockWithValue(ctx, gomock.Any(), "1007", gomock.Any(), time.Second).
 					Return(false, "1001", nil)
 				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(true, nil)
+					EXPECT().Lock(ctx, "expt_completing_mutex_lock:123:1001", 3*time.Minute).Return(false, nil)
 			},
 			wantErr: true,
 		},
@@ -831,7 +835,7 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					BackoffLockWithValue(ctx, gomock.Any(), "1008", gomock.Any(), time.Second).
 					Return(false, "1001", nil)
 				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(false, errors.New("lock check error"))
+					EXPECT().Lock(ctx, "expt_completing_mutex_lock:123:1001", 3*time.Minute).Return(false, errors.New("lock check error"))
 			},
 			wantErr: true,
 		},
