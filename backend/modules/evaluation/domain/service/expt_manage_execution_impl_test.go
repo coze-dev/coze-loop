@@ -408,6 +408,75 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name:    "calculate_run_log_stats_failure",
+			exptID:  123,
+			runID:   456,
+			mode:    entity.EvaluationModeSubmit,
+			spaceID: 789,
+			opts:    []entity.CompleteExptOptionFn{},
+			setup: func() {
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+					EXPECT().
+					Get(ctx, int64(123), int64(456)).
+					Return(&entity.ExptRunLog{ID: 456, ExptID: 123, ExptRunID: 456, Status: int64(entity.ExptStatus_Processing)}, nil)
+				mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+					EXPECT().
+					ListTurnResult(ctx, int64(789), int64(123), nil, gomock.Any(), false).
+					Return(nil, int64(0), errors.New("list turn result failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name:    "unlock_force_failure",
+			exptID:  123,
+			runID:   456,
+			mode:    entity.EvaluationModeSubmit,
+			spaceID: 789,
+			opts:    []entity.CompleteExptOptionFn{},
+			setup: func() {
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+					EXPECT().
+					Get(ctx, int64(123), int64(456)).
+					Return(&entity.ExptRunLog{ID: 456, ExptID: 123, ExptRunID: 456, Status: int64(entity.ExptStatus_Processing)}, nil)
+				mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+					EXPECT().
+					ListTurnResult(ctx, int64(789), int64(123), nil, gomock.Any(), false).
+					Return([]*entity.ExptTurnResult{}, int64(0), nil)
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					UnlockForce(ctx, "expt_run_mutex_lock:123").
+					Return(false, errors.New("unlock failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name:    "save_run_log_failure",
+			exptID:  123,
+			runID:   456,
+			mode:    entity.EvaluationModeSubmit,
+			spaceID: 789,
+			opts:    []entity.CompleteExptOptionFn{},
+			setup: func() {
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+					EXPECT().
+					Get(ctx, int64(123), int64(456)).
+					Return(&entity.ExptRunLog{ID: 456, ExptID: 123, ExptRunID: 456, Status: int64(entity.ExptStatus_Processing)}, nil)
+				mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+					EXPECT().
+					ListTurnResult(ctx, int64(789), int64(123), nil, gomock.Any(), false).
+					Return([]*entity.ExptTurnResult{}, int64(0), nil)
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					UnlockForce(ctx, "expt_run_mutex_lock:123").
+					Return(true, nil)
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+					EXPECT().
+					Save(ctx, gomock.Any()).
+					Return(errors.New("save run log failed"))
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -2020,6 +2089,22 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExptMangerImpl_CompleteExpt_DuplicateCIDReturnsNil(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mgr := newTestExptManager(ctrl)
+	ctx := context.Background()
+	session := &entity.Session{UserID: "test_user"}
+
+	mgr.idem.(*idemMocks.MockIdempotentService).
+		EXPECT().
+		Exist(ctx, "CompleteExpt:duplicate_cid").
+		Return(true, nil)
+
+	err := mgr.CompleteExpt(ctx, 123, gptr.Of[int64](456), 789, session, entity.WithCID("duplicate_cid"))
+	assert.NoError(t, err)
 }
 
 func TestExptMangerImpl_CompleteExpt_workflow_calls_PipelineNodeFinishCallback(t *testing.T) {
