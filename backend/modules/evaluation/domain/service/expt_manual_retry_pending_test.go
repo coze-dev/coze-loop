@@ -360,6 +360,51 @@ type pendingReadFailureHook struct {
 	fail   atomic.Bool
 }
 
+type pendingJoinedNilHook struct {
+	prefix string
+}
+
+func (h *pendingJoinedNilHook) DialHook(next redisc.DialHook) redisc.DialHook { return next }
+func (h *pendingJoinedNilHook) ProcessPipelineHook(next redisc.ProcessPipelineHook) redisc.ProcessPipelineHook {
+	return next
+}
+
+func (h *pendingJoinedNilHook) ProcessHook(next redisc.ProcessHook) redisc.ProcessHook {
+	return func(ctx context.Context, cmd redisc.Cmder) error {
+		err := next(ctx, cmd)
+		if cmd.Name() == "get" && len(cmd.Args()) > 1 && strings.HasPrefix(fmt.Sprint(cmd.Args()[1]), h.prefix) && errors.Is(err, redisc.Nil) {
+			return errors.Join(redisc.Nil, err)
+		}
+		return err
+	}
+}
+
+func TestPendingRetryJoinedNilReceiptUsesPrimaryRecovery(t *testing.T) {
+	p, port, raw := newPendingRetryTestFixture(t)
+	pending := preparePendingRetryTestRequest(t, p, port)
+	planned := &entity.ManualRetryReceipt{RunID: p.f.run, RequestID: pending.Request.RequestID, AcceptedCount: 1}
+	require.NoError(t, port.PreparePendingRetryCommit(context.Background(), pending, planned, []int64{p.f.item}))
+	committed, err := port.RequeueTerminalItems(context.Background(), pending.Request)
+	require.NoError(t, err)
+	require.Equal(t, int32(1), committed.AcceptedCount)
+	prefix := fmt.Sprintf("[experiment]pending_manual_retry:%d:%d:%d", p.f.space, p.f.expt, p.f.run)
+	raw.AddHook(&pendingJoinedNilHook{prefix: prefix})
+	missing := raw.Get(context.Background(), prefix+":"+pending.Request.RequestID).Err()
+	require.ErrorIs(t, missing, redisc.Nil)
+	require.False(t, missing == redisc.Nil)
+	before := p.f.snapshot()
+	receipt, err := port.ResolvePendingRetry(context.Background(), pending, false)
+	require.NoError(t, err)
+	require.Equal(t, int32(1), receipt.AcceptedCount)
+	require.Equal(t, pending.Request.RequestID, receipt.RequestID)
+	require.Equal(t, before, p.f.snapshot(), "SQL token recovery must not requeue the item")
+	cached, err := port.GetPendingRetry(context.Background(), p.f.space, p.f.expt, p.f.run)
+	require.NoError(t, err)
+	require.Nil(t, cached)
+	require.NoError(t, p.manager.consumePendingCurrentRetry(context.Background(), p.event), "an empty joined-nil pending slot must not block the ordinary tick")
+	require.Equal(t, int64(1), port.calls.Load())
+}
+
 func (h *pendingReadFailureHook) DialHook(next redisc.DialHook) redisc.DialHook { return next }
 func (h *pendingReadFailureHook) ProcessPipelineHook(next redisc.ProcessPipelineHook) redisc.ProcessPipelineHook {
 	return next

@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
-	redisc "github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
+	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
@@ -44,7 +44,7 @@ func (r *ExptManualRetryRepoImpl) GetPendingRetry(ctx context.Context, space, ex
 		return nil, nil
 	}
 	raw, err := r.cache.Get(ctx, pendingRetryKey(space, expt, run)).Bytes()
-	if err == redisc.Nil {
+	if redis.IsNilError(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -212,7 +212,7 @@ func (r *ExptManualRetryRepoImpl) ResolvePendingRetry(ctx context.Context, p *re
 			}
 			return nil
 		}
-		if err != redisc.Nil {
+		if !redis.IsNilError(err) {
 			return err
 		}
 		current, err := r.GetPendingRetry(ctx, p.Request.SpaceID, p.Request.ExptID, p.Request.RunID)
