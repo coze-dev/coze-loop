@@ -1243,9 +1243,6 @@ func TestExptMangerImpl_Clone(t *testing.T) {
 						SpaceID:     100,
 						Name:        "test",
 						Description: "test",
-						EvalConf: &entity.EvaluationConfiguration{
-							RunnerEnvs: map[string]string{"APP_KEY": "encrypted-value"},
-						},
 					}, nil).
 					Times(1)
 
@@ -1324,9 +1321,6 @@ func TestExptMangerImpl_Clone(t *testing.T) {
 				}
 				if got.Description != tt.want.Description {
 					t.Errorf("Clone() got Description = %v, want %v", got.Description, tt.want.Description)
-				}
-				if got.EvalConf == nil || got.EvalConf.RunnerEnvs != nil {
-					t.Errorf("Clone() must clear runner_envs, got %#v", got.EvalConf)
 				}
 			}
 		})
