@@ -366,11 +366,13 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		// 多集执行恒用顶层 target, 而 ItemConfig 的来源空间是 per-set 的
 		// (见 ExptItemEvalCtx.TargetSourceSpaceID 的论证) —— 按 per-set 派生会重演
 		// "拿 B 的空间去加载 A 的 target" 那类错配。
-		ExptSpaceID:   etec.Event.SpaceID,
-		ExptCreatedBy: etec.Expt.CreatedBy,
+		ExptSpaceID:        etec.Event.SpaceID,
+		ExptCreatedBy:      etec.Expt.CreatedBy,
+		RunnerEnvsResolved: true,
 	}
 	if etec.Expt.EvalConf != nil {
 		etc.EnableExtractTrajectory = etec.Expt.EvalConf.EnableExtractTrajectory
+		etc.RunnerEnvs = etec.Expt.EvalConf.RunnerEnvs
 	}
 	// Provider storage clips Content in place; retain independent history for later turns.
 	var historyMessages []*entity.Message

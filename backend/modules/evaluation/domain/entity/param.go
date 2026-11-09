@@ -259,6 +259,9 @@ type ExecuteEvalTargetParam struct {
 	// 沙箱 workspace、record 空间、AK/SK 一律继续用 spaceID 形参, 换了会撕裂销毁链与回传链。
 	ExptSpaceID   int64
 	ExptCreatedBy string
+	// RunnerEnvs is the encrypted experiment snapshot; Resolved distinguishes an empty snapshot from a missing propagation.
+	RunnerEnvs         map[string]string `json:"-"`
+	RunnerEnvsResolved bool              `json:"-"`
 }
 
 // EvalSetItemMeta 承载评测集与 item 层面的元数据快照, 用于评测对象 (如 SandboxAgent) 透传给外部执行侧。
