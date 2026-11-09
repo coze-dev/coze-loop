@@ -1936,9 +1936,6 @@ func (e *ExptMangerImpl) listItemTurnIDs(ctx context.Context, spaceID, exptID in
 //
 // 沿用 "ForCancelledItems" 这个名字是因为它已被多处引用；实际语义已扩为"所有终态"，
 // 传入的 itemIDs 在 Terminated 分支是被终止的 item、在其它终态分支是未完成的 item。
-//
-// targetSourceSpaceID: 跨空间共享场景下评测对象的来源空间 (Expt.TargetSpaceID, 0=同消费方空间);
-// EvalTargetRecord 落库时 SpaceID = 来源空间, 用消费方 spaceID 查会漏, 沙箱清不掉。
 func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.Context, spaceID, targetSourceSpaceID, exptID int64, exptRunID *int64, terminatedItemIDs []int64, waitForDestroy ...bool) error {
 	if e.evalTargetService == nil || exptRunID == nil || *exptRunID <= 0 || len(terminatedItemIDs) == 0 {
 		if len(terminatedItemIDs) > 0 && len(waitForDestroy) > 0 && waitForDestroy[0] {
@@ -1949,7 +1946,7 @@ func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.C
 	if lifecycle, ok := e.evalTargetService.(interface {
 		TerminateSandboxAttemptsForRunItems(context.Context, int64, int64, []int64, ...bool) error
 	}); ok {
-		if err := lifecycle.TerminateSandboxAttemptsForRunItems(ctx, resolveLoadSpaceID(spaceID, targetSourceSpaceID), *exptRunID, terminatedItemIDs, waitForDestroy...); err != nil {
+		if err := lifecycle.TerminateSandboxAttemptsForRunItems(ctx, spaceID, *exptRunID, terminatedItemIDs, waitForDestroy...); err != nil {
 			logs.CtxWarn(ctx, "[SandboxDestroy] discover pre-dispatch attempts failed, run_id=%d, err=%v", *exptRunID, err)
 			if len(waitForDestroy) > 0 && waitForDestroy[0] {
 				return err
@@ -1975,12 +1972,9 @@ func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.C
 	for id := range recordIDSet {
 		recordIDs = append(recordIDs, id)
 	}
-	// 跨空间: EvalTargetRecord.SpaceID = 来源空间, TerminateAsyncRecordsAndDestroySandbox 的
-	// List/Version/Destroy 全链路都用它，否则 space 过滤把 record 过滤空、Destroy RPC 发不出。
-	targetSpaceID := resolveLoadSpaceID(spaceID, targetSourceSpaceID)
 	return e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
 		ctx,
-		targetSpaceID,
+		spaceID,
 		recordIDs,
 		int32(errno.AsyncEvalTargetTerminatedCode),
 		"async eval target terminated: experiment cancelled",

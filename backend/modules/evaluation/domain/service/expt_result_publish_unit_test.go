@@ -176,14 +176,18 @@ func TestPrepareItemResultPublicationUnit(t *testing.T) {
 		_, err := d.svc.PrepareItemResultPublication(context.Background(), source, publishUnitExperiment())
 		require.True(t, errno.NeedMQRetry(err))
 	})
-	t.Run("multiset_config_missing", func(t *testing.T) {
+	t.Run("multiset_without_item_config_reads_experiment_record_space", func(t *testing.T) {
 		d := newPublishUnitDeps(t)
 		source := publishUnitSource()
 		source.Source.Turns[0].TargetResultID = 88
 		expt := publishUnitExperiment()
 		expt.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
-		_, err := d.svc.PrepareItemResultPublication(context.Background(), source, expt)
-		require.True(t, errno.NeedMQRetry(err))
+		expt.TargetSpaceID = 4
+		d.targets.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(88)).Return(&entity.EvalTargetRecord{ID: 88, SpaceID: 3, ItemID: 9, TurnID: 0, ExperimentRunID: 2, Status: gptr.Of(entity.EvalTargetRunStatusSuccess)}, nil)
+		publication, err := d.svc.PrepareItemResultPublication(context.Background(), source, expt)
+		require.NoError(t, err)
+		require.Len(t, publication.Turns, 1)
+		require.Equal(t, int64(88), publication.Turns[0].TargetResultID)
 	})
 	t.Run("target_reader_missing", func(t *testing.T) {
 		d := newPublishUnitDeps(t)
@@ -999,17 +1003,19 @@ func TestReconcileManualRetryFilterWrapperUnit(t *testing.T) {
 func TestPreparePublicationRemainingBranches(t *testing.T) {
 	expt := func() *entity.Experiment { return publishUnitExperiment() }
 
-	t.Run("multiset_target_space", func(t *testing.T) {
+	t.Run("multiset_target_source_space_does_not_own_records", func(t *testing.T) {
 		d := newPublishUnitDeps(t)
 		source := publishUnitSource()
 		source.Source.Turns[0].TargetResultID = 88
 		source.ItemRef = &entity.ExptItemRef{ItemConfig: &entity.ExptItemConfig{TargetSourceSpaceID: 4}}
 		e := expt()
 		e.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
-		d.targets.EXPECT().GetRecordByID(gomock.Any(), int64(4), int64(88)).Return(&entity.EvalTargetRecord{ID: 88, SpaceID: 4, ItemID: 9, TurnID: 0, ExperimentRunID: 2, Status: gptr.Of(entity.EvalTargetRunStatusSuccess)}, nil)
+		e.TargetSpaceID = 5
+		d.targets.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(88)).Return(&entity.EvalTargetRecord{ID: 88, SpaceID: 3, ItemID: 9, TurnID: 0, ExperimentRunID: 2, Status: gptr.Of(entity.EvalTargetRunStatusSuccess)}, nil)
 		publication, err := d.svc.PrepareItemResultPublication(context.Background(), source, e)
 		require.NoError(t, err)
 		require.Len(t, publication.Turns, 1)
+		require.Equal(t, int64(88), publication.Turns[0].TargetResultID)
 	})
 	t.Run("frozen_turn_missing_same_len", func(t *testing.T) {
 		d := newPublishUnitDeps(t)

@@ -1660,9 +1660,7 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		runLog.Status = entity.TurnRunState_Processing
 		runLog.ExptRunID = eiec.Event.ExptRunID
 		runLog.ErrMsg = ""
-		// 跨空间共享: Target 记录随执行落来源空间(冻结 TargetSpaceID), 失败重试选引用时须按来源空间读;
-		// 用调用方空间读会得 nil → 误判 Target 非 Success → 清零 target_result_id 触发无谓重跑 Target。
-		targetID, evalIDs, err := failRetrySelectTurnRunLogRefs(snapshotCtx, resolveLoadSpaceID(eiec.Event.SpaceID, eiec.TargetSourceSpaceID()), !shouldSkipTargetNode(eiec.Expt), tr, e.evalTargetService, e.evaluatorRecordSvc, refsByTurnResultID[tr.ID], sourceLogs)
+		targetID, evalIDs, err := failRetrySelectTurnRunLogRefs(snapshotCtx, eiec.Event.SpaceID, !shouldSkipTargetNode(eiec.Expt), tr, e.evalTargetService, e.evaluatorRecordSvc, refsByTurnResultID[tr.ID], sourceLogs)
 		if err != nil {
 			return fmt.Errorf("%w: %w", errRetryStartDependencyFailure, err)
 		}
@@ -1858,7 +1856,7 @@ func (e *ExptItemEventEvalServiceImpl) ordinaryInvocationInFlight(ctx context.Co
 			continue
 		}
 		if log.TargetResultID > 0 {
-			record, err := e.evaTargetService.GetRecordByID(ctx, resolveLoadSpaceID(eiec.Event.SpaceID, eiec.TargetSourceSpaceID()), log.TargetResultID)
+			record, err := e.evaTargetService.GetRecordByID(ctx, eiec.Event.SpaceID, log.TargetResultID)
 			if err != nil {
 				return false, errno.WrapMQRetryErr(err)
 			}

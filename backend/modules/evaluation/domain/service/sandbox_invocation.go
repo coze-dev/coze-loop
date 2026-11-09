@@ -58,7 +58,7 @@ func (l *sandboxInvocationLifecycle) check(ctx context.Context) error {
 	if !active {
 		return errorx.NewByCode(errno.AsyncEvalTargetTerminatedCode)
 	}
-	current, err := l.service.evalTargetRepo.GetEvalTargetRecordByIDAndSpaceID(contexts.WithCtxWriteDB(ctx), l.spaceID, l.record.ID)
+	current, err := l.service.evalTargetRepo.GetEvalTargetRecordByIDAndSpaceID(contexts.WithCtxWriteDB(ctx), l.experimentSpaceID(), l.record.ID)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (l *sandboxInvocationLifecycle) prepare(ctx context.Context, invokeID int64
 	if !ok || l.service.sandboxLeasePendingRegistrar == nil {
 		return 0, fmt.Errorf("sandbox durable lifecycle is not configured")
 	}
-	old, err := store.LatestSandboxInvocation(ctx, l.spaceID, gptr.Indirect(l.param.ExperimentRunID), l.param.ItemID, l.param.TurnID)
+	old, err := store.LatestSandboxInvocation(ctx, l.experimentSpaceID(), gptr.Indirect(l.param.ExperimentRunID), l.param.ItemID, l.param.TurnID)
 	if err != nil {
 		return 0, err
 	}
@@ -163,6 +163,7 @@ func (l *sandboxInvocationLifecycle) prepare(ctx context.Context, invokeID int64
 			CreatedAt: gptr.Of(time.Now().UnixMilli()), UpdatedAt: gptr.Of(time.Now().UnixMilli()),
 		},
 	}
+	l.record.BindExecutionSpace(l.spaceID, l.param.ExptSpaceID)
 	if _, err := l.service.evalTargetRepo.CreateEvalTargetRecord(ctx, l.record, l.param.TruncateLargeContent); err != nil {
 		return 0, err
 	}
@@ -257,7 +258,7 @@ func sandboxInvocationReported(r *entity.EvalTargetRecord) bool {
 }
 
 func (l *sandboxInvocationLifecycle) loadReported(ctx context.Context) (bool, error) {
-	r, err := l.service.evalTargetRepo.GetEvalTargetRecordByIDAndSpaceID(contexts.WithCtxWriteDB(ctx), l.spaceID, l.record.ID)
+	r, err := l.service.evalTargetRepo.GetEvalTargetRecordByIDAndSpaceID(contexts.WithCtxWriteDB(ctx), l.experimentSpaceID(), l.record.ID)
 	if err != nil {
 		return false, err
 	}

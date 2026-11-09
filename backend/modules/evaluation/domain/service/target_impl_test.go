@@ -3542,7 +3542,7 @@ func TestEvalTargetServiceImpl_CheckSandboxTerminated(t *testing.T) {
 		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
 
 		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
-			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 20, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)}}, nil)
+			Return([]*entity.EvalTargetRecord{{ID: 10, SpaceID: 1, TargetVersionID: 20, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)}}, nil)
 		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
 			Return([]*entity.EvalTarget{{
 				EvalTargetType:    entity.EvalTargetTypeCozeBot,

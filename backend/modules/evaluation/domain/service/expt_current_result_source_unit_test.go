@@ -363,35 +363,40 @@ func TestValidateResumeSourceUnit(t *testing.T) {
 		_, err := svc.validateResumeSource(context.Background(), eventWith(targetSource), current)
 		require.True(t, errno.NeedMQRetry(err))
 	})
-	t.Run("detail_error", func(t *testing.T) {
+	t.Run("target_resume_does_not_read_experiment_detail", func(t *testing.T) {
 		d := newCurrentUnitDeps(t)
 		d.turns.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{{SpaceID: 3, ExptID: 1, ExptRunID: 2, ItemID: 9, ItemVersionID: 7, TurnID: 0, Status: entity.TurnRunState_Success, TargetResultID: 61}}, nil)
-		d.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(nil, errors.New("detail"))
+		d.manager.EXPECT().GetDetail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+		d.targets.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(61)).Return(&entity.EvalTargetRecord{ID: 61, SpaceID: 3, ExperimentRunID: 2, ItemID: 9, TurnID: 0, Status: gptr.Of(entity.EvalTargetRunStatusSuccess)}, nil)
 		targetSource := &entity.ExptResumeSource{RecordID: 61, TurnID: 0, InvokeID: "61", Kind: "target"}
-		_, err := d.eventService().validateResumeSource(context.Background(), eventWith(targetSource), current)
-		require.True(t, errno.NeedMQRetry(err))
+		valid, err := d.eventService().validateResumeSource(context.Background(), eventWith(targetSource), current)
+		require.NoError(t, err)
+		require.True(t, valid)
 	})
-	t.Run("detail_missing", func(t *testing.T) {
+	t.Run("target_resume_without_experiment_manager", func(t *testing.T) {
 		d := newCurrentUnitDeps(t)
 		d.turns.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{{SpaceID: 3, ExptID: 1, ExptRunID: 2, ItemID: 9, ItemVersionID: 7, TurnID: 0, Status: entity.TurnRunState_Success, TargetResultID: 61}}, nil)
-		d.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(nil, nil)
+		d.targets.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(61)).Return(&entity.EvalTargetRecord{ID: 61, SpaceID: 3, ExperimentRunID: 2, ItemID: 9, TurnID: 0, Status: gptr.Of(entity.EvalTargetRunStatusSuccess)}, nil)
+		svc := d.eventService()
+		svc.manager = nil
 		targetSource := &entity.ExptResumeSource{RecordID: 61, TurnID: 0, InvokeID: "61", Kind: "target"}
-		_, err := d.eventService().validateResumeSource(context.Background(), eventWith(targetSource), current)
-		require.True(t, errno.NeedMQRetry(err))
+		valid, err := svc.validateResumeSource(context.Background(), eventWith(targetSource), current)
+		require.NoError(t, err)
+		require.True(t, valid)
 	})
 	t.Run("target_record_error", func(t *testing.T) {
 		d := newCurrentUnitDeps(t)
 		d.turns.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{{SpaceID: 3, ExptID: 1, ExptRunID: 2, ItemID: 9, ItemVersionID: 7, TurnID: 0, Status: entity.TurnRunState_Success, TargetResultID: 61}}, nil)
-		d.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(&entity.Experiment{ID: 1, SpaceID: 3, TargetSpaceID: 4}, nil)
-		d.targets.EXPECT().GetRecordByID(gomock.Any(), int64(4), int64(61)).Return(nil, errors.New("read"))
+		fault := errors.New("read")
+		d.targets.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(61)).Return(nil, fault)
 		targetSource := &entity.ExptResumeSource{RecordID: 61, TurnID: 0, InvokeID: "61", Kind: "target"}
 		_, err := d.eventService().validateResumeSource(context.Background(), eventWith(targetSource), current)
 		require.True(t, errno.NeedMQRetry(err))
+		require.ErrorIs(t, err, fault)
 	})
 	t.Run("target_record_missing", func(t *testing.T) {
 		d := newCurrentUnitDeps(t)
 		d.turns.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{{SpaceID: 3, ExptID: 1, ExptRunID: 2, ItemID: 9, ItemVersionID: 7, TurnID: 0, Status: entity.TurnRunState_Success, TargetResultID: 61}}, nil)
-		d.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(&entity.Experiment{ID: 1, SpaceID: 3}, nil)
 		d.targets.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(61)).Return(nil, nil)
 		targetSource := &entity.ExptResumeSource{RecordID: 61, TurnID: 0, InvokeID: "61", Kind: "target"}
 		_, err := d.eventService().validateResumeSource(context.Background(), eventWith(targetSource), current)
@@ -400,7 +405,6 @@ func TestValidateResumeSourceUnit(t *testing.T) {
 	t.Run("target_record_incomplete", func(t *testing.T) {
 		d := newCurrentUnitDeps(t)
 		d.turns.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{{SpaceID: 3, ExptID: 1, ExptRunID: 2, ItemID: 9, ItemVersionID: 7, TurnID: 0, Status: entity.TurnRunState_Success, TargetResultID: 61}}, nil)
-		d.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(&entity.Experiment{ID: 1, SpaceID: 3}, nil)
 		d.targets.EXPECT().GetRecordByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvalTargetRecord{ID: 61}, nil)
 		targetSource := &entity.ExptResumeSource{RecordID: 61, TurnID: 0, InvokeID: "61", Kind: "target"}
 		_, err := d.eventService().validateResumeSource(context.Background(), eventWith(targetSource), current)
@@ -410,7 +414,6 @@ func TestValidateResumeSourceUnit(t *testing.T) {
 		for _, expected := range []bool{true, false} {
 			d := newCurrentUnitDeps(t)
 			d.turns.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{{SpaceID: 3, ExptID: 1, ExptRunID: 2, ItemID: 9, ItemVersionID: 7, TurnID: 0, Status: entity.TurnRunState_Success, TargetResultID: 61}}, nil)
-			d.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(&entity.Experiment{ID: 1, SpaceID: 3}, nil)
 			record := &entity.EvalTargetRecord{ID: 61, SpaceID: 3, ExperimentRunID: 2, ItemID: 9, TurnID: 0, Status: gptr.Of(entity.EvalTargetRunStatusSuccess)}
 			if !expected {
 				record.ItemVersionID = 8

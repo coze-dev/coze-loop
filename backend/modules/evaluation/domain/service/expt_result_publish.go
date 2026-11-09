@@ -81,15 +81,7 @@ func (e *ExptResultServiceImpl) PrepareItemResultPublication(ctx context.Context
 		turn.ExptRunID = c.RunID
 		turn.WeightedScore = nil
 		if log.TargetResultID > 0 {
-			targetSpace := resolveLoadSpaceID(c.SpaceID, expt.TargetSpaceID)
-			if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
-				if source.ItemRef == nil || source.ItemRef.ItemConfig == nil {
-					return nil, errno.NewMQRetryErr("publication frozen item configuration missing")
-				}
-				if source.ItemRef.ItemConfig.TargetSourceSpaceID > 0 {
-					targetSpace = source.ItemRef.ItemConfig.TargetSourceSpaceID
-				}
-			}
+			targetSpace := c.SpaceID
 			if e.evalTargetService == nil {
 				return nil, errno.NewMQRetryErr("publication target reader missing")
 			}

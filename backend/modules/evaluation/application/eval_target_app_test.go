@@ -2624,7 +2624,7 @@ func TestEvalTargetApplicationImpl_GetEvalTargetRecord(t *testing.T) {
 
 	workspaceID := int64(111)
 	recordID := int64(222)
-	record := &entity.EvalTargetRecord{TargetID: 333, ID: recordID, BaseInfo: &entity.BaseInfo{}}
+	record := &entity.EvalTargetRecord{TargetID: 333, ID: recordID, SpaceID: workspaceID, BaseInfo: &entity.BaseInfo{}}
 
 	tests := []struct {
 		name        string
@@ -2733,7 +2733,7 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetRecords(t *testing.T) {
 
 	workspaceID := int64(777)
 	recordIDs := []int64{1, 2}
-	records := []*entity.EvalTargetRecord{{ID: 1, BaseInfo: &entity.BaseInfo{}}, {ID: 2, BaseInfo: &entity.BaseInfo{}}}
+	records := []*entity.EvalTargetRecord{{ID: 1, SpaceID: workspaceID, TargetID: 3, BaseInfo: &entity.BaseInfo{}}, {ID: 2, SpaceID: workspaceID, TargetID: 3, BaseInfo: &entity.BaseInfo{}}}
 
 	tests := []struct {
 		name        string
@@ -2756,6 +2756,7 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetRecords(t *testing.T) {
 				EvalTargetRecordIds: recordIDs,
 			},
 			mockSetup: func() {
+				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), workspaceID, recordIDs).Return(records, nil)
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
 			},
 			wantErr:     true,
@@ -2768,7 +2769,6 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetRecords(t *testing.T) {
 				EvalTargetRecordIds: recordIDs,
 			},
 			mockSetup: func() {
-				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), workspaceID, recordIDs).
 					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
 			},
@@ -2783,10 +2783,10 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetRecords(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
-					ObjectID:      strconv.FormatInt(workspaceID, 10),
+					ObjectID:      "3",
 					SpaceID:       workspaceID,
-					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationTarget"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-				}).Return(nil)
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
+				}).Return(nil).Times(len(records))
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), workspaceID, recordIDs).Return(records, nil)
 			},
 		},
@@ -3048,6 +3048,7 @@ func TestEvalTargetApplicationImpl_GetEvalTargetOutputFieldContent(t *testing.T)
 	}
 	mockRecord := &entity.EvalTargetRecord{
 		TargetID: targetID,
+		SpaceID:  workspaceID,
 		EvalTargetOutputData: &entity.EvalTargetOutputData{
 			OutputFields: map[string]*entity.Content{
 				"actual_output": mockContent,
