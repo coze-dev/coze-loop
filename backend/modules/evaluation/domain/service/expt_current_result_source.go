@@ -28,6 +28,8 @@ type currentItemSourceKey struct{}
 
 type currentItemExecution struct {
 	Source          *entity.ExptCurrentItemRunSource
+	Request         *entity.ExptItemCurrentRequest
+	ItemRunLogID    int64
 	LockLost        bool
 	Completed       bool
 	QuotaReleased   bool
@@ -356,6 +358,7 @@ func (e *ExptItemEventEvalServiceImpl) handleCurrentEventErr(ctx context.Context
 			retryInterval = conf.GetRetryInterval()
 			return nil
 		}
+		execution.Completed = true
 		e.releaseCentralQuotaOutsideGate(lockCtx, event, evalErr, "item unretriable pre-exec failure")
 		return nil
 	}()
@@ -444,6 +447,9 @@ func (e *ExptSchedulerImpl) withCurrentScannedItem(ctx context.Context, event *e
 		return false, errno.WrapMQRetryErr(err)
 	}
 	lockCtx = context.WithValue(lockCtx, currentItemSourceKey{}, &currentItemExecution{Source: item.Source})
+	if _, resourceProtocol := e.centralGuard.(component.ICentralItemExecution); resourceProtocol {
+		lockCtx = component.WithEvaluationResourceRequestID(lockCtx, item.Source.Current.RequestID)
+	}
 	applied, err := callback(lockCtx, port)
 	if err != nil {
 		return false, errno.WrapMQRetryErr(err)
@@ -582,7 +588,16 @@ func (e *ExptSchedulerImpl) sweepCurrentSandboxItems(ctx context.Context, event 
 			if err := lockCtx.Err(); err != nil {
 				return false, errno.WrapMQRetryErr(err)
 			}
-			_ = e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(lockCtx, space, stopped, int32(errno.SandboxTerminatedBeforeReportCode), fmt.Sprintf("sandbox execute reached terminal state (%s) before result was reported", state), false)
+			_, resourceProtocol := e.centralGuard.(component.ICentralItemExecution)
+			strictStop := resourceProtocol && expt != nil && entity.IsCentralDispatch(expt.ExptDispatchMode)
+			var stopOptions []bool
+			if strictStop {
+				stopOptions = []bool{true, true}
+			}
+			stopErr := e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(lockCtx, space, stopped, int32(errno.SandboxTerminatedBeforeReportCode), fmt.Sprintf("sandbox execute reached terminal state (%s) before result was reported", state), false, stopOptions...)
+			if strictStop && stopErr != nil {
+				return false, stopErr
+			}
 			applied, err := port.CompleteCurrentItemRun(lockCtx, item.Source, write)
 			if err != nil || !applied {
 				return false, err

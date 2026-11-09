@@ -118,7 +118,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 		return tr, nil
 	}
 	// An earlier Processing claim without a recorded attempt is not permission to replay bootstrap side effects.
-	if isCentralResourceExecution(ctx) && tr == nil && ctx.Value(centralResourceFirstStartKey{}) != true {
+	if isCentralResourceExecution(ctx) && tr == nil && ctx.Value(centralResourceFirstStartKey{}) != true && ctx.Value(centralResourceTurnStartKey{etec.Turn.ID}) != true {
 		return nil, fmt.Errorf("%w: previous target attempt unavailable", errCentralItemAdmission)
 	}
 	if isCentralResourceExecution(ctx) && tr != nil {
@@ -150,6 +150,19 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 
 	etec.Event.WithCtxTargetCalled(ctx)
 	return record, nil
+}
+
+func isUnstartedResourceContinuation(ctx context.Context, etec *entity.ExptTurnEvalCtx) bool {
+	execution := executionSource(ctx)
+	if execution == nil || !execution.SourceValidated || execution.LockLost || execution.Source == nil ||
+		etec.Event.ResumeSource == nil || etec.Event.ResumeSource.TurnID == etec.Turn.ID {
+		return false
+	}
+	turn := execution.Source.Turns[etec.Turn.ID]
+	previous := execution.Source.Turns[etec.Event.ResumeSource.TurnID]
+	return previous != nil && previous.Status == entity.TurnRunState_Success &&
+		turn != nil && (turn.Status == entity.TurnRunState_Queueing || resourceTurnHasPendingStart(execution, turn)) && turn.TargetResultID == 0 &&
+		entity.SameCurrentEvaluatorRefs(turn.EvaluatorResultIds, nil)
 }
 
 // Direct turn callers also need a local event before mode-based reuse checks.

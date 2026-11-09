@@ -146,6 +146,10 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 			}
 			continue
 		}
+		ctx, err = e.prepareResourceTurnStart(ctx, etec)
+		if err != nil {
+			return false, err
+		}
 
 		ctx = context.WithValue(ctx, consts.CtxKeyLogID, etec.GetTurnEvalLogID(ctx, turn.ID)) //nolint:staticcheck
 
@@ -190,6 +194,48 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 	return false, nil
 }
 
+func (e *ExptItemEvalCtxExecutor) prepareResourceTurnStart(ctx context.Context, etec *entity.ExptTurnEvalCtx) (context.Context, error) {
+	if !isCentralResourceExecution(ctx) || etec.ExptTurnRunResult.GetTargetResult() != nil {
+		return ctx, nil
+	}
+	execution := executionSource(ctx)
+	if execution == nil || execution.Source == nil || !execution.SourceValidated || execution.LockLost {
+		return ctx, nil
+	}
+	turn := execution.Source.Turns[etec.Turn.ID]
+	if turn == nil || turn.TargetResultID != 0 || !entity.SameCurrentEvaluatorRefs(turn.EvaluatorResultIds, nil) ||
+		turn.Status != entity.TurnRunState_Queueing && turn.Status != entity.TurnRunState_Processing {
+		return ctx, fmt.Errorf("%w: resource turn start unavailable", errCentralItemAdmission)
+	}
+	if !resourceTurnHasPendingStart(execution, turn) &&
+		(turn.Status != entity.TurnRunState_Queueing || turn.Ext[entity.ResourceTurnStartExtKey] != "") {
+		return ctx, fmt.Errorf("%w: previous target attempt unavailable", errCentralItemAdmission)
+	}
+	if ctx.Value(centralResourceFirstStartKey{}) != true && !isUnstartedResourceContinuation(ctx, etec) {
+		return ctx, nil
+	}
+	port, ok := e.ItemResultRepo.(repo.IExptCurrentResultRepo)
+	if !ok {
+		return ctx, nil
+	}
+	started := *turn
+	started.Status = entity.TurnRunState_Processing
+	started.Ext = make(map[string]string, len(turn.Ext)+1)
+	for key, value := range turn.Ext {
+		started.Ext[key] = value
+	}
+	started.Ext[entity.ResourceTurnStartExtKey] = resourceTurnStartValue(execution, true)
+	applied, err := port.StoreCurrentTurnRunResult(ctx, execution.Source, &started)
+	if err := checkedCurrentWrite(ctx, applied, err); err != nil {
+		return ctx, err
+	}
+	execution.Source.Turns[etec.Turn.ID] = &started
+	if etec.ExistItemEvalResult != nil && etec.ExistItemEvalResult.TurnResultRunLogs != nil {
+		etec.ExistItemEvalResult.TurnResultRunLogs[etec.Turn.ID] = &started
+	}
+	return context.WithValue(ctx, centralResourceTurnStartKey{etec.Turn.ID}, true), nil
+}
+
 // isItemTerminated 查该 item 当前 run log 是否已被行级终止置为 Terminal。
 // 查询失败返回 false（不拦截）—— 宁可多跑一轮，也不能因一次查询抖动把正常行掐掉；
 // 真被终止的行还有 CompleteItemRun 的条件 UPDATE（UpdateItemRunLogIfNotTerminal）兜底。
@@ -215,6 +261,9 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 	if result == nil {
 		return fmt.Errorf("StoreTurnRunResult with nil result")
 	}
+	if isCentralResourceExecution(ctx) && errors.Is(result.GetEvalErr(), errCentralItemAdmission) {
+		return errno.WrapMQRetryErr(result.GetEvalErr())
+	}
 	persistCtx, cancel := context.WithTimeout(ctx, exptRunLogPersistTimeout)
 	defer cancel()
 
@@ -231,6 +280,16 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 	}
 
 	clone.Ext = etec.Ext
+	if isCentralResourceExecution(ctx) {
+		clone.Ext = make(map[string]string, len(etec.Ext)+1)
+		for key, value := range etec.Ext {
+			clone.Ext[key] = value
+		}
+		delete(clone.Ext, entity.ResourceTurnStartExtKey)
+		if value, ok := turnResultLog.Ext[entity.ResourceTurnStartExtKey]; ok {
+			clone.Ext[entity.ResourceTurnStartExtKey] = value
+		}
+	}
 
 	var evalErr error
 
@@ -573,6 +632,9 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 	if err := ctx.Err(); err != nil {
 		return errno.WrapMQRetryErr(err)
 	}
+	if isCentralResourceExecution(ctx) && errors.Is(evalErr, errCentralItemAdmission) {
+		return errno.WrapMQRetryErr(evalErr)
+	}
 	if errno.NeedMQRetry(evalErr) || errors.Is(evalErr, errExptNonCurrentSource) {
 		return evalErr
 	}
@@ -622,6 +684,14 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 		}
 		if err := e.ItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, map[string]any{"result_state": entity.ExptItemResultStateLogged}, event.SpaceID); err != nil {
 			return err
+		}
+	}
+	if execution := executionSource(ctx); execution != nil {
+		if execution.Source != nil || isCentralResourceExecution(ctx) {
+			execution.Completed = true
+			if item := eiec.GetExistItemResultLog(); item != nil {
+				execution.ItemRunLogID = item.ID
+			}
 		}
 	}
 

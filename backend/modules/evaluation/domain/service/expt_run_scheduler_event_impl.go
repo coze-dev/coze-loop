@@ -605,7 +605,11 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 				logs.CtxWarn(ctx, "[EvaluationResource] terminal stop retry failed, item_id=%d err=%v", item.ItemID, err)
 			}
 		} else {
-			notifyCentralItemTerminal(ctx, e.centralGuard, e.ExptItemResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, item.ItemID)
+			if item.Source != nil {
+				notifyCentralItemTerminalForSource(ctx, e.centralGuard, e.ExptItemResultRepo, &item.Source.Current, 0)
+			} else {
+				notifyCentralItemTerminal(ctx, e.centralGuard, e.ExptItemResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, item.ItemID)
+			}
 		}
 	}
 	if err = e.recordEvalItemRunLogs(ctx, event, complete, mode, exptDetail); err != nil {
@@ -1582,7 +1586,20 @@ func (e *ExptSchedulerImpl) releaseCentralQuotaForItems(ctx context.Context, exp
 	}
 	if _, resourceProtocol := e.centralGuard.(component.ICentralItemLifecycle); resourceProtocol {
 		for _, itemID := range itemIDs {
-			notifyCentralItemTerminal(ctx, e.centralGuard, e.ExptItemResultRepo, expt.SpaceID, expt.ID, exptRunID, itemID)
+			if execution := executionSource(ctx); execution != nil && execution.Source != nil && execution.Source.Current.ItemID == itemID {
+				notifyCentralItemTerminalForSource(ctx, e.centralGuard, e.ExptItemResultRepo, &execution.Source.Current, 0)
+				continue
+			}
+			item, err := e.ExptItemResultRepo.GetItemRunLog(contexts.WithCtxWriteDB(ctx), expt.ID, exptRunID, itemID, expt.SpaceID)
+			if err != nil || item == nil {
+				continue
+			}
+			request, err := resourceRequestForItem(ctx, e.ExptItemResultRepo, item)
+			observed, ok := itemRequestIDs[itemID]
+			if err != nil || request == nil || !ok || request.RequestID != observed {
+				continue
+			}
+			notifyCentralItemTerminalForSource(ctx, e.centralGuard, e.ExptItemResultRepo, request, item.ID)
 		}
 		return
 	}

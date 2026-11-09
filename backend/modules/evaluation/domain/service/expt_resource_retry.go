@@ -22,6 +22,7 @@ const centralItemRetryRecordKey = "__central_item_retry_times"
 
 type centralResourceExecutionKey struct{}
 type centralResourceFirstStartKey struct{}
+type centralResourceTurnStartKey struct{ turnID int64 }
 
 func isCentralResourceExecution(ctx context.Context) bool {
 	active, _ := ctx.Value(centralResourceExecutionKey{}).(bool)
@@ -37,12 +38,14 @@ func (e *ExptItemEventEvalServiceImpl) publishCentralRetry(ctx context.Context, 
 	}
 	clone.RetryTimes = int(item.RetryTimes)
 	clone.AsyncReportTrigger, clone.AsyncEvaluatorReportTrigger = false, false
+	clone.ResumeSource = nil
 	interval := e.configer.GetErrRetryConf(ctx, event.SpaceID, errno.DeserializeErr(item.ErrMsg)).GetRetryInterval()
 	if e.publisher == nil {
 		return fmt.Errorf("%w: publisher not wired", errCentralRetryPublication)
 	}
 	if err := e.publisher.PublishExptRecordEvalEvent(ctx, clone, &interval, func(ne *entity.ExptItemEvalEvent) {
 		ne.AsyncReportTrigger, ne.AsyncEvaluatorReportTrigger = false, false
+		ne.ResumeSource = nil
 	}); err != nil {
 		return fmt.Errorf("%w: %w", errCentralRetryPublication, err)
 	}

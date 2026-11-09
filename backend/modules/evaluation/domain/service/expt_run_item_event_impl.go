@@ -156,7 +156,9 @@ func NewExptRecordEvalService(
 
 func (e *ExptItemEventEvalServiceImpl) Eval(ctx context.Context, event *entity.ExptItemEvalEvent) error {
 	ctx = ctxcache.Init(ctx)
-	defer notifyCentralItemTerminal(ctx, e.centralGuard, e.exptItemResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
+	execution := &currentItemExecution{}
+	ctx = context.WithValue(ctx, currentItemSourceKey{}, execution)
+	defer e.notifyCompletedResourceItem(ctx, event.Clone(), execution)
 
 	if err := e.endpoints(ctx, event); err != nil {
 		logs.CtxError(ctx, "[ExptTurnEval] expt record eval fail, event: %v, err: %v", json.Jsonify(event), err)
@@ -340,6 +342,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			if item == nil || item.ID <= 0 || item.SpaceID != event.SpaceID || item.ExptID != event.ExptID || item.ExptRunID != event.ExptRunID || item.ItemID != event.EvalSetItemID {
 				return fmt.Errorf("%w: item identity mismatch", errCentralItemAdmission)
 			}
+			if source := executionSource(ctx); source != nil {
+				source.ItemRunLogID = item.ID
+			}
 			state := entity.ItemRunState(item.Status)
 			if entity.IsItemRunFinished(state) {
 				return nil
@@ -347,6 +352,16 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			strictStart = state == entity.ItemRunState_Queueing && item.QuotaReservationState.IsQuotaReserved()
 			if !strictStart && state != entity.ItemRunState_Processing {
 				return nil
+			}
+			if source := executionSource(ctx); source != nil && source.SourceValidated {
+				request := source.Request
+				if source.Source != nil {
+					request = &source.Source.Current
+				}
+				if request == nil {
+					return fmt.Errorf("%w: validated resource generation missing", errCentralItemAdmission)
+				}
+				ctx = component.WithEvaluationResourceRequestID(ctx, request.RequestID)
 			}
 			allowed, err := execution.ConfirmItemRunning(ctx, expt, item)
 			if err != nil {
@@ -356,13 +371,11 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 				return nil
 			}
 			ctx = context.WithValue(ctx, centralResourceExecutionKey{}, true)
-			if !event.AsyncReportTrigger && !event.AsyncEvaluatorReportTrigger {
-				if event.RetryTimes > int(item.RetryTimes) {
-					return nil
-				}
-				if event.RetryTimes < int(item.RetryTimes) {
-					return e.publishCentralRetry(ctx, event, item)
-				}
+			if event.RetryTimes > int(item.RetryTimes) {
+				return nil
+			}
+			if event.RetryTimes < int(item.RetryTimes) {
+				return e.publishCentralRetry(ctx, event, item)
 			}
 		} else {
 			ok, err := guard.ConfirmRunning(ctx, expt.SchedulerScope, event.ExptRunID, event.EvalSetItemID, event.RequestID)
@@ -377,6 +390,11 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 
 		// The DAO commits canonical/turn/log/stats together. Only a current
 		// nonterminal source can continue into the existing recovery path.
+		if strictStart {
+			if err := e.prepareResourceTurnStarts(ctx); err != nil {
+				return err
+			}
+		}
 		if e.dispatchRepo != nil {
 			started, err := e.dispatchRepo.StartReservedItem(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.RequestID)
 			if err != nil {
@@ -630,8 +648,11 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 		if err := ctx.Err(); err != nil {
 			return errno.WrapMQRetryErr(err)
 		}
-		execution := &currentItemExecution{}
-		ctx = context.WithValue(ctx, currentItemSourceKey{}, execution)
+		execution := executionSource(ctx)
+		if execution == nil {
+			execution = &currentItemExecution{}
+			ctx = context.WithValue(ctx, currentItemSourceKey{}, execution)
+		}
 		nextErr := func(ctx context.Context, event *entity.ExptItemEvalEvent) (err error) {
 			defer goroutine.Recover(ctx, &err)
 			return next(ctx, event)
@@ -850,9 +871,13 @@ func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx conte
 			logs.CtxWarn(ctx, "unretriable error source unavailable: %v", err)
 			return err
 		}
-		if _, err := port.CompleteCurrentItemRun(ctx, source, &entity.ExptCurrentItemRunWrite{Status: entity.ItemRunState_Fail, ErrMsg: []byte(errno.SerializeErr(evalErr)), RetryTimes: int32(event.RetryTimes), FailPendingTurns: true}); err != nil {
+		applied, err := port.CompleteCurrentItemRun(ctx, source, &entity.ExptCurrentItemRunWrite{Status: entity.ItemRunState_Fail, ErrMsg: []byte(errno.SerializeErr(evalErr)), RetryTimes: int32(event.RetryTimes), FailPendingTurns: true})
+		if err := checkedCurrentWrite(ctx, applied, err); err != nil {
 			logs.CtxWarn(ctx, "unretriable error storage: %v", err)
 			return err
+		}
+		if execution := executionSource(ctx); execution != nil {
+			execution.Completed = true
 		}
 		return nil
 	}
@@ -886,6 +911,11 @@ func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx conte
 	}
 
 	if e.exptTurnResultRepo == nil {
+		if persistErr == nil {
+			if execution := executionSource(ctx); execution != nil {
+				execution.Completed = true
+			}
+		}
 		return persistErr
 	}
 	// turn run log 必须与 item run log 成对（见方法头注释）。item 已 Terminal 时 turn 也要写 Terminal，
@@ -903,6 +933,11 @@ func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx conte
 		persistErr = errors.Join(persistErr, err)
 		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr create/update turn run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+	}
+	if persistErr == nil {
+		if execution := executionSource(ctx); execution != nil {
+			execution.Completed = true
+		}
 	}
 	return persistErr
 }
@@ -1179,7 +1214,7 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 		if execution, ok := e.centralGuard.(component.ICentralItemExecution); ok {
 			preparedCtx, err := execution.PrepareItemResources(ctx, eiec)
 			if err != nil {
-				return err
+				return fmt.Errorf("%w: %w", errCentralItemAdmission, err)
 			}
 			if preparedCtx == nil {
 				return fmt.Errorf("%w: nil granted resource context", errCentralItemAdmission)
@@ -1447,6 +1482,10 @@ func (e *ExptRecordEvalModeSubmit) PreEval(ctx context.Context, eiec *entity.Exp
 		logID := logs.GetLogID(ctx)
 
 		turnRunResults := make([]*entity.ExptTurnResultRunLog, 0, len(absentRunLogTurnIDs))
+		state := entity.TurnRunState_Processing
+		if isCentralResourceExecution(ctx) {
+			state = entity.TurnRunState_Queueing
+		}
 		for idx, turnID := range absentRunLogTurnIDs {
 			turnRunResults = append(turnRunResults, &entity.ExptTurnResultRunLog{
 				ID:            ids[idx],
@@ -1456,7 +1495,7 @@ func (e *ExptRecordEvalModeSubmit) PreEval(ctx context.Context, eiec *entity.Exp
 				ItemID:        event.EvalSetItemID,
 				ItemVersionID: gptr.Indirect(eiec.EvalSetItem.ItemVersionID),
 				TurnID:        turnID,
-				Status:        entity.TurnRunState_Processing,
+				Status:        state,
 				LogID:         logID,
 			})
 		}
@@ -1886,7 +1925,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleCurrentSource(next RecordEvalEndPoi
 		}
 		_, resourceProtocol := e.centralGuard.(component.ICentralItemExecution)
 		_, centralAdmitted := event.CtxCentralAdmittedExpt(ctx)
-		if resourceProtocol && centralAdmitted && !event.AsyncReportTrigger && !event.AsyncEvaluatorReportTrigger {
+		if resourceProtocol && centralAdmitted {
 			if event.RetryTimes > int(source.RetryTimes) {
 				return nil
 			}
@@ -1926,7 +1965,13 @@ func (e *ExptItemEventEvalServiceImpl) HandleCurrentSource(next RecordEvalEndPoi
 		if err := ctx.Err(); err != nil {
 			return errno.WrapMQRetryErr(err)
 		}
-		executionSource(ctx).SourceValidated = true
+		execution := executionSource(ctx)
+		request := *source
+		execution.Request = &request
+		execution.SourceValidated = true
+		if resourceProtocol && centralAdmitted {
+			ctx = component.WithEvaluationResourceRequestID(ctx, request.RequestID)
+		}
 		return next(ctx, event)
 	}
 }

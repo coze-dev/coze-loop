@@ -698,17 +698,39 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 		commit.Items = append(commit.Items, item)
 	}
 	enforce := expt.ExptDispatchMode == entity.ExptDispatchModeEnforce
+	resourceProtocol := m.usesCentralResourceProtocol(expt)
 	// fail-closed 必须在任何写之前：enforce 实验若没有可用的账本，改排出来的 item 会在
 	// 下一次派发时既拿不到与上一轮对齐的释放、也说不清旧预占归谁，宁可整笔拒绝。
 	if enforce && len(commit.Items) > 0 && (m.centralGuard == nil || expt.SchedulerScope == "") {
 		return nil, fmt.Errorf("terminal reservation release unavailable")
+	}
+	if resourceProtocol {
+		port, err := m.terminationRepo()
+		if err != nil {
+			return nil, err
+		}
+		for _, item := range commit.Items {
+			if err := checkLocks(); err != nil {
+				return nil, err
+			}
+			source, err := port.GetTerminationItemSource(opCtx, expt.SpaceID, expt.ID, item.PreviousRunID, item.SourceItem.ItemID)
+			if err != nil {
+				return nil, errno.WrapMQRetryErr(err)
+			}
+			if source == nil || source.Current.RequestID != item.PreviousRequestID || source.Current.ItemVersionID != item.ItemVersionID {
+				return nil, errno.NewMQRetryErr("manual retry resource source advanced")
+			}
+			if err := m.finalizeResourceSourceBeforeMigration(opCtx, expt, source); err != nil {
+				return nil, err
+			}
+		}
 	}
 	if err := checkAllLocks(); err != nil {
 		return nil, err
 	}
 	receipt, err := m.manualRetryRepo.RequeueTerminalItems(opCtx, commit)
 	if err != nil {
-		// 提交失败时账本没有任何副作用：旧预占仍归上一轮所有，同一请求重试可在提交成功后释放恰好一次。
+		// Resource finalization closes only the old terminal generation; a reset failure leaves its business source intact.
 		return nil, err
 	}
 	// 改排已经提交：先归还 run/item 锁，再做与 DB 状态无关的账本补偿。
@@ -716,7 +738,7 @@ func (m *ExptMangerImpl) RetryInCurrentRun(ctx context.Context, req *entity.Retr
 	// 同步耗时直接吃掉 manualRetryLockMaxHold。
 	cancel()
 	stop()
-	if enforce {
+	if enforce && !resourceProtocol {
 		m.releaseRetriedTerminalReservations(opCtx, expt, commit.Items, commit.RequestID)
 	}
 	if err := m.wakeCurrentRetryRun(ctx, expt, run); err != nil {

@@ -134,6 +134,7 @@ func TestSupplementRetryPublicationFailureReplaysAuthorizedRetry(t *testing.T) {
 
 func TestSupplementSameAttemptDoesNotRestartAndAuthorizedRetryProceeds(t *testing.T) {
 	svc, items, _, target, etec, ctx := supplementExecutionFixture()
+	svc.exptItemResultRepo = resourceCurrentItemStore{items}
 	require.NoError(t, svc.Eval(ctx, etec.Event))
 	etec.ExptTurnRunResult.TargetResult.Status = gptr.Of(entity.EvalTargetRunStatusFail)
 	require.NoError(t, svc.Eval(ctx, etec.Event))
@@ -150,7 +151,8 @@ func TestSupplementSameAttemptDoesNotRestartAndAuthorizedRetryProceeds(t *testin
 }
 
 func TestSupplementDuplicateItemAfterAsyncReturnStartsOnce(t *testing.T) {
-	svc, _, _, target, etec, ctx := supplementExecutionFixture()
+	svc, items, _, target, etec, ctx := supplementExecutionFixture()
+	svc.exptItemResultRepo = resourceCurrentItemStore{items}
 	require.NoError(t, svc.Eval(ctx, etec.Event))
 	require.NoError(t, svc.Eval(ctx, etec.Event))
 	require.Equal(t, 1, target.starts)

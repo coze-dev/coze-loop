@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -108,10 +109,38 @@ func (e *ExptMangerImpl) cancelCentralItem(ctx context.Context, expt *entity.Exp
 		}
 	}
 	// Retrying Terminal items must retry physical stop; Terminal alone cannot release running budget.
+	request, err := resourceRequestForItem(ctx, e.itemResultRepo, current)
+	if errors.Is(err, errExptNonCurrentSource) {
+		rows, readErr := e.itemResultRepo.BatchGet(ctx, current.SpaceID, current.ExptID, []int64{current.ItemID})
+		if readErr != nil {
+			return readErr
+		}
+		if len(rows) != 1 || rows[0] == nil || rows[0].ExptRunID == current.ExptRunID {
+			return err
+		}
+		historical, ok := e.centralGuard.(component.ICentralHistoricalItemLifecycle)
+		if !ok {
+			return fmt.Errorf("central historical item lifecycle not wired: %w", err)
+		}
+		if err := e.stopCentralItemResources(ctx, expt, current.ExptRunID, current.ItemID); err != nil {
+			return err
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return historical.OnHistoricalItemTerminal(ctx, current)
+	}
+	if err != nil || request == nil {
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("central cancellation source generation unavailable")
+	}
+	ctx = component.WithEvaluationResourceRequestID(ctx, request.RequestID)
 	if err := e.stopCentralItemResources(ctx, expt, row.ExptRunID, row.ItemID); err != nil {
 		return err
 	}
-	notifyCentralItemTerminal(ctx, e.centralGuard, e.itemResultRepo, expt.SpaceID, expt.ID, row.ExptRunID, row.ItemID, true)
+	notifyCentralItemTerminalForSource(ctx, e.centralGuard, e.itemResultRepo, request, row.ID, true)
 	return nil
 }
 

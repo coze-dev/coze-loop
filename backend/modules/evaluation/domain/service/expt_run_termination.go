@@ -300,10 +300,11 @@ func (e *ExptMangerImpl) releaseTerminationResourcesWithDebt(ctx context.Context
 			return eligible[index:], errno.WrapMQRetryErr(err)
 		}
 		if e.usesCentralResourceProtocol(expt) {
-			if err := e.stopCentralItemResources(ctx, expt, run, source.Current.ItemID); err != nil {
+			sourceCtx := component.WithEvaluationResourceRequestID(ctx, source.Current.RequestID)
+			if err := e.stopCentralItemResources(sourceCtx, expt, run, source.Current.ItemID); err != nil {
 				return eligible[index:], errno.WrapMQRetryErr(err)
 			}
-			if err := notifyCentralItemTerminal(ctx, e.centralGuard, e.itemResultRepo, expt.SpaceID, expt.ID, run, source.Current.ItemID, true); err != nil {
+			if err := notifyCentralItemTerminalForSource(sourceCtx, e.centralGuard, e.itemResultRepo, &source.Current, 0, true); err != nil {
 				if whole {
 					return eligible[index:], errno.WrapMQRetryErr(err)
 				}
@@ -692,7 +693,8 @@ func (e *ExptMangerImpl) releaseCurrentSupersededRunQuota(ctx context.Context, e
 	if !entity.IsCentralDispatch(current.ExptDispatchMode) || current.LatestRunID == 0 || current.LatestRunID == newRun {
 		return nil
 	}
-	if entity.IsExptFinished(current.Status) {
+	resourceProtocol := e.usesCentralResourceProtocol(current)
+	if entity.IsExptFinished(current.Status) && !resourceProtocol {
 		if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(ctx, expt, space, &entity.Session{}); err != nil {
 			return errno.WrapMQRetryErr(err)
 		}
@@ -732,6 +734,25 @@ func (e *ExptMangerImpl) releaseCurrentSupersededRunQuota(ctx context.Context, e
 			return errno.NewMQRetryErr("superseded quota cursor invalid")
 		}
 		cursor = next
+	}
+	if resourceProtocol {
+		ids := make([]int64, 0, len(sources))
+		byID := make(map[int64]*entity.ExptCurrentItemRunSource, len(sources))
+		for _, source := range sources {
+			ids = append(ids, source.Current.ItemID)
+			byID[source.Current.ItemID] = source
+		}
+		if err := e.withNewRunItemLocks(ctx, space, expt, run, ids, true, func(itemCtx context.Context, item int64) error {
+			return e.finalizeResourceSourceBeforeMigration(itemCtx, current, byID[item])
+		}); err != nil {
+			return err
+		}
+		if entity.IsExptFinished(current.Status) {
+			if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(ctx, expt, space, &entity.Session{}); err != nil {
+				return errno.WrapMQRetryErr(err)
+			}
+		}
+		return ctx.Err()
 	}
 	// The new lifecycle holder excludes old run cleanup until migration completes.
 	for _, source := range sources {
@@ -836,12 +857,29 @@ func (e *ExptMangerImpl) withNewRunItemLocks(ctx context.Context, space, expt, n
 					}
 					token = previous.RequestID
 				}
-				result, err := e.centralGuard.ReleaseTerminalReservation(itemCtx, current.SchedulerScope, item.ExptRunID, id, token)
-				if err != nil {
-					return errno.WrapMQRetryErr(err)
-				}
-				if result != component.TerminalReservationReleased && result != component.TerminalReservationAbsent {
-					return errno.NewMQRetryErr("new-run reset reservation source mismatch")
+				if e.usesCentralResourceProtocol(current) {
+					port, err := e.terminationRepo()
+					if err != nil {
+						return err
+					}
+					source, err := port.GetTerminationItemSource(itemCtx, space, expt, item.ExptRunID, id)
+					if err != nil {
+						return errno.WrapMQRetryErr(err)
+					}
+					if source == nil || source.Current.RequestID != token {
+						return errno.NewMQRetryErr("new-run resource source changed")
+					}
+					if err := e.finalizeResourceSourceBeforeMigration(itemCtx, current, source); err != nil {
+						return err
+					}
+				} else {
+					result, err := e.centralGuard.ReleaseTerminalReservation(itemCtx, current.SchedulerScope, item.ExptRunID, id, token)
+					if err != nil {
+						return errno.WrapMQRetryErr(err)
+					}
+					if result != component.TerminalReservationReleased && result != component.TerminalReservationAbsent {
+						return errno.NewMQRetryErr("new-run reset reservation source mismatch")
+					}
 				}
 			}
 			if err := itemCtx.Err(); err != nil {
@@ -852,6 +890,42 @@ func (e *ExptMangerImpl) withNewRunItemLocks(ctx context.Context, space, expt, n
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (e *ExptMangerImpl) finalizeResourceSourceBeforeMigration(ctx context.Context, expt *entity.Experiment, expected *entity.ExptCurrentItemRunSource) error {
+	if expected == nil {
+		return errno.NewMQRetryErr("previous resource source missing")
+	}
+	port, err := e.terminationRepo()
+	if err != nil {
+		return err
+	}
+	current, err := port.GetTerminationItemSource(ctx, expected.Current.SpaceID, expected.Current.ExptID, expected.Current.RunID, expected.Current.ItemID)
+	if err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if !sameExecutionIdentity(expected, current) {
+		return errno.NewMQRetryErr("previous resource source advanced")
+	}
+	item, err := e.itemResultRepo.GetItemRunLog(contexts.WithCtxWriteDB(ctx), current.Current.ExptID, current.Current.RunID, current.Current.ItemID, current.Current.SpaceID)
+	if err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if item == nil || item.ID <= 0 || item.SpaceID != current.Current.SpaceID || item.ExptID != current.Current.ExptID ||
+		item.ExptRunID != current.Current.RunID || item.ItemID != current.Current.ItemID || !entity.IsItemRunFinished(entity.ItemRunState(item.Status)) {
+		return errno.NewMQRetryErr("previous resource item must be terminal before takeover")
+	}
+	if err := ctx.Err(); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	ctx = component.WithEvaluationResourceRequestID(ctx, current.Current.RequestID)
+	if err := e.stopCentralItemResources(ctx, expt, item.ExptRunID, item.ItemID); err != nil {
+		return errno.WrapMQRetryErr(err)
+	}
+	if err := notifyCentralItemTerminalForSource(ctx, e.centralGuard, e.itemResultRepo, &current.Current, item.ID, true); err != nil {
+		return errno.WrapMQRetryErr(err)
 	}
 	return nil
 }
@@ -936,10 +1010,11 @@ func (e *ExptMangerImpl) ReconcileTerminalResourceDebt(ctx context.Context, even
 
 func (e *ExptMangerImpl) releaseTerminalResourceDebt(ctx context.Context, expt *entity.Experiment, row *entity.ExptItemCurrentRequest) error {
 	if e.usesCentralResourceProtocol(expt) {
-		if err := e.stopCentralItemResources(ctx, expt, row.RunID, row.ItemID); err != nil {
+		sourceCtx := component.WithEvaluationResourceRequestID(ctx, row.RequestID)
+		if err := e.stopCentralItemResources(sourceCtx, expt, row.RunID, row.ItemID); err != nil {
 			return errno.WrapMQRetryErr(err)
 		}
-		if err := notifyCentralItemTerminal(ctx, e.centralGuard, e.itemResultRepo, row.SpaceID, row.ExptID, row.RunID, row.ItemID, true); err != nil {
+		if err := notifyCentralItemTerminalForSource(sourceCtx, e.centralGuard, e.itemResultRepo, row, 0, true); err != nil {
 			return errno.WrapMQRetryErr(err)
 		}
 	} else {

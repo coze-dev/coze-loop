@@ -32,7 +32,8 @@ type ICentralItemLifecycle interface {
 // ICentralHistoricalItemLifecycle resolves generations from immutable persistent bindings, never the current item or context RequestID.
 type ICentralHistoricalItemLifecycle interface {
 	// Called under the item lease after Terminal is re-read and all historical run/item attempts are strictly stopped.
-	// Missing/conflicting bindings or an unknown finalization outcome must return an error to block deletion.
+	// An empty owned-binding enumeration is a legitimate no-op after these checks.
+	// Missing referenced bindings, corrupt/conflicting nonempty bindings or unknown finalization must block deletion.
 	OnHistoricalItemTerminal(ctx context.Context, item *entity.ExptItemResultRunLog) error
 }
 

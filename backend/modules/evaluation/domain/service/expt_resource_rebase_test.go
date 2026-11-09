@@ -45,6 +45,7 @@ func TestResourceRebaseCurrentRequestBeforeHandshake(t *testing.T) {
 	for _, request := range []string{"stale", "current"} {
 		t.Run(request, func(t *testing.T) {
 			svc, items, original, event, ctx := resourceFixture()
+			svc.exptItemResultRepo = resourceCurrentItemStore{items}
 			original.ready = true
 			guard := &rebaseResourceGuard{resourceGuard: original}
 			svc.centralGuard = guard
@@ -114,6 +115,7 @@ func TestResourceRebaseCommittedTerminationStopsBeforeLifecycle(t *testing.T) {
 			guard := &rebaseResourceGuard{resourceGuard: original}
 			mgr.centralGuard = guard
 			items.run.Status = int32(entity.ItemRunState_Terminal)
+			items.requestID = "current"
 			if stopFailed {
 				sandbox.stopErr = errors.New("physical stop unavailable")
 			}

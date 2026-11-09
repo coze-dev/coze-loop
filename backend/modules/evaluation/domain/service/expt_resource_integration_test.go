@@ -43,6 +43,33 @@ type resourceDispatchStore struct {
 	item *resourceItemStore
 }
 
+type resourceCurrentItemStore struct{ *resourceItemStore }
+
+func (s resourceCurrentItemStore) GetCurrentItemRunSource(ctx context.Context, space, expt, run, item int64) (*entity.ExptCurrentItemRunSource, error) {
+	request, err := s.GetCurrentRequest(ctx, space, expt, run, item)
+	return &entity.ExptCurrentItemRunSource{Current: *request, Turns: map[int64]*entity.ExptTurnResultRunLog{}}, err
+}
+func (s resourceCurrentItemStore) StoreCurrentTurnRunResult(context.Context, *entity.ExptCurrentItemRunSource, *entity.ExptTurnResultRunLog) (bool, error) {
+	return false, errors.New("this fixture has no turns; use the real-MySQL protocol fixture for turn claims")
+}
+func (s resourceCurrentItemStore) CompleteCurrentItemRun(ctx context.Context, _ *entity.ExptCurrentItemRunSource, write *entity.ExptCurrentItemRunWrite) (bool, error) {
+	if s.writeErr != nil {
+		return false, s.writeErr
+	}
+	if write.RetryOnly {
+		s.run.RetryTimes = max(s.run.RetryTimes, write.RetryTimes)
+		return true, nil
+	}
+	if err := s.UpdateItemRunLog(ctx, 0, 0, nil, map[string]any{"status": int32(write.Status)}, 0); err != nil {
+		return false, err
+	}
+	s.run.RetryTimes = write.RetryTimes
+	return true, nil
+}
+func (s resourceCurrentItemStore) BatchGet(context.Context, int64, int64, []int64) ([]*entity.ExptItemResult, error) {
+	return []*entity.ExptItemResult{{ExptRunID: s.run.ExptRunID}}, nil
+}
+
 func (s *resourceDispatchStore) StartReservedItem(_ context.Context, _, _, _, _ int64, requestID string) (repo.StartReservedItemResult, error) {
 	if requestID != s.item.requestID || entity.IsItemRunFinished(entity.ItemRunState(s.item.run.Status)) {
 		return repo.StartReservedItemResult{}, nil
@@ -262,12 +289,17 @@ func TestResourceItemRetryKeepsOriginalBudgetAndRun(t *testing.T) {
 }
 
 func TestResourceItemTerminalNotificationDoesNotRollbackBusinessState(t *testing.T) {
-	svc, item, guard, event, _ := resourceFixture()
-	svc.endpoints = func(context.Context, *entity.ExptItemEvalEvent) error {
-		item.run.Status = int32(entity.ItemRunState_Fail)
-		return nil
-	}
-	require.NoError(t, svc.Eval(context.Background(), event))
+	svc, item, guard, event, ctx := resourceFixture()
+	svc.exptItemResultRepo = resourceCurrentItemStore{item}
+	guard.ready = true
+	svc.configer, svc.metric = resourceConfig{}, resourceMetric{}
+	svc.endpoints = svc.HandleEventErr(svc.HandleCentralReservation(func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+		executor := &ExptItemEvalCtxExecutor{ItemResultRepo: svc.exptItemResultRepo, Configer: resourceConfig{}}
+		eiec := &entity.ExptItemEvalCtx{Event: event, Expt: &entity.Experiment{ID: 1, SpaceID: 3},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{ItemResultRunLog: item.run}}
+		return executor.CompleteItemRun(ctx, eiec, errors.New("terminal execution failure"))
+	}))
+	require.NoError(t, svc.Eval(ctx, event))
 	require.Len(t, guard.finalized, 1)
 	require.Equal(t, int32(entity.ItemRunState_Fail), guard.finalized[0].Status)
 	require.Equal(t, int32(entity.ItemRunState_Fail), item.run.Status)

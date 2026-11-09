@@ -290,7 +290,8 @@ func currentSourceMatches(expected, actual *entity.ExptCurrentItemRunSource) boo
 	}
 	for id, turn := range expected.Turns {
 		other := actual.Turns[id]
-		if turn == nil || other == nil || turn.ID != other.ID || turn.TargetResultID != other.TargetResultID || turn.ItemVersionID != other.ItemVersionID || !entity.SameCurrentEvaluatorRefs(turn.EvaluatorResultIds, other.EvaluatorResultIds) {
+		if turn == nil || other == nil || turn.ID != other.ID || turn.TargetResultID != other.TargetResultID || turn.ItemVersionID != other.ItemVersionID || !entity.SameCurrentEvaluatorRefs(turn.EvaluatorResultIds, other.EvaluatorResultIds) ||
+			turn.Ext[entity.ResourceTurnStartExtKey] != other.Ext[entity.ResourceTurnStartExtKey] {
 			return false
 		}
 	}
@@ -325,9 +326,27 @@ func (dao *exptItemResultDAOImpl) StoreCurrentTurnRunResult(ctx context.Context,
 			return nil
 		}
 		fields := map[string]any{"status": po.Status, "trace_id": po.TraceID, "log_id": po.LogID, "target_result_id": po.TargetResultID, "evaluator_result_ids": gptr.Indirect(po.EvaluatorResultIds), "err_msg": gptr.Indirect(po.ErrMsg), "ext": po.Ext}
-		written := tx.Model(&model.ExptTurnResultRunLog{}).Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?", old.ID, source.Current.SpaceID, source.Current.ExptID, source.Current.RunID, source.Current.ItemID, old.ItemVersionID).Updates(fields)
+		row := tx.Model(&model.ExptTurnResultRunLog{}).Where("id=? AND space_id=? AND expt_id=? AND expt_run_id=? AND item_id=? AND item_version_id=?", old.ID, source.Current.SpaceID, source.Current.ExptID, source.Current.RunID, source.Current.ItemID, old.ItemVersionID)
+		written := row.Updates(fields)
 		if written.Error != nil {
 			return written.Error
+		}
+		if written.RowsAffected == 0 {
+			// MySQL reports changed rows; verify a replay under the source/turn locks.
+			var stored model.ExptTurnResultRunLog
+			if err := row.Take(&stored).Error; err != nil {
+				return err
+			}
+			got, err := convert.NewExptTurnResultRunLogConvertor().PO2DO(&stored)
+			if err != nil {
+				return err
+			}
+			if got.TurnID != old.TurnID || got.Status != result.Status || got.TraceID != result.TraceID || got.LogID != result.LogID || got.TargetResultID != result.TargetResultID || got.ErrMsg != result.ErrMsg ||
+				!entity.SameCurrentEvaluatorRefs(got.EvaluatorResultIds, result.EvaluatorResultIds) || (len(got.Ext)+len(result.Ext) != 0 && !reflect.DeepEqual(got.Ext, result.Ext)) {
+				return fmt.Errorf("current execution turn update not applied")
+			}
+			applied = true
+			return ctx.Err()
 		}
 		if written.RowsAffected != 1 {
 			return fmt.Errorf("current execution turn disappeared")
