@@ -24,6 +24,7 @@ import (
 	exptrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	exptmysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -291,15 +292,24 @@ func (p *currentRetryCombinationFixture) rejectOldSource(t *testing.T, old *enti
 	f := p.f
 	before := f.snapshot()
 	guard := &fakeGuard{confirmResult: true}
-	svc := &ExptItemEventEvalServiceImpl{exptItemResultRepo: f.itemRepo(), exptTurnResultRepo: f.turnRepo(), dispatchRepo: p.dispatch, centralGuard: guard, itemLocker: p.manager.manualRetryLocker}
+	svc := &ExptItemEventEvalServiceImpl{manager: p.manager, experimentRepo: p.manager.exptRepo, exptItemResultRepo: f.itemRepo(), exptTurnResultRepo: f.turnRepo(), dispatchRepo: p.dispatch, centralGuard: guard, itemLocker: p.manager.manualRetryLocker}
 	calls := 0
 	handler := RecordEvalChain(svc.HandleEventErr, svc.HandleEventLock, svc.HandleCurrentSource, svc.HandleCentralReservation)(func(context.Context, *entity.ExptItemEvalEvent) error { calls++; return nil })
 	for _, kind := range []string{"execution", "target", "evaluator"} {
+		if old.Current.RequestID == "" && kind == "execution" {
+			// Missing-Q ordinary wake is now valid; native scheduler tests cover it.
+			continue
+		}
 		event := &entity.ExptItemEvalEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, EvalSetItemID: f.item, ExptRunMode: old.Current.Mode, RequestID: old.Current.RequestID}
 		if kind != "execution" {
 			event.ResumeSource = &entity.ExptResumeSource{Kind: kind, RecordID: f.base + 41, TurnID: 0}
 		}
-		require.NoError(t, handler(admittedEnforceCtx(event), event))
+		err := handler(admittedEnforceCtx(event), event)
+		if old.Current.RequestID == "" {
+			require.True(t, errno.NeedMQRetry(err), "missing current refs remain retryable; old ref cannot execute")
+		} else {
+			require.NoError(t, err)
+		}
 	}
 	require.Zero(t, calls)
 	require.Zero(t, guard.confirmCalls)

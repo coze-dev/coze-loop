@@ -194,7 +194,7 @@ func TestSetupCompensationReservedQuota(t *testing.T) {
 					logged, readErr := m.runLogRepo.Get(ctx, f.expt, f.run)
 					require.NoError(t, readErr)
 					require.Equal(t, int64(entity.ExptStatus_Pending), logged.Status, "terminal run ACK must not cut off compensation replay")
-					p.checkAdmission(t, true)
+					p.checkAdmission(t, fault != "run_update")
 					p.checkOriginalExperiment(t)
 					if fault == "quota" || fault == "replacement" {
 						require.Contains(t, p.quota.ExptID2RunTime, f.expt)

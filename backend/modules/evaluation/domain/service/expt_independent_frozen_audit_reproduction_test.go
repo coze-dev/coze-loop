@@ -339,7 +339,7 @@ func independentAuditResult(t *testing.T, ch <-chan error) error {
 
 func (f *independentAuditFixture) replay(manager *ExptMangerImpl) error {
 	f.log("HandleEventCheck_terminal_replay_begin", map[string]any{"run": f.r1, "mode": entity.EvaluationModeSubmit})
-	scheduler := &ExptSchedulerImpl{Manager: manager}
+	scheduler := &ExptSchedulerImpl{Manager: manager, Configer: manager.configer}
 	err := scheduler.HandleEventCheck(func(context.Context, *entity.ExptScheduleEvent) error {
 		return errors.New("FIXTURE_ERROR terminal message reached execution")
 	})(f.ctx, &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.r1, ExptRunMode: entity.EvaluationModeSubmit, ExptType: entity.ExptType_Offline, CreatedAt: time.Now().Add(-time.Hour).Unix(), Session: &entity.Session{}})
@@ -533,7 +533,7 @@ func TestIndependentFrozenAuditReproduction(t *testing.T) {
 			require.Greater(t, ttl, time.Duration(0))
 			admitErr := f.manager.LogRun(f.ctx, f.expt, f.r2, entity.EvaluationModeRetryAll, f.space, nil, &entity.Session{})
 			require.Error(t, admitErr, "slow whole completion excludes new admission")
-			require.Equal(t, "evaluation", f.admission())
+			require.Equal(t, "<absent>", f.admission(), "initial terminal SQL already paired admission release")
 			f.log("F2_actual_tick_renewed_after_6s_new_run_excluded", map[string]any{"holder": holder, "pttl_ns": ttl.Nanoseconds(), "new_admission_error": fmt.Sprint(admitErr), "ctx_error": fmt.Sprint(ctx.Err())})
 		}
 		port := f.manager.runFinishRepo.(repo.IExptRunTerminationRepo)

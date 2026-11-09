@@ -305,7 +305,7 @@ func TestRunCancelResourcesSurviveParentCancelAfterCommit(t *testing.T) {
 	key := p.manager.makeExptMutexLockKey(f.expt)
 	admitted, err := p.manager.mutex.Exists(ctx, key)
 	require.NoError(t, err)
-	require.True(t, admitted)
+	require.False(t, admitted, "original admission was paired before terminal SQL")
 	cid := fmt.Sprintf("CompleteExpt:exptexec:onend:%d", f.run)
 	marked, err := p.manager.idem.Exist(ctx, cid)
 	require.NoError(t, err)
@@ -616,7 +616,7 @@ func runReplacementAdmissionFixture(t *testing.T, r1Mode, r2Mode entity.ExptRunM
 		released, err = p.manager.mutex.Unlock(lockKey)
 	}
 	require.NoError(t, err)
-	require.True(t, released)
+	require.Equal(t, pendingSetup, released, "only uncommitted Pending setup still owns original admission")
 	guard.releaseErr = nil
 
 	if pendingSetup && replayBeforeCreate {

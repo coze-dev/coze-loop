@@ -6,14 +6,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/stretchr/testify/require"
 )
 
-func TestLegacyHalfTerminalMySQLNaturalRechecksCanonical(t *testing.T) {
+func TestLegacyHalfTerminalMySQLNaturalLeavesOriginalPairUntouched(t *testing.T) {
 	for _, failed := range []bool{false, true} {
 		t.Run(map[bool]string{false: "success", true: "failed"}[failed], func(t *testing.T) {
 			f := terminalFinishFixture(t)
@@ -27,15 +26,15 @@ func TestLegacyHalfTerminalMySQLNaturalRechecksCanonical(t *testing.T) {
 				}
 			}
 			require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(status)).Error)
+			before := f.snapshot()
 			result, err := finishFixture(f)
 			require.NoError(t, err)
-			require.Equal(t, entity.ExptRunFinishFinished, result.Disposition)
-			require.Equal(t, status, result.Experiment.Status)
-			require.NotNil(t, result.Experiment.EndAt)
-			before := f.snapshot()
+			require.Equal(t, entity.ExptRunFinishPending, result.Disposition)
+			require.Nil(t, result.Experiment)
+			require.Equal(t, before, f.snapshot(), "legacy half state has no new completion writes")
 			result, err = finishFixture(f)
 			require.NoError(t, err)
-			require.Equal(t, entity.ExptRunFinishAlreadyFinished, result.Disposition)
+			require.Equal(t, entity.ExptRunFinishPending, result.Disposition)
 			require.Equal(t, before, f.snapshot())
 		})
 	}
@@ -47,6 +46,9 @@ func TestLegacyHalfTerminalMySQLNaturalRejectsCorruptBindings(t *testing.T) {
 			f := terminalFinishFixture(t)
 			require.NoError(t, f.conn.Model(&model.ExptTurnResult{}).Where("space_id=?", f.space).Update("status", int32(entity.TurnRunState_Success)).Error)
 			require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(entity.ExptStatus_Success)).Error)
+			if fault == "missing_log" || fault == "version" || fault == "canonical_status" {
+				require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(entity.ExptStatus_Processing)).Error)
+			}
 			switch fault {
 			case "run_status":
 				require.NoError(t, f.conn.Model(&model.ExptRunLog{}).Where("space_id=?", f.space).Update("status", int64(entity.ExptStatus_Failed)).Error)
@@ -65,8 +67,13 @@ func TestLegacyHalfTerminalMySQLNaturalRejectsCorruptBindings(t *testing.T) {
 			}
 			before := f.snapshot()
 			result, err := finishFixture(f)
-			require.Error(t, err)
-			require.Nil(t, result)
+			if fault == "run_status" {
+				require.NoError(t, err)
+				require.Equal(t, entity.ExptRunFinishPending, result.Disposition)
+			} else {
+				require.Error(t, err)
+				require.Nil(t, result)
+			}
 			require.Equal(t, before, f.snapshot())
 		})
 	}
@@ -91,12 +98,9 @@ func TestLegacyHalfTerminalMySQLExplicitSourceAndLatestProtection(t *testing.T) 
 			result, err := port.TerminateCurrentRun(context.Background(), &entity.ExptRunTerminationRequest{SpaceID: f.space, ExptID: f.expt, RunID: f.run, Items: []*entity.ExptCurrentItemRunSource{source}, ExpectedSource: source, Finalize: true, Status: entity.ExptStatus_Failed})
 			switch fault {
 			case "none":
-				require.NoError(t, err)
-				require.True(t, result.Applied)
-				require.Equal(t, entity.ExptStatus_Failed, result.Experiment.Status)
-				var run model.ExptRunLog
-				require.NoError(t, f.conn.Where("space_id=?", f.space).Take(&run).Error)
-				require.Equal(t, int64(entity.ExptStatus_Failed), gptr.Indirect(run.Status))
+				require.Error(t, err, "old pair remains responsible for half completion")
+				require.Nil(t, result)
+
 			case "references":
 				require.Error(t, err)
 				require.Nil(t, result)
@@ -104,9 +108,7 @@ func TestLegacyHalfTerminalMySQLExplicitSourceAndLatestProtection(t *testing.T) 
 				require.NoError(t, err)
 				require.True(t, result.NonCurrent)
 			}
-			if fault != "none" {
-				require.Equal(t, before, f.snapshot())
-			}
+			require.Equal(t, before, f.snapshot())
 		})
 	}
 }

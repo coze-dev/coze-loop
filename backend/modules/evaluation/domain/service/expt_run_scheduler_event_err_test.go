@@ -218,7 +218,9 @@ func TestRetryAllStartFailureTerminatesMutatedRun(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			p.expt.EvalSet = &entity.EvaluationSet{ID: p.f.base + 80, EvaluationSetVersion: &entity.EvaluationSetVersion{ID: p.f.base + 81}}
 
-			// Turn the initialized run into the terminal result that RetryAll receives.
+			// Seed the paired terminal state that RetryAll receives. The original
+			// admission release is explicit; terminal replay cannot delete a holder.
+			require.NoError(t, p.manager.releaseCompleteAdmissionForMode(ctx, p.f.expt, p.f.run, mode))
 			endedAt := time.Now()
 			require.NoError(t, p.f.conn.Model(&model.Experiment{}).Where("space_id=? AND id=?", p.f.space, p.f.expt).
 				Updates(map[string]any{"status": int32(entity.ExptStatus_Success), "end_at": &endedAt}).Error)
@@ -394,6 +396,7 @@ func TestRetryStartRedeliveryPreservesLoggedItems(t *testing.T) {
 				Update("status", int32(entity.TurnRunState_Success)).Error)
 			require.NoError(t, p.f.conn.Model(&model.ExptStats{}).Where("space_id=? AND expt_id=?", p.f.space, p.f.expt).
 				Updates(map[string]any{"pending_cnt": 0, "processing_cnt": 0, "success_cnt": 1, "fail_cnt": 0, "terminated_cnt": 0}).Error)
+			require.NoError(t, p.manager.releaseCompleteAdmissionForMode(ctx, p.f.expt, p.f.run, mode))
 			require.NoError(t, p.manager.CompleteRun(ctx, p.f.expt, p.f.run, p.f.space, p.event.Session))
 
 			if tc.multiSet {

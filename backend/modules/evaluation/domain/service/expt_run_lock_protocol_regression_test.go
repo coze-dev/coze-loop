@@ -61,6 +61,7 @@ func TestLifecycleProtocolEvaluationInitializationFailureReleases(t *testing.T) 
 		require.Equal(t, "evaluation", holder)
 		return failure
 	})
+	runs.EXPECT().Update(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).Return(nil)
 	runs.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 	expts := repomocks.NewMockIExperimentRepo(ctrl)
 	expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(&entity.Experiment{ID: 1, SpaceID: 3}, nil).AnyTimes()
@@ -127,7 +128,7 @@ func TestLifecycleProtocolCompletedReplayDoesNotTouchReplacementAdmission(t *tes
 				factory, server := finishRealLockerFactory(t)
 				require.NoError(t, server.Set("expt_run_mutex_lock:1", "evaluation"))
 				ctrl := gomock.NewController(t)
-				current := &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, Status: entity.ExptStatus_Success, EndAt: gptr.Of(time.Now())}
+				current := &entity.Experiment{ID: 1, SpaceID: 3, LatestRunID: 2, ExptType: entity.ExptType_Offline, Status: entity.ExptStatus_Success, EndAt: gptr.Of(time.Now())}
 				frozen := *current
 				if newerSQL {
 					current.LatestRunID = 99
@@ -135,7 +136,7 @@ func TestLifecycleProtocolCompletedReplayDoesNotTouchReplacementAdmission(t *tes
 				}
 				expts := repomocks.NewMockIExperimentRepo(ctrl)
 				expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(current, nil).AnyTimes()
-				mgr := &ExptMangerImpl{manualRetryLocker: factory, exptRepo: expts, quotaRepo: repomocks.NewMockQuotaRepo(ctrl), idem: &cleanupTestIdem{seen: true}}
+				mgr := &ExptMangerImpl{runFinishRepo: &finishRepoProbe{result: &entity.ExptRunFinishResult{Disposition: entity.ExptRunFinishAlreadyFinished, Experiment: &frozen}}, manualRetryLocker: factory, exptRepo: expts, quotaRepo: repomocks.NewMockQuotaRepo(ctrl), idem: &cleanupTestIdem{seen: true}}
 				if newerSQL {
 					port := repomocks.NewMockIExptRunFinishRepo(ctrl)
 					request := &entity.ExptRunFinishRequest{SpaceID: 3, ExptID: 1, RunID: 2}
@@ -161,9 +162,9 @@ func TestLifecycleProtocolCompletedReplayDoesNotTouchReplacementAdmission(t *tes
 				}
 				var err error
 				if endpoint == "natural" {
-					err = completeNaturalFixture(mgr, context.Background(), event, &frozen)
+					err = completeNaturalReplayFixture(mgr, context.Background(), event, &frozen)
 				} else {
-					err = completeTerminationFixture(mgr, ctx, event, &frozen, nil, &entity.CompleteExptOption{NoCompleteItemTurn: true})
+					err = completeCommittedFixture(mgr, ctx, event, &frozen, nil, &entity.CompleteExptOption{NoCompleteItemTurn: true}, false)
 				}
 				if newerSQL && endpoint == "cancelled" {
 					require.ErrorIs(t, err, context.Canceled)
@@ -175,7 +176,7 @@ func TestLifecycleProtocolCompletedReplayDoesNotTouchReplacementAdmission(t *tes
 				require.NoError(t, err)
 				require.Equal(t, "evaluation", actual, "completed replay must exit before deleting the next admission or releasing shared quota")
 				if newerSQL && endpoint == "cancelled" {
-					require.NoError(t, completeTerminationFixture(mgr, context.Background(), event, &frozen, nil, &entity.CompleteExptOption{NoCompleteItemTurn: true}))
+					require.NoError(t, completeCommittedFixture(mgr, context.Background(), event, &frozen, nil, &entity.CompleteExptOption{NoCompleteItemTurn: true}, false))
 					actual, err = server.Get("expt_run_mutex_lock:1")
 					require.NoError(t, err)
 					require.Equal(t, "evaluation", actual, "healthy R1 replay must preserve the R2 admission and quota")

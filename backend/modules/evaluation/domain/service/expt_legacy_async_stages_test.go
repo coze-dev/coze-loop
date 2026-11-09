@@ -4,6 +4,8 @@ package service
 
 import (
 	"context"
+	"testing"
+
 	"github.com/bytedance/gg/gptr"
 	benefitmocks "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
@@ -13,7 +15,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/ctxcache"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"testing"
 )
 
 func TestLegacyContinuationRunsMissingEvaluatorWithoutRepeatingExisting(t *testing.T) {

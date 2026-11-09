@@ -626,6 +626,9 @@ func TestCleanupCurrentUnscheduledRunUnit(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
 		m.mutex = d.locker
+		runs := repomocks.NewMockIExptRunLogRepo(d.ctrl)
+		runs.EXPECT().Update(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any()).Return(nil)
+		m.runLogRepo = runs
 		failure := errors.New("unlock")
 		d.locker.EXPECT().UnlockWithValue(gomock.Any(), "expt_run_mutex_lock:1", "2").Return(false, failure)
 		d.expectLock(true, context.Background())

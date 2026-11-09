@@ -179,7 +179,9 @@ func TestOfflineTrialSubsetFinishesWithCanonicalCounts(t *testing.T) {
 			items.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(0), int64(1), int64(3)).Return(nil, int64(0), nil)
 			factory, _ := finishRealLockerFactory(t)
 			port := &trialSubsetFinishPort{IExptRunFinishRepo: exptmysql.NewExptRunFinishDAO(provider), current: expt}
-			manager := &ExptMangerImpl{runFinishRepo: port, exptRepo: experiments, quotaRepo: quota, manualRetryLocker: factory, mutex: factory().WithHolder(legacyStaticHolderValue), runLogRepo: &completedFixtureRunRepo{event: event}, idem: idem}
+			runs := repomocks.NewMockIExptRunLogRepo(ctrl)
+			runs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{ExptID: 1, ExptRunID: 2, SpaceID: 3, Mode: int32(entity.EvaluationModeTrialRun), Status: int64(entity.ExptStatus_Processing)}, nil).AnyTimes()
+			manager := &ExptMangerImpl{runFinishRepo: port, exptRepo: experiments, quotaRepo: quota, manualRetryLocker: factory, mutex: factory().WithHolder(legacyStaticHolderValue), runLogRepo: runs, idem: idem}
 			calibration := &finishTickCalibration{ready: true}
 			trial := &ExptTrialRunExec{ExptSubmitExec: &ExptSubmitExec{manager: manager, idem: idem, configer: config, exptItemResultRepo: items, resultSvc: calibration}}
 			scheduler := &ExptSchedulerImpl{Manager: manager, Mutex: factory()}

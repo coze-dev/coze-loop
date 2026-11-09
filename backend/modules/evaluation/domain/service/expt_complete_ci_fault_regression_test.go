@@ -74,7 +74,7 @@ func TestCompleteCIFaultR02SlowFilterPersistsDone(t *testing.T) {
 	sink.beforeSave = func(rows []*entity.ExptTurnResultFilterEntity) {
 		calls++
 		require.True(t, f.server.Exists(f.key()), "filter write retains the actual item lease after nine seconds")
-		require.True(t, f.server.Exists(m.makeExptMutexLockKey(f.expt)))
+		require.False(t, f.server.Exists(m.makeExptMutexLockKey(f.expt)), "filter follows paired admission release")
 		require.Len(t, rows, 1)
 		require.Equal(t, entity.ItemRunState_Terminal, rows[0].Status)
 	}
@@ -183,13 +183,7 @@ func TestCompleteCIFaultR07CancelledFinalizeRemainsReplayable(t *testing.T) {
 					require.NotContains(t, spaceQuota.ExptID2RunTime, f.expt)
 				} else {
 					require.False(t, marked, "R07: required filter has not run, so completion cannot record Done")
-					holder, getErr := f.server.Get(m.makeExptMutexLockKey(f.expt))
-					require.NoError(t, getErr)
-					want := legacyStaticHolderValue
-					if mode == entity.EvaluationModeRetryItems {
-						want = strconv.FormatInt(f.run, 10)
-					}
-					require.Equal(t, want, holder, "filter retry retains the original admission")
+					require.False(t, f.server.Exists(m.makeExptMutexLockKey(f.expt)), "filter retry cannot restore released admission")
 					require.Contains(t, spaceQuota.ExptID2RunTime, f.expt)
 					// Exercise a standard fresh-context replay through the scheduler,
 					// so sources must be recovered from real SQL after Finalize.

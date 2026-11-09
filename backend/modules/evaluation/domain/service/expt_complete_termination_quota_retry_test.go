@@ -96,10 +96,8 @@ func (h *terminationQuotaRetryFixture) terminate(t *testing.T) {
 	require.True(t, errno.NeedMQRetry(err))
 	require.False(t, seen, "failed central release must not record Done")
 	require.True(t, spaceHeld, "item release failure must precede space admission release")
-	value, readErr := f.server.Get(h.admit)
-	require.NoError(t, readErr)
-	require.Equal(t, h.holder, value)
-	value, readErr = f.server.Get(h.reserve)
+	require.False(t, f.server.Exists(h.admit), "initial terminal SQL was paired with admission release")
+	value, readErr := f.server.Get(h.reserve)
 	require.NoError(t, readErr)
 	require.Equal(t, "rq1", value)
 }
@@ -190,7 +188,7 @@ func TestCompleteTerminationQuotaFrozenSourcePreservesNewAttempt(t *testing.T) {
 	seen, err := h.m.idem.Exist(context.Background(), h.done)
 	require.NoError(t, err)
 	require.False(t, seen)
-	require.True(t, f.server.Exists(h.admit))
+	require.False(t, f.server.Exists(h.admit), "new source cannot resurrect original released admission")
 	t.Log("REAL_MYSQL_TERMINATION_QUOTA_NEW_ATTEMPT old_request=rq1 new_request=rq2 new_reservation_preserved=true")
 }
 

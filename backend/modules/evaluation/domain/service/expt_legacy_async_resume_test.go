@@ -5,6 +5,8 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"testing"
+
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
@@ -12,7 +14,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"testing"
 )
 
 // Exact e6 event fields: e6f46429:domain/entity/event.go. The round trip below
@@ -86,7 +87,11 @@ func TestNormalAsyncMissingRequestBindsRealCurrentReference(t *testing.T) {
 			target.EXPECT().GetRecordByID(gomock.Any(), int64(9), int64(71)).Return(&entity.EvalTargetRecord{ID: 71, SpaceID: 9, ExperimentRunID: 8, ItemID: 10, ItemVersionID: 11, TurnID: 0, TargetVersionID: 31, Status: gptr.Of(status)}, nil).AnyTimes()
 			records := svcmocks.NewMockEvaluatorRecordService(ctrl)
 			records.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(81), false).Return(&entity.EvaluatorRecord{ID: 81, SpaceID: 9, ExperimentID: 7, ExperimentRunID: 8, ItemID: 10, ItemVersionID: 11, TurnID: 0, EvaluatorVersionID: 51, Alias: "a", TargetRecordID: 71, Status: entity.EvaluatorRunStatusSuccess}, nil).AnyTimes()
-			port.EXPECT().CompleteCurrentItemRun(gomock.Any(), source, gomock.Any()).Return(true, nil).AnyTimes()
+			if kind == "ref_missing" {
+				port.EXPECT().CompleteCurrentItemRun(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			} else {
+				port.EXPECT().CompleteCurrentItemRun(gomock.Any(), source, gomock.Any()).Return(true, nil).AnyTimes()
+			}
 			factory, _ := finishRealLockerFactory(t)
 			svc := &ExptItemEventEvalServiceImpl{exptItemResultRepo: &legacyWakeSourceRepo{IExptItemResultRepo: items, IExptCurrentResultRepo: port}, exptTurnResultRepo: repomocks.NewMockIExptTurnResultRepo(ctrl), manager: manager, experimentRepo: expts, itemLocker: factory, evaTargetService: target, evaluatorRecordService: records}
 			called := false

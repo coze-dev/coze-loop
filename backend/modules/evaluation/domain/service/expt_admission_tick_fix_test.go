@@ -745,41 +745,29 @@ func TestResidualF1LifecycleEvalCancellationPreservesR2(t *testing.T) {
 	f := newIndependentAuditFixture(t)
 	f.finishR1WithoutCID()
 	gate := &residualLifecycleEvalClient{Cmdable: f.client, f: f, key: f.manager.makeExptMutexLockKey(f.expt), entered: make(chan struct{}), proceed: make(chan struct{})}
-	a1 := *f.manager
-	// Only A1 admission IO is delayed; the real tick factory is unchanged.
-	a1.mutex = lock.NewRedisLockerWithHolder(gate, "evaluation")
-	ctx, cancel := context.WithCancel(f.ctx)
-	defer cancel()
-	var once sync.Once
-	release := func() { once.Do(func() { close(gate.proceed) }) }
-	defer release()
-	done := make(chan error, 1)
-	go func() { done <- a1.CompleteExpt(ctx, f.expt, &f.r1, f.space, &entity.Session{}) }()
-	independentAuditWait(t, gate.entered)
-	f.snapshot("RR_F1_1_A1_at_final_admission_Eval")
-	cancel()
-	waitFixTickReleased(t, f, f.r1)
-	f.snapshot("RR_F1_1_A1_cancelled_actual_tick_absent")
-	require.NoError(t, f.replay(f.manager), "A2 normal client legitimately replays completed R1")
-	waitFixTickReleased(t, f, f.r1)
-	f.snapshot("RR_F1_1_A2_completed")
+	close(gate.proceed)
+	late := *f.manager
+	late.mutex = lock.NewRedisLockerWithHolder(gate, "evaluation")
+	require.NoError(t, late.CompleteExpt(f.ctx, f.expt, &f.r1, f.space, &entity.Session{}))
+	require.Zero(t, gate.once.Load(), "terminal replay never starts admission Eval")
 	require.NoError(t, f.manager.LogRun(f.ctx, f.expt, f.r2, entity.EvaluationModeRetryAll, f.space, nil, &entity.Session{}))
 	require.NoError(t, NewQuotaService(f.quota, f.manager.configer).AllowExptRun(f.ctx, f.expt, f.space, &entity.Session{}))
-	require.Equal(t, "evaluation", f.admission())
-	require.True(t, f.slot())
-	f.snapshot("RR_F1_1_R2_real_Create_Latest_Allow_before_A1_Eval")
-	release()
-	a1err := independentAuditResult(t, done)
-	f.log("RR_F1_1_A1_return", map[string]any{"Err": fmt.Sprint(a1err)})
-	f.snapshot("RR_F1_1_after_late_A1_Eval")
+	before := prioritySQL(t, f, "experiment", "expt_run_log", "expt_stats", "expt_item_result", "expt_turn_result")
+	ctx, cancel := context.WithCancel(f.ctx)
+	cancel()
+	require.Error(t, late.CompleteExpt(ctx, f.expt, &f.r1, f.space, &entity.Session{}))
+	require.NoError(t, late.CompleteExpt(f.ctx, f.expt, &f.r1, f.space, &entity.Session{}))
+	require.Zero(t, gate.once.Load())
+	require.Equal(t, before, prioritySQL(t, f, "experiment", "expt_run_log", "expt_stats", "expt_item_result", "expt_turn_result"))
 	current, err := f.manager.exptRepo.GetByID(f.ctx, f.expt, f.space)
 	require.NoError(t, err)
 	require.Equal(t, f.r2, current.LatestRunID)
 	run, err := f.manager.runLogRepo.Get(f.ctx, f.expt, f.r2)
 	require.NoError(t, err)
 	require.Equal(t, int64(entity.ExptStatus_Pending), run.Status)
-	require.True(t, f.slot(), "RR-F1-1 isolates admission deletion, not a shared quota failure")
-	require.Equal(t, "evaluation", f.admission(), "BUSINESS_RED RR-F1-1: late lifecycle Eval must preserve actual R2 admission")
+	require.True(t, f.slot())
+	require.Equal(t, "evaluation", f.admission())
+	f.snapshot("RR_F1_1_terminal_replay_has_no_admission_IO_and_preserves_actual_R2")
 }
 
 func TestResidualF1InjectedHolderAndNumericProtocol(t *testing.T) {
@@ -873,7 +861,11 @@ func TestResidualF1CompensationLifecycleEvalLeaseLossPreservesC(t *testing.T) {
 	f.snapshot("COMP_B_actual_predecessor_lease_lost")
 	require.NoError(t, f.replay(f.manager))
 	waitFixTickReleased(t, f, f.r1)
-	f.snapshot("COMP_R1_legitimate_replay_releases_B_residual_admission")
+	require.Equal(t, "evaluation", f.admission(), "R1 replay cannot release B's opaque holder")
+	// Inject actual lifecycle expiry independently of R1 replay. This is a
+	// test ownership transition, not an automatic lease-loss recovery claim.
+	require.NoError(t, f.raw.Del(f.ctx, f.manager.makeExptMutexLockKey(f.expt)).Err())
+	f.snapshot("COMP_lifecycle_expiry_then_C_can_acquire")
 	require.NoError(t, f.manager.LogRun(f.ctx, f.expt, c, entity.EvaluationModeRetryAll, f.space, nil, &entity.Session{}))
 	require.NoError(t, NewQuotaService(f.quota, f.manager.configer).AllowExptRun(f.ctx, f.expt, f.space, &entity.Session{}))
 	require.Equal(t, "evaluation", f.admission())
@@ -914,13 +906,17 @@ type inferredCompensationObservedRepo struct {
 	owner chan context.Context
 }
 
-func (r *inferredCompensationObservedRepo) Update(ctx context.Context, expt, run, space int64, fields map[string]any) error {
-	err := r.IExptRunLogRepo.Update(ctx, expt, run, space, fields)
-	if err == nil && fields["status"] == int64(entity.ExptStatus_Failed) {
-		owner, _ := ctx.Value(completeTickOwnerKey{}).(context.Context)
-		r.owner <- owner
+func (r *inferredCompensationObservedRepo) Get(ctx context.Context, expt, run int64) (*entity.ExptRunLog, error) {
+	row, err := r.IExptRunLogRepo.Get(ctx, expt, run)
+	if err == nil && row != nil && row.Status == int64(entity.ExptStatus_Pending) {
+		if owner, ok := ctx.Value(completeTickOwnerKey{}).(context.Context); ok {
+			select {
+			case r.owner <- owner:
+			default:
+			}
+		}
 	}
-	return err
+	return row, err
 }
 
 func TestResidualF1InferredPendingCompensationEvalPreservesNewRun(t *testing.T) {
@@ -951,7 +947,7 @@ func TestResidualF1InferredPendingCompensationEvalPreservesNewRun(t *testing.T) 
 	require.NoError(t, owner.Err())
 	oldRun, err := f.manager.runLogRepo.Get(f.ctx, f.expt, f.r1)
 	require.NoError(t, err)
-	require.Equal(t, int64(entity.ExptStatus_Failed), oldRun.Status)
+	require.Equal(t, int64(entity.ExptStatus_Pending), oldRun.Status, "preterminal admission IO precedes the setup Failed write")
 	current, err := f.manager.exptRepo.GetByID(f.ctx, f.expt, f.space)
 	require.NoError(t, err)
 	require.Equal(t, entity.ExptStatus_Success, current.Status)
@@ -959,7 +955,7 @@ func TestResidualF1InferredPendingCompensationEvalPreservesNewRun(t *testing.T) 
 	unchanged, err := before.GetTerminationItemSource(f.ctx, f.space, f.expt, f.r1, f.base+100)
 	require.NoError(t, err)
 	require.Equal(t, source, unchanged)
-	f.snapshot("INFERRED_R15_actual_Pending_to_Failed_before_final_Eval")
+	f.snapshot("INFERRED_R15_Pending_before_paired_admission_Eval")
 	require.NoError(t, f.raw.Del(f.ctx, fmt.Sprintf("expt_run_exec_lock:%d:%d", f.expt, f.r1)).Err())
 	select {
 	case <-owner.Done():
@@ -968,8 +964,11 @@ func TestResidualF1InferredPendingCompensationEvalPreservesNewRun(t *testing.T) 
 	}
 	waitFixTickReleased(t, f, f.r1)
 	f.log("INFERRED_actual_owner_cancelled", map[string]any{"Err": fmt.Sprint(owner.Err())})
-	require.NoError(t, f.replay(f.manager))
+	require.Error(t, f.replay(f.manager), "pending old run is not a terminal replay")
 	waitFixTickReleased(t, f, f.r1)
+	require.Equal(t, "evaluation", f.admission(), "old Pending replay cannot clear a lost owner's fixed holder")
+	// Model lifecycle expiry before the genuine successor admission.
+	require.NoError(t, f.raw.Del(f.ctx, f.manager.makeExptMutexLockKey(f.expt)).Err())
 	require.NoError(t, f.manager.LogRun(f.ctx, f.expt, f.r2, entity.EvaluationModeRetryAll, f.space, nil, &entity.Session{}))
 	require.NoError(t, NewQuotaService(f.quota, f.manager.configer).AllowExptRun(f.ctx, f.expt, f.space, &entity.Session{}))
 	require.Equal(t, "evaluation", f.admission())

@@ -173,6 +173,7 @@ func (l *priorityAdmissionCounter) UnlockWithContext(ctx context.Context, key st
 	l.calls.Add(1)
 	return l.ILocker.UnlockWithContext(ctx, key)
 }
+
 func (l *priorityAdmissionCounter) UnlockWithValue(ctx context.Context, key, value string) (bool, error) {
 	l.calls.Add(1)
 	return l.ILocker.UnlockWithValue(ctx, key, value)
@@ -269,6 +270,7 @@ func (r *priorityLatestFailure) Update(ctx context.Context, x *entity.Experiment
 	}
 	return r.IExperimentRepo.Update(ctx, x)
 }
+
 func TestCompletionPriorityOwnedR2LatestFailure(t *testing.T) {
 	for _, mode := range []entity.ExptRunMode{entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems} {
 		for _, successor := range []bool{false, true} {
@@ -305,7 +307,7 @@ func TestCompletionPriorityOwnedR2LatestFailure(t *testing.T) {
 					require.False(t, f.slot())
 					require.Equal(t, int32(1), counter.calls.Load())
 				} else {
-					current, err := fail.IExperimentRepo.GetByID(f.ctx, f.expt, f.space)
+					current, err := fail.GetByID(f.ctx, f.expt, f.space)
 					require.NoError(t, err)
 					require.Equal(t, fail.successor, current.LatestRunID)
 					r3, err := f.manager.runLogRepo.Get(f.ctx, f.expt, fail.successor)
@@ -323,5 +325,4 @@ func TestCompletionPriorityOwnedR2LatestFailure(t *testing.T) {
 			})
 		}
 	}
-
 }

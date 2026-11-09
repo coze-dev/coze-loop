@@ -177,7 +177,8 @@ func TestRunFinishMySQLMissingBindingAndHalfTerminalFailClosed(t *testing.T) {
 			}
 			before := f.snapshot()
 			r, err := finishFixture(f)
-			if which == "noncurrent" {
+			switch which {
+			case "noncurrent":
 				require.NoError(t, err)
 				require.Equal(t, entity.ExptRunFinishNonCurrent, r.Disposition)
 				var old, replacementAfter model.ExptRunLog
@@ -191,7 +192,11 @@ func TestRunFinishMySQLMissingBindingAndHalfTerminalFailClosed(t *testing.T) {
 				require.NoError(t, f.conn.Where("space_id=? AND expt_run_id=?", f.space, f.run+100).Take(&replacementAfter).Error)
 				require.Equal(t, replacementBefore, replacementAfter)
 				require.Equal(t, withoutOwnRunCompletion(t, before, f), withoutOwnRunCompletion(t, f.snapshot(), f))
-			} else {
+			case "half_run":
+				require.NoError(t, err)
+				require.Equal(t, entity.ExptRunFinishPending, r.Disposition)
+				require.Equal(t, before, f.snapshot())
+			default:
 				require.Error(t, err)
 				require.Nil(t, r)
 				require.Equal(t, before, f.snapshot())
