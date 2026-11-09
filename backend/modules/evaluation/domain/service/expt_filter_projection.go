@@ -246,7 +246,17 @@ func (e ExptResultServiceImpl) projectionItemRefs(ctx context.Context, expt *ent
 			var sourceSpace int64
 			if expt.EvalConf != nil {
 				for _, set := range expt.EvalConf.EvalSetConfigs {
-					if set != nil && set.EvalSetID == ref.EvalSetID && (set.EvalSetVersionID == ref.EvalSetVersionID || expt.ExptType == entity.ExptType_Online) && (ref.EvalSetSourceSpaceID == 0 || resolveLoadSpaceID(expt.SpaceID, set.SourceSpaceID) == ref.EvalSetSourceSpaceID) {
+					if set == nil {
+						continue
+					}
+					configVersion, refVersion := set.EvalSetVersionID, ref.EvalSetVersionID
+					if configVersion == set.EvalSetID {
+						configVersion = 0
+					}
+					if refVersion == ref.EvalSetID {
+						refVersion = 0
+					}
+					if set.EvalSetID == ref.EvalSetID && (configVersion == refVersion || expt.ExptType == entity.ExptType_Online) && (ref.EvalSetSourceSpaceID == 0 || resolveLoadSpaceID(expt.SpaceID, set.SourceSpaceID) == ref.EvalSetSourceSpaceID) {
 						resolved := resolveLoadSpaceID(expt.SpaceID, set.SourceSpaceID)
 						if matched && sourceSpace != resolved {
 							return nil, projectionContextError(expt, knownKey, "item_refs", fmt.Errorf("ambiguous frozen dataset source"))
