@@ -5,8 +5,6 @@ package entity
 
 import (
 	"context"
-	"maps"
-	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/ctxcache"
 )
@@ -27,7 +25,7 @@ type ExptScheduleEvent struct {
 	InfraErrorRetryTimes int
 }
 
-type ctxTargetCalledCacheKey struct{ event *ExptItemEvalEvent }
+type ctxTargetCalledCacheKey struct{}
 
 type ctxForceNoRetryKey struct{}
 
@@ -37,21 +35,11 @@ type ctxCentralQuotaHeldKey struct{}
 // ctxCentralAdmittedExptKey 见 WithCtxCentralAdmittedExpt。
 type ctxCentralAdmittedExptKey struct{}
 
-// ExptResumeSource identifies the original invocation, independently of scheduling retries.
-type ExptResumeSource struct {
-	Kind     string
-	TurnID   int64
-	InvokeID string
-	RecordID int64
-}
-
 type ExptItemEvalEvent struct {
-	RequestID    string            `json:",omitempty"`
-	ResumeSource *ExptResumeSource `json:",omitempty"`
-	SpaceID      int64
-	ExptID       int64
-	ExptRunID    int64
-	ExptRunMode  ExptRunMode
+	SpaceID     int64
+	ExptID      int64
+	ExptRunID   int64
+	ExptRunMode ExptRunMode
 
 	EvalSetItemID               int64
 	AsyncReportTrigger          bool
@@ -62,47 +50,6 @@ type ExptItemEvalEvent struct {
 	MaxRetryTimes int
 	Ext           map[string]string
 	Session       *Session
-}
-
-// Clone preserves the event contract and copies every mutable field. Session and
-// ResumeSource contain only scalar values; Ext is the event's only collection.
-func (e *ExptItemEvalEvent) Clone() *ExptItemEvalEvent {
-	if e == nil {
-		return nil
-	}
-	cloned := *e
-	cloned.Ext = maps.Clone(e.Ext)
-	if e.Session != nil {
-		session := *e.Session
-		cloned.Session = &session
-	}
-	if e.ResumeSource != nil {
-		source := *e.ResumeSource
-		cloned.ResumeSource = &source
-	}
-	return &cloned
-}
-
-func (e *ExptItemEvalEvent) CloneWithResumeSource(kind string, recordID, turnID int64) *ExptItemEvalEvent {
-	cloned := e.Clone()
-	if cloned != nil {
-		cloned.ResumeSource = &ExptResumeSource{
-			Kind: kind, TurnID: turnID, InvokeID: strconv.FormatInt(recordID, 10), RecordID: recordID,
-		}
-	}
-	return cloned
-}
-
-// CloneForTurn keeps callback flags on the original turn, including turn zero,
-// while preserving the source that identifies this event as a continuation.
-// Events without source metadata retain the legacy callback contract.
-func (e *ExptItemEvalEvent) CloneForTurn(turnID int64) *ExptItemEvalEvent {
-	cloned := e.Clone()
-	if cloned != nil && cloned.ResumeSource != nil && cloned.ResumeSource.TurnID != turnID {
-		cloned.AsyncReportTrigger = false
-		cloned.AsyncEvaluatorReportTrigger = false
-	}
-	return cloned
 }
 
 func (e *ExptItemEvalEvent) WithCtxForceNoRetry(ctx context.Context) {
@@ -166,11 +113,11 @@ func (e *ExptItemEvalEvent) CtxCentralQuotaHeldScope(ctx context.Context) (strin
 }
 
 func (e *ExptItemEvalEvent) WithCtxTargetCalled(ctx context.Context) {
-	ctxcache.Store(ctx, ctxTargetCalledCacheKey{event: e}, struct{}{})
+	ctxcache.Store(ctx, ctxTargetCalledCacheKey{}, struct{}{})
 }
 
 func (e *ExptItemEvalEvent) CtxTargetCalled(ctx context.Context) bool {
-	_, ok := ctxcache.Get[struct{}](ctx, ctxTargetCalledCacheKey{event: e})
+	_, ok := ctxcache.Get[struct{}](ctx, ctxTargetCalledCacheKey{})
 	return ok
 }
 
@@ -182,12 +129,6 @@ func (e *ExptItemEvalEvent) IgnoreExistedEvaluatorResult(ctx context.Context) bo
 }
 
 func (e *ExptItemEvalEvent) ignoreExistedResult() bool {
-	if e == nil {
-		return false
-	}
-	if e.ResumeSource != nil || e.AsyncReportTrigger || e.AsyncEvaluatorReportTrigger {
-		return false
-	}
 	return (e.ExptRunMode == EvaluationModeRetryItems || e.ExptRunMode == EvaluationModeRetryAll) && e.RetryTimes == 0
 }
 

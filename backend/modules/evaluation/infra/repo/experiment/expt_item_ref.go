@@ -5,8 +5,6 @@ package experiment
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -52,12 +50,6 @@ func (r *ExptItemRefRepoImpl) GetByExptIDAndItemID(ctx context.Context, spaceID,
 	po, err := r.dao.GetByExptIDAndItemID(ctx, spaceID, exptID, itemID)
 	if err != nil {
 		return nil, err
-	}
-	if po != nil && po.ItemConfig != nil && len(*po.ItemConfig) > 0 {
-		var cfg *entity.ExptItemConfig
-		if err := json.Unmarshal(*po.ItemConfig, &cfg); err != nil {
-			return nil, fmt.Errorf("frozen item config: %w", err)
-		}
 	}
 	return convert.NewExptItemRefConvertor().PO2DO(po), nil
 }

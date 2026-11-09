@@ -18,7 +18,7 @@ func TestExptItemEvalEvent_WithCtxTargetCalled(t *testing.T) {
 		e := &ExptItemEvalEvent{}
 
 		e.WithCtxTargetCalled(ctx)
-		_, ok := ctxcache.Get[struct{}](ctx, ctxTargetCalledCacheKey{event: e})
+		_, ok := ctxcache.Get[struct{}](ctx, ctxTargetCalledCacheKey{})
 		assert.False(t, ok)
 	})
 
@@ -27,7 +27,7 @@ func TestExptItemEvalEvent_WithCtxTargetCalled(t *testing.T) {
 		e := &ExptItemEvalEvent{}
 
 		e.WithCtxTargetCalled(ctx)
-		_, ok := ctxcache.Get[struct{}](ctx, ctxTargetCalledCacheKey{event: e})
+		_, ok := ctxcache.Get[struct{}](ctx, ctxTargetCalledCacheKey{})
 		assert.True(t, ok)
 	})
 }

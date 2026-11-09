@@ -53,27 +53,25 @@ func TestNewExptItemDispatchRepo(t *testing.T) {
 
 func TestExptItemDispatchRepo_ClaimQuotaReserved(t *testing.T) {
 	itemIDs := []int64{1, 2, 3}
-	expected := map[int64]string{1: "", 2: "rq1", 3: "rq2"}
-	payload := []repo.ClaimedDispatchItem{{ItemID: 1, Mode: entity.EvaluationModeSubmit}, {ItemID: 3, RequestID: "rq2", Mode: entity.EvaluationModeRetryItems, RetryTimes: 3}}
 
 	t.Run("成功：实参按位置转发，返回值原样上抛", func(t *testing.T) {
 		r, dao := newDispatchRepoFixture(t)
 		dao.EXPECT().
-			ClaimQuotaReserved(gomock.Any(), testSpaceID, testExptID, testExptRunID, itemIDs, expected).
-			Return(payload, nil)
+			ClaimQuotaReserved(gomock.Any(), testSpaceID, testExptID, testExptRunID, itemIDs).
+			Return([]int64{1, 3}, nil)
 
-		got, err := r.ClaimQuotaReserved(context.Background(), testSpaceID, testExptID, testExptRunID, itemIDs, expected)
+		got, err := r.ClaimQuotaReserved(context.Background(), testSpaceID, testExptID, testExptRunID, itemIDs)
 		require.NoError(t, err)
-		assert.Equal(t, payload, got)
+		assert.Equal(t, []int64{1, 3}, got)
 	})
 
 	t.Run("失败：错误不被吞", func(t *testing.T) {
 		r, dao := newDispatchRepoFixture(t)
 		wantErr := errors.New("dao down")
-		dao.EXPECT().ClaimQuotaReserved(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		dao.EXPECT().ClaimQuotaReserved(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, wantErr)
 
-		got, err := r.ClaimQuotaReserved(context.Background(), testSpaceID, testExptID, testExptRunID, itemIDs, expected)
+		got, err := r.ClaimQuotaReserved(context.Background(), testSpaceID, testExptID, testExptRunID, itemIDs)
 		require.ErrorIs(t, err, wantErr)
 		assert.Nil(t, got)
 	})
@@ -81,15 +79,14 @@ func TestExptItemDispatchRepo_ClaimQuotaReserved(t *testing.T) {
 
 func TestExptItemDispatchRepo_ResetQuotaReserved(t *testing.T) {
 	itemIDs := []int64{7, 8}
-	expected := map[int64]string{7: "", 8: "rq1"}
 
 	t.Run("成功", func(t *testing.T) {
 		r, dao := newDispatchRepoFixture(t)
 		dao.EXPECT().
-			ResetQuotaReserved(gomock.Any(), testSpaceID, testExptID, testExptRunID, itemIDs, expected).
+			ResetQuotaReserved(gomock.Any(), testSpaceID, testExptID, testExptRunID, itemIDs).
 			Return(itemIDs, nil)
 
-		got, err := r.ResetQuotaReserved(context.Background(), testSpaceID, testExptID, testExptRunID, itemIDs, expected)
+		got, err := r.ResetQuotaReserved(context.Background(), testSpaceID, testExptID, testExptRunID, itemIDs)
 		require.NoError(t, err)
 		assert.Equal(t, itemIDs, got)
 	})
@@ -97,10 +94,10 @@ func TestExptItemDispatchRepo_ResetQuotaReserved(t *testing.T) {
 	t.Run("失败", func(t *testing.T) {
 		r, dao := newDispatchRepoFixture(t)
 		wantErr := errors.New("reset fail")
-		dao.EXPECT().ResetQuotaReserved(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		dao.EXPECT().ResetQuotaReserved(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, wantErr)
 
-		_, err := r.ResetQuotaReserved(context.Background(), testSpaceID, testExptID, testExptRunID, itemIDs, expected)
+		_, err := r.ResetQuotaReserved(context.Background(), testSpaceID, testExptID, testExptRunID, itemIDs)
 		require.ErrorIs(t, err, wantErr)
 	})
 }
@@ -141,31 +138,31 @@ func TestExptItemDispatchRepo_StartReservedItem(t *testing.T) {
 	t.Run("CAS 命中返回 true", func(t *testing.T) {
 		r, dao := newDispatchRepoFixture(t)
 		dao.EXPECT().
-			StartReservedItem(gomock.Any(), testSpaceID, testExptID, testExptRunID, testItemID, "rq1").
-			Return(repo.StartReservedItemResult{CurrentRequest: true, Started: true}, nil)
+			StartReservedItem(gomock.Any(), testSpaceID, testExptID, testExptRunID, testItemID).
+			Return(true, nil)
 
-		started, err := r.StartReservedItem(context.Background(), testSpaceID, testExptID, testExptRunID, testItemID, "rq1")
+		started, err := r.StartReservedItem(context.Background(), testSpaceID, testExptID, testExptRunID, testItemID)
 		require.NoError(t, err)
-		assert.True(t, started.Started)
+		assert.True(t, started)
 	})
 
 	t.Run("CAS 未命中返回 false 且不报错", func(t *testing.T) {
 		r, dao := newDispatchRepoFixture(t)
-		dao.EXPECT().StartReservedItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-			Return(repo.StartReservedItemResult{}, nil)
+		dao.EXPECT().StartReservedItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(false, nil)
 
-		started, err := r.StartReservedItem(context.Background(), testSpaceID, testExptID, testExptRunID, testItemID, "rq1")
+		started, err := r.StartReservedItem(context.Background(), testSpaceID, testExptID, testExptRunID, testItemID)
 		require.NoError(t, err)
-		assert.False(t, started.CurrentRequest, "CAS 未命中必须回 false —— 改写成 true 会让重复投递的 item 执行两次")
+		assert.False(t, started, "CAS 未命中必须回 false —— 改写成 true 会让重复投递的 item 执行两次")
 	})
 
 	t.Run("失败", func(t *testing.T) {
 		r, dao := newDispatchRepoFixture(t)
 		wantErr := errors.New("start fail")
-		dao.EXPECT().StartReservedItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-			Return(repo.StartReservedItemResult{}, wantErr)
+		dao.EXPECT().StartReservedItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(false, wantErr)
 
-		_, err := r.StartReservedItem(context.Background(), testSpaceID, testExptID, testExptRunID, testItemID, "rq1")
+		_, err := r.StartReservedItem(context.Background(), testSpaceID, testExptID, testExptRunID, testItemID)
 		require.ErrorIs(t, err, wantErr)
 	})
 }
@@ -174,20 +171,20 @@ func TestExptItemDispatchRepo_RequeueProcessingItem(t *testing.T) {
 	t.Run("退回成功", func(t *testing.T) {
 		r, dao := newDispatchRepoFixture(t)
 		dao.EXPECT().
-			RequeueProcessingItem(gomock.Any(), testSpaceID, testExptID, testExptRunID, testItemID, "rq1").
+			RequeueProcessingItem(gomock.Any(), testSpaceID, testExptID, testExptRunID, testItemID).
 			Return(true, nil)
 
-		requeued, err := r.RequeueProcessingItem(context.Background(), testSpaceID, testExptID, testExptRunID, testItemID, "rq1")
+		requeued, err := r.RequeueProcessingItem(context.Background(), testSpaceID, testExptID, testExptRunID, testItemID)
 		require.NoError(t, err)
 		assert.True(t, requeued)
 	})
 
 	t.Run("CAS 未命中返回 false 且不报错", func(t *testing.T) {
 		r, dao := newDispatchRepoFixture(t)
-		dao.EXPECT().RequeueProcessingItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		dao.EXPECT().RequeueProcessingItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(false, nil)
 
-		requeued, err := r.RequeueProcessingItem(context.Background(), testSpaceID, testExptID, testExptRunID, testItemID, "rq1")
+		requeued, err := r.RequeueProcessingItem(context.Background(), testSpaceID, testExptID, testExptRunID, testItemID)
 		require.NoError(t, err)
 		assert.False(t, requeued)
 	})
@@ -195,10 +192,10 @@ func TestExptItemDispatchRepo_RequeueProcessingItem(t *testing.T) {
 	t.Run("失败", func(t *testing.T) {
 		r, dao := newDispatchRepoFixture(t)
 		wantErr := errors.New("requeue fail")
-		dao.EXPECT().RequeueProcessingItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		dao.EXPECT().RequeueProcessingItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(false, wantErr)
 
-		_, err := r.RequeueProcessingItem(context.Background(), testSpaceID, testExptID, testExptRunID, testItemID, "rq1")
+		_, err := r.RequeueProcessingItem(context.Background(), testSpaceID, testExptID, testExptRunID, testItemID)
 		require.ErrorIs(t, err, wantErr)
 	})
 }
