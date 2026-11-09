@@ -115,3 +115,12 @@ func TestEvalTargetRecordConvert(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestEvalTargetRecordLegacyUsageRetainsTotalNormalization(t *testing.T) {
+	output := []byte(`{"OutputFields":{"actual_output":{"text":"answer"}},"EvaluatorUsage":{"InputTokens":17,"OutputTokens":23},"TimeConsumingMS":11}`)
+	record, err := EvalTargetRecordPO2DO(&model.TargetRecord{ID: 30, SpaceID: 1, ExperimentRunID: 4, TargetVersionID: 55, ItemID: 0, OutputData: &output})
+	assert.NoError(t, err)
+	assert.NotNil(t, record)
+	assert.Equal(t, int64(0), record.ItemID, "legacy identity must not be rewritten")
+	assert.Equal(t, &entity.EvalTargetUsage{InputTokens: 17, OutputTokens: 23, TotalTokens: 40}, record.EvalTargetOutputData.EvalTargetUsage)
+}

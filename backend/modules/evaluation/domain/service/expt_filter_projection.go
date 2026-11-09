@@ -378,6 +378,8 @@ func (e ExptResultServiceImpl) projectionEvaluators(ctx context.Context, expt *e
 
 func (e ExptResultServiceImpl) projectionTargets(ctx context.Context, expt *entity.Experiment, turns []*entity.ExptTurnResult, refs map[int64]*entity.ExptItemRef, knownKey *entity.ExptFilterKey) (map[int64]*entity.EvalTargetRecord, error) {
 	result := make(map[int64]*entity.EvalTargetRecord)
+	type runItem struct{ run, item int64 }
+	var legacyAnchors map[runItem]map[int64]int64
 	if expt.ExptType == entity.ExptType_Online {
 		return result, nil
 	}
@@ -423,15 +425,46 @@ func (e ExptResultServiceImpl) projectionTargets(ctx context.Context, expt *enti
 			if tr == nil {
 				return nil, projectionContextError(expt, knownKey, "targets", fmt.Errorf("target missing output or ownership mismatch"))
 			}
-			if result[tr.ID] != nil || record.SpaceID != space || record.ItemID != tr.ItemID || record.TurnID != tr.TurnID || record.ExperimentRunID <= 0 || record.EvalTargetOutputData == nil {
+			legacyItem := record.ItemID == 0 && tr.ExptRunID > 0 && record.ExperimentRunID == tr.ExptRunID
+			if result[tr.ID] != nil || record.SpaceID != space || (record.ItemID != tr.ItemID && !legacyItem) || record.TurnID != tr.TurnID || record.ExperimentRunID <= 0 || record.EvalTargetOutputData == nil {
 				return nil, projectionError(expt.SpaceID, expt.ID, tr.ItemID, tr.TurnID, "targets", fmt.Errorf("target missing output or ownership mismatch"))
 			}
 			version := expt.TargetVersionID
 			if ref := refs[tr.ItemID]; ref != nil && ref.ItemConfig != nil && ref.ItemConfig.EvalTargetConf != nil {
 				version = ref.ItemConfig.EvalTargetConf.TargetVersionID
 			}
+			if legacyItem && version <= 0 {
+				return nil, projectionError(expt.SpaceID, expt.ID, tr.ItemID, tr.TurnID, "targets", fmt.Errorf("legacy target item metadata requires a frozen target version"))
+			}
 			if version > 0 && record.TargetVersionID != version {
 				return nil, projectionError(expt.SpaceID, expt.ID, tr.ItemID, tr.TurnID, "targets", fmt.Errorf("target version mismatch"))
+			}
+			if legacyItem {
+				key := runItem{tr.ExptRunID, tr.ItemID}
+				anchors, loaded := legacyAnchors[key]
+				if !loaded {
+					logs, err := e.ExptTurnResultRepo.GetItemTurnRunLogs(ctx, expt.ID, tr.ExptRunID, tr.ItemID, expt.SpaceID)
+					if err != nil {
+						return nil, projectionError(expt.SpaceID, expt.ID, tr.ItemID, tr.TurnID, "target_runlog", err)
+					}
+					anchors = make(map[int64]int64, len(logs))
+					for _, log := range logs {
+						if log == nil || log.ID <= 0 || log.SpaceID != expt.SpaceID || log.ExptID != expt.ID || log.ExptRunID != tr.ExptRunID || log.ItemID != tr.ItemID || log.TurnID < 0 {
+							return nil, projectionError(expt.SpaceID, expt.ID, tr.ItemID, tr.TurnID, "target_runlog", fmt.Errorf("invalid legacy target runlog ownership"))
+						}
+						if _, duplicate := anchors[log.TurnID]; duplicate {
+							return nil, projectionError(expt.SpaceID, expt.ID, tr.ItemID, tr.TurnID, "target_runlog", fmt.Errorf("ambiguous legacy target runlog"))
+						}
+						anchors[log.TurnID] = log.TargetResultID
+					}
+					if legacyAnchors == nil {
+						legacyAnchors = make(map[runItem]map[int64]int64)
+					}
+					legacyAnchors[key] = anchors
+				}
+				if anchors[tr.TurnID] != record.ID {
+					return nil, projectionError(expt.SpaceID, expt.ID, tr.ItemID, tr.TurnID, "target_runlog", fmt.Errorf("legacy target does not match current item/turn runlog"))
+				}
 			}
 			result[tr.ID] = record
 		}
