@@ -266,3 +266,33 @@ func TestCallTarget_ExtPassthroughDoesNotMutateCallerMap(t *testing.T) {
 	assert.NotContains(t, etec.Ext, consts.TargetExecuteExtRunConfKey)
 	assert.NotContains(t, etec.Ext, consts.TargetExecuteExtRunModeConfigKey)
 }
+
+func TestCallTarget_PassesRunnerEnvsSnapshot(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		envs map[string]string
+	}{
+		{name: "configured", envs: map[string]string{"APP_KEY": "ciphertext"}},
+		{name: "empty"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+			mockTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+			svc := &DefaultExptTurnEvaluationImpl{metric: mockMetric, evalTargetService: mockTargetSvc}
+			etec := newRunConfEtec(nil, nil)
+			etec.Expt.EvalConf.RunnerEnvs = tc.envs
+
+			mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), false)
+			mockTargetSvc.EXPECT().ExecuteTarget(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ context.Context, _, _, _ int64, param *entity.ExecuteTargetCtx, _ *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
+					assert.Equal(t, tc.envs, param.RunnerEnvs)
+					assert.True(t, param.RunnerEnvsResolved)
+					return &entity.EvalTargetRecord{ID: 1}, nil
+				})
+
+			_, err := svc.callTarget(context.Background(), etec, nil, 123)
+			require.NoError(t, err)
+		})
+	}
+}

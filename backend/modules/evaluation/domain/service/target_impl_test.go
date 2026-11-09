@@ -408,6 +408,8 @@ func TestEvalTargetServiceImpl_asyncExecuteTarget(t *testing.T) {
 						if param.ExptCreatedBy != "experiment_creator" {
 							return 0, "", nil, errorx.NewByCode(errno.CommonInvalidParamCode)
 						}
+						assert.Equal(t, map[string]string{"APP_KEY": "ciphertext"}, param.RunnerEnvs)
+						assert.True(t, param.RunnerEnvsResolved)
 						return 999, "callee", nil, nil
 					})
 				deps.repo.EXPECT().GetEvalTargetVersion(ctx, target.SpaceID, target.EvalTargetVersion.ID).Return(target, nil)
@@ -469,7 +471,13 @@ func TestEvalTargetServiceImpl_asyncExecuteTarget(t *testing.T) {
 			}
 
 			record, callee, err := svc.asyncExecuteTarget(ctx, target.SpaceID, target,
-				&entity.ExecuteTargetCtx{ItemID: 1, TurnID: 2, ExptCreatedBy: "experiment_creator"}, input)
+				&entity.ExecuteTargetCtx{
+					ItemID:             1,
+					TurnID:             2,
+					ExptCreatedBy:      "experiment_creator",
+					RunnerEnvs:         map[string]string{"APP_KEY": "ciphertext"},
+					RunnerEnvsResolved: true,
+				}, input)
 
 			if tt.wantErr {
 				require.Error(t, err)
@@ -519,6 +527,8 @@ func TestEvalTargetServiceImpl_ExecuteTarget(t *testing.T) {
 					assert.Equal(t, evalTarget.EvalTargetVersion.ID, param.VersionID)
 					assert.Equal(t, evalTarget.SourceTargetID, param.SourceTargetID)
 					assert.Equal(t, evalTarget.EvalTargetType, param.TargetType)
+					assert.Equal(t, map[string]string{"APP_KEY": "ciphertext"}, param.RunnerEnvs)
+					assert.True(t, param.RunnerEnvsResolved)
 					return outputData, entity.EvalTargetRunStatusSuccess, nil
 				})
 				return prepareResult{
@@ -615,9 +625,11 @@ func TestEvalTargetServiceImpl_ExecuteTarget(t *testing.T) {
 			}
 
 			param := &entity.ExecuteTargetCtx{
-				ExperimentRunID: gptr.Of(int64(555)),
-				ItemID:          777,
-				TurnID:          888,
+				ExperimentRunID:    gptr.Of(int64(555)),
+				ItemID:             777,
+				TurnID:             888,
+				RunnerEnvs:         map[string]string{"APP_KEY": "ciphertext"},
+				RunnerEnvsResolved: true,
 			}
 
 			deps.repo.EXPECT().GetEvalTargetVersion(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.ID).Return(evalTarget, nil)

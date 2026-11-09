@@ -199,6 +199,9 @@ type ExecuteTargetCtx struct {
 	ExptSpaceID int64
 	// ExptCreatedBy is the persisted experiment creator, independent of the async caller.
 	ExptCreatedBy string
+	// RunnerEnvs is the encrypted experiment snapshot; Resolved distinguishes an empty snapshot from a missing propagation.
+	RunnerEnvs         map[string]string `json:"-"`
+	RunnerEnvsResolved bool              `json:"-"`
 }
 
 type TargetTrajectoryConf struct {

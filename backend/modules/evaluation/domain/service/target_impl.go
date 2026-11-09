@@ -512,6 +512,8 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 		EvalSetItemID:       gptr.Of(param.ItemID),
 		EvalSetTurnID:       gptr.Of(param.TurnID),
 		ExptCreatedBy:       param.ExptCreatedBy,
+		RunnerEnvs:          param.RunnerEnvs,
+		RunnerEnvsResolved:  param.RunnerEnvsResolved,
 	})
 	if err != nil {
 		return nil, err
@@ -631,8 +633,10 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		ItemMeta:                param.ItemMeta,
 		ExptGroupKey:            param.ExptGroupKey,
 		// 透传发起实验的空间。注意这里**不能**用 spaceID —— 跨空间共享时它已是对象来源空间。
-		ExptSpaceID:   param.ExptSpaceID,
-		ExptCreatedBy: param.ExptCreatedBy,
+		ExptSpaceID:        param.ExptSpaceID,
+		ExptCreatedBy:      param.ExptCreatedBy,
+		RunnerEnvs:         param.RunnerEnvs,
+		RunnerEnvsResolved: param.RunnerEnvsResolved,
 	})
 	if execErr != nil {
 		lifecycle.abort(ctx, execErr)
