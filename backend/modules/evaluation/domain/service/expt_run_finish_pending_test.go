@@ -100,7 +100,7 @@ func newPendingRunFixture(t *testing.T, initMode entity.ExptRunMode) *pendingRun
 		}
 		return nil
 	}).AnyTimes()
-	manager := &ExptMangerImpl{configer: config, mutex: factory().WithHolder(legacyStaticHolderValue), manualRetryLocker: factory, runLogRepo: runs, exptRepo: experiments, itemResultRepo: f.itemRepo(), itemRefRepo: exptrepo.NewExptItemRefRepo(exptmysql.NewExptItemRefDAO(f.provider)), turnResultRepo: f.turnRepo(), statsRepo: stats, runFinishRepo: exptrepo.NewExptRunFinishRepo(f.provider), manualRetryRepo: exptrepo.NewExptManualRetryRepo(f.provider, ids), mtr: metric, idgenerator: ids, idem: idem, centralGuard: component.NewNoopCentralReservationGuard(), currentRunWaker: component.NewNoopCurrentRunSchedulerWaker(), quotaRepo: quota, exptResultService: cleanupResult}
+	manager := &ExptMangerImpl{configer: config, mutex: factory().WithHolder(legacyStaticHolderValue), manualRetryLocker: factory, runLogRepo: runs, exptRepo: experiments, itemResultRepo: f.itemRepo(), itemRefRepo: exptrepo.NewExptItemRefRepo(exptmysql.NewExptItemRefDAO(f.provider)), turnResultRepo: f.turnRepo(), statsRepo: stats, runFinishRepo: exptrepo.NewExptRunFinishRepo(f.provider), manualRetryRepo: exptrepo.NewExptManualRetryRepoWithPending(f.provider, ids, client), mtr: metric, idgenerator: ids, idem: idem, centralGuard: component.NewNoopCentralReservationGuard(), currentRunWaker: component.NewNoopCurrentRunSchedulerWaker(), quotaRepo: quota, exptResultService: cleanupResult}
 	session := &entity.Session{UserID: "pending-run-test"}
 	if initMode == entity.EvaluationModeRetryItems {
 		run, joined, err := manager.LogRetryItemsRun(ctx, f.expt, initMode, f.space, []int64{f.item}, session)
@@ -236,7 +236,7 @@ func TestRunFinishPendingRealAdmissionPublicationAndFourModes(t *testing.T) {
 			f := p.f
 			p.publishSuccess(t, false)
 			req := &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, Mode: entity.EvaluationModeRetryItems, ItemIDs: []int64{f.item}, Session: p.event.Session}
-			receipt, err := p.manager.RetryInCurrentRun(context.Background(), req)
+			receipt, err := retryThroughRealTickForTest(t, p.manager, context.Background(), req)
 			require.NoError(t, err)
 			require.Equal(t, int32(1), receipt.AcceptedCount)
 			currentExpt, err := p.manager.exptRepo.GetByID(context.Background(), f.expt, f.space)
@@ -284,13 +284,13 @@ func TestRunFinishPendingRealAdmissionPublicationAndFourModes(t *testing.T) {
 			require.Equal(t, int32(1), p.notifications.Load(), "real idem must suppress normal AlreadyFinished duplicates")
 			require.Equal(t, int32(1), p.resources.Load(), "completed cleanup replay must not release shared quota again")
 			require.Equal(t, after, f.snapshot(), "AlreadyFinished cannot recalculate stats or endAt")
-			again, err := p.manager.RetryInCurrentRun(context.Background(), req)
+			again, err := retryThroughRealTickForTest(t, p.manager, context.Background(), req)
 			require.ErrorContains(t, err, "run_finished")
 			require.Nil(t, again)
-			require.Empty(t, receipt.RequestID)
+			require.Equal(t, attempt.RequestID, receipt.RequestID)
 			require.Positive(t, receipt.SnapshotAtMS)
 			require.Equal(t, after, f.snapshot())
-			_, err = p.manager.RetryInCurrentRun(context.Background(), req)
+			_, err = retryThroughRealTickForTest(t, p.manager, context.Background(), req)
 			require.ErrorContains(t, err, "run_finished")
 			require.Equal(t, after, f.snapshot())
 		})

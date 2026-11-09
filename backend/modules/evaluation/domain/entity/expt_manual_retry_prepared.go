@@ -3,6 +3,8 @@
 
 package entity
 
+import "context"
+
 type PreparedRetryItem struct {
 	PreviousRunID     int64
 	PreviousRequestID string
@@ -56,6 +58,9 @@ type RequeueTerminalItemsRequest struct {
 	SnapshotAtMS  int64
 	Items         []*PreparedRetryItem
 	RejectedItems []*ManualRetryRejectedItem
+	// These callbacks share the existing experiment/run row locks with cancellation.
+	BeforeRequeue func(context.Context) error                               `json:"-"`
+	BeforeCommit  func(context.Context, *ManualRetryReceipt, []int64) error `json:"-"`
 }
 
 type RetryInCurrentRunRequest struct {

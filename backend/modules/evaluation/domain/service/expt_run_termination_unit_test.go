@@ -1137,7 +1137,7 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 	t.Run("repo_missing", func(t *testing.T) {
 		d := newTermUnitDeps(t)
 		m := d.manager()
-		_, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
+		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), manualRetryUnitRequest())
 		require.Error(t, err)
 	})
 	// 开关门禁删除后，configer nil 与存量关闭配置都必须照常准入，只在 run 锁竞争处被拒绝。
@@ -1154,7 +1154,7 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 					// 存量 TCC 里残留旧开关 key 时同样不得再被读取。
 					config.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Times(0)
 				}
-				_, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
+				_, err := retryThroughOriginalTickForTest(t, m, context.Background(), manualRetryUnitRequest())
 				require.ErrorContains(t, err, "retry_busy")
 			})
 		}
@@ -1166,7 +1166,7 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
-		_, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
+		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), manualRetryUnitRequest())
 		require.Error(t, err)
 	})
 	t.Run("run_finished", func(t *testing.T) {
@@ -1178,7 +1178,7 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
 		m.runLogRepo = runs
-		_, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
+		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), manualRetryUnitRequest())
 		require.Error(t, err)
 	})
 	t.Run("prepare_error", func(t *testing.T) {
@@ -1187,7 +1187,7 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("scan"))
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
-		_, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
+		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), manualRetryUnitRequest())
 		require.Error(t, err)
 	})
 	t.Run("happy_path_empty_plan", func(t *testing.T) {
@@ -1202,7 +1202,7 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
 		m.runLogRepo = runs
-		got, err := m.RetryInCurrentRun(context.Background(), manualRetryUnitRequest())
+		got, err := retryThroughOriginalTickForTest(t, m, context.Background(), manualRetryUnitRequest())
 		require.NoError(t, err)
 		require.Same(t, receipt, got)
 	})
@@ -1587,7 +1587,7 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 		m.manualRetryRepo = retryRepo
 		request := req()
 		request.ExpectedRunID = 0
-		_, err := m.RetryInCurrentRun(context.Background(), request)
+		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), request)
 		require.ErrorIs(t, err, cause)
 	})
 	t.Run("locker_nil", func(t *testing.T) {
@@ -1597,7 +1597,7 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
 		m.manualRetryLocker = nil
-		_, err := m.RetryInCurrentRun(context.Background(), req())
+		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), req())
 		require.Error(t, err)
 	})
 	t.Run("run_missing", func(t *testing.T) {
@@ -1609,7 +1609,7 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
 		m.runLogRepo = runs
-		_, err := m.RetryInCurrentRun(context.Background(), req())
+		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), req())
 		require.Error(t, err)
 	})
 	t.Run("run_mismatch", func(t *testing.T) {
@@ -1621,7 +1621,7 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
 		m.runLogRepo = runs
-		_, err := m.RetryInCurrentRun(context.Background(), req())
+		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), req())
 		require.Error(t, err)
 	})
 	t.Run("preflight_error", func(t *testing.T) {
@@ -1634,7 +1634,7 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
 		m.runLogRepo = runs
-		_, err := m.RetryInCurrentRun(context.Background(), req())
+		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), req())
 		require.Error(t, err)
 	})
 	t.Run("requeue_error", func(t *testing.T) {
@@ -1648,7 +1648,7 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
 		m.runLogRepo = runs
-		_, err := m.RetryInCurrentRun(context.Background(), req())
+		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), req())
 		require.Error(t, err)
 	})
 }

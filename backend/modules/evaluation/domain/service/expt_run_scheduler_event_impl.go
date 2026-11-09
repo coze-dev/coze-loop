@@ -468,6 +468,11 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	if err != nil {
 		return err
 	}
+	if manager, ok := e.Manager.(*ExptMangerImpl); ok {
+		if err := manager.consumePendingCurrentRetry(ctx, event); err != nil {
+			return err
+		}
+	}
 
 	err = mode.ScheduleStart(ctx, event, exptDetail)
 	if err != nil {

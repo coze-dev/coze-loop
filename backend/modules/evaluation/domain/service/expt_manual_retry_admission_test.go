@@ -42,10 +42,10 @@ func TestManualRetryAdmissionUsesLatestRunID(t *testing.T) {
 			req := admissionRequest()
 			req.ExpectedRunID = 0
 			expt := &entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}
-			expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(expt, nil).Times(6)
+			expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(expt, nil).Times(4)
 			items.EXPECT().BatchGet(gomock.Any(), int64(9), int64(7), []int64{11}).Return([]*entity.ExptItemResult{{ItemID: 11, Status: status}}, nil).Times(2)
-			mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:7:8", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil).Times(2)
-			runs.EXPECT().Get(gomock.Any(), int64(7), int64(8)).Return(&entity.ExptRunLog{SpaceID: 9, ExptID: 7, ExptRunID: 8, Status: int64(entity.ExptStatus_Processing)}, nil).Times(2)
+			mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:7:8", 5*time.Second, 5*time.Minute).Return(true, context.Background(), func() {}, nil).Times(0)
+			runs.EXPECT().Get(gomock.Any(), int64(7), int64(8)).Return(&entity.ExptRunLog{SpaceID: 9, ExptID: 7, ExptRunID: 8, Status: int64(entity.ExptStatus_Processing)}, nil).Times(0)
 			var commit *entity.RequeueTerminalItemsRequest
 			var operationIDs []string
 			port.EXPECT().PreflightTerminalItems(gomock.Any(), gomock.Cond(func(value any) bool {
@@ -66,7 +66,7 @@ func TestManualRetryAdmissionUsesLatestRunID(t *testing.T) {
 			}).Times(2)
 			manager := &ExptMangerImpl{manualRetryRepo: port, exptRepo: expts, itemResultRepo: items, runLogRepo: runs, manualRetryLocker: func() lock.ILocker { return mutex }}
 			for i := 0; i < 2; i++ {
-				got, err := manager.RetryInCurrentRun(context.Background(), req)
+				got, err := retryThroughOriginalTickForTest(t, manager, context.Background(), req)
 				require.NoError(t, err)
 				require.Equal(t, int64(8), got.RunID)
 				require.Empty(t, got.RequestID)
@@ -101,7 +101,7 @@ func TestManualRetryAdmissionLatestRunUnavailable(t *testing.T) {
 			}
 			expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(current, cause)
 			manager := &ExptMangerImpl{manualRetryRepo: port, exptRepo: expts}
-			receipt, err := manager.RetryInCurrentRun(context.Background(), req)
+			receipt, err := retryThroughOriginalTickForTest(t, manager, context.Background(), req)
 			require.Nil(t, receipt)
 			require.Zero(t, req.ExpectedRunID)
 			if cause != nil {
@@ -129,7 +129,7 @@ func TestManualRetryAdmissionHistoricalReceiptCannotBypassDependencies(t *testin
 	manager := &ExptMangerImpl{manualRetryRepo: port, exptRepo: expts}
 	for _, ext := range []map[string]string{nil, {"business": "changed"}} {
 		req.Ext = ext
-		got, err := manager.RetryInCurrentRun(context.Background(), req)
+		got, err := retryThroughOriginalTickForTest(t, manager, context.Background(), req)
 		require.Nil(t, got)
 		require.ErrorIs(t, err, cause)
 		require.Empty(t, port.calls)
@@ -203,7 +203,7 @@ func TestManualRetryAdmissionGuards(t *testing.T) {
 				expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(got, nil)
 			}
 			if kind == "run_busy" || kind == "lost_run_lock" {
-				items.EXPECT().BatchGet(gomock.Any(), int64(9), int64(7), []int64{11}).Return(nil, nil)
+				expectAdmissionTerminalCandidate(ctrl, manager, items, got)
 				lockCtx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 				if kind == "lost_run_lock" {
@@ -211,7 +211,7 @@ func TestManualRetryAdmissionGuards(t *testing.T) {
 				}
 				mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:7:8", gomock.Any(), gomock.Any()).Return(kind != "run_busy", lockCtx, func() {}, nil)
 			}
-			receipt, err := manager.RetryInCurrentRun(context.Background(), req)
+			receipt, err := retryThroughOriginalTickForTest(t, manager, context.Background(), req)
 			require.Error(t, err)
 			require.Nil(t, receipt)
 			if kind == "run_busy" {
@@ -260,10 +260,11 @@ func TestManualRetryAdmissionIgnoresLegacyRunningRetryConfig(t *testing.T) {
 				config.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Times(0)
 				manager.configer = config
 			}
-			expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(&entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil)
-			items.EXPECT().BatchGet(gomock.Any(), int64(9), int64(7), []int64{11}).Return(nil, nil)
+			expt := &entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}
+			expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(expt, nil)
+			expectAdmissionTerminalCandidate(ctrl, manager, items, expt)
 			mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:7:8", gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
-			receipt, err := manager.RetryInCurrentRun(context.Background(), admissionRequest())
+			receipt, err := retryThroughOriginalTickForTest(t, manager, context.Background(), admissionRequest())
 			require.Nil(t, receipt)
 			// 抵达 run 锁说明门禁已放行，只剩并发占用这一正常拒绝原因。
 			require.ErrorContains(t, err, "retry_busy")
@@ -408,13 +409,15 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 			if kind == "lost_during_preflight" {
 				port.afterPreflight = runCancel
 			}
-			mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:7:8", 5*time.Second, 5*time.Minute).DoAndReturn(func(context.Context, string, time.Duration, time.Duration) (bool, context.Context, func(), error) {
-				if kind == "historical_receipt" {
-					port.chunks = []entity.ExptRunLogItems{{ManualRetryReceipt: &entity.ManualRetryReceipt{RequestID: "old-operation", PayloadHash: "old-payload", AcceptedCount: 0, SnapshotAtMS: 77}}}
-				}
-				return true, runCtx, runCancel, nil
-			})
-			{
+			if kind != "preflight_capacity" && kind != "preflight_source_changed" {
+				mutex.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:7:8", 5*time.Second, 5*time.Minute).DoAndReturn(func(context.Context, string, time.Duration, time.Duration) (bool, context.Context, func(), error) {
+					if kind == "historical_receipt" {
+						port.chunks = []entity.ExptRunLogItems{{ManualRetryReceipt: &entity.ManualRetryReceipt{RequestID: "old-operation", PayloadHash: "old-payload", AcceptedCount: 0, SnapshotAtMS: 77}}}
+					}
+					return true, runCtx, runCancel, nil
+				})
+			}
+			if kind != "preflight_capacity" && kind != "preflight_source_changed" && kind != "lost_during_preflight" {
 				expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).DoAndReturn(func(context.Context, int64, int64) (*entity.Experiment, error) {
 					if kind == "lock_state_changed" {
 						copy := *expt
@@ -424,7 +427,7 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 					return expt, nil
 				})
 			}
-			if kind != "lock_state_changed" {
+			if kind != "lock_state_changed" && kind != "preflight_capacity" && kind != "preflight_source_changed" && kind != "lost_during_preflight" {
 				runs.EXPECT().Get(gomock.Any(), int64(7), int64(8)).Return(run, nil)
 				itemCtx, itemCancel := context.WithCancel(runCtx)
 				defer itemCancel()
@@ -472,7 +475,7 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 			publisher.EXPECT().PublishExptScheduleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			callerCtx, callerCancel := context.WithCancel(context.Background())
 			defer callerCancel()
-			got, err := manager.RetryInCurrentRun(callerCtx, req)
+			got, err := retryThroughOriginalTickForTest(t, manager, callerCtx, req)
 			require.NoError(t, callerCtx.Err())
 			if failures {
 				require.Error(t, err)
@@ -481,7 +484,11 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			require.Empty(t, got.RequestID)
+			if kind == "preflight_source_changed" {
+				require.Empty(t, got.RequestID)
+			} else {
+				require.Equal(t, port.operationID, got.RequestID)
+			}
 			require.Empty(t, got.PayloadHash)
 			_, parseErr := uuid.Parse(port.operationID)
 			require.NoError(t, parseErr)
@@ -522,7 +529,7 @@ func TestManualRetryAdmissionCommitOrdering(t *testing.T) {
 				before := len(port.calls)
 				for _, ext := range []map[string]string{req.Ext, {"business": "changed"}} {
 					req.Ext = ext
-					again, err := manager.RetryInCurrentRun(context.Background(), req)
+					again, err := retryThroughOriginalTickForTest(t, manager, context.Background(), req)
 					want := "run_finished"
 					if kind == "receipt_after_replacement" {
 						want = "run_conflict"
@@ -544,12 +551,13 @@ func TestManualRetryAdmissionUsesIndependentLocker(t *testing.T) {
 	owned := lockmocks.NewMockILocker(ctrl)
 	manager := &ExptMangerImpl{manualRetryRepo: &admissionReceiptRepo{}, exptRepo: expts, itemResultRepo: items, mutex: shared}
 	req := admissionRequest()
-	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(&entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}, nil)
-	items.EXPECT().BatchGet(gomock.Any(), int64(9), int64(7), []int64{11}).Return(nil, nil)
+	expt := &entity.Experiment{ID: 7, SpaceID: 9, LatestRunID: 8, Status: entity.ExptStatus_Processing, ExptType: entity.ExptType_Offline}
+	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(expt, nil)
+	expectAdmissionTerminalCandidate(ctrl, manager, items, expt)
 	owned.EXPECT().LockWithRenew(gomock.Any(), "expt_run_exec_lock:7:8", gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
 	// Use a factory so an old renewal can never share ownership with the next admission.
 	manager.manualRetryLocker = func() lock.ILocker { return owned }
-	_, err := manager.RetryInCurrentRun(context.Background(), req)
+	_, err := retryThroughOriginalTickForTest(t, manager, context.Background(), req)
 	require.ErrorContains(t, err, "retry_busy")
 }
 
@@ -608,11 +616,11 @@ func TestManualRetryDependencyErrorRetainsCause(t *testing.T) {
 	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(nil, cause)
 	expts.EXPECT().GetByID(gomock.Any(), int64(7), int64(9)).Return(nil, nil)
 	manager := &ExptMangerImpl{manualRetryRepo: &admissionReceiptRepo{}, exptRepo: expts}
-	_, err := manager.RetryInCurrentRun(context.Background(), admissionRequest())
+	_, err := retryThroughOriginalTickForTest(t, manager, context.Background(), admissionRequest())
 	require.Same(t, cause, err)
 	_, ok := kerrors.FromBizStatusError(err)
 	require.False(t, ok)
-	_, err = manager.RetryInCurrentRun(context.Background(), admissionRequest())
+	_, err = retryThroughOriginalTickForTest(t, manager, context.Background(), admissionRequest())
 	require.ErrorContains(t, err, "experiment missing")
 	_, ok = kerrors.FromBizStatusError(err)
 	require.False(t, ok)

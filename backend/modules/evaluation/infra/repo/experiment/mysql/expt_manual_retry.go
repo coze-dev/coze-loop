@@ -135,6 +135,11 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 		if expt.SpaceID != request.SpaceID || run.SpaceID != request.SpaceID {
 			return errorx.NewByCode(errno.ManualRetryRunConflictCode)
 		}
+		if request.BeforeRequeue != nil {
+			if err := request.BeforeRequeue(ctx); err != nil {
+				return err
+			}
+		}
 		chunks, err := decodeManualRetryRunItems(run)
 		if err != nil {
 			return err
@@ -266,10 +271,19 @@ func (d *ExptManualRetryDAOImpl) RequeueTerminalItems(ctx context.Context, reque
 				}
 			}
 		}
-		if len(fields) == 0 {
-			return nil
+		if len(fields) > 0 {
+			if err := NewExptRunLogDAO(d.provider).Update(ctx, request.ExptID, request.RunID, request.SpaceID, fields, opts...); err != nil {
+				return err
+			}
 		}
-		return NewExptRunLogDAO(d.provider).Update(ctx, request.ExptID, request.RunID, request.SpaceID, fields, opts...)
+		if request.BeforeCommit != nil {
+			ids := make([]int64, 0, len(accepted))
+			for _, item := range accepted {
+				ids = append(ids, item.item.ItemID)
+			}
+			return request.BeforeCommit(ctx, receipt, ids)
+		}
+		return nil
 	}, db.WithMaster())
 	if err != nil {
 		return nil, err
