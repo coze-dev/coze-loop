@@ -118,7 +118,7 @@ func (e ExptResultServiceImpl) BuildExptFilterProjection(ctx context.Context, sp
 	for _, tr := range turns {
 		turnIDs = append(turnIDs, tr.ID)
 	}
-	records, err := e.projectionEvaluators(ctx, expt, turnIDs, turnByID, evaluatorMapping, knownKey)
+	records, err := e.projectionEvaluators(ctx, expt, turnIDs, turnByID, refs, evaluatorMapping, knownKey)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +183,9 @@ func (e ExptResultServiceImpl) BuildExptFilterProjection(ctx context.Context, sp
 				if !projectionFinite(*score) {
 					return nil, projectionError(spaceID, exptID, tr.ItemID, tr.TurnID, "evaluator_score", fmt.Errorf("nonfinite score"))
 				}
-				row.EvaluatorScore[evaluatorMapping[instance]] = *score
+				if key := evaluatorMapping[instance]; key != "" {
+					row.EvaluatorScore[key] = *score
+				}
 			}
 			row.EvaluatorScoreCorrected = row.EvaluatorScoreCorrected || record.GetCorrected()
 		}
@@ -311,7 +313,25 @@ func projectionMappings(expt *entity.Experiment, mappings []*entity.ExptTurnResu
 	return evaluators, annotations, nil
 }
 
-func (e ExptResultServiceImpl) projectionEvaluators(ctx context.Context, expt *entity.Experiment, turnIDs []int64, turns map[int64]*entity.ExptTurnResult, mappings map[string]string, knownKey *entity.ExptFilterKey) (map[int64]map[string]*entity.EvaluatorRecord, error) {
+func projectionUnconfiguredLegacyEvaluator(expt *entity.Experiment, item *entity.ExptItemRef, ref *entity.ExptTurnEvaluatorResultRef, mappings map[string]string) bool {
+	if expt.EvalSetSourceType != entity.ExptEvalSetSourceType_MultiSetConfig || expt.EvalConf == nil || item == nil || item.ItemConfig == nil || len(item.ItemConfig.EvaluatorConfs) != 0 || ref.Alias != "" {
+		return false
+	}
+	// Historical MultiSet execution could run the global evaluator union for an unconfigured item.
+	for _, set := range expt.EvalConf.EvalSetConfigs {
+		if set == nil {
+			continue
+		}
+		for _, conf := range set.EvaluatorConfs {
+			if conf != nil && conf.EvaluatorVersionID == ref.EvaluatorVersionID && conf.Alias != "" && mappings[entity.EncodeEvaluatorInstanceKey(conf.EvaluatorVersionID, conf.Alias)] != "" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (e ExptResultServiceImpl) projectionEvaluators(ctx context.Context, expt *entity.Experiment, turnIDs []int64, turns map[int64]*entity.ExptTurnResult, itemRefs map[int64]*entity.ExptItemRef, mappings map[string]string, knownKey *entity.ExptFilterKey) (map[int64]map[string]*entity.EvaluatorRecord, error) {
 	refs, err := e.ExptTurnResultRepo.BatchGetTurnEvaluatorResultRef(ctx, expt.SpaceID, turnIDs)
 	if err != nil {
 		return nil, projectionContextError(expt, knownKey, "evaluator_refs", err)
@@ -334,7 +354,8 @@ func (e ExptResultServiceImpl) projectionEvaluators(ctx context.Context, expt *e
 		if instances[ref.ExptTurnResultID] == nil {
 			instances[ref.ExptTurnResultID] = make(map[string]bool)
 		}
-		if instances[ref.ExptTurnResultID][key] || !inline && mappings[key] == "" {
+		missingMapping := !inline && mappings[key] == "" && !projectionUnconfiguredLegacyEvaluator(expt, itemRefs[turns[ref.ExptTurnResultID].ItemID], ref, mappings)
+		if instances[ref.ExptTurnResultID][key] || missingMapping {
 			return nil, projectionError(expt.SpaceID, expt.ID, turns[ref.ExptTurnResultID].ItemID, turns[ref.ExptTurnResultID].TurnID, "evaluator_refs", fmt.Errorf("duplicate instance or missing mapping for %s", key))
 		}
 		instances[ref.ExptTurnResultID][key] = true
