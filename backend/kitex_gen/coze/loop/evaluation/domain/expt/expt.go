@@ -4504,6 +4504,8 @@ type Experiment struct {
 	// 从 experiment.eval_conf 回显；缺省表示普通评测。
 	VerificationConfig *VerificationConfig `thrift:"verification_config,119,optional" frugal:"119,optional,VerificationConfig" form:"verification_config" json:"verification_config,omitempty" query:"verification_config"`
 	LatestRunID        *int64              `thrift:"latest_run_id,120,optional" frugal:"120,optional,i64" json:"latest_run_id,omitempty" form:"latest_run_id" query:"latest_run_id"`
+	// 沙箱运行环境变量回显：key 明文，value 由商业层掩码；开源仓原样带出
+	RunnerEnvs map[string]string `thrift:"runner_envs,121,optional" frugal:"121,optional,map<string:string>" form:"runner_envs" json:"runner_envs,omitempty" query:"runner_envs"`
 }
 
 func NewExperiment() *Experiment {
@@ -5136,6 +5138,18 @@ func (p *Experiment) GetLatestRunID() (v int64) {
 	}
 	return *p.LatestRunID
 }
+
+var Experiment_RunnerEnvs_DEFAULT map[string]string
+
+func (p *Experiment) GetRunnerEnvs() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRunnerEnvs() {
+		return Experiment_RunnerEnvs_DEFAULT
+	}
+	return p.RunnerEnvs
+}
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
 }
@@ -5292,6 +5306,9 @@ func (p *Experiment) SetVerificationConfig(val *VerificationConfig) {
 func (p *Experiment) SetLatestRunID(val *int64) {
 	p.LatestRunID = val
 }
+func (p *Experiment) SetRunnerEnvs(val map[string]string) {
+	p.RunnerEnvs = val
+}
 
 var fieldIDToName_Experiment = map[int16]string{
 	1:   "id",
@@ -5346,6 +5363,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	118: "expected_quota_consumption",
 	119: "verification_config",
 	120: "latest_run_id",
+	121: "runner_envs",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -5554,6 +5572,10 @@ func (p *Experiment) IsSetVerificationConfig() bool {
 
 func (p *Experiment) IsSetLatestRunID() bool {
 	return p.LatestRunID != nil
+}
+
+func (p *Experiment) IsSetRunnerEnvs() bool {
+	return p.RunnerEnvs != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -5985,6 +6007,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 120:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField120(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 121:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField121(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6647,6 +6677,35 @@ func (p *Experiment) ReadField120(iprot thrift.TProtocol) error {
 	p.LatestRunID = _field
 	return nil
 }
+func (p *Experiment) ReadField121(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.RunnerEnvs = _field
+	return nil
+}
 
 func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6860,6 +6919,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField120(oprot); err != nil {
 			fieldId = 120
+			goto WriteFieldError
+		}
+		if err = p.writeField121(oprot); err != nil {
+			fieldId = 121
 			goto WriteFieldError
 		}
 	}
@@ -7875,6 +7938,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 120 end error: ", p), err)
 }
+func (p *Experiment) writeField121(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRunnerEnvs() {
+		if err = oprot.WriteFieldBegin("runner_envs", thrift.MAP, 121); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.RunnerEnvs)); err != nil {
+			return err
+		}
+		for k, v := range p.RunnerEnvs {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 121 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 121 end error: ", p), err)
+}
 
 func (p *Experiment) String() string {
 	if p == nil {
@@ -8044,6 +8136,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field120DeepEqual(ano.LatestRunID) {
+		return false
+	}
+	if !p.Field121DeepEqual(ano.RunnerEnvs) {
 		return false
 	}
 	return true
@@ -8612,6 +8707,19 @@ func (p *Experiment) Field120DeepEqual(src *int64) bool {
 	}
 	if *p.LatestRunID != *src {
 		return false
+	}
+	return true
+}
+func (p *Experiment) Field121DeepEqual(src map[string]string) bool {
+
+	if len(p.RunnerEnvs) != len(src) {
+		return false
+	}
+	for k, v := range p.RunnerEnvs {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }

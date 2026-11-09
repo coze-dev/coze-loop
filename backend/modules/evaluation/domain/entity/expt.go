@@ -362,6 +362,9 @@ type EvaluationConfiguration struct {
 	EnableExtractTrajectory *bool
 	Ext                     map[string]string
 
+	// RunnerEnvs 沙箱运行环境变量；value 由商业层加密后写入，开源仓只做存储与回显。
+	RunnerEnvs map[string]string `json:"runner_envs,omitempty"`
+
 	// ★ 新增: 多评测集配置 (MultiSetConfig 路径权威源)
 	// 创建期序列化进 experiment.eval_conf; 调度期反序列化读取
 	EvalSetConfigs []*EvalSetConfig `json:"eval_set_configs,omitempty"`

@@ -29141,6 +29141,7 @@ type SubmitExperimentOApiRequest struct {
 	// 其余取值或未授权一律走 legacy。不填则按 openapi 处理。
 	TriggerType *string           `thrift:"trigger_type,62,optional" frugal:"62,optional,string" form:"trigger_type" json:"trigger_type,omitempty"`
 	Ext         map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	RunnerEnvs  map[string]string `thrift:"runner_envs,101,optional" frugal:"101,optional,map<string:string>" form:"runner_envs" json:"runner_envs,omitempty"`
 	// 实验分组 key 默认以实验 ID 兜底；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）。
 	// 引用分组实验 id: 填写时校验其为当前空间内的实验 id。
 	RefGroupExperimentID *int64       `thrift:"ref_group_experiment_id,102,optional" frugal:"102,optional,i64" json:"ref_group_experiment_id" form:"ref_group_experiment_id" `
@@ -29407,6 +29408,18 @@ func (p *SubmitExperimentOApiRequest) GetExt() (v map[string]string) {
 	return p.Ext
 }
 
+var SubmitExperimentOApiRequest_RunnerEnvs_DEFAULT map[string]string
+
+func (p *SubmitExperimentOApiRequest) GetRunnerEnvs() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRunnerEnvs() {
+		return SubmitExperimentOApiRequest_RunnerEnvs_DEFAULT
+	}
+	return p.RunnerEnvs
+}
+
 var SubmitExperimentOApiRequest_RefGroupExperimentID_DEFAULT int64
 
 func (p *SubmitExperimentOApiRequest) GetRefGroupExperimentID() (v int64) {
@@ -29505,6 +29518,9 @@ func (p *SubmitExperimentOApiRequest) SetTriggerType(val *string) {
 func (p *SubmitExperimentOApiRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
+func (p *SubmitExperimentOApiRequest) SetRunnerEnvs(val map[string]string) {
+	p.RunnerEnvs = val
+}
 func (p *SubmitExperimentOApiRequest) SetRefGroupExperimentID(val *int64) {
 	p.RefGroupExperimentID = val
 }
@@ -29537,6 +29553,7 @@ var fieldIDToName_SubmitExperimentOApiRequest = map[int16]string{
 	61:  "expected_quota_consumption",
 	62:  "trigger_type",
 	100: "ext",
+	101: "runner_envs",
 	102: "ref_group_experiment_id",
 	254: "extra",
 	255: "Base",
@@ -29624,6 +29641,10 @@ func (p *SubmitExperimentOApiRequest) IsSetTriggerType() bool {
 
 func (p *SubmitExperimentOApiRequest) IsSetExt() bool {
 	return p.Ext != nil
+}
+
+func (p *SubmitExperimentOApiRequest) IsSetRunnerEnvs() bool {
+	return p.RunnerEnvs != nil
 }
 
 func (p *SubmitExperimentOApiRequest) IsSetRefGroupExperimentID() bool {
@@ -29819,6 +29840,14 @@ func (p *SubmitExperimentOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 101:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField101(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -30138,6 +30167,35 @@ func (p *SubmitExperimentOApiRequest) ReadField100(iprot thrift.TProtocol) error
 	p.Ext = _field
 	return nil
 }
+func (p *SubmitExperimentOApiRequest) ReadField101(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.RunnerEnvs = _field
+	return nil
+}
 func (p *SubmitExperimentOApiRequest) ReadField102(iprot thrift.TProtocol) error {
 
 	var _field *int64
@@ -30254,6 +30312,10 @@ func (p *SubmitExperimentOApiRequest) Write(oprot thrift.TProtocol) (err error) 
 		}
 		if err = p.writeField100(oprot); err != nil {
 			fieldId = 100
+			goto WriteFieldError
+		}
+		if err = p.writeField101(oprot); err != nil {
+			fieldId = 101
 			goto WriteFieldError
 		}
 		if err = p.writeField102(oprot); err != nil {
@@ -30699,6 +30761,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
+func (p *SubmitExperimentOApiRequest) writeField101(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRunnerEnvs() {
+		if err = oprot.WriteFieldBegin("runner_envs", thrift.MAP, 101); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.RunnerEnvs)); err != nil {
+			return err
+		}
+		for k, v := range p.RunnerEnvs {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
+}
 func (p *SubmitExperimentOApiRequest) writeField102(oprot thrift.TProtocol) (err error) {
 	if p.IsSetRefGroupExperimentID() {
 		if err = oprot.WriteFieldBegin("ref_group_experiment_id", thrift.I64, 102); err != nil {
@@ -30829,6 +30920,9 @@ func (p *SubmitExperimentOApiRequest) DeepEqual(ano *SubmitExperimentOApiRequest
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
+		return false
+	}
+	if !p.Field101DeepEqual(ano.RunnerEnvs) {
 		return false
 	}
 	if !p.Field102DeepEqual(ano.RefGroupExperimentID) {
@@ -31052,6 +31146,19 @@ func (p *SubmitExperimentOApiRequest) Field100DeepEqual(src map[string]string) b
 		return false
 	}
 	for k, v := range p.Ext {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *SubmitExperimentOApiRequest) Field101DeepEqual(src map[string]string) bool {
+
+	if len(p.RunnerEnvs) != len(src) {
+		return false
+	}
+	for k, v := range p.RunnerEnvs {
 		_src := src[k]
 		if strings.Compare(v, _src) != 0 {
 			return false

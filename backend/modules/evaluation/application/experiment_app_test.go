@@ -1707,6 +1707,7 @@ func TestExperimentApplication_GetExperimentIDsByGroup(t *testing.T) {
 			ExperimentGroupKey: groupKey,
 			CreatedBy:          "creator-1",
 			CreatedAt:          &createdAt1,
+			EvalConf:           &entity.EvaluationConfiguration{RunnerEnvs: map[string]string{"APP_KEY": "plaintext-or-ciphertext"}},
 		},
 		{
 			ID:                 exptIDs[1],
@@ -1715,6 +1716,7 @@ func TestExperimentApplication_GetExperimentIDsByGroup(t *testing.T) {
 			ExperimentGroupKey: groupKey,
 			CreatedBy:          "creator-2",
 			CreatedAt:          &createdAt2,
+			EvalConf:           &entity.EvaluationConfiguration{RunnerEnvs: map[string]string{"SUBJECT_ID": "plaintext-or-ciphertext"}},
 		},
 	}
 
@@ -1866,6 +1868,7 @@ func TestExperimentApplication_GetExperimentIDsByGroup(t *testing.T) {
 					require.Equal(t, expts[i].CreatedAt.Unix(), got.GetCreateTime())
 					require.Equal(t, expts[i].CreatedBy, got.GetCreatorBy())
 					require.Equal(t, expts[i].ExperimentGroupKey, got.GetExperimentGroupKey())
+					require.Nil(t, got.RunnerEnvs, "内部分组列表接口不得返回 runner_envs")
 				}
 			},
 		},
