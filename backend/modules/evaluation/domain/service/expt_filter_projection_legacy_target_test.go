@@ -101,15 +101,22 @@ func TestBuildExptFilterProjectionModernTargetStillAllowsValidReusedRun(t *testi
 
 type legacyTargetRunLogRepo struct {
 	repo.IExptTurnResultRepo
-	logs  []*entity.ExptTurnResultRunLog
-	err   error
-	calls int
+	logs        []*entity.ExptTurnResultRunLog
+	err         error
+	calls       int
+	logsByRun   map[int64][]*entity.ExptTurnResultRunLog
+	errorsByRun map[int64]error
+	queriedRuns []int64
 }
 
 func (r *legacyTargetRunLogRepo) GetItemTurnRunLogs(_ context.Context, expt, run, item, space int64) ([]*entity.ExptTurnResultRunLog, error) {
 	r.calls++
-	if expt != 2 || run != 4 || item != 3 || space != 1 {
+	r.queriedRuns = append(r.queriedRuns, run)
+	if expt != 2 || item != 3 || space != 1 || (r.logsByRun == nil && run != 4) {
 		return nil, fmt.Errorf("wrong runlog identity tuple")
+	}
+	if r.logsByRun != nil {
+		return r.logsByRun[run], r.errorsByRun[run]
 	}
 	return r.logs, r.err
 }
@@ -180,4 +187,91 @@ func TestBuildExptFilterProjectionLegacyTargetReadsRunlogOncePerItem(t *testing.
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 	require.Equal(t, 1, reader.calls)
+}
+
+func legacyTargetReuseFixture(t *testing.T) (*projectionFixture, ExptResultServiceImpl, *legacyTargetRunLogRepo) {
+	f := newProjectionFixture(t)
+	f.expt.TargetVersionID = 55
+	f.targets[0].TargetVersionID = 55
+	f.targets[0].ItemID = 0
+	f.targets[0].ExperimentRunID = 5
+	s := legacyTargetService(f)
+	reader := s.ExptTurnResultRepo.(*legacyTargetRunLogRepo)
+	original := *reader.logs[0]
+	original.ID = 16
+	original.ExptRunID = 5
+	reader.logsByRun = map[int64][]*entity.ExptTurnResultRunLog{4: reader.logs, 5: {&original}}
+	return f, s, reader
+}
+
+func TestBuildExptFilterProjectionLegacyTargetReusesOriginalRun(t *testing.T) {
+	f, s, reader := legacyTargetReuseFixture(t)
+	rows, err := s.BuildExptFilterProjection(context.Background(), 1, 2, []int64{3})
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	require.Equal(t, int64(3), rows[0].ItemID)
+	require.Equal(t, "preview", rows[0].EvalTargetData["custom"])
+	require.ElementsMatch(t, []int64{4, 5}, reader.queriedRuns)
+	require.Equal(t, int64(0), f.targets[0].ItemID)
+	require.Equal(t, int64(5), f.targets[0].ExperimentRunID)
+	require.Equal(t, int64(4), f.turns[0].ExptRunID)
+}
+
+func TestBuildExptFilterProjectionLegacyTargetReuseRequiresBothRunlogs(t *testing.T) {
+	cases := map[string]func(*projectionFixture, *legacyTargetRunLogRepo){
+		"changed current reference": func(f *projectionFixture, r *legacyTargetRunLogRepo) {
+			f.turns[0].TargetResultID, f.targets[0].ID = 51, 51
+		},
+		"changed current reference and anchor": func(f *projectionFixture, r *legacyTargetRunLogRepo) {
+			f.turns[0].TargetResultID, f.targets[0].ID = 51, 51
+			r.logsByRun[4][0].TargetResultID = 51
+		},
+		"current anchor missing":  func(_ *projectionFixture, r *legacyTargetRunLogRepo) { r.logsByRun[4] = nil },
+		"original anchor missing": func(_ *projectionFixture, r *legacyTargetRunLogRepo) { r.logsByRun[5] = nil },
+		"original nil anchor": func(_ *projectionFixture, r *legacyTargetRunLogRepo) {
+			r.logsByRun[5] = []*entity.ExptTurnResultRunLog{nil}
+		},
+		"original read error": func(_ *projectionFixture, r *legacyTargetRunLogRepo) {
+			r.errorsByRun = map[int64]error{5: errors.New("read unavailable")}
+		},
+		"original wrong space":      func(_ *projectionFixture, r *legacyTargetRunLogRepo) { r.logsByRun[5][0].SpaceID = 9 },
+		"original wrong experiment": func(_ *projectionFixture, r *legacyTargetRunLogRepo) { r.logsByRun[5][0].ExptID = 9 },
+		"original wrong run":        func(_ *projectionFixture, r *legacyTargetRunLogRepo) { r.logsByRun[5][0].ExptRunID = 9 },
+		"original wrong item":       func(_ *projectionFixture, r *legacyTargetRunLogRepo) { r.logsByRun[5][0].ItemID = 9 },
+		"original wrong turn":       func(_ *projectionFixture, r *legacyTargetRunLogRepo) { r.logsByRun[5][0].TurnID = 1 },
+		"original wrong target":     func(_ *projectionFixture, r *legacyTargetRunLogRepo) { r.logsByRun[5][0].TargetResultID = 51 },
+		"original duplicate anchor": func(_ *projectionFixture, r *legacyTargetRunLogRepo) {
+			duplicate := *r.logsByRun[5][0]
+			duplicate.ID = 17
+			r.logsByRun[5] = append(r.logsByRun[5], &duplicate)
+		},
+	}
+	for name, change := range cases {
+		t.Run(name, func(t *testing.T) {
+			f, s, reader := legacyTargetReuseFixture(t)
+			change(f, reader)
+			rows, err := s.BuildExptFilterProjection(context.Background(), 1, 2, []int64{3})
+			require.Error(t, err)
+			require.Empty(t, rows)
+		})
+	}
+}
+
+func TestBuildExptFilterProjectionLegacyTargetReuseCachesBothRuns(t *testing.T) {
+	f, s, reader := legacyTargetReuseFixture(t)
+	turn := *f.turns[0]
+	turn.ID, turn.TurnID, turn.TargetResultID = 12, 1, 51
+	f.turns = append(f.turns, &turn)
+	target := *f.targets[0]
+	target.ID, target.TurnID = 51, 1
+	f.targets = append(f.targets, &target)
+	for _, run := range []int64{4, 5} {
+		anchor := *reader.logsByRun[run][0]
+		anchor.ID, anchor.TurnID, anchor.TargetResultID = 20+run, 1, 51
+		reader.logsByRun[run] = append(reader.logsByRun[run], &anchor)
+	}
+	rows, err := s.BuildExptFilterProjection(context.Background(), 1, 2, []int64{3})
+	require.NoError(t, err)
+	require.Len(t, rows, 2)
+	require.ElementsMatch(t, []int64{4, 5}, reader.queriedRuns)
 }

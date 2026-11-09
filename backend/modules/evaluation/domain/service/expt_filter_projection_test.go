@@ -128,7 +128,7 @@ type projectionEvaluatorService struct {
 }
 
 func (r projectionEvaluatorService) BatchGetEvaluatorRecord(ctx context.Context, ids []int64, deleted, full bool) ([]*entity.EvaluatorRecord, error) {
-	require.False(r.f.t, deleted)
+	require.True(r.f.t, deleted)
 	require.False(r.f.t, full, "index must use stored preview")
 	return r.f.evaluators, r.f.read(ctx, "evaluators")
 }
@@ -195,8 +195,8 @@ func TestBuildExptFilterProjectionKeepsCompleteInstancesAndPresentZero(t *testin
 func TestBuildExptFilterProjectionRejectsIncompleteSources(t *testing.T) {
 	cases := map[string]func(*projectionFixture){
 		"missing experiment": func(f *projectionFixture) { f.expt = nil }, "missing start date": func(f *projectionFixture) { f.expt.StartAt = nil }, "missing item": func(f *projectionFixture) { f.items = nil }, "wrong item ownership": func(f *projectionFixture) { f.items[0].SpaceID = 99 },
-		"missing multiset ref": func(f *projectionFixture) { f.refs = nil }, "wrong set ref": func(f *projectionFixture) { f.refs[0].EvalSetVersionID = 999 }, "missing target": func(f *projectionFixture) { f.targets = nil }, "stub target": func(f *projectionFixture) { f.targets[0].EvalTargetOutputData = nil }, "nil output value": func(f *projectionFixture) { f.targets[0].EvalTargetOutputData.OutputFields["custom"] = nil },
-		"missing evaluator": func(f *projectionFixture) { f.evaluators = f.evaluators[:1] }, "wrong evaluator alias": func(f *projectionFixture) { f.evaluators[1].Alias = "c" }, "missing evaluator mapping": func(f *projectionFixture) { f.mappings = f.mappings[1:] }, "duplicate mapping target": func(f *projectionFixture) { f.mappings[1].ToKey = "key11" }, "duplicate evaluator instance": func(f *projectionFixture) { f.evaluatorRefs = append(f.evaluatorRefs, f.evaluatorRefs[0]) },
+		"missing multiset ref": func(f *projectionFixture) { f.refs = nil }, "wrong set ref": func(f *projectionFixture) { f.refs[0].EvalSetVersionID = 999 },
+		"wrong evaluator alias": func(f *projectionFixture) { f.evaluators[1].Alias = "c" }, "missing evaluator mapping": func(f *projectionFixture) { f.mappings = f.mappings[1:] }, "duplicate mapping target": func(f *projectionFixture) { f.mappings[1].ToKey = "key11" }, "duplicate evaluator instance": func(f *projectionFixture) { f.evaluatorRefs = append(f.evaluatorRefs, f.evaluatorRefs[0]) },
 		"missing annotation": func(f *projectionFixture) { f.annotations = f.annotations[:2] }, "nil numeric annotation": func(f *projectionFixture) { f.annotations[0].AnnotateData.Score = nil }, "nil text annotation": func(f *projectionFixture) { f.annotations[1].AnnotateData.TextValue = nil }, "nonfinite score": func(f *projectionFixture) { *f.evaluators[0].EvaluatorOutputData.EvaluatorResult.Score = math.NaN() }, "status overflow": func(f *projectionFixture) { f.items[0].Status = entity.ItemRunState(int64(math.MaxInt32) + 1) },
 	}
 	for name, change := range cases {

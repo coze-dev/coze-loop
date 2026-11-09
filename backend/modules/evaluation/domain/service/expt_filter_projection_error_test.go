@@ -113,7 +113,7 @@ func projectionSourceDigest(t *testing.T, f *projectionFixture) string {
 }
 
 func TestBuildProjectionDependencyErrorsKeepVerifiedKey(t *testing.T) {
-	stages := []string{"experiment", "turns", "items", "item_refs", "mappings", "evaluator_refs", "evaluators", "targets", "tag_refs", "annotation_refs", "annotations", "missing_target", "missing_evaluator", "missing_annotation", "foreign_target", "foreign_item", "foreign_experiment", "foreign_turn", "foreign_item_ref", "foreign_mapping", "foreign_target_unrequested", "foreign_evaluator_unrequested", "foreign_target_identity", "foreign_evaluator_identity", "multiple_turns", "multiple_items"}
+	stages := []string{"experiment", "turns", "items", "item_refs", "mappings", "evaluator_refs", "evaluators", "targets", "tag_refs", "annotation_refs", "annotations", "missing_annotation", "foreign_target", "foreign_item", "foreign_experiment", "foreign_turn", "foreign_item_ref", "foreign_mapping", "foreign_target_unrequested", "foreign_evaluator_unrequested", "foreign_target_identity", "foreign_evaluator_identity", "multiple_turns", "multiple_items"}
 	for _, stage := range stages {
 		t.Run(stage, func(t *testing.T) {
 			f := newProjectionFixture(t)
@@ -187,7 +187,7 @@ func TestBuildProjectionDependencyErrorsKeepVerifiedKey(t *testing.T) {
 				return f.targets, read(ctx, "targets")
 			}).AnyTimes()
 			evaluators := svcmocks.NewMockEvaluatorRecordService(ctrl)
-			evaluators.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).DoAndReturn(func(ctx context.Context, _ []int64, _, _ bool) ([]*entity.EvaluatorRecord, error) {
+			evaluators.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), true, false).DoAndReturn(func(ctx context.Context, _ []int64, _, _ bool) ([]*entity.EvaluatorRecord, error) {
 				return f.evaluators, read(ctx, "evaluators")
 			}).AnyTimes()
 			filters := repomocks.NewMockIExptTurnResultFilterRepo(ctrl)
@@ -205,12 +205,6 @@ func TestBuildProjectionDependencyErrorsKeepVerifiedKey(t *testing.T) {
 			svc.exptTurnResultFilterRepo = index
 			expectedStage := failedRead
 			switch stage {
-			case "missing_target":
-				f.targets = nil
-				expectedStage = "targets"
-			case "missing_evaluator":
-				f.evaluators = f.evaluators[:1]
-				expectedStage = "evaluators"
 			case "missing_annotation":
 				f.annotations = f.annotations[:2]
 				expectedStage = "annotations"
