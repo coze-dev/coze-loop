@@ -491,6 +491,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 
 	res.Total = total
 	if len(turnResultDAOs) == 0 {
+		desensitizeSharedEvalSetResult(res, exptMap)
 		return res, nil
 	}
 

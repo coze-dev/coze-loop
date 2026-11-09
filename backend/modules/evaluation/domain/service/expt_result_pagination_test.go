@@ -17,6 +17,7 @@ import (
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
+	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 )
 
 func TestListTurnResultItemPagination(t *testing.T) {
@@ -144,5 +145,61 @@ func TestMGetExperimentResultEmptyPageTotal(t *testing.T) {
 			require.Empty(t, got.ItemResults)
 			require.Equal(t, int64(89), got.Total)
 		})
+	}
+}
+
+func TestMGetExperimentResultEmptyPageSharedColumns(t *testing.T) {
+	for _, source := range []entity.ExptEvalSetSourceType{entity.ExptEvalSetSourceType_SingleSet, entity.ExptEvalSetSourceType_MultiSetConfig} {
+		for _, level := range []string{entity.SharedAccessLevelExecute, entity.SharedAccessLevelReadable} {
+			for _, pageNumber := range []int{6, 1000} {
+				t.Run(fmt.Sprintf("%v/%s/page_%d", source, level, pageNumber), func(t *testing.T) {
+					ctrl := gomock.NewController(t)
+					items := repomocks.NewMockIExptItemResultRepo(ctrl)
+					turns := repomocks.NewMockIExptTurnResultRepo(ctrl)
+					expts := repomocks.NewMockIExperimentRepo(ctrl)
+					annotations := repomocks.NewMockIExptAnnotateRepo(ctrl)
+					metric := metricsmocks.NewMockExptMetric(ctrl)
+					lwt := lwtmocks.NewMockILatestWriteTracker(ctrl)
+					versions := servicemocks.NewMockEvaluationSetVersionService(ctrl)
+					expt := &entity.Experiment{
+						ID: 1, SpaceID: 3, ExptType: entity.ExptType_Offline, EvalSetSourceType: source,
+						EvalSetID: 100, EvalSetVersionID: 101, EvalSetSpaceID: 7, EvalSetAccessLevel: level,
+					}
+					if source == entity.ExptEvalSetSourceType_MultiSetConfig {
+						expt.EvalSetAccessLevel = entity.SharedAccessLevelReadable
+						expt.EvalConf = &entity.EvaluationConfiguration{EvalSetConfigs: []*entity.EvalSetConfig{
+							{EvalSetID: 100, EvalSetVersionID: 101, SourceSpaceID: 7, AccessLevel: level},
+						}}
+					}
+					expts.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(3)).Return([]*entity.Experiment{expt}, nil)
+					expts.EXPECT().GetEvaluatorRefByExptIDs(gomock.Any(), []int64{1}, int64(3)).Return(nil, nil)
+					annotations.EXPECT().BatchGetExptTurnResultTagRefs(gomock.Any(), []int64{1}, int64(3)).Return(nil, nil)
+					metric.EXPECT().EmitGetExptResult(int64(3), false)
+					lwt.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), int64(1)).Return(false)
+					versions.EXPECT().GetEvaluationSetVersion(gomock.Any(), int64(7), int64(101), gptr.Of(true), nil).
+						Return(&entity.EvaluationSetVersion{EvaluationSetSchema: &entity.EvaluationSetSchema{
+							FieldSchemas: []*entity.FieldSchema{{Key: "input", Name: "private field", Description: "private description", TextSchema: "{}"}},
+						}}, nil, nil)
+					page := entity.NewPage(pageNumber, 20)
+					items.EXPECT().ListItemResultsByExptID(gomock.Any(), int64(1), int64(3), page, false).
+						Return(nil, int64(89), nil)
+					svc := ExptResultServiceImpl{ExptItemResultRepo: items, ExptTurnResultRepo: turns,
+						ExperimentRepo: expts, ExptAnnotateRepo: annotations, Metric: metric, lwt: lwt,
+						evaluationSetVersionService: versions}
+					got, err := svc.MGetExperimentResult(context.Background(), &entity.MGetExperimentResultParam{
+						SpaceID: 3, ExptIDs: []int64{1}, BaseExptID: gptr.Of(int64(1)), Page: page, UseAccelerator: true,
+					})
+					require.NoError(t, err)
+					require.Empty(t, got.ItemResults)
+					require.Equal(t, int64(89), got.Total)
+					if level == entity.SharedAccessLevelExecute {
+						require.Empty(t, got.ColumnEvalSetFields)
+					} else {
+						require.Len(t, got.ColumnEvalSetFields, 1)
+						require.Equal(t, "private field", gptr.Indirect(got.ColumnEvalSetFields[0].Name))
+					}
+				})
+			}
+		}
 	}
 }
