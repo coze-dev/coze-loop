@@ -290,3 +290,19 @@ func TestExptStatsRepo_Save(t *testing.T) {
 		})
 	}
 }
+
+// Legacy DAOs without the conditional-write capability must fail closed instead
+// of silently downgrading to an unconditional write.
+func TestExptStatsRepo_ConditionalWritersRequireCapableDAO(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repo := &exptStatsRepo{exptStatsDAO: mocks.NewMockIExptStatsDAO(ctrl)}
+
+	applied, err := repo.UpdateByExptIDIfMatch(context.Background(), 1, 2, &entity.ExptStats{}, &entity.ExptStats{})
+	assert.False(t, applied)
+	assert.Error(t, err)
+
+	applied, err = repo.UpdateByExptIDIfLatestRun(context.Background(), 1, 2, &entity.ExptStats{}, 3)
+	assert.False(t, applied)
+	assert.Error(t, err)
+}

@@ -197,3 +197,76 @@ func TestReconcileExptStats_SkipsWhenThrottleKeyErrors(t *testing.T) {
 
 	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, enforceExptForReconcile())
 }
+
+func TestReconcileExptStats_SkipsWithoutConditionalWriter(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+	items := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	plainStats := repoMocks.NewMockIExptStatsRepo(ctrl) // 不实现 IExptStatsReconcileRepo
+	idm := idemMocks.NewMockIdempotentService(ctrl)
+	e := &ExptSchedulerImpl{ExptItemResultRepo: items, ExptStatsRepo: plainStats, Idem: idm}
+
+	idm.EXPECT().SetNX(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+	items.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	plainStats.EXPECT().UpdateByExptID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, enforceExptForReconcile())
+}
+
+func TestReconcileExptStats_SkipsOnRecountError(t *testing.T) {
+	e, items, stats, idm := reconcileFixture(t)
+
+	idm.EXPECT().SetNX(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+	gomock.InOrder(
+		items.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[entity.ItemRunState]int64{entity.ItemRunState_Success: 1}, nil),
+		items.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("db down")),
+	)
+	stats.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptStats{SuccessItemCnt: 9}, nil)
+	stats.updateIfMatch = nil
+
+	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, enforceExptForReconcile())
+}
+
+func TestReconcileExptStats_SkipsWhenRecountEmpty(t *testing.T) {
+	e, items, stats, idm := reconcileFixture(t)
+
+	idm.EXPECT().SetNX(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+	gomock.InOrder(
+		items.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[entity.ItemRunState]int64{entity.ItemRunState_Success: 1}, nil),
+		items.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[entity.ItemRunState]int64{}, nil),
+	)
+	stats.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptStats{SuccessItemCnt: 9}, nil)
+	stats.updateIfMatch = nil
+
+	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, enforceExptForReconcile())
+}
+
+func TestReconcileExptStats_SkipsOnCASError(t *testing.T) {
+	e, items, stats, idm := reconcileFixture(t)
+
+	idm.EXPECT().SetNX(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+	items.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[entity.ItemRunState]int64{
+		entity.ItemRunState_Success: 1,
+	}, nil).Times(2)
+	stats.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptStats{PendingItemCnt: 5}, nil)
+	stats.updateIfMatch = func(context.Context, int64, int64, *entity.ExptStats, *entity.ExptStats) (bool, error) {
+		return false, errors.New("cas failed")
+	}
+
+	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, enforceExptForReconcile())
+}
+
+func TestReconcileExptStats_StaleWriteSkipped(t *testing.T) {
+	e, items, stats, idm := reconcileFixture(t)
+
+	idm.EXPECT().SetNX(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+	items.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[entity.ItemRunState]int64{
+		entity.ItemRunState_Success: 1,
+	}, nil).Times(2)
+	stats.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptStats{PendingItemCnt: 5}, nil)
+	stats.updateIfMatch = func(context.Context, int64, int64, *entity.ExptStats, *entity.ExptStats) (bool, error) {
+		return false, nil
+	}
+
+	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, enforceExptForReconcile())
+}
