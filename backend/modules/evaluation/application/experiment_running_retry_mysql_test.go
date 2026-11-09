@@ -80,12 +80,13 @@ func testRunningRetryMySQLApplicationAdmission(t *testing.T, mode entity.ExptRun
 	require.NoError(t, conn.Create(&model.ExptTurnResultRunLog{ID: base + 16, SpaceID: space, ExptID: expt, ExptRunID: run, ItemID: item, ItemVersionID: base + 91, TurnID: base + 21, Status: 2, TargetResultID: 123, EvaluatorResultIds: gptr.Of([]byte(`null`)), Ext: []byte(`{"other":"keep"}`)}).Error)
 	ctrl := gomock.NewController(t)
 	config := confmocks.NewMockIConfiger(ctrl)
+	config.EXPECT().GetExptExecConf(gomock.Any(), space).Return(&entity.ExptExecConf{RetryCompleteEnabled: true}).AnyTimes()
 	auth := rpcmocks.NewMockIAuthProvider(ctrl)
 	generator := idmocks.NewMockIIDGenerator(ctrl)
 	lwt := lwtmocks.NewMockILatestWriteTracker(ctrl)
 	mutex := lockmocks.NewMockILocker(ctrl)
 	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
-	// same-run 准入不再读取开关；显式 expected_run_id 时必须直接进入当前 run。
+	// 发布门显式开启；expected_run_id 指向当前 run。
 	lwt.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), expt).Return(false).AnyTimes()
 	auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	// 首次、两次重复请求和补范围请求分别获取 run/item 锁。
@@ -128,7 +129,7 @@ func testRunningRetryMySQLApplicationAdmission(t *testing.T, mode entity.ExptRun
 	require.Equal(t, "queueing", again.RejectedItems[0].GetReason())
 	require.Equal(t, item, again.RejectedItems[0].GetItemID())
 	require.Equal(t, run, again.GetRunID())
-	// 开关门禁删除后，重复请求的拒绝原因只由 run / 队列状态决定，配置读取不再发生。
+	// 门禁开启后的重复请求仍只由 run / 队列状态决定。
 	gate := confmocks.NewMockIConfiger(ctrl)
 	gate.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Times(0)
 	app.configer = gate
