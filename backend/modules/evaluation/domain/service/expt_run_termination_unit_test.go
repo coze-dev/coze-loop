@@ -1129,6 +1129,31 @@ func TestManualRetryNormalizeAndValidateUnit(t *testing.T) {
 	})
 }
 
+// Busy/run-state cases need a real candidate now: an empty plan deliberately
+// completes under SQL preflight without waiting for a consumer tick.
+func terminationRetryCandidateExperiment() *entity.Experiment {
+	expt := manualRetryUnitExperiment()
+	expt.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
+	expt.TargetID, expt.TargetVersionID = 0, 0
+	return expt
+}
+
+func expectTerminationRetryCandidate(d *termUnitDeps, m *ExptMangerImpl) {
+	expt := manualRetryUnitExperiment()
+	expt.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
+	refs := repomocks.NewMockIExptItemRefRepo(d.ctrl)
+	turns := repomocks.NewMockIExptTurnResultRepo(d.ctrl)
+	m.itemRefRepo, m.turnResultRepo = refs, turns
+	source := &entity.ExptItemResult{ID: 101, SpaceID: 3, ExptID: 1, ExptRunID: 1, ItemID: 9, ItemVersionID: 7, Status: entity.ItemRunState_Fail}
+	d.items.EXPECT().ScanItemResults(gomock.Any(), int64(1), int64(0), int64(500), []int32{int32(entity.ItemRunState_Fail)}, int64(3)).Return([]*entity.ExptItemResult{source}, int64(1), nil)
+	d.items.EXPECT().ScanItemResults(gomock.Any(), int64(1), int64(1), int64(500), []int32{int32(entity.ItemRunState_Fail)}, int64(3)).Return(nil, int64(0), nil)
+	d.items.EXPECT().MGetItemRunLog(gomock.Any(), int64(1), int64(2), []int64{9}, int64(3)).Return(nil, nil)
+	refs.EXPECT().GetByExptIDAndItemID(gomock.Any(), int64(3), int64(1), int64(9)).Return(&entity.ExptItemRef{SpaceID: 3, ExptID: 1, ItemID: 9, ItemVersionID: 7}, nil)
+	turns.EXPECT().GetItemTurnResults(gomock.Any(), int64(1), int64(9), int64(3)).Return([]*entity.ExptTurnResult{{ID: 301, SpaceID: 3, ExptID: 1, ExptRunID: 1, ItemID: 9, ItemVersionID: 7, TurnID: 21, Status: int32(entity.TurnRunState_Fail)}}, nil)
+	turns.EXPECT().GetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), int64(9), int64(3)).Return(nil, nil)
+	turns.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(3), []int64{301}).Return(nil, nil)
+}
+
 func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 	newDeps := func(t *testing.T) (*termUnitDeps, *repomocks.MockIExptManualRetryRepo, *componentmocks.MockIConfiger, *repomocks.MockIExptRunLogRepo) {
 		d := newTermUnitDeps(t)
@@ -1145,11 +1170,14 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 		for _, kind := range []string{"configer_nil", "legacy_config"} {
 			t.Run(kind, func(t *testing.T) {
 				d, retryRepo, config, _ := newDeps(t)
-				d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil)
-				d.items.EXPECT().ScanItemResults(gomock.Any(), int64(1), int64(0), int64(500), []int32{int32(entity.ItemRunState_Fail)}, int64(3)).Return(nil, int64(0), nil)
+				d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(terminationRetryCandidateExperiment(), nil)
 				d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
 				m := d.manager()
 				m.manualRetryRepo = retryRepo
+				expectTerminationRetryCandidate(d, m)
+				retryRepo.EXPECT().PreflightTerminalItems(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryPreparation, error) {
+					return &entity.ManualRetryPreparation{Items: r.Items, SnapshotAtMS: r.SnapshotAtMS}, nil
+				})
 				if kind == "legacy_config" {
 					// 存量 TCC 里残留旧开关 key 时同样不得再被读取。
 					config.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Times(0)
@@ -1161,22 +1189,28 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 	})
 	t.Run("lock_busy", func(t *testing.T) {
 		d, retryRepo, _, _ := newDeps(t)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil)
-		d.items.EXPECT().ScanItemResults(gomock.Any(), int64(1), int64(0), int64(500), []int32{int32(entity.ItemRunState_Fail)}, int64(3)).Return(nil, int64(0), nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(terminationRetryCandidateExperiment(), nil)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(false, context.Background(), func() {}, nil)
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
+		expectTerminationRetryCandidate(d, m)
+		retryRepo.EXPECT().PreflightTerminalItems(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryPreparation, error) {
+			return &entity.ManualRetryPreparation{Items: r.Items, SnapshotAtMS: r.SnapshotAtMS}, nil
+		})
 		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), manualRetryUnitRequest())
 		require.Error(t, err)
 	})
 	t.Run("run_finished", func(t *testing.T) {
 		d, retryRepo, _, runs := newDeps(t)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
-		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(terminationRetryCandidateExperiment(), nil).Times(2)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
 		runs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{SpaceID: 3, ExptID: 1, ExptRunID: 2, Status: int64(entity.ExptStatus_Success)}, nil)
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
+		expectTerminationRetryCandidate(d, m)
+		retryRepo.EXPECT().PreflightTerminalItems(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryPreparation, error) {
+			return &entity.ManualRetryPreparation{Items: r.Items, SnapshotAtMS: r.SnapshotAtMS}, nil
+		})
 		m.runLogRepo = runs
 		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), manualRetryUnitRequest())
 		require.Error(t, err)
@@ -1191,17 +1225,14 @@ func TestRetryInCurrentRunManagerUnit(t *testing.T) {
 		require.Error(t, err)
 	})
 	t.Run("happy_path_empty_plan", func(t *testing.T) {
-		d, retryRepo, _, runs := newDeps(t)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
+		d, retryRepo, _, _ := newDeps(t)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		runs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{SpaceID: 3, ExptID: 1, ExptRunID: 2, Status: int64(entity.ExptStatus_Processing)}, nil)
 		retryRepo.EXPECT().PreflightTerminalItems(gomock.Any(), gomock.Any()).Return(&entity.ManualRetryPreparation{}, nil)
 		receipt := &entity.ManualRetryReceipt{AcceptedCount: 0}
 		retryRepo.EXPECT().RequeueTerminalItems(gomock.Any(), gomock.Any()).Return(receipt, nil)
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
-		m.runLogRepo = runs
 		got, err := retryThroughOriginalTickForTest(t, m, context.Background(), manualRetryUnitRequest())
 		require.NoError(t, err)
 		require.Same(t, receipt, got)
@@ -1214,7 +1245,6 @@ func TestPrepareTerminalCandidatesUnit(t *testing.T) {
 		return d, repomocks.NewMockIExptTurnResultRepo(d.ctrl), repomocks.NewMockIExptItemRefRepo(d.ctrl)
 	}
 	expt := func() *entity.Experiment { return manualRetryUnitExperiment() }
-
 	t.Run("fail_retry_with_items", func(t *testing.T) {
 		d, _, _ := newDateDeps(t)
 		m := d.manager()
@@ -1592,62 +1622,65 @@ func TestRetryInCurrentRunRemainingBranches(t *testing.T) {
 	})
 	t.Run("locker_nil", func(t *testing.T) {
 		d, retryRepo, _, _ := newDeps(t)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil)
-		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(terminationRetryCandidateExperiment(), nil)
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
+		expectTerminationRetryCandidate(d, m)
+		retryRepo.EXPECT().PreflightTerminalItems(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryPreparation, error) {
+			return &entity.ManualRetryPreparation{Items: r.Items, SnapshotAtMS: r.SnapshotAtMS}, nil
+		})
 		m.manualRetryLocker = nil
 		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), req())
 		require.Error(t, err)
 	})
 	t.Run("run_missing", func(t *testing.T) {
 		d, retryRepo, _, runs := newDeps(t)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
-		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(terminationRetryCandidateExperiment(), nil).Times(2)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
 		runs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(nil, nil)
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
+		expectTerminationRetryCandidate(d, m)
+		retryRepo.EXPECT().PreflightTerminalItems(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryPreparation, error) {
+			return &entity.ManualRetryPreparation{Items: r.Items, SnapshotAtMS: r.SnapshotAtMS}, nil
+		})
 		m.runLogRepo = runs
 		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), req())
 		require.Error(t, err)
 	})
 	t.Run("run_mismatch", func(t *testing.T) {
 		d, retryRepo, _, runs := newDeps(t)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
-		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(terminationRetryCandidateExperiment(), nil).Times(2)
 		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
 		runs.EXPECT().Get(gomock.Any(), int64(1), int64(2)).Return(&entity.ExptRunLog{SpaceID: 99, ExptID: 1, ExptRunID: 2}, nil)
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
+		expectTerminationRetryCandidate(d, m)
+		retryRepo.EXPECT().PreflightTerminalItems(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryPreparation, error) {
+			return &entity.ManualRetryPreparation{Items: r.Items, SnapshotAtMS: r.SnapshotAtMS}, nil
+		})
 		m.runLogRepo = runs
 		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), req())
 		require.Error(t, err)
 	})
 	t.Run("preflight_error", func(t *testing.T) {
-		d, retryRepo, _, runs := newDeps(t)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
+		d, retryRepo, _, _ := newDeps(t)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		runs.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptRunLog{SpaceID: 3, ExptID: 1, ExptRunID: 2, Status: int64(entity.ExptStatus_Processing)}, nil)
 		retryRepo.EXPECT().PreflightTerminalItems(gomock.Any(), gomock.Any()).Return(nil, errors.New("preflight"))
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
-		m.runLogRepo = runs
 		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), req())
 		require.Error(t, err)
 	})
 	t.Run("requeue_error", func(t *testing.T) {
-		d, retryRepo, _, runs := newDeps(t)
-		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil).Times(2)
+		d, retryRepo, _, _ := newDeps(t)
+		d.expts.EXPECT().GetByID(gomock.Any(), int64(1), int64(3)).Return(manualRetryUnitExperiment(), nil)
 		d.items.EXPECT().ScanItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
-		d.locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, context.Background(), func() {}, nil)
-		runs.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptRunLog{SpaceID: 3, ExptID: 1, ExptRunID: 2, Status: int64(entity.ExptStatus_Processing)}, nil)
 		retryRepo.EXPECT().PreflightTerminalItems(gomock.Any(), gomock.Any()).Return(&entity.ManualRetryPreparation{}, nil)
 		retryRepo.EXPECT().RequeueTerminalItems(gomock.Any(), gomock.Any()).Return(nil, errors.New("requeue"))
 		m := d.manager()
 		m.manualRetryRepo = retryRepo
-		m.runLogRepo = runs
 		_, err := retryThroughOriginalTickForTest(t, m, context.Background(), req())
 		require.Error(t, err)
 	})

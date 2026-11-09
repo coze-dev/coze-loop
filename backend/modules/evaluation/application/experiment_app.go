@@ -1763,11 +1763,15 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return nil, err
 	}
 
-	// expected_run_id 可省略：运行中的离线 Processing 实验由服务端解析当前 run，
-	// 该行为是固定契约，不依赖任何配置开关/空间白名单。
-	// RetryAll 语义是「整份重跑」，仍在跑的实验必须走原有起新 run 的链路；
-	// 当前 run 内重排只接受 RetryFailure / RetryTargetItems。
-	if runMode != entity.EvaluationModeRetryAll && (req.ExpectedRunID != nil || (got.ExptType == entity.ExptType_Offline && got.Status == entity.ExptStatus_Processing)) {
+	retryCompleteEnabled := false
+	if e.configer != nil {
+		conf := e.configer.GetConsumerConf(ctx)
+		retryCompleteEnabled = conf != nil && conf.RetryCompleteEnabled
+	}
+
+	// 开关只控制新请求准入；RetryAll 保留原路径。
+	if retryCompleteEnabled && runMode != entity.EvaluationModeRetryAll &&
+		(req.ExpectedRunID != nil || (got.ExptType == entity.ExptType_Offline && got.Status == entity.ExptStatus_Processing)) {
 		if req.GetExpectedRunID() < 0 {
 			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid current run retry identity"))
 		}
@@ -1788,7 +1792,7 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 
 	// 显式声明了 expected_run_id 却不在当前-run 重排语义内：先拒绝，再考虑沙箱/新 run，
 	// 不能把并发保护静默丢掉后执行另一个操作。
-	if req.ExpectedRunID != nil {
+	if retryCompleteEnabled && req.ExpectedRunID != nil {
 		if req.GetExpectedRunID() < 0 {
 			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid current run retry identity"))
 		}

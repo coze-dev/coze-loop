@@ -16,6 +16,7 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/bytedance/gg/gptr"
 	idmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
+	infraredis "github.com/coze-dev/coze-loop/backend/infra/redis"
 	idemmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
 	confmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -25,6 +26,7 @@ import (
 	exptmysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	redisc "github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -38,6 +40,7 @@ type currentRetryCombinationFixture struct {
 	expt       *entity.Experiment
 	event      *entity.ExptScheduleEvent
 	server     *miniredis.Miniredis
+	cache      infraredis.Cmdable
 	parentMode entity.ExptRunMode
 	oldRun     int64
 	items      []int64
@@ -109,6 +112,10 @@ func newCurrentRetryCombinationFixture(t *testing.T, parent entity.ExptRunMode) 
 	}
 	require.NoError(t, f.conn.Model(&model.ExptStats{}).Where("space_id=?", f.space).Updates(map[string]any{"pending_cnt": 0, "processing_cnt": 2, "success_cnt": len(items) - 2, "fail_cnt": 0}).Error)
 	factory, server := finishRealLockerFactory(t)
+	cache, err := infraredis.NewClient(&redisc.Options{Addr: server.Addr()})
+	require.NoError(t, err)
+	cacheRaw, _ := infraredis.Unwrap(cache)
+	t.Cleanup(func() { _ = cacheRaw.Close() })
 	ids := idmocks.NewMockIIDGenerator(ctrl)
 	ids.EXPECT().GenID(gomock.Any()).Return(f.run, nil).AnyTimes()
 	nextID := f.base + 9000
@@ -129,7 +136,7 @@ func newCurrentRetryCombinationFixture(t *testing.T, parent entity.ExptRunMode) 
 	experiments := f.experimentRepo()
 	stats := exptrepo.NewExptStatsRepo(exptmysql.NewExptStatsDAO(f.provider))
 	result := &ExptResultServiceImpl{ExptItemResultRepo: f.itemRepo(), ExptTurnResultRepo: f.turnRepo(), ExptStatsRepo: stats, idgen: ids, scoreCalculator: NewEvaluatorScoreCalculator(nil, nil), resultPublishRepo: exptrepo.NewExptResultPublishRepo(f.provider), resultPublishLocker: factory}
-	manager := &ExptMangerImpl{exptRepo: experiments, runLogRepo: runs, itemResultRepo: f.itemRepo(), turnResultRepo: f.turnRepo(), itemRefRepo: exptrepo.NewExptItemRefRepo(exptmysql.NewExptItemRefDAO(f.provider)), manualRetryRepo: exptrepo.NewExptManualRetryRepo(f.provider, ids), runFinishRepo: exptrepo.NewExptRunFinishRepo(f.provider), manualRetryLocker: factory, mutex: factory(), configer: config, idgenerator: ids, idem: idem}
+	manager := &ExptMangerImpl{exptRepo: experiments, runLogRepo: runs, itemResultRepo: f.itemRepo(), turnResultRepo: f.turnRepo(), itemRefRepo: exptrepo.NewExptItemRefRepo(exptmysql.NewExptItemRefDAO(f.provider)), manualRetryRepo: exptrepo.NewExptManualRetryRepoWithPending(f.provider, ids, cache), runFinishRepo: exptrepo.NewExptRunFinishRepo(f.provider), manualRetryLocker: factory, mutex: factory(), configer: config, idgenerator: ids, idem: idem}
 	expt, err := experiments.GetByID(ctx, f.expt, f.space)
 	require.NoError(t, err)
 	expt.EvalSet = &entity.EvaluationSet{ID: f.base + 80, ItemCount: int64(len(items)), EvaluationSetVersion: &entity.EvaluationSetVersion{ID: f.base + 81}}
@@ -154,7 +161,7 @@ func newCurrentRetryCombinationFixture(t *testing.T, parent entity.ExptRunMode) 
 	default:
 		t.Fatalf("unsupported parent mode %d", parent)
 	}
-	p := &currentRetryCombinationFixture{f: f, manager: manager, result: result, dispatch: exptrepo.NewExptItemDispatchRepo(exptmysql.NewExptItemDispatchDAO(f.provider)), mode: mode, expt: expt, event: event, server: server, parentMode: parent, oldRun: oldRun, items: items}
+	p := &currentRetryCombinationFixture{f: f, manager: manager, result: result, dispatch: exptrepo.NewExptItemDispatchRepo(exptmysql.NewExptItemDispatchDAO(f.provider)), mode: mode, expt: expt, event: event, server: server, cache: cache, parentMode: parent, oldRun: oldRun, items: items}
 	if parent == entity.EvaluationModeRetryItems {
 		require.NoError(t, server.Set(fmt.Sprintf("expt_run_mutex_lock:%d", f.expt), fmt.Sprint(f.run)))
 		joinedRun, joined, err := manager.LogRetryItemsRun(ctx, f.expt, parent, f.space, items[2:], event.Session)
@@ -430,7 +437,7 @@ func runCurrentRetryCombination(t *testing.T, parent, requestMode, nextMode enti
 	frozen, err := p.manager.prepareTerminalCandidatesAndReusableRefs(context.Background(), p.expt, f.run, req.Mode, req.ItemIDs, nil)
 	require.NoError(t, err)
 	require.Len(t, frozen.Items, 1)
-	receipt, err := p.manager.RetryInCurrentRun(context.Background(), req)
+	receipt, err := retryThroughRealTickForTest(t, p.manager, context.Background(), req)
 	require.NoError(t, err)
 	require.Equal(t, int32(1), receipt.AcceptedCount)
 	require.Equal(t, f.run, receipt.RunID)
@@ -451,7 +458,7 @@ func runCurrentRetryCombination(t *testing.T, parent, requestMode, nextMode enti
 		require.NoError(t, err)
 		require.Zero(t, duplicate.AcceptedCount)
 		require.NotEmpty(t, duplicate.RejectedItems)
-		duplicate, err = p.manager.RetryInCurrentRun(context.Background(), p.request(entity.EvaluationModeRetryItems))
+		duplicate, err = retryThroughRealTickForTest(t, p.manager, context.Background(), p.request(entity.EvaluationModeRetryItems))
 		require.NoError(t, err)
 		require.Zero(t, duplicate.AcceptedCount)
 		require.Equal(t, stage, duplicate.RejectedItems[0].Reason)
@@ -491,7 +498,7 @@ func runCurrentRetryCombination(t *testing.T, parent, requestMode, nextMode enti
 	nextPlan, err := p.manager.prepareTerminalCandidatesAndReusableRefs(context.Background(), p.expt, f.run, nextMode, nextRequest.ItemIDs, nil)
 	require.NoError(t, err)
 	require.Len(t, nextPlan.Items, 1)
-	receipt, err = p.manager.RetryInCurrentRun(context.Background(), nextRequest)
+	receipt, err = retryThroughRealTickForTest(t, p.manager, context.Background(), nextRequest)
 	require.NoError(t, err)
 	require.Equal(t, int32(1), receipt.AcceptedCount, "Resulted Q1 permits a legitimate Q2")
 	p.awaitReleased(t)
@@ -530,7 +537,7 @@ func TestCurrentRetryCombinationsCompletionOrdering(t *testing.T) {
 				port := exptmysql.NewExptRunFinishDAO(p.f.provider)
 				request := &entity.ExptRunFinishRequest{SpaceID: p.f.space, ExptID: p.f.expt, RunID: p.f.run}
 				if first == "retry" {
-					receipt, err := p.manager.RetryInCurrentRun(context.Background(), p.request(entity.EvaluationModeRetryItems))
+					receipt, err := retryThroughRealTickForTest(t, p.manager, context.Background(), p.request(entity.EvaluationModeRetryItems))
 					require.NoError(t, err)
 					require.Equal(t, int32(1), receipt.AcceptedCount)
 					p.awaitReleased(t)
@@ -544,7 +551,7 @@ func TestCurrentRetryCombinationsCompletionOrdering(t *testing.T) {
 					require.NoError(t, err)
 					require.Equal(t, entity.ExptRunFinishFinished, result.Disposition)
 					before := p.f.snapshot()
-					receipt, err := p.manager.RetryInCurrentRun(context.Background(), p.request(entity.EvaluationModeRetryItems))
+					receipt, err := retryThroughRealTickForTest(t, p.manager, context.Background(), p.request(entity.EvaluationModeRetryItems))
 					require.ErrorContains(t, err, "run_finished")
 					require.Nil(t, receipt)
 					require.Equal(t, before, p.f.snapshot())
@@ -565,7 +572,7 @@ func TestCurrentRetryCombinationsBusyRunLockDoesNotMutate(t *testing.T) {
 			require.NoError(t, p.server.Set(key, "another-tick"))
 			p.server.SetTTL(key, time.Minute)
 			before := p.f.snapshot()
-			receipt, err := p.manager.RetryInCurrentRun(context.Background(), p.request(entity.EvaluationModeRetryItems))
+			receipt, err := retryThroughRealTickForTest(t, p.manager, context.Background(), p.request(entity.EvaluationModeRetryItems))
 			require.Error(t, err)
 			require.True(t, strings.Contains(err.Error(), "busy"), "%v", err)
 			require.Nil(t, receipt)

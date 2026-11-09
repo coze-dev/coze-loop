@@ -95,7 +95,7 @@ func TestLegacyAsyncPartialEvaluatorConsumerAndArm(t *testing.T) {
 			ctx := context.Background()
 			f := p.f
 			ctrl := gomock.NewController(t)
-			receipt, err := p.manager.RetryInCurrentRun(ctx, &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, ItemIDs: []int64{f.item}, Mode: entity.EvaluationModeRetryItems, Session: p.event.Session})
+			receipt, err := retryThroughRealTickForTest(t, p.manager, ctx, &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, ItemIDs: []int64{f.item}, Mode: entity.EvaluationModeRetryItems, Session: p.event.Session})
 			require.NoError(t, err)
 			require.EqualValues(t, 1, receipt.AcceptedCount)
 			request := f.source().Current.RequestID

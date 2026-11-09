@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -37,18 +38,27 @@ type pendingRetryTestPort struct {
 	repo.IExptManualRetryPendingRepo
 	calls          atomic.Int64
 	preflights     []int
+	preflightMu    sync.Mutex
 	afterPreflight func(*entity.ManualRetryPreparation)
 }
 
 func (p *pendingRetryTestPort) PreflightTerminalItems(ctx context.Context, r *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryPreparation, error) {
 	plan, err := p.IExptManualRetryRepo.PreflightTerminalItems(ctx, r)
 	if err == nil {
+		p.preflightMu.Lock()
 		p.preflights = append(p.preflights, len(plan.Items))
+		p.preflightMu.Unlock()
 		if p.afterPreflight != nil {
 			p.afterPreflight(plan)
 		}
 	}
 	return plan, err
+}
+
+func (p *pendingRetryTestPort) observedPreflights() []int {
+	p.preflightMu.Lock()
+	defer p.preflightMu.Unlock()
+	return append([]int(nil), p.preflights...)
 }
 
 func (p *pendingRetryTestPort) RequeueTerminalItems(ctx context.Context, r *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryReceipt, error) {
@@ -60,8 +70,13 @@ func newPendingRetryTestFixture(t *testing.T) (*currentRetryCombinationFixture, 
 	t.Helper()
 	p := newCurrentRetryCombinationFixture(t, entity.EvaluationModeRetryAll)
 	p.completeAndPublish(t, p.f.item, entity.ItemRunState_Success)
-	require.Equal(t, "127.0.0.1:26379", os.Getenv("RR_REDIS_ADDR"), "only the authorized local Redis may be used")
-	cache, err := iredis.NewClient(&redisc.Options{Addr: os.Getenv("RR_REDIS_ADDR"), ContextTimeoutEnabled: true})
+	addr := os.Getenv("EXPT_RETRY_REAL_REDIS_ADDR")
+	if addr == "" {
+		addr = os.Getenv("RR_REDIS_ADDR")
+	}
+	require.NotEmpty(t, addr, "real Redis must be configured for pending integration")
+	require.True(t, strings.HasPrefix(addr, "127.0.0.1:"), "only local integration Redis may be used")
+	cache, err := iredis.NewClient(&redisc.Options{Addr: addr, ContextTimeoutEnabled: true})
 	require.NoError(t, err)
 	raw, ok := iredis.Unwrap(cache)
 	require.True(t, ok)
@@ -122,8 +137,8 @@ func TestPendingRetryEmptyEvaluatorCollectionsSurviveJSONRoundTrip(t *testing.T)
 			}
 			receipt, err := retryThroughRealTickForTest(t, p.manager, context.Background(), p.request(entity.EvaluationModeRetryItems))
 			require.NoError(t, err)
-			t.Logf("PENDING_EMPTY_JSON input=%s preflight_accepted=%v receipt=%+v", encoded, port.preflights, receipt)
-			require.Equal(t, []int{1, 1}, port.preflights, "unchanged SQL source must pass before and after real pending Redis serialization")
+			t.Logf("PENDING_EMPTY_JSON input=%s preflight_accepted=%v receipt=%+v", encoded, port.observedPreflights(), receipt)
+			require.Equal(t, []int{1, 1}, port.observedPreflights(), "unchanged SQL source must pass before and after real pending Redis serialization")
 			require.Equal(t, int32(1), receipt.AcceptedCount)
 			require.Empty(t, receipt.RejectedItems)
 		})

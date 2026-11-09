@@ -42,7 +42,7 @@ func TestMixedRetrySequenceHistoricalFailAppendAndOverlappingAdmission(t *testin
 	ctx := context.Background()
 	ids := &mixedRetrySequenceLogIDs{IIDGenerator: p.manager.idgenerator}
 	ids.next.Store(f.base + 20000)
-	p.manager.manualRetryRepo = exptrepo.NewExptManualRetryRepo(f.provider, ids)
+	p.manager.manualRetryRepo = exptrepo.NewExptManualRetryRepoWithPending(f.provider, ids, p.cache)
 	// The helper soft-deletes its old ref. Remove only that already-deleted
 	// fixture row before taking raw-table snapshots: retry correctly purges
 	// tombstones, while this sequence asserts a physically empty ref table.
@@ -146,7 +146,7 @@ func TestMixedRetrySequenceHistoricalFailAppendAndOverlappingAdmission(t *testin
 	assertRunCounts(0, 2, 0, 0) // publication does not refresh run-log counters
 
 	// No item IDs are supplied: the actual Fail scan must discover C.
-	q1, err := p.manager.RetryInCurrentRun(ctx, request(entity.EvaluationModeFailRetry))
+	q1, err := retryThroughRealTickForTest(t, p.manager, ctx, request(entity.EvaluationModeFailRetry))
 	require.NoError(t, err)
 	require.Equal(t, int32(2), q1.AcceptedCount)
 	require.Empty(t, q1.RejectedItems)
@@ -174,7 +174,7 @@ func TestMixedRetrySequenceHistoricalFailAppendAndOverlappingAdmission(t *testin
 
 	// Once both real publications reached Resulted, RetryItems resets every
 	// prepared turn. This is the S02 switch back, and C03's first selection.
-	q2, err := p.manager.RetryInCurrentRun(ctx, request(entity.EvaluationModeRetryItems, a, c))
+	q2, err := retryThroughRealTickForTest(t, p.manager, ctx, request(entity.EvaluationModeRetryItems, a, c))
 	require.NoError(t, err)
 	require.Equal(t, int32(2), q2.AcceptedCount)
 	require.Empty(t, q2.RejectedItems)
@@ -204,7 +204,7 @@ func TestMixedRetrySequenceHistoricalFailAppendAndOverlappingAdmission(t *testin
 
 	// A/C remain Queueing. Only historical D is eligible; duplicate D is
 	// accepted once. C/B/X receive distinct per-item rejection reasons.
-	q3, err := p.manager.RetryInCurrentRun(ctx, request(entity.EvaluationModeRetryItems, c, d, b, x, d, c))
+	q3, err := retryThroughRealTickForTest(t, p.manager, ctx, request(entity.EvaluationModeRetryItems, c, d, b, x, d, c))
 	require.NoError(t, err)
 	require.Equal(t, int32(1), q3.AcceptedCount)
 	require.Equal(t, f.run, q3.RunID)
@@ -310,7 +310,7 @@ func beginMixedRetryWindow(t *testing.T, p *currentRetryCombinationFixture, req 
 	})
 	go func() {
 		defer close(done)
-		receipt, err := p.manager.RetryInCurrentRun(ctx, req)
+		receipt, err := retryThroughRealTickForTest(t, p.manager, ctx, req)
 		replies <- mixedRetryWindowReply{receipt: receipt, err: err}
 	}()
 	return gate, replies
@@ -342,7 +342,7 @@ func prepareMixedRetryWindowIDs(t *testing.T, p *currentRetryCombinationFixture)
 	t.Helper()
 	ids := &mixedRetrySequenceLogIDs{IIDGenerator: p.manager.idgenerator}
 	ids.next.Store(p.f.base + 20000)
-	p.manager.manualRetryRepo = exptrepo.NewExptManualRetryRepo(p.f.provider, ids)
+	p.manager.manualRetryRepo = exptrepo.NewExptManualRetryRepoWithPending(p.f.provider, ids, p.cache)
 	require.NoError(t, p.f.conn.Unscoped().Where("space_id=? AND expt_id=? AND deleted_at IS NOT NULL", p.f.space, p.f.expt).Delete(&model.ExptTurnEvaluatorResultRef{}).Error)
 }
 
@@ -432,7 +432,7 @@ func TestMixedRetryWindowFailScanThenNewFailure(t *testing.T) {
 	require.NoError(t, f.conn.Where("space_id=? AND expt_id=? AND expt_run_id=? AND item_id=?", f.space, f.expt, f.run, b).Take(&bAfter).Error)
 	require.Equal(t, bBefore, bAfter)
 	assertMixedRetryWindowStats(t, p, [4]int32{1, 0, 0, 1}, [4]int32{1, 0, 0, 1})
-	q2, err := p.manager.RetryInCurrentRun(context.Background(), p.request(entity.EvaluationModeFailRetry))
+	q2, err := retryThroughRealTickForTest(t, p.manager, context.Background(), p.request(entity.EvaluationModeFailRetry))
 	require.NoError(t, err)
 	require.Equal(t, int32(1), q2.AcceptedCount)
 	require.Empty(t, q2.RejectedItems)
@@ -487,7 +487,7 @@ func TestMixedRetryWindowDifferentItemsCompeteForRunTick(t *testing.T) {
 			owner, err := p.server.Get(runKey)
 			require.NoError(t, err)
 			require.NotEmpty(t, owner)
-			busy, err := p.manager.RetryInCurrentRun(context.Background(), request(second))
+			busy, err := retryThroughRealTickForTest(t, p.manager, context.Background(), request(second))
 			require.ErrorContains(t, err, "retry_busy")
 			require.Nil(t, busy)
 			require.Equal(t, before, f.snapshot(), "losing the actual held tick must perform zero SQL writes")
@@ -512,7 +512,7 @@ func TestMixedRetryWindowDifferentItemsCompeteForRunTick(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, secondItem, 1)
 			require.Equal(t, entity.ItemRunState_Success, secondItem[0].Status, "busy caller rereads the terminal source before making a fresh request")
-			q2, err := p.manager.RetryInCurrentRun(context.Background(), request(second))
+			q2, err := retryThroughRealTickForTest(t, p.manager, context.Background(), request(second))
 			require.NoError(t, err)
 			require.Equal(t, int32(1), q2.AcceptedCount)
 			require.Empty(t, q2.RejectedItems)

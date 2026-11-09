@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/require"
@@ -18,16 +18,20 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
+	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
-	lockmocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
+	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
+	exptrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/testutil"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 type manualRetryFixture struct {
@@ -82,6 +86,18 @@ type singleSetTargetStorage struct {
 type singleSetEvaluatorStorage struct {
 	service.EvaluatorRecordService
 	*singleSetRetryStorage
+}
+
+func (s *singleSetExperimentStorage) MGetByID(ctx context.Context, ids []int64, space int64) ([]*entity.Experiment, error) {
+	var result []*entity.Experiment
+	for _, id := range ids {
+		expt, err := s.GetByID(ctx, id, space)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, expt)
+	}
+	return result, nil
 }
 
 func (s *singleSetExperimentStorage) GetByID(ctx context.Context, expt, space int64) (*entity.Experiment, error) {
@@ -234,7 +250,9 @@ type singleSetRetryPort struct {
 	repo.IExptManualRetryRepo
 	beforePreflight func()
 	beforeCommit    func()
+	afterCommit     func(error)
 	prepared        *entity.RequeueTerminalItemsRequest
+	preparedOnce    sync.Once
 }
 
 type singleSetRetryWaker struct{}
@@ -242,7 +260,7 @@ type singleSetRetryWaker struct{}
 func (singleSetRetryWaker) WakeCurrentRun(context.Context, string) error { return nil }
 
 func (p *singleSetRetryPort) PreflightTerminalItems(ctx context.Context, req *entity.RequeueTerminalItemsRequest) (*entity.ManualRetryPreparation, error) {
-	p.prepared = req
+	p.preparedOnce.Do(func() { p.prepared = req })
 	if p.beforePreflight != nil {
 		p.beforePreflight()
 	}
@@ -253,31 +271,43 @@ func (p *singleSetRetryPort) RequeueTerminalItems(ctx context.Context, req *enti
 	if p.beforeCommit != nil {
 		p.beforeCommit()
 	}
-	return p.IExptManualRetryRepo.RequeueTerminalItems(ctx, req)
+	receipt, err := p.IExptManualRetryRepo.RequeueTerminalItems(ctx, req)
+	if p.afterCommit != nil {
+		p.afterCommit(err)
+	}
+	return receipt, err
+}
+
+type singleSetPendingPort struct {
+	repo.IExptManualRetryRepo
+	repo.IExptManualRetryPendingRepo
 }
 
 func singleSetRetryManager(t *testing.T, f *manualRetryFixture, port repo.IExptManualRetryRepo, enforce bool) service.IExptManager {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	config := componentmocks.NewMockIConfiger(ctrl)
-	locker := lockmocks.NewMockILocker(ctrl)
-	locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), 5*time.Second, 5*time.Minute).DoAndReturn(func(ctx context.Context, key string, ttl, renewal time.Duration) (bool, context.Context, func(), error) {
-		child, cancel := context.WithCancel(ctx)
-		return true, child, cancel, nil
-	}).AnyTimes()
+	cache := testutil.RetryRedis(t)
+	factory := func() lock.ILocker { return lock.NewRedisLocker(cache) }
+	locker := factory()
+	generator := idgenmocks.NewMockIIDGenerator(ctrl)
+	actual := exptrepo.NewExptManualRetryRepoWithPending(f.provider, generator, cache).(repo.IExptManualRetryPendingRepo)
+	pendingPort := &singleSetPendingPort{IExptManualRetryRepo: port, IExptManualRetryPendingRepo: actual}
 	guard := componentmocks.NewMockICentralReservationGuard(ctrl)
 	waker := singleSetRetryWaker{}
 	if enforce {
 		guard.EXPECT().ReleaseTerminalReservation(gomock.Any(), "single-set-test", f.run, int64(11), "").Return(component.TerminalReservationAbsent, nil).MaxTimes(1)
 	}
 	s := &singleSetRetryStorage{f: f}
-	return service.NewExptManager(
-		nil, &singleSetExperimentStorage{singleSetRetryStorage: s}, &singleSetRunStorage{singleSetRetryStorage: s}, nil,
+	manager := service.NewExptManager(
+		testutil.DisplayResult{}, &singleSetExperimentStorage{singleSetRetryStorage: s}, &singleSetRunStorage{singleSetRetryStorage: s}, nil,
 		&singleSetItemStorage{singleSetRetryStorage: s}, &singleSetRefStorage{singleSetRetryStorage: s}, &singleSetTurnStorage{singleSetRetryStorage: s}, config, nil, locker, nil, nil,
-		nil, nil, nil, nil, nil, nil, &singleSetTargetStorage{singleSetRetryStorage: s}, nil, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, guard, port, &singleSetEvaluatorStorage{singleSetRetryStorage: s}, waker,
-		func() lock.ILocker { return locker },
+		nil, nil, nil, platestwrite.NewLatestWriteTracker(cache), testutil.DisplayVersions{SetID: f.base + 31}, testutil.DisplaySet{}, testutil.DisplayTarget{IEvalTargetService: &singleSetTargetStorage{singleSetRetryStorage: s}}, nil, nil, testutil.DisplayAggregate{}, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, guard, pendingPort, &singleSetEvaluatorStorage{singleSetRetryStorage: s}, waker,
+		factory,
 	)
+	testutil.StartPendingTicks(t, manager, pendingPort, factory, &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: f.run, ExptType: entity.ExptType_Offline, ExptRunMode: entity.EvaluationModeSubmit, Session: &entity.Session{UserID: "single-set-test"}})
+	return manager
 }
 
 func prepareSingleSetFixture(t *testing.T, f *manualRetryFixture, enforce, zeroVersion bool) {
@@ -328,7 +358,9 @@ func TestManualRetryMySQLSingleSetManagerSameRun(t *testing.T) {
 					require.NoError(t, err, "single_set current items have frozen bindings without expt_item_ref")
 					require.Equal(t, int32(1), receipt.AcceptedCount)
 					if mode == entity.EvaluationModeRetryItems {
-						require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 12, Reason: "processing"}, {ItemID: 13, Reason: "queueing"}}, receipt.RejectedItems)
+						var expected []*entity.ManualRetryRejectedItem
+						require.NoError(t, json.Unmarshal([]byte(`[{"item_id":12,"reason":"processing"},{"item_id":13,"reason":"queueing"}]`), &expected))
+						require.Equal(t, expected, receipt.RejectedItems)
 					}
 					after := f.snapshot()
 					for _, table := range []string{"experiment", "expt_item_ref", "eval_target_record", "evaluator_record"} {
@@ -415,7 +447,11 @@ func TestManualRetryMySQLSingleSetFrozenSourceDrift(t *testing.T) {
 				receipt, err := manager.RetryInCurrentRun(context.Background(), &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, Mode: entity.EvaluationModeRetryItems, ItemIDs: []int64{11}})
 				require.NoError(t, err)
 				require.Zero(t, receipt.AcceptedCount)
-				require.Equal(t, []*entity.ManualRetryRejectedItem{{ItemID: 11, Reason: "source_changed"}}, receipt.RejectedItems)
+				expected := []*entity.ManualRetryRejectedItem{{ItemID: 11, Reason: "source_changed"}}
+				if boundary == "commit" {
+					require.NoError(t, json.Unmarshal([]byte(`[{"item_id":11,"reason":"source_changed"}]`), &expected))
+				}
+				require.Equal(t, expected, receipt.RejectedItems)
 				after := f.snapshot()
 				for table, original := range before {
 					if table != "expt_run_log" {
@@ -480,7 +516,7 @@ func TestManualRetryMySQLSingleSetConcurrentReplay(t *testing.T) {
 	// acceptors then contend on the actual experiment/run/item locks.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	port.beforeCommit = cancel
+	port.beforePreflight = cancel
 	_, err := manager.RetryInCurrentRun(ctx, &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, Mode: entity.EvaluationModeFailRetry})
 	require.ErrorIs(t, err, context.Canceled)
 	require.NotNil(t, port.prepared)
@@ -532,8 +568,12 @@ func TestManualRetryMySQLSingleSetWriteRollback(t *testing.T) {
 			prepareSingleSetFixture(t, f, false, false)
 			before := f.snapshot()
 			cause := errors.New("single-set atomic write failure")
+			var callbackCalls atomic.Int64
+			daoErrors := make(chan error, 1)
+			port := &singleSetRetryPort{IExptManualRetryRepo: f.port, afterCommit: func(err error) { daoErrors <- err }}
 			callback := func(tx *gorm.DB) {
 				if tx.Statement.Table == table {
+					callbackCalls.Add(1)
 					_ = tx.AddError(cause)
 				}
 			}
@@ -544,11 +584,17 @@ func TestManualRetryMySQLSingleSetWriteRollback(t *testing.T) {
 				require.NoError(t, f.conn.Callback().Update().Remove(name))
 				require.NoError(t, f.conn.Callback().Delete().Remove(name))
 			}()
-			manager := singleSetRetryManager(t, f, f.port, false)
+			manager := singleSetRetryManager(t, f, port, false)
 			receipt, err := manager.RetryInCurrentRun(context.Background(), &entity.RetryInCurrentRunRequest{SpaceID: f.space, ExptID: f.expt, ExpectedRunID: f.run, Mode: entity.EvaluationModeFailRetry})
-			require.ErrorIs(t, err, cause)
+			status, ok := errorx.FromStatusError(err)
+			require.True(t, ok)
+			require.Equal(t, int32(601200702), status.Code())
+			require.Positive(t, callbackCalls.Load(), "real GORM fault callback must execute")
+			require.Len(t, daoErrors, 1, "real DAO return must be captured")
+			require.ErrorIs(t, <-daoErrors, cause)
 			require.Nil(t, receipt)
 			require.Equal(t, before, f.snapshot(), "four tables, refs, stats and receipt roll back together")
+			t.Logf("DAO_CAUSE_AND_API_CODE_VERIFIED table=%s api_code=%d callback_calls=%d complete_SQL_snapshot_equal=true", table, status.Code(), callbackCalls.Load())
 		})
 	}
 }

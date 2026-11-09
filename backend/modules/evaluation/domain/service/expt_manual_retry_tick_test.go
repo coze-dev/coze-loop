@@ -117,13 +117,20 @@ func expectAdmissionTerminalCandidate(ctrl *gomock.Controller, manager *ExptMang
 
 func retryThroughRealTickForTest(t *testing.T, manager *ExptMangerImpl, ctx context.Context, request *entity.RetryInCurrentRunRequest) (*entity.ManualRetryReceipt, error) {
 	t.Helper()
+	if ctx.Err() != nil {
+		return manager.RetryInCurrentRun(ctx, request)
+	}
 	port := manager.manualRetryRepo.(repo.IExptManualRetryPendingRepo)
+	previous, readErr := port.GetPendingRetry(ctx, request.SpaceID, request.ExptID, request.ExpectedRunID)
+	require.NoError(t, readErr)
+	apiCtx, stopAPI := context.WithCancel(ctx)
+	defer stopAPI()
 	type outcome struct {
 		receipt *entity.ManualRetryReceipt
 		err     error
 	}
 	done := make(chan outcome, 1)
-	go func() { receipt, err := manager.RetryInCurrentRun(ctx, request); done <- outcome{receipt, err} }()
+	go func() { receipt, err := manager.RetryInCurrentRun(apiCtx, request); done <- outcome{receipt, err} }()
 	deadline := time.NewTimer(5 * time.Second)
 	defer deadline.Stop()
 	for {
@@ -136,7 +143,7 @@ func retryThroughRealTickForTest(t *testing.T, manager *ExptMangerImpl, ctx cont
 		}
 		pending, err := port.GetPendingRetry(ctx, request.SpaceID, request.ExptID, request.ExpectedRunID)
 		require.NoError(t, err)
-		if pending != nil {
+		if pending != nil && (previous == nil || previous.Request.RequestID != pending.Request.RequestID) {
 			break
 		}
 		time.Sleep(time.Millisecond)
@@ -145,7 +152,11 @@ func retryThroughRealTickForTest(t *testing.T, manager *ExptMangerImpl, ctx cont
 	key := fmt.Sprintf("expt_run_exec_lock:%d:%d", request.ExptID, request.ExpectedRunID)
 	locked, tickCtx, cancel, err := locker.LockWithRenew(ctx, key, 5*time.Second, manualRetryLockMaxHold)
 	require.NoError(t, err)
-	require.True(t, locked)
+	if !locked {
+		stopAPI()
+		result := <-done
+		return result.receipt, result.err
+	}
 	err = manager.consumePendingCurrentRetry(tickCtx, &entity.ExptScheduleEvent{SpaceID: request.SpaceID, ExptID: request.ExptID, ExptRunID: request.ExpectedRunID, ExptRunMode: entity.EvaluationModeSubmit, ExptType: entity.ExptType_Offline})
 	cancel()
 	_, unlockErr := locker.UnlockWithContext(ctx, key)

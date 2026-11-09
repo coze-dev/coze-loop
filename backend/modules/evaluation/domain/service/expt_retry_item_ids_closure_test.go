@@ -60,7 +60,7 @@ func newRetryItemIDsClosureFixture(t *testing.T, parent entity.ExptRunMode, curr
 	manager := &ExptMangerImpl{
 		exptRepo: f.experimentRepo(), runLogRepo: exptrepo.NewExptRunLogRepo(exptmysql.NewExptRunLogDAO(f.provider)),
 		itemResultRepo: f.itemRepo(), turnResultRepo: f.turnRepo(),
-		manualRetryRepo:   exptrepo.NewExptManualRetryRepo(f.provider, ids),
+		manualRetryRepo:   exptrepo.NewExptManualRetryRepoWithPending(f.provider, ids, client),
 		manualRetryLocker: func() lock.ILocker { return lock.NewRedisLocker(client) },
 	}
 
@@ -180,7 +180,7 @@ func TestRetryItemIDsClosureRealMySQLAdmission(t *testing.T) {
 				p := newRetryItemIDsClosureFixture(t, parent.mode, source.currentLog, source.listed, false)
 				f := p.f
 				before := p.unchangedRows(t)
-				receipt, err := p.manager.RetryInCurrentRun(context.Background(), p.request())
+				receipt, err := retryThroughRealTickForTest(t, p.manager, context.Background(), p.request())
 				require.NoError(t, err)
 				require.NotNil(t, receipt)
 				require.Equal(t, f.run, receipt.RunID)
@@ -313,7 +313,7 @@ func TestRetryItemIDsClosureRealMySQLPreflightCapacity(t *testing.T) {
 				require.Empty(t, checked.RejectedItems)
 			}
 			require.Equal(t, before, f.snapshot(), "Preflight must never write rows")
-			receipt, err := p.manager.RetryInCurrentRun(context.Background(), p.request())
+			receipt, err := retryThroughRealTickForTest(t, p.manager, context.Background(), p.request())
 			if tc.capacity {
 				require.Error(t, err)
 				var statusErr errorx.StatusError
@@ -416,7 +416,7 @@ func TestRetryItemIDsClosureRealMySQLSchedulerExecution(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int32(1), countsBefore[f.item])
 	require.Zero(t, countsBefore[f.item+2])
-	receipt, err := p.manager.RetryInCurrentRun(ctx, p.request())
+	receipt, err := retryThroughRealTickForTest(t, p.manager, ctx, p.request())
 	require.NoError(t, err)
 	require.Equal(t, int32(1), receipt.AcceptedCount)
 	require.Empty(t, receipt.RejectedItems)

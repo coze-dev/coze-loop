@@ -113,7 +113,7 @@ func TestCompleteStandardCurrentRetrySharesTickBothOrders(t *testing.T) {
 				retryDone, completeDone := make(chan standardCompleteRetryOutcome, 1), make(chan error, 1)
 				startRetry := func() {
 					go func() {
-						receipt, err := p.manager.RetryInCurrentRun(ctx, req)
+						receipt, err := retryThroughRealTickForTest(t, p.manager, ctx, req)
 						retryDone <- standardCompleteRetryOutcome{receipt, err}
 					}()
 				}

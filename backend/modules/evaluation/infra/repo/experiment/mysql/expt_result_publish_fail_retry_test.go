@@ -7,18 +7,20 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	"github.com/bytedance/gg/gptr"
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
-	lockmocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
+	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
+	exptrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/convert"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -53,11 +55,9 @@ func crossRunRetryManager(t *testing.T, f *manualRetryFixture) service.IExptMana
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	config := componentmocks.NewMockIConfiger(ctrl)
-	locker := lockmocks.NewMockILocker(ctrl)
-	locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), 5*time.Second, 5*time.Minute).DoAndReturn(func(ctx context.Context, key string, ttl, renewal time.Duration) (bool, context.Context, func(), error) {
-		child, cancel := context.WithCancel(ctx)
-		return true, child, cancel, nil
-	}).AnyTimes()
+	cache := testutil.RetryRedis(t)
+	factory := func() lock.ILocker { return lock.NewRedisLocker(cache) }
+	locker := factory()
 	s := &singleSetRetryStorage{f: f}
 	items := &crossRunItemStorage{&singleSetItemStorage{singleSetRetryStorage: s}}
 	turns := &crossRunTurnStorage{&singleSetTurnStorage{singleSetRetryStorage: s}}
@@ -67,14 +67,18 @@ func crossRunRetryManager(t *testing.T, f *manualRetryFixture) service.IExptMana
 		nextID++
 		return nextID, nil
 	}).AnyTimes()
-	port := mysql.NewExptManualRetryDAO(f.provider, generator)
-	return service.NewExptManager(
-		nil, &singleSetExperimentStorage{singleSetRetryStorage: s}, &singleSetRunStorage{singleSetRetryStorage: s}, nil,
+	port := exptrepo.NewExptManualRetryRepoWithPending(f.provider, generator, cache)
+	manager := service.NewExptManager(
+		testutil.DisplayResult{}, &singleSetExperimentStorage{singleSetRetryStorage: s}, &singleSetRunStorage{singleSetRetryStorage: s}, nil,
 		items, &singleSetRefStorage{singleSetRetryStorage: s}, turns, config, nil, locker, nil, nil,
-		nil, nil, nil, nil, nil, nil, &singleSetTargetStorage{singleSetRetryStorage: s}, nil, nil, nil, nil, nil,
+		nil, nil, nil, platestwrite.NewLatestWriteTracker(cache), testutil.DisplayVersions{SetID: f.base + 31}, testutil.DisplaySet{}, testutil.DisplayTarget{IEvalTargetService: &singleSetTargetStorage{singleSetRetryStorage: s}}, nil, nil, testutil.DisplayAggregate{}, nil, nil,
 		nil, nil, nil, nil, nil, nil, nil, componentmocks.NewMockICentralReservationGuard(ctrl), port, &singleSetEvaluatorStorage{singleSetRetryStorage: s}, singleSetRetryWaker{},
-		func() lock.ILocker { return locker },
+		factory,
 	)
+	current, err := manager.Get(context.Background(), f.expt, f.space, &entity.Session{UserID: "cross-run-test"})
+	require.NoError(t, err)
+	testutil.StartPendingTicks(t, manager, port.(repo.IExptManualRetryPendingRepo), factory, &entity.ExptScheduleEvent{SpaceID: f.space, ExptID: f.expt, ExptRunID: current.LatestRunID, ExptType: entity.ExptType_Offline, ExptRunMode: entity.EvaluationModeSubmit, Session: &entity.Session{UserID: "cross-run-test"}})
+	return manager
 }
 
 func TestResultPublishMySQLFailRetryHistoricalSuccessAllowsNextRetry(t *testing.T) {
