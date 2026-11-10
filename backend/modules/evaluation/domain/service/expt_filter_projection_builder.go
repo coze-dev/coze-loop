@@ -17,6 +17,10 @@ type ExptFilterProjectionBuilder interface {
 }
 
 // NewExptFilterProjectionBuilder does not initialize execution services or publishers.
-func NewExptFilterProjectionBuilder(experiments repo.IExperimentRepo, items repo.IExptItemResultRepo, turns repo.IExptTurnResultRepo, annotations repo.IExptAnnotateRepo, index repo.IExptTurnResultFilterRepo, refs repo.IExptItemRefRepo, targets repo.IEvalTargetRepo, evaluators repo.IEvaluatorRecordRepo, configer component.IConfiger) ExptFilterProjectionBuilder {
-	return &ExptResultServiceImpl{ExperimentRepo: experiments, ExptItemResultRepo: items, ExptTurnResultRepo: turns, ExptAnnotateRepo: annotations, exptTurnResultFilterRepo: index, exptItemRefRepo: refs, evalTargetRepo: targets, filterEvaluatorRepo: evaluators, scoreCalculator: NewEvaluatorScoreCalculator(configer, nil)}
+func NewExptFilterProjectionBuilder(experiments repo.IExperimentRepo, items repo.IExptItemResultRepo, turns repo.IExptTurnResultRepo, annotations repo.IExptAnnotateRepo, index repo.IExptTurnResultFilterRepo, refs repo.IExptItemRefRepo, targets repo.IEvalTargetRepo, evaluators repo.IEvaluatorRecordRepo, configer component.IConfiger, versions ...EvaluationSetVersionService) ExptFilterProjectionBuilder {
+	var versionService EvaluationSetVersionService
+	if len(versions) > 0 {
+		versionService = versions[0]
+	}
+	return &ExptResultServiceImpl{ExperimentRepo: experiments, ExptItemResultRepo: items, ExptTurnResultRepo: turns, ExptAnnotateRepo: annotations, exptTurnResultFilterRepo: index, exptItemRefRepo: refs, evalTargetRepo: targets, filterEvaluatorRepo: evaluators, evaluationSetVersionService: versionService, scoreCalculator: NewEvaluatorScoreCalculator(configer, nil)}
 }

@@ -132,6 +132,7 @@ func (e ExptResultServiceImpl) BuildExptFilterProjection(ctx context.Context, sp
 	}
 	result := make([]*entity.ExptTurnResultFilterEntity, 0, len(turns))
 	var bytes int64
+	var legacyEvalSetID int64
 	for _, tr := range turns {
 		item := itemByID[tr.ItemID]
 		if item == nil {
@@ -142,6 +143,14 @@ func (e ExptResultServiceImpl) BuildExptFilterProjection(ctx context.Context, sp
 			row.EvalSetID = ref.EvalSetID
 			row.EvalSetVersionID = ref.EvalSetVersionID
 			row.ItemVersionID = ref.ItemVersionID
+		} else if row.EvalSetID == 0 && row.EvalSetVersionID > 0 && expt.ExptType == entity.ExptType_Offline && expt.EvalSetSourceType == entity.ExptEvalSetSourceType_SingleSet {
+			if legacyEvalSetID == 0 {
+				legacyEvalSetID, err = e.projectionLegacyEvalSetID(ctx, expt)
+				if err != nil {
+					return nil, projectionError(spaceID, exptID, tr.ItemID, tr.TurnID, "item_refs", err)
+				}
+			}
+			row.EvalSetID = legacyEvalSetID
 		}
 		if tr.ItemVersionID != 0 && tr.ItemVersionID != row.ItemVersionID || item.ItemVersionID != 0 && item.ItemVersionID != row.ItemVersionID {
 			return nil, projectionError(spaceID, exptID, tr.ItemID, tr.TurnID, "item_refs", fmt.Errorf("item version mismatch"))
@@ -224,6 +233,28 @@ func projectionContextError(expt *entity.Experiment, key *entity.ExptFilterKey, 
 }
 
 func projectionFinite(value float64) bool { return !math.IsNaN(value) && !math.IsInf(value, 0) }
+
+func (e ExptResultServiceImpl) projectionLegacyEvalSetID(ctx context.Context, expt *entity.Experiment) (int64, error) {
+	if expt.EvalSetSpaceID != 0 && expt.EvalSetSpaceID != expt.SpaceID {
+		return 0, fmt.Errorf("legacy dataset version is outside experiment space")
+	}
+	if e.evaluationSetVersionService == nil {
+		return 0, fmt.Errorf("legacy dataset version reader missing")
+	}
+	// Deleted datasets can still own the immutable version used by a live experiment.
+	withDeleted := true
+	version, set, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, expt.SpaceID, expt.EvalSetVersionID, &withDeleted, nil)
+	if err != nil {
+		return 0, err
+	}
+	if version == nil || version.ID != expt.EvalSetVersionID || version.SpaceID != expt.SpaceID || version.EvaluationSetID <= 0 {
+		return 0, fmt.Errorf("legacy dataset version missing or identity mismatch")
+	}
+	if set != nil && (set.ID != version.EvaluationSetID || set.SpaceID != expt.SpaceID) {
+		return 0, fmt.Errorf("legacy dataset and version identity mismatch")
+	}
+	return version.EvaluationSetID, nil
+}
 
 func (e ExptResultServiceImpl) projectionItemRefs(ctx context.Context, expt *entity.Experiment, itemIDs []int64, wanted map[int64]bool, knownKey *entity.ExptFilterKey) (map[int64]*entity.ExptItemRef, error) {
 	multi := expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig
