@@ -643,6 +643,50 @@ func TestMetricApplication_GetDrillDownValues(t *testing.T) {
 	}
 }
 
+func TestMetricApplication_GetDrillDownValues_FluxTypes(t *testing.T) {
+	tests := []struct {
+		drillDownValueType metricpb.DrillDownValueType
+		metricName         string
+	}{
+		{drillDownValueType: metricpb.DrillDownValueTypeFluxUser, metricName: "flux_user_count_pie"},
+		{drillDownValueType: metricpb.DrillDownValueTypeFluxAgent, metricName: "flux_agent_count_pie"},
+		{drillDownValueType: metricpb.DrillDownValueTypeFluxModelName, metricName: "flux_model_name_count_pie"},
+		{drillDownValueType: metricpb.DrillDownValueTypeFluxProjectName, metricName: "flux_project_name_count_pie"},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.drillDownValueType), func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			metricMock := metricservicemock.NewMockIMetricsService(ctrl)
+			authMock := rpcmock.NewMockIAuthProvider(ctrl)
+			authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceMetricRead, "5", false).Return(nil)
+			metricMock.EXPECT().QueryMetrics(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(_ context.Context, req *service.QueryMetricsReq) (*service.QueryMetricsResp, error) {
+					assert.Equal(t, []string{tt.metricName}, req.MetricsNames)
+					return &service.QueryMetricsResp{Metrics: map[string]*entity.Metric{}}, nil
+				},
+			)
+
+			app := &MetricApplication{
+				metricService: metricMock,
+				authSvc:       authMock,
+			}
+			resp, err := app.GetDrillDownValues(context.Background(), &metricapi.GetDrillDownValuesRequest{
+				WorkspaceID:        5,
+				StartTime:          0,
+				EndTime:            1,
+				DrillDownValueType: tt.drillDownValueType,
+			})
+
+			if !assert.NoError(t, err) {
+				return
+			}
+			assert.NotNil(t, resp)
+			assert.Empty(t, resp.DrillDownValues)
+		})
+	}
+}
+
 func TestMetricApplication_validateGetDrillDownValuesReq(t *testing.T) {
 	t.Parallel()
 	app := &MetricApplication{}
