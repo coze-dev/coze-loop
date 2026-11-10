@@ -24,6 +24,12 @@ type Provider interface {
 	Transaction(ctx context.Context, fc func(tx *gorm.DB) error, opts ...Option) error
 }
 
+// CrossTableJoinCapable 由存储提供方按实际后端声明是否支持跨表 JOIN。
+// 未实现该接口的 Provider 按「支持」处理，保持既有 SQL 形态。
+type CrossTableJoinCapable interface {
+	SupportsCrossTableJoin() bool
+}
+
 // WithMaster 强制读主库
 func WithMaster() Option {
 	return func(option *option) {

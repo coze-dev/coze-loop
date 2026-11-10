@@ -32,20 +32,28 @@ type currentRequestRow struct {
 }
 
 func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, spaceID, exptID, runID int64, itemIDs []int64, retryFirst bool, opts ...db.Option) ([]*entity.ExptItemCurrentRequest, error) {
-	session := dao.provider.NewSession(ctx, append(opts, db.WithMaster())...).Table("expt_item_result_run_log AS l").
-		Select("l.id,l.item_id,l.item_version_id,l.status,l.result_state,l.retry_times,l.quota_reservation_state,l.updated_at,c.id AS canonical_id,c.expt_run_id AS canonical_run_id,c.status AS canonical_status,c.item_version_id AS canonical_item_version_id,c.ext,r.mode,r.status AS run_status").
-		Joins("LEFT JOIN expt_item_result AS c ON c.space_id=l.space_id AND c.expt_id=l.expt_id AND c.item_id=l.item_id AND c.deleted_at IS NULL").
-		Joins("LEFT JOIN expt_run_log AS r ON r.space_id=l.space_id AND r.expt_id=l.expt_id AND r.expt_run_id=l.expt_run_id AND r.deleted_at IS NULL").
-		Where("l.space_id=? AND l.expt_id=? AND l.expt_run_id=? AND l.deleted_at IS NULL", spaceID, exptID, runID)
-	if itemIDs != nil {
-		session = session.Where("l.item_id IN ?", itemIDs)
-	}
-	if retryFirst {
-		session = session.Order("l.retry_times ASC")
-	}
 	var rows []currentRequestRow
-	if err := session.Order("l.id ASC").Find(&rows).Error; err != nil {
-		return nil, err
+	if !dao.supportsCrossTableJoin() {
+		var err error
+		rows, err = dao.readCurrentRequestRowsSplit(ctx, spaceID, exptID, runID, itemIDs, retryFirst, opts...)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		session := dao.provider.NewSession(ctx, append(opts, db.WithMaster())...).Table("expt_item_result_run_log AS l").
+			Select("l.id,l.item_id,l.item_version_id,l.status,l.result_state,l.retry_times,l.quota_reservation_state,l.updated_at,c.id AS canonical_id,c.expt_run_id AS canonical_run_id,c.status AS canonical_status,c.item_version_id AS canonical_item_version_id,c.ext,r.mode,r.status AS run_status").
+			Joins("LEFT JOIN expt_item_result AS c ON c.space_id=l.space_id AND c.expt_id=l.expt_id AND c.item_id=l.item_id AND c.deleted_at IS NULL").
+			Joins("LEFT JOIN expt_run_log AS r ON r.space_id=l.space_id AND r.expt_id=l.expt_id AND r.expt_run_id=l.expt_run_id AND r.deleted_at IS NULL").
+			Where("l.space_id=? AND l.expt_id=? AND l.expt_run_id=? AND l.deleted_at IS NULL", spaceID, exptID, runID)
+		if itemIDs != nil {
+			session = session.Where("l.item_id IN ?", itemIDs)
+		}
+		if retryFirst {
+			session = session.Order("l.retry_times ASC")
+		}
+		if err := session.Order("l.id ASC").Find(&rows).Error; err != nil {
+			return nil, err
+		}
 	}
 	out := make([]*entity.ExptItemCurrentRequest, 0, len(rows))
 	for _, row := range rows {
@@ -111,6 +119,70 @@ func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, space
 		out = append(out, &entity.ExptItemCurrentRequest{SpaceID: spaceID, ExptID: exptID, RunID: runID, ItemID: row.ItemID, ItemVersionID: row.ItemVersionID, RequestID: request, Mode: mode, Status: status, ResultState: entity.ExptItemResultState(result), RetryTimes: row.RetryTimes, UpdatedAt: gptr.Of(row.UpdatedAt), QuotaReservationState: entity.QuotaReservationState(row.QuotaReservationState)})
 	}
 	return out, nil
+}
+
+// 存储不支持跨表 JOIN 时，用三次单表查询在 Go 侧组装同一份观测。
+func (dao *exptItemResultDAOImpl) supportsCrossTableJoin() bool {
+	c, ok := dao.provider.(db.CrossTableJoinCapable)
+	return !ok || c.SupportsCrossTableJoin()
+}
+
+func (dao *exptItemResultDAOImpl) readCurrentRequestRowsSplit(ctx context.Context, spaceID, exptID, runID int64, itemIDs []int64, retryFirst bool, opts ...db.Option) ([]currentRequestRow, error) {
+	opts = append(opts, db.WithMaster())
+	session := dao.provider.NewSession(ctx, opts...).
+		Select("id,item_id,item_version_id,status,result_state,retry_times,quota_reservation_state,updated_at").
+		Where("space_id=? AND expt_id=? AND expt_run_id=?", spaceID, exptID, runID)
+	if itemIDs != nil {
+		session = session.Where("item_id IN ?", itemIDs)
+	}
+	if retryFirst {
+		session = session.Order("retry_times ASC")
+	}
+	var itemLogs []model.ExptItemResultRunLog
+	if err := session.Order("id ASC").Find(&itemLogs).Error; err != nil {
+		return nil, err
+	}
+	if len(itemLogs) == 0 {
+		return nil, nil
+	}
+	logItemIDs := make([]int64, 0, len(itemLogs))
+	for _, itemLog := range itemLogs {
+		logItemIDs = append(logItemIDs, itemLog.ItemID)
+	}
+	var items []model.ExptItemResult
+	if err := dao.provider.NewSession(ctx, opts...).
+		Select("id,item_id,expt_run_id,status,item_version_id,ext").
+		Where("space_id=? AND expt_id=? AND item_id IN ?", spaceID, exptID, logItemIDs).
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+	itemsByID := make(map[int64]model.ExptItemResult, len(items))
+	for _, item := range items {
+		itemsByID[item.ItemID] = item
+	}
+	var runs []model.ExptRunLog
+	if err := dao.provider.NewSession(ctx, opts...).
+		Select("mode,status").
+		Where("space_id=? AND expt_id=? AND expt_run_id=?", spaceID, exptID, runID).
+		Find(&runs).Error; err != nil {
+		return nil, err
+	}
+	rows := make([]currentRequestRow, 0, len(itemLogs))
+	for _, itemLog := range itemLogs {
+		item := itemsByID[itemLog.ItemID]
+		row := currentRequestRow{
+			ID: itemLog.ID, ItemID: itemLog.ItemID, ItemVersionID: itemLog.ItemVersionID,
+			Status: itemLog.Status, ResultState: itemLog.ResultState, RetryTimes: itemLog.RetryTimes,
+			QuotaReservationState: itemLog.QuotaReservationState, UpdatedAt: itemLog.UpdatedAt,
+			CanonicalID: item.ID, CanonicalRunID: item.ExptRunID, CanonicalStatus: item.Status,
+			CanonicalItemVersionID: item.ItemVersionID, Ext: gptr.Indirect(item.Ext),
+		}
+		if len(runs) > 0 {
+			row.Mode, row.RunStatus = runs[0].Mode, runs[0].Status
+		}
+		rows = append(rows, row)
+	}
+	return rows, nil
 }
 
 func validCurrentItemStatus(status entity.ItemRunState) bool {
