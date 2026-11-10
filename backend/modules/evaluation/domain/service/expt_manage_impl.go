@@ -1799,7 +1799,7 @@ func (e *ExptMangerImpl) Update(ctx context.Context, expt *entity.Experiment, se
 // 采用 read-modify-write：读出完整实验 → 内存中仅覆盖指定字段 → 序列化完整 EvalConf → 只写指定列。
 // 严禁用只含两字段的裸 EvalConf 覆盖该列（会清空 ConnectorConf/TimeRange/Ext）。
 func (e *ExptMangerImpl) UpdateRunConf(ctx context.Context, param *entity.UpdateRunConfParam) error {
-	got, err := e.exptRepo.GetByID(ctx, param.ExptID, param.SpaceID)
+	got, err := e.exptRepo.GetByID(contexts.WithCtxWriteDB(ctx), param.ExptID, param.SpaceID)
 	if err != nil {
 		return err
 	}
@@ -1807,14 +1807,17 @@ func (e *ExptMangerImpl) UpdateRunConf(ctx context.Context, param *entity.Update
 		return errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("experiment %d not found in space %d", param.ExptID, param.SpaceID)))
 	}
 
-	// 状态门：仅允许对「待执行 / 进行中」的实验修改运行配置，终态/排空态一律拒绝。
-	if got.Status != entity.ExptStatus_Pending && got.Status != entity.ExptStatus_Processing {
+	if got.Status != entity.ExptStatus_Pending && got.Status != entity.ExptStatus_Processing &&
+		!(got.Status == entity.ExptStatus_Failed && entity.IsTaskExperimentMutation(ctx)) {
 		return errorx.NewByCode(errno.ExperimentValidateFailCode,
 			errorx.WithExtraMsg("run conf can only be modified when experiment is pending or processing"))
 	}
 
 	if got.EvalConf == nil {
 		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("EvalConfig is invalid"))
+	}
+	if param.MaxRunMinutes != nil && (!entity.ValidateMaxRunMinutes(*param.MaxRunMinutes) || got.EvalConf.RunModeConfig == nil) {
+		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("max_run_minutes requires a positive value and an existing run_mode_config"))
 	}
 
 	// 中心调度参数只对 enforce 实验有意义：legacy 实验既不参与优先级排序（调度器的扫描条件是
@@ -1833,6 +1836,9 @@ func (e *ExptMangerImpl) UpdateRunConf(ctx context.Context, param *entity.Update
 	}
 	if param.ItemRetryNum != nil {
 		evalConf.ItemRetryNum = param.ItemRetryNum
+	}
+	if param.MaxRunMinutes != nil {
+		evalConf.RunModeConfig.MaxRunMinutes = *param.MaxRunMinutes
 	}
 	if param.ExpectedQuotaConsumption != nil {
 		evalConf.ExpectedQuotaConsumption = param.ExpectedQuotaConsumption

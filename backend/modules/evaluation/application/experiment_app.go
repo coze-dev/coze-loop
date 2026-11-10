@@ -1502,8 +1502,7 @@ func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.
 	}, nil
 }
 
-// UpdateExptRunConf 修改进行中实验的运行配置（并发度 / Item 重试次数）。
-// 仅对 Pending / Processing 状态的实验生效；改的是整数值，跳过内容审核。
+// UpdateExptRunConf 修改执行参数；可信任务入口可更新 Failed 来源但不启动实验。
 func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt.UpdateExptRunConfRequest) (r *expt.UpdateExptRunConfResponse, err error) {
 	session := entity.NewSession(ctx)
 
@@ -1527,9 +1526,16 @@ func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt
 		return nil, err
 	}
 
-	// 解析并校验两个可变字段，得到用于 RMW 的指针（nil = 不修改）。
+	// 解析可变字段，得到用于 RMW 的指针（nil = 不修改）。
 	// 注意 0 值语义不对称：ItemConcurNum 的 0 表示"不修改"；ItemRetryNum 的 0 是合法值"不重试"。
-	var itemConcurNum, itemRetryNum *int
+	var itemConcurNum, itemRetryNum, maxRunMinutes *int
+	if req.IsSetMaxRunMinutes() {
+		minutes := int(req.GetMaxRunMinutes())
+		if !entity.ValidateMaxRunMinutes(minutes) {
+			return nil, errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("max_run_minutes must be positive"))
+		}
+		maxRunMinutes = &minutes
+	}
 
 	// ItemConcurNum：nil 或 0 = 不修改；<0 拒绝；(0, MaxItemConcurNum] 接受；越上界拒绝。
 	if req.IsSetItemConcurNum() {
@@ -1569,6 +1575,7 @@ func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt
 		SpaceID:                  req.GetWorkspaceID(),
 		ItemConcurNum:            itemConcurNum,
 		ItemRetryNum:             itemRetryNum,
+		MaxRunMinutes:            maxRunMinutes,
 		PriorityLevel:            priorityLevel,
 		ExpectedQuotaConsumption: expectedQuota,
 		Session:                  session,
@@ -1756,6 +1763,11 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		session = entity.NewSession(ctx)
 		runMode = experiment.ConvRetryMode(req.GetRetryMode())
 	)
+	if req.ExpectedSourceRunID != nil {
+		if req.ExpectedRunID != nil || req.GetExpectedSourceRunID() <= 0 || runMode != entity.EvaluationModeRetryItems || len(req.GetItemIds()) == 0 {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("expected_source_run_id requires targeted retry and excludes expected_run_id"))
+		}
+	}
 
 	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {
@@ -1776,7 +1788,7 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 	// 该行为是固定契约，不依赖任何配置开关/空间白名单。
 	// RetryAll 语义是「整份重跑」，仍在跑的实验必须走原有起新 run 的链路；
 	// 当前 run 内重排只接受 RetryFailure / RetryTargetItems。
-	if runMode != entity.EvaluationModeRetryAll && (req.ExpectedRunID != nil || (got.ExptType == entity.ExptType_Offline && got.Status == entity.ExptStatus_Processing)) {
+	if req.ExpectedSourceRunID == nil && runMode != entity.EvaluationModeRetryAll && (req.ExpectedRunID != nil || (got.ExptType == entity.ExptType_Offline && got.Status == entity.ExptStatus_Processing)) {
 		if req.GetExpectedRunID() < 0 {
 			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid current run retry identity"))
 		}
@@ -1825,6 +1837,26 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 
 	switch runMode {
 	case entity.EvaluationModeRetryItems:
+		if req.ExpectedSourceRunID != nil {
+			receipt, err := e.manager.LogRetryItemsRunFromSource(ctx, req.GetExptID(), req.GetExpectedSourceRunID(), req.GetWorkspaceID(), req.GetItemIds(), session)
+			if err != nil {
+				return nil, err
+			}
+			rejected := make([]*expt.RetryRejectedItem, 0, len(receipt.RejectedItems))
+			for _, item := range receipt.RejectedItems {
+				rejected = append(rejected, &expt.RetryRejectedItem{ItemID: gptr.Of(item.ItemID), Reason: gptr.Of(item.Reason)})
+			}
+			response := &expt.RetryExperimentResponse{AcceptedItemIds: receipt.AcceptedItemIDs, AcceptedCount: gptr.Of(int32(len(receipt.AcceptedItemIDs))), RejectedItems: rejected, SnapshotAtMs: gptr.Of(receipt.SnapshotAtMS), BaseResp: base.NewBaseResp()}
+			if receipt.RunID != 0 {
+				response.RunID = gptr.Of(receipt.RunID)
+			}
+			if len(receipt.AcceptedItemIDs) > 0 {
+				if err := e.manager.RetryItems(ctx, req.GetExptID(), receipt.RunID, req.GetWorkspaceID(), gptr.Indirect(got.EvalConf.ItemRetryNum), receipt.AcceptedItemIDs, session, req.GetExt()); err != nil {
+					return response, err
+				}
+			}
+			return response, nil
+		}
 		rid, retried, err := e.manager.LogRetryItemsRun(ctx, req.GetExptID(), runMode, req.GetWorkspaceID(), req.GetItemIds(), session)
 		if err != nil {
 			return nil, err
