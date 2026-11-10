@@ -68,5 +68,28 @@ func (m *ManageImpl) readConfig(ctx context.Context) ([]*entity.Model, error) {
 	if err := m.loader.UnmarshalKey(ctx, "models", &models); err != nil {
 		return nil, err
 	}
+
+	// default_value was the original decoder key, while every shipped model
+	// config uses default_val. Normalize the alias from the same decoded
+	// snapshot so both spellings remain supported during live config reloads.
+	for _, model := range models {
+		if model == nil || model.ParamConfig == nil {
+			continue
+		}
+		normalizeParamSchemaDefaultValues(model.ParamConfig.ParamSchemas)
+	}
 	return models, nil
+}
+
+func normalizeParamSchemaDefaultValues(schemas []*entity.ParamSchema) {
+	for _, schema := range schemas {
+		if schema == nil {
+			continue
+		}
+		if schema.DefaultVal != nil {
+			schema.DefaultValue = *schema.DefaultVal
+			schema.DefaultVal = nil
+		}
+		normalizeParamSchemaDefaultValues(schema.Properties)
+	}
 }

@@ -359,6 +359,7 @@ type ParamSchema struct {
 	Min          string         `json:"min" yaml:"min" mapstructure:"min"`
 	Max          string         `json:"max" yaml:"max" mapstructure:"max"`
 	DefaultValue string         `json:"default_value" yaml:"default_value" mapstructure:"default_value"`
+	DefaultVal   *string        `json:"-" yaml:"-" mapstructure:"default_val"` // normalized into DefaultValue by the config loader
 	Options      []*ParamOption `json:"options" yaml:"options" mapstructure:"options"`
 	Properties   []*ParamSchema `json:"properties" mapstructrue:"properties"`
 	JsonPath     string         `json:"json_path" mapstructrue:"json_path"`
