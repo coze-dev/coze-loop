@@ -646,6 +646,7 @@ type FluxWorkflowConfig struct {
 	SourceTemplateID string                      `json:"source_template_id,omitempty"`
 	SourceSnapshotID string                      `json:"source_snapshot_id,omitempty"`
 	SourceReleaseID  string                      `json:"source_release_id,omitempty"`
+	QueryAppendix    string                      `json:"query_appendix,omitempty"`
 	PhaseReview      *FluxWorkflowPhaseReview    `json:"phase_review,omitempty"`
 	InteractionSUA   *FluxWorkflowInteractionSUA `json:"interaction_sua,omitempty"`
 	Nodes            []*FluxWorkflowNodePolicy   `json:"nodes,omitempty"`
