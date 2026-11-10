@@ -52,6 +52,7 @@ func FromDOChatMsgPart(p *ChatMessagePart) schema.ChatMessagePart {
 		Type:     schema.ChatMessagePartType(p.Type),
 		Text:     p.Text,
 		ImageURL: FromDOImageURL(p.ImageURL),
+		VideoURL: FromDOVideoURL(p.VideoURL),
 	}
 }
 
@@ -62,6 +63,16 @@ func FromDOImageURL(p *ChatMessageImageURL) *schema.ChatMessageImageURL {
 	return &schema.ChatMessageImageURL{
 		URL:      p.URL,
 		Detail:   schema.ImageURLDetail(p.Detail),
+		MIMEType: p.MIMEType,
+	}
+}
+
+func FromDOVideoURL(p *ChatMessageVideoURL) *schema.ChatMessageVideoURL {
+	if p == nil {
+		return nil
+	}
+	return &schema.ChatMessageVideoURL{
+		URL:      p.URL,
 		MIMEType: p.MIMEType,
 	}
 }
@@ -265,6 +276,7 @@ func ToDOMultiContent(cm schema.ChatMessagePart) *ChatMessagePart {
 		Type:     ChatMessagePartType(cm.Type),
 		Text:     cm.Text,
 		ImageURL: ToDOImageURL(cm.ImageURL),
+		VideoURL: ToDOVideoURL(cm.VideoURL),
 	}
 }
 
@@ -275,6 +287,16 @@ func ToDOImageURL(cm *schema.ChatMessageImageURL) *ChatMessageImageURL {
 	return &ChatMessageImageURL{
 		URL:      cm.URL,
 		Detail:   ImageURLDetail(cm.Detail),
+		MIMEType: cm.MIMEType,
+	}
+}
+
+func ToDOVideoURL(cm *schema.ChatMessageVideoURL) *ChatMessageVideoURL {
+	if cm == nil {
+		return nil
+	}
+	return &ChatMessageVideoURL{
+		URL:      cm.URL,
 		MIMEType: cm.MIMEType,
 	}
 }
