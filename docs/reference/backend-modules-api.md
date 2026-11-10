@@ -48,6 +48,18 @@ modules/<domain>/
 - Handler 按领域分组: `backend/api/handler/coze/`
 - 生成路由（勿手动修改）: `backend/api/router_gen.go`
 
+## 实验重试的制品版本覆盖
+
+`RetryExperiment` 和 `RetryExperimentOApi` 复用已有 `ext` 字段：
+
+```json
+{"ext":{"retry_runtime_param":"{\"binary_version\":\"v0.0.250-rc.1\",\"cua_package_url\":\"https://example.com/cua.zip\",\"cua_package_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"}}
+```
+
+仅允许 `binary_version`、`cua_package_url`、`cua_package_sha256`，CUA URL 与 SHA256 必须成对；非法版本名、非 HTTP(S) URL、非 64 位十六进制摘要会在重试准入前拒绝。仅支持已终态 Sandbox Agent 实验的新 run，运行中同 run 重试不接受版本覆盖。
+
+覆盖从本次调度事件取得，合并在原实验或评测集绑定的 runtime 参数之后，保留模型、effort 等字段，不修改实验永久配置。自动失败重试通过事件及异步上下文继承覆盖；下一次手工重试若不传参数，仍使用原实验配置。`retry_failure` 的选行范围不变，但选中行的 target 与评估器均重新执行，不复用旧制品的成功阶段；无覆盖参数时保留原来的成功阶段复用行为。
+
 ## 共享基础设施 (`backend/infra/`)
 
 | 目录 | 职责 |

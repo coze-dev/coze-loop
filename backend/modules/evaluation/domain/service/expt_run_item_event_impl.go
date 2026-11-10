@@ -1279,6 +1279,9 @@ func NewRecordEvalMode(
 			idgen:              idgen,
 		}, nil
 	case entity.EvaluationModeFailRetry:
+		if event.Ext[entity.RetryRuntimeParamExtKey] != "" {
+			return &ExptRecordEvalModeRetryIgnoreResult{exptTurnResultRepo: exptTurnResultRepo, idgen: idgen}, nil
+		}
 		return &ExptRecordEvalModeFailRetry{
 			exptItemResultRepo: exptItemResultRepo,
 			exptTurnResultRepo: exptTurnResultRepo,

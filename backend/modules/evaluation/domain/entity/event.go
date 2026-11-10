@@ -188,7 +188,8 @@ func (e *ExptItemEvalEvent) ignoreExistedResult() bool {
 	if e.ResumeSource != nil || e.AsyncReportTrigger || e.AsyncEvaluatorReportTrigger {
 		return false
 	}
-	return (e.ExptRunMode == EvaluationModeRetryItems || e.ExptRunMode == EvaluationModeRetryAll) && e.RetryTimes == 0
+	return (e.ExptRunMode == EvaluationModeRetryItems || e.ExptRunMode == EvaluationModeRetryAll ||
+		(e.ExptRunMode == EvaluationModeFailRetry && e.Ext[RetryRuntimeParamExtKey] != "")) && e.RetryTimes == 0
 }
 
 func (e *ExptItemEvalEvent) GetExptID() int64 {

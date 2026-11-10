@@ -323,6 +323,18 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 			}
 		}
 	}
+	// The event owns this run's override; old item metadata must not restore a previous run's version.
+	delete(ext, entity.RetryRuntimeParamExtKey)
+	runtimeParam, overrideErr := entity.MergeRetryRuntimeOverride(ext[consts.TargetExecuteExtRuntimeParamKey], etec.Event.Ext)
+	if overrideErr != nil {
+		return nil, overrideErr
+	}
+	if runtimeParam != "" {
+		if ext == nil {
+			ext = make(map[string]string)
+		}
+		ext[consts.TargetExecuteExtRuntimeParamKey] = runtimeParam
+	}
 	// 题目级多轮/SUA 运行配置透传: 仅 MultiSetConfig 新实验的 ItemConfig 非空, 老 DataSet 实验 nil 回退不透传。
 	// SandboxAgent 算子从此 Ext key 读出 RunConf 组 case-file dataset_item.run_conf。
 	if ic := etec.ItemConfig; ic != nil && ic.EvalTargetConf != nil && ic.EvalTargetConf.RunConf != nil {
