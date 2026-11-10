@@ -110,7 +110,7 @@ func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.Inge
 		return nil, err
 	}
 	// unpack space
-	spanMap := o.unpackSpace(ctx, req.Spans)
+	spanMap := o.unpackSpace(ctx, req.Spans, req.GetWorkspaceID())
 	connectorUid := session.UserIDInCtxOrEmpty(ctx)
 	hasErr := false
 	for workspaceId := range spanMap {
@@ -175,14 +175,14 @@ func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.Inge
 	return openapi.NewIngestTracesResponse(), nil
 }
 
-func (o *OpenAPIApplication) unpackSpace(ctx context.Context, spans []*span.InputSpan) map[string][]*span.InputSpan {
+func (o *OpenAPIApplication) unpackSpace(ctx context.Context, spans []*span.InputSpan, headerWorkspaceID string) map[string][]*span.InputSpan {
 	if spans == nil {
 		return nil
 	}
 	spansMap := make(map[string][]*span.InputSpan)
 	claim := o.auth.GetClaim(ctx)
 	for i := range spans {
-		workspaceID := o.workspace.GetIngestWorkSpaceID(ctx, []*span.InputSpan{spans[i]}, claim)
+		workspaceID := o.workspace.GetIngestWorkSpaceID(ctx, []*span.InputSpan{spans[i]}, headerWorkspaceID, claim)
 		if workspaceID == "" {
 			continue
 		}
@@ -407,7 +407,7 @@ func (o *OpenAPIApplication) unpackOtelSpace(ctx context.Context, outerSpaceID s
 				}
 				if spaceID == "" {
 					claim := o.auth.GetClaim(ctx)
-					spaceID = o.workspace.GetIngestWorkSpaceID(ctx, []*span.InputSpan{o.convertOtelTag2InputSpan(scopeSpan)}, claim)
+					spaceID = o.workspace.GetIngestWorkSpaceID(ctx, []*span.InputSpan{o.convertOtelTag2InputSpan(scopeSpan)}, "", claim)
 				}
 				if spansMap[spaceID] == nil {
 					spansMap[spaceID] = make([]*otel.ResourceScopeSpan, 0)

@@ -18,7 +18,7 @@ func NewWorkspaceProvider() workspace.IWorkSpaceProvider {
 
 type WorkspaceProviderImpl struct{}
 
-func (t *WorkspaceProviderImpl) GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan, claim *rpc.Claim) string {
+func (t *WorkspaceProviderImpl) GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan, headerWorkspaceID string, claim *rpc.Claim) string {
 	if len(spans) == 0 {
 		return ""
 	}
