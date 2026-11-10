@@ -204,6 +204,7 @@ type ProtocolConfig struct {
 	ProtocolConfigQwen     *ProtocolConfigQwen     `json:"protocol_config_qwen" yaml:"protocol_config_qwen" mapstructure:"protocol_config_qwen"`
 	ProtocolConfigQianfan  *ProtocolConfigQianfan  `json:"protocol_config_qianfan" yaml:"protocol_config_qianfan" mapstructure:"protocol_config_qianfan"`
 	ProtocolConfigArkBot   *ProtocolConfigArkBot   `json:"protocol_config_ark_bot" yaml:"protocol_config_ark_bot" mapstructure:"protocol_config_ark_bot"`
+	ProtocolConfigMiniMax  *ProtocolConfigMiniMax  `json:"protocol_config_minimax" yaml:"protocol_config_minimax" mapstructure:"protocol_config_minimax"`
 }
 
 type ProtocolConfigArk struct {
@@ -263,6 +264,10 @@ type ProtocolConfigQianfan struct {
 	ParallelToolCalls        *bool    `json:"parallel_tool_calls" yaml:"parallel_tool_calls" mapstructure:"parallel_tool_calls"`
 	ResponseFormatType       *string  `json:"response_format_type" yaml:"response_format_type" mapstructure:"response_format_type"`
 	ResponseFormatJsonSchema *string  `json:"response_format_json_schema" yaml:"response_format_json_schema" mapstructure:"response_format_json_schema"`
+}
+
+type ProtocolConfigMiniMax struct {
+	ResponseFormatType string `json:"response_format_type" yaml:"response_format_type" mapstructure:"response_format_type"`
 }
 
 type ProtocolConfigArkBot struct {
@@ -406,6 +411,7 @@ const (
 	ProtocolQwen      Protocol = "qwen"
 	ProtocolQianfan   Protocol = "qianfan"
 	ProtocolArkBot    Protocol = "arkbot"
+	ProtocolMiniMax   Protocol = "minimax"
 )
 
 type Family string
