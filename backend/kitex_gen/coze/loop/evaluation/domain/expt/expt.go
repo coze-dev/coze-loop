@@ -2842,6 +2842,15 @@ type RunModeConfig struct {
 	// 与 skills_mode 同容器同链路; 结构对齐 runtime testcase.Skill, 由 runtime 按
 	// skills_mode 与题目级 dataset_item.skills 合并安装。
 	Skills []*AgentSkillDeclare `thrift:"skills,12,optional" frugal:"12,optional,list<AgentSkillDeclare>" json:"skills" form:"skills" query:"skills"`
+	// max_qa_turns 实验级 QA(被测 Agent 反问)次数上限, 文本与工具提问共用同一个额度。
+	// **optional i32 是刻意的**: nil = 未配置(由 runtime 取默认/题目级值), 0 或负数 =
+	// 用户显式配了非法值, 必须在 runtime 侧被拒绝 —— 两者不能在中途被 getter 或零值合并吞掉。
+	// 题目级同名字段在 ItemRunConf, 题目级优先; 合并在 runtime 侧做。
+	MaxQaTurns *int32 `thrift:"max_qa_turns,13,optional" frugal:"13,optional,i32" json:"max_qa_turns" form:"max_qa_turns" query:"max_qa_turns"`
+	// sua_qa_reply_template 实验级 QA 回答设定(长 PE): 只在回答当前主任务的澄清问题时生效,
+	// 与 sua_pe_template / sua_resume_pe_template 相互独立。空 = 未配置, runtime 用内置默认答复。
+	// 题目级同名字段在 ItemRunConf, 题目级优先。
+	SuaQaReplyTemplate *string `thrift:"sua_qa_reply_template,14,optional" frugal:"14,optional,string" json:"sua_qa_reply_template" form:"sua_qa_reply_template" query:"sua_qa_reply_template"`
 }
 
 func NewRunModeConfig() *RunModeConfig {
@@ -2982,6 +2991,30 @@ func (p *RunModeConfig) GetSkills() (v []*AgentSkillDeclare) {
 	}
 	return p.Skills
 }
+
+var RunModeConfig_MaxQaTurns_DEFAULT int32
+
+func (p *RunModeConfig) GetMaxQaTurns() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMaxQaTurns() {
+		return RunModeConfig_MaxQaTurns_DEFAULT
+	}
+	return *p.MaxQaTurns
+}
+
+var RunModeConfig_SuaQaReplyTemplate_DEFAULT string
+
+func (p *RunModeConfig) GetSuaQaReplyTemplate() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuaQaReplyTemplate() {
+		return RunModeConfig_SuaQaReplyTemplate_DEFAULT
+	}
+	return *p.SuaQaReplyTemplate
+}
 func (p *RunModeConfig) SetRunMode(val *ExptRunMode) {
 	p.RunMode = val
 }
@@ -3015,6 +3048,12 @@ func (p *RunModeConfig) SetSkillsMode(val *string) {
 func (p *RunModeConfig) SetSkills(val []*AgentSkillDeclare) {
 	p.Skills = val
 }
+func (p *RunModeConfig) SetMaxQaTurns(val *int32) {
+	p.MaxQaTurns = val
+}
+func (p *RunModeConfig) SetSuaQaReplyTemplate(val *string) {
+	p.SuaQaReplyTemplate = val
+}
 
 var fieldIDToName_RunModeConfig = map[int16]string{
 	1:  "run_mode",
@@ -3028,6 +3067,8 @@ var fieldIDToName_RunModeConfig = map[int16]string{
 	10: "max_turns",
 	11: "skills_mode",
 	12: "skills",
+	13: "max_qa_turns",
+	14: "sua_qa_reply_template",
 }
 
 func (p *RunModeConfig) IsSetRunMode() bool {
@@ -3072,6 +3113,14 @@ func (p *RunModeConfig) IsSetSkillsMode() bool {
 
 func (p *RunModeConfig) IsSetSkills() bool {
 	return p.Skills != nil
+}
+
+func (p *RunModeConfig) IsSetMaxQaTurns() bool {
+	return p.MaxQaTurns != nil
+}
+
+func (p *RunModeConfig) IsSetSuaQaReplyTemplate() bool {
+	return p.SuaQaReplyTemplate != nil
 }
 
 func (p *RunModeConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -3175,6 +3224,22 @@ func (p *RunModeConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3344,6 +3409,28 @@ func (p *RunModeConfig) ReadField12(iprot thrift.TProtocol) error {
 	p.Skills = _field
 	return nil
 }
+func (p *RunModeConfig) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.MaxQaTurns = _field
+	return nil
+}
+func (p *RunModeConfig) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SuaQaReplyTemplate = _field
+	return nil
+}
 
 func (p *RunModeConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3393,6 +3480,14 @@ func (p *RunModeConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 	}
@@ -3619,6 +3714,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
+func (p *RunModeConfig) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMaxQaTurns() {
+		if err = oprot.WriteFieldBegin("max_qa_turns", thrift.I32, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.MaxQaTurns); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+func (p *RunModeConfig) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuaQaReplyTemplate() {
+		if err = oprot.WriteFieldBegin("sua_qa_reply_template", thrift.STRING, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SuaQaReplyTemplate); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
 
 func (p *RunModeConfig) String() string {
 	if p == nil {
@@ -3665,6 +3796,12 @@ func (p *RunModeConfig) DeepEqual(ano *RunModeConfig) bool {
 		return false
 	}
 	if !p.Field12DeepEqual(ano.Skills) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.MaxQaTurns) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.SuaQaReplyTemplate) {
 		return false
 	}
 	return true
@@ -3800,6 +3937,30 @@ func (p *RunModeConfig) Field12DeepEqual(src []*AgentSkillDeclare) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *RunModeConfig) Field13DeepEqual(src *int32) bool {
+
+	if p.MaxQaTurns == src {
+		return true
+	} else if p.MaxQaTurns == nil || src == nil {
+		return false
+	}
+	if *p.MaxQaTurns != *src {
+		return false
+	}
+	return true
+}
+func (p *RunModeConfig) Field14DeepEqual(src *string) bool {
+
+	if p.SuaQaReplyTemplate == src {
+		return true
+	} else if p.SuaQaReplyTemplate == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SuaQaReplyTemplate, *src) != 0 {
+		return false
 	}
 	return true
 }
