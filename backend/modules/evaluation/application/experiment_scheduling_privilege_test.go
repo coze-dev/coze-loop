@@ -149,6 +149,40 @@ func TestEnforceSchedulingPrivilege_NonEvalxTriggerUntouched(t *testing.T) {
 	assert.Equal(t, domain_expt.OpenAPI, req.GetTriggerType(), "openapi trigger 必须原样保留")
 }
 
+func TestEnforceSchedulingPrivilege_EvalTaskTriggerUntouched(t *testing.T) {
+	for _, tt := range []struct {
+		name          string
+		declaresQuota bool
+	}{
+		{name: "no legacy quota"},
+		{name: "unprivileged legacy quota", declaresQuota: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			configer := componentMocks.NewMockIConfiger(ctrl)
+			app := &experimentApplication{configer: configer}
+			req := &expt.CreateExperimentRequest{
+				WorkspaceID: 456,
+				TriggerType: gptr.Of(entity.ExptTriggerTypeEvalTask),
+				SourceType:  gptr.Of(domain_expt.SourceType_Evaluation),
+				SourceID:    gptr.Of("task-123"),
+			}
+			if tt.declaresQuota {
+				req.ExpectedQuotaConsumption = privilegedReq().ExpectedQuotaConsumption
+				configer.EXPECT().GetExptSchedulingPrivilegeWhiteList(gomock.Any()).
+					Return(&entity.ExptSchedulingPrivilegeWhiteList{})
+			}
+
+			app.enforceSchedulingPrivilege(ctxWithEmail("nobody@bytedance.com"), req)
+
+			assert.Equal(t, entity.ExptTriggerTypeEvalTask, req.GetTriggerType())
+			assert.Equal(t, domain_expt.SourceType_Evaluation, req.GetSourceType())
+			assert.Equal(t, "task-123", req.GetSourceID())
+			assert.Nil(t, req.ExpectedQuotaConsumption)
+		})
+	}
+}
+
 // TestEnforceSchedulingPrivilege_NilSafe req 为 nil 时不得 panic（这道闸在创建实验热路径上）。
 func TestEnforceSchedulingPrivilege_NilSafe(t *testing.T) {
 	ctrl := gomock.NewController(t)

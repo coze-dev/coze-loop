@@ -517,6 +517,28 @@ func TestHandleFeishuNotification_Disabled_BitsUT(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestHandleFeishuNotification_EvalTaskTrigger_Suppressed(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	for _, status := range []entity.ExptStatus{entity.ExptStatus_Processing, entity.ExptStatus_Success} {
+		for _, conf := range []*entity.ExptNotificationConf{nil, {
+			FeishuNotification: &entity.FeishuNotificationConf{Enable: true},
+		}} {
+			ctrl := gomock.NewController(t)
+			handler, mocks := newTestLifecycleEventHandler(ctrl)
+			expt := &entity.Experiment{
+				ID: 1, SpaceID: 100, CreatedBy: "user1",
+				TriggerType: entity.ExptTriggerTypeEvalTask, NotificationConf: conf,
+			}
+			mocks.exptRepo.EXPECT().GetByID(ctx, int64(1), int64(100)).Return(expt, nil)
+			assert.NoError(t, handler.HandleLifecycleEvent(ctx, &entity.ExptLifecycleEvent{
+				ExptID: 1, SpaceID: 100, ToStatus: status,
+			}))
+		}
+	}
+}
+
 // TestHandleFeishuNotification_EvalxTrigger_Suppressed_BitsUT trigger_type=evalx 一律不发卡，
 // 且优先于 NotificationConf —— 显式 Enable=true + 命中 filter 的实验也挡，老实验(conf=nil)终态也挡。
 func TestHandleFeishuNotification_EvalxTrigger_Suppressed_BitsUT(t *testing.T) {

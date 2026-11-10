@@ -174,11 +174,12 @@ func TestExptMangerImpl_CheckName(t *testing.T) {
 
 type resourceCreationPolicy struct {
 	component.ICentralAdmissionPolicy
-	err error
+	err    error
+	denied bool
 }
 
 func (p resourceCreationPolicy) SelectEvaluationScheduling(context.Context, component.CentralAdmissionSubject) (component.CentralAdmissionDecision, error) {
-	return component.CentralAdmissionDecision{Admitted: true}, p.err
+	return component.CentralAdmissionDecision{Admitted: !p.denied}, p.err
 }
 
 type resourceScopeProvider struct{}
@@ -206,19 +207,49 @@ func TestResourceCreateSandboxFreezesModeWithoutLegacyQuota(t *testing.T) {
 	mgr.benefitService.(*benefitMocks.MockIBenefitService).EXPECT().CheckAndDeductEvalBenefit(any, any).Return(&benefit.CheckAndDeductEvalBenefitResult{IsFreeEvaluate: gptr.Of(true)}, nil).AnyTimes()
 	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Update(any, any).Return(nil).AnyTimes()
 	req := &entity.CreateExptParam{WorkspaceID: 1, Name: "central-sandbox", EvalSetID: 2, EvalSetVersionID: 3, ExptType: entity.ExptType_Offline, ExptConf: &entity.EvaluationConfiguration{ConnectorConf: entity.Connector{TargetConf: &entity.TargetConf{TargetVersionID: 101, IngressConf: &entity.TargetIngressConf{EvalSetAdapter: &entity.FieldAdapter{}}}}}, CreateEvalTargetParam: &entity.CreateEvalTargetParam{EvalTargetType: gptr.Of(entity.EvalTargetTypeSandboxAgent), SourceTargetID: gptr.Of("100"), SourceTargetVersion: gptr.Of("v1")}}
+	configErr := errors.New("central scheduling configuration missing")
+	for _, tt := range []struct {
+		name    string
+		trigger string
+		want    string
+	}{
+		{name: "default manual", want: "manual"},
+		{name: "manual", trigger: "manual", want: "manual"},
+		{name: "eval task", trigger: entity.ExptTriggerTypeEvalTask, want: entity.ExptTriggerTypeEvalTask},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			req.TriggerType = tt.trigger
+			req.SourceType = entity.SourceType_Evaluation
+			req.SourceID = "task-123"
+			mgr.centralAdmissionPolicy = resourceCreationPolicy{}
+			created, err := mgr.CreateExpt(context.Background(), req, &entity.Session{UserID: "1"})
+			require.NoError(t, err)
+			require.Equal(t, tt.want, created.TriggerType)
+			require.Equal(t, req.SourceType, created.SourceType)
+			require.Equal(t, req.SourceID, created.SourceID)
+			require.Equal(t, entity.ExptDispatchModeEnforce, created.ExptDispatchMode)
+			require.Equal(t, testScope, created.SchedulerScope)
+			require.Nil(t, created.EvalConf.ExpectedQuotaConsumption)
+
+			mgr.centralAdmissionPolicy = resourceCreationPolicy{denied: true}
+			legacy, err := mgr.CreateExpt(context.Background(), req, &entity.Session{UserID: "1"})
+			require.NoError(t, err)
+			require.Equal(t, entity.ExptDispatchModeLegacy, legacy.ExptDispatchMode)
+			require.Empty(t, legacy.SchedulerScope)
+			require.Equal(t, entity.ExptDispatchModeEnforce, created.ExptDispatchMode, "new admission must not change frozen experiments")
+			require.Equal(t, testScope, created.SchedulerScope)
+
+			mgr.centralAdmissionPolicy = resourceCreationPolicy{err: configErr}
+			_, err = mgr.CreateExpt(context.Background(), req, &entity.Session{UserID: "1"})
+			require.ErrorIs(t, err, configErr)
+		})
+	}
+	req.TriggerType = entity.ExptTriggerTypeEvalx
 	created, err := mgr.CreateExpt(context.Background(), req, &entity.Session{UserID: "1"})
 	require.NoError(t, err)
-	require.Equal(t, entity.ExptDispatchModeEnforce, created.ExptDispatchMode)
-	require.Equal(t, testScope, created.SchedulerScope)
-	configErr := errors.New("central scheduling configuration missing")
-	mgr.centralAdmissionPolicy = resourceCreationPolicy{err: configErr}
-	_, err = mgr.CreateExpt(context.Background(), req, &entity.Session{UserID: "1"})
-	require.ErrorIs(t, err, configErr)
-	mgr.centralAdmissionPolicy = resourceCreationPolicy{}
-	req.TriggerType = "evalx"
-	created, err = mgr.CreateExpt(context.Background(), req, &entity.Session{UserID: "1"})
-	require.NoError(t, err)
 	require.Equal(t, entity.ExptDispatchModeLegacy, created.ExptDispatchMode, "EvalX must not enter the new protocol")
+	require.Empty(t, created.SchedulerScope)
+	require.Equal(t, entity.ExptTriggerTypeEvalx, created.TriggerType)
 }
 
 func TestExptMangerImpl_CreateExpt(t *testing.T) {

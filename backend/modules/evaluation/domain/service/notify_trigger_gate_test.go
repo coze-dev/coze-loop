@@ -28,8 +28,13 @@ func TestIsFeishuNotifySuppressedByTrigger(t *testing.T) {
 		// trigger_type 跨系统传递，上游可能带空白或大小写差异，一律按 evalx 处理。
 		{name: "evalx with spaces", expt: &entity.Experiment{TriggerType: "  evalx  "}, want: true},
 		{name: "evalx upper case", expt: &entity.Experiment{TriggerType: "EvalX"}, want: true},
+		{name: "eval task", expt: &entity.Experiment{TriggerType: entity.ExptTriggerTypeEvalTask}, want: true},
+		{name: "eval task with spaces", expt: &entity.Experiment{TriggerType: "  eval_task  "}, want: true},
+		{name: "eval task upper case", expt: &entity.Experiment{TriggerType: "EVAL_TASK"}, want: true},
 		// 只有完全等于 evalx 才抑制，前后缀不同的值不误伤。
 		{name: "evalx prefix only", expt: &entity.Experiment{TriggerType: "evalx_v2"}, want: false},
+		{name: "eval task prefix only", expt: &entity.Experiment{TriggerType: "eval_task_v2"}, want: false},
+		{name: "eval task suffix only", expt: &entity.Experiment{TriggerType: "my_eval_task"}, want: false},
 	}
 
 	for _, tt := range tests {

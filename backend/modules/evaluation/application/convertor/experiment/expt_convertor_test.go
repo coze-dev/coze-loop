@@ -5,6 +5,7 @@ package experiment
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
@@ -16,7 +17,39 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	domain_filter "github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
+
+func TestConvertCreateReq_EvalTaskTriggerRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	for _, trigger := range []string{entity.ExptTriggerTypeEvalTask, entity.ExptTriggerTypeEvalx, domain_expt.Manual} {
+		t.Run(trigger, func(t *testing.T) {
+			req := &expt.CreateExperimentRequest{
+				WorkspaceID: 1001,
+				TriggerType: gptr.Of(domain_expt.ExptTriggerType("  " + trigger + "  ")),
+				SourceType:  gptr.Of(domain_expt.SourceType_Evaluation),
+				SourceID:    gptr.Of("task-123"),
+			}
+			data, err := json.Marshal(req)
+			require.NoError(t, err)
+			var decoded expt.CreateExperimentRequest
+			require.NoError(t, json.Unmarshal(data, &decoded))
+			require.Equal(t, req.GetTriggerType(), decoded.GetTriggerType())
+
+			param, err := ConvertCreateReq(&decoded, nil)
+			require.NoError(t, err)
+			require.Equal(t, trigger, param.TriggerType)
+			require.Equal(t, entity.SourceType_Evaluation, param.SourceType)
+			require.Equal(t, "task-123", param.SourceID)
+			require.Nil(t, param.ExpectedQuotaConsumption)
+			dto := ToExptDTO(&entity.Experiment{TriggerType: param.TriggerType, SourceType: param.SourceType, SourceID: param.SourceID})
+			require.Equal(t, trigger, dto.GetTriggerType())
+			require.Equal(t, req.GetSourceType(), dto.GetSourceType())
+			require.Equal(t, req.GetSourceID(), dto.GetSourceID())
+		})
+	}
+}
 
 func TestEvalConfConvert_ConvertToEntity_TargetConfAlwaysCreated(t *testing.T) {
 	tests := []struct {

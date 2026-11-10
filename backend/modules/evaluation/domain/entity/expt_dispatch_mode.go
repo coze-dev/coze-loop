@@ -108,6 +108,9 @@ func NormalizeExptPriorityLevelWithDefault(priority, defaultPriority int32) int3
 // 分层约束；两处值必须一致，由 TestExptTriggerTypeEvalxMatchesIDL 守住。
 const ExptTriggerTypeEvalx = "evalx"
 
+// ExptTriggerTypeEvalTask 标识评测任务发起的实验，与真正的 EvalX 来源区分。
+const ExptTriggerTypeEvalTask = "eval_task"
+
 // ShouldEnforceByTrigger 判断某 trigger 来源的新实验是否应写 enforce。
 //
 // 本期规则：只有 EvalX 发起的实验进入中心调度。EvalX 是内部平台，会按约定携带

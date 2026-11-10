@@ -22,11 +22,14 @@ func TestShouldEnforceByTrigger(t *testing.T) {
 		"evalx mixed case":  {trigger: "EvalX", want: true},
 		"evalx upper":       {trigger: "EVALX", want: true},
 		// 其它入口保持 legacy，行为与引入中心调度前一致。
-		"manual":   {trigger: "manual", want: false},
-		"empty":    {trigger: "", want: false},
-		"blank":    {trigger: "   ", want: false},
-		"schedule": {trigger: "schedule", want: false},
-		"openapi":  {trigger: "openapi", want: false},
+		"manual":           {trigger: "manual", want: false},
+		"empty":            {trigger: "", want: false},
+		"blank":            {trigger: "   ", want: false},
+		"schedule":         {trigger: "schedule", want: false},
+		"openapi":          {trigger: "openapi", want: false},
+		"eval task":        {trigger: ExptTriggerTypeEvalTask, want: false},
+		"eval task mixed":  {trigger: "Eval_Task", want: false},
+		"eval task spaces": {trigger: "  eval_task  ", want: false},
 		// 前缀/子串不得误命中 —— 否则一个叫 "evalx_v2" 的新来源会被静默拽进 enforce，
 		// 而它可能并不申报消耗向量，实验会建好却一个 item 都不跑。
 		"prefix only": {trigger: "evalx_v2", want: false},
@@ -65,6 +68,8 @@ func TestShouldEnforceByTriggerAndType(t *testing.T) {
 		"online evalx mixed":  {trigger: "EvalX", exptType: ExptType_Online, want: false},
 		"online non-evalx":    {trigger: "manual", exptType: ExptType_Online, want: false},
 		"offline non-evalx":   {trigger: "manual", exptType: ExptType_Offline, want: false},
+		"offline eval task":   {trigger: ExptTriggerTypeEvalTask, exptType: ExptType_Offline, want: false},
+		"online eval task":    {trigger: ExptTriggerTypeEvalTask, exptType: ExptType_Online, want: false},
 		// 零值 ExptType（未显式设置）不等于 Online，不该被这道闸挡掉 ——
 		// 否则一批没填 expt_type 的调用方会静默失去中心调度。
 		"zero type evalx": {trigger: "evalx", exptType: 0, want: true},
@@ -85,4 +90,10 @@ func TestExptTriggerTypeEvalxValue(t *testing.T) {
 	// domain 层不 import kitex_gen（分层约束），因此靠本断言守住两处不漂移 ——
 	// 一旦漂移，EvalX 发起的实验会被判成 legacy，中心调度静默失去全部候选。
 	assert.Equal(t, "evalx", ExptTriggerTypeEvalx)
+}
+
+func TestExptTriggerTypeEvalTaskValue(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "eval_task", ExptTriggerTypeEvalTask)
 }

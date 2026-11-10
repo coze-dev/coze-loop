@@ -90,17 +90,20 @@ func TestSandboxAgentNotifier_NotifyProgressIfDue_EnableFalse_Skip(t *testing.T)
 	assert.NoError(t, err)
 }
 
-// TestSandboxAgentNotifier_EvalxTrigger_Skip trigger_type=evalx 时两张卡都不发，
+// TestSandboxAgentNotifier_EvalxTrigger_Skip evalx 与 eval_task 时两张卡都不发，
 // 即便实验是沙箱 agent 且 FeishuNotification.Enable=true —— 一个依赖都不该被调用。
 func TestSandboxAgentNotifier_EvalxTrigger_Skip(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	n, _, _, _, _ := newTestSandboxAgentNotifier(ctrl)
 	expt := buildSandboxAgentExpt(true, "ou_abc")
-	expt.TriggerType = "evalx"
-
-	assert.NoError(t, n.NotifyProgressIfDue(context.Background(), expt))
-	assert.NoError(t, n.NotifyItemFail(context.Background(), expt, 1, errors.New("boom")))
+	for _, trigger := range []string{entity.ExptTriggerTypeEvalx, entity.ExptTriggerTypeEvalTask} {
+		t.Run(trigger, func(t *testing.T) {
+			expt.TriggerType = trigger
+			assert.NoError(t, n.NotifyProgressIfDue(context.Background(), expt))
+			assert.NoError(t, n.NotifyItemFail(context.Background(), expt, 1, errors.New("boom")))
+		})
+	}
 }
 
 func TestSandboxAgentNotifier_NotifyProgressIfDue_EmptyCardID_Skip(t *testing.T) {
