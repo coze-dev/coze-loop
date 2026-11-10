@@ -543,9 +543,10 @@ func ThinkingConfigDTO2DO(dto *prompt.ThinkingConfig) *entity.ThinkingConfig {
 		return nil
 	}
 	return &entity.ThinkingConfig{
-		BudgetTokens:    dto.BudgetTokens,
-		ThinkingOption:  ThinkingOptionDTO2DO(dto.ThinkingOption),
-		ReasoningEffort: ReasoningEffortDTO2DO(dto.ReasoningEffort),
+		BudgetTokens:         dto.BudgetTokens,
+		ThinkingOption:       ThinkingOptionDTO2DO(dto.ThinkingOption),
+		ReasoningEffort:      ReasoningEffortDTO2DO(dto.ReasoningEffort),
+		ReasoningEffortValue: ptr.PtrConvert(dto.ReasoningEffortValue, func(value string) string { return value }),
 	}
 }
 
@@ -1062,9 +1063,10 @@ func ThinkingConfigDO2DTO(do *entity.ThinkingConfig) *prompt.ThinkingConfig {
 		return nil
 	}
 	return &prompt.ThinkingConfig{
-		BudgetTokens:    do.BudgetTokens,
-		ThinkingOption:  ThinkingOptionDO2DTO(do.ThinkingOption),
-		ReasoningEffort: ReasoningEffortDO2DTO(do.ReasoningEffort),
+		BudgetTokens:         do.BudgetTokens,
+		ThinkingOption:       ThinkingOptionDO2DTO(do.ThinkingOption),
+		ReasoningEffort:      ReasoningEffortDO2DTO(do.ReasoningEffort),
+		ReasoningEffortValue: ptr.PtrConvert(do.ReasoningEffortValue, func(value string) string { return value }),
 	}
 }
 

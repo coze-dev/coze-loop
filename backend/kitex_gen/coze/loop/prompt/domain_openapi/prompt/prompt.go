@@ -10368,7 +10368,8 @@ type ThinkingConfig struct {
 	BudgetTokens   *int64          `thrift:"budget_tokens,1,optional" frugal:"1,optional,i64" json:"budget_tokens" form:"budget_tokens" query:"budget_tokens"`
 	ThinkingOption *ThinkingOption `thrift:"thinking_option,2,optional" frugal:"2,optional,string" form:"thinking_option" json:"thinking_option,omitempty" query:"thinking_option"`
 	// 思考长度
-	ReasoningEffort *ReasoningEffort `thrift:"reasoning_effort,3,optional" frugal:"3,optional,string" form:"reasoning_effort" json:"reasoning_effort,omitempty" query:"reasoning_effort"`
+	ReasoningEffort      *ReasoningEffort `thrift:"reasoning_effort,3,optional" frugal:"3,optional,string" form:"reasoning_effort" json:"reasoning_effort,omitempty" query:"reasoning_effort"`
+	ReasoningEffortValue *string          `thrift:"reasoning_effort_value,4,optional" frugal:"4,optional,string" form:"reasoning_effort_value" json:"reasoning_effort_value,omitempty" query:"reasoning_effort_value"`
 }
 
 func NewThinkingConfig() *ThinkingConfig {
@@ -10413,6 +10414,18 @@ func (p *ThinkingConfig) GetReasoningEffort() (v ReasoningEffort) {
 	}
 	return *p.ReasoningEffort
 }
+
+var ThinkingConfig_ReasoningEffortValue_DEFAULT string
+
+func (p *ThinkingConfig) GetReasoningEffortValue() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReasoningEffortValue() {
+		return ThinkingConfig_ReasoningEffortValue_DEFAULT
+	}
+	return *p.ReasoningEffortValue
+}
 func (p *ThinkingConfig) SetBudgetTokens(val *int64) {
 	p.BudgetTokens = val
 }
@@ -10422,11 +10435,15 @@ func (p *ThinkingConfig) SetThinkingOption(val *ThinkingOption) {
 func (p *ThinkingConfig) SetReasoningEffort(val *ReasoningEffort) {
 	p.ReasoningEffort = val
 }
+func (p *ThinkingConfig) SetReasoningEffortValue(val *string) {
+	p.ReasoningEffortValue = val
+}
 
 var fieldIDToName_ThinkingConfig = map[int16]string{
 	1: "budget_tokens",
 	2: "thinking_option",
 	3: "reasoning_effort",
+	4: "reasoning_effort_value",
 }
 
 func (p *ThinkingConfig) IsSetBudgetTokens() bool {
@@ -10439,6 +10456,10 @@ func (p *ThinkingConfig) IsSetThinkingOption() bool {
 
 func (p *ThinkingConfig) IsSetReasoningEffort() bool {
 	return p.ReasoningEffort != nil
+}
+
+func (p *ThinkingConfig) IsSetReasoningEffortValue() bool {
+	return p.ReasoningEffortValue != nil
 }
 
 func (p *ThinkingConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -10478,6 +10499,14 @@ func (p *ThinkingConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10545,6 +10574,17 @@ func (p *ThinkingConfig) ReadField3(iprot thrift.TProtocol) error {
 	p.ReasoningEffort = _field
 	return nil
 }
+func (p *ThinkingConfig) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ReasoningEffortValue = _field
+	return nil
+}
 
 func (p *ThinkingConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -10562,6 +10602,10 @@ func (p *ThinkingConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -10636,6 +10680,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ThinkingConfig) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetReasoningEffortValue() {
+		if err = oprot.WriteFieldBegin("reasoning_effort_value", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ReasoningEffortValue); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *ThinkingConfig) String() string {
 	if p == nil {
@@ -10658,6 +10720,9 @@ func (p *ThinkingConfig) DeepEqual(ano *ThinkingConfig) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.ReasoningEffort) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.ReasoningEffortValue) {
 		return false
 	}
 	return true
@@ -10695,6 +10760,18 @@ func (p *ThinkingConfig) Field3DeepEqual(src *ReasoningEffort) bool {
 		return false
 	}
 	if strings.Compare(*p.ReasoningEffort, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ThinkingConfig) Field4DeepEqual(src *string) bool {
+
+	if p.ReasoningEffortValue == src {
+		return true
+	} else if p.ReasoningEffortValue == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ReasoningEffortValue, *src) != 0 {
 		return false
 	}
 	return true

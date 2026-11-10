@@ -593,9 +593,10 @@ func OpenAPIThinkingConfigDTO2DO(dto *domainopenapi.ThinkingConfig) *entity.Thin
 		return nil
 	}
 	return &entity.ThinkingConfig{
-		BudgetTokens:    dto.BudgetTokens,
-		ThinkingOption:  OpenAPIThinkingOptionDTO2DO(dto.ThinkingOption),
-		ReasoningEffort: OpenAPIReasoningEffortDTO2DO(dto.ReasoningEffort),
+		BudgetTokens:         dto.BudgetTokens,
+		ThinkingOption:       OpenAPIThinkingOptionDTO2DO(dto.ThinkingOption),
+		ReasoningEffort:      OpenAPIReasoningEffortDTO2DO(dto.ReasoningEffort),
+		ReasoningEffortValue: ptr.PtrConvert(dto.ReasoningEffortValue, func(value string) string { return value }),
 	}
 }
 
@@ -623,19 +624,7 @@ func OpenAPIReasoningEffortDTO2DO(dto *domainopenapi.ReasoningEffort) *entity.Re
 	if dto == nil {
 		return nil
 	}
-	var result entity.ReasoningEffort
-	switch *dto {
-	case domainopenapi.ReasoningEffortMinimal:
-		result = entity.ReasoningEffortMinimal
-	case domainopenapi.ReasoningEffortLow:
-		result = entity.ReasoningEffortLow
-	case domainopenapi.ReasoningEffortMedium:
-		result = entity.ReasoningEffortMedium
-	case domainopenapi.ReasoningEffortHigh:
-		result = entity.ReasoningEffortHigh
-	default:
-		return nil
-	}
+	result := entity.ReasoningEffort(*dto)
 	return &result
 }
 
@@ -645,9 +634,10 @@ func OpenAPIThinkingConfigDO2DTO(do *entity.ThinkingConfig) *domainopenapi.Think
 		return nil
 	}
 	return &domainopenapi.ThinkingConfig{
-		BudgetTokens:    do.BudgetTokens,
-		ThinkingOption:  OpenAPIThinkingOptionDO2DTO(do.ThinkingOption),
-		ReasoningEffort: OpenAPIReasoningEffortDO2DTO(do.ReasoningEffort),
+		BudgetTokens:         do.BudgetTokens,
+		ThinkingOption:       OpenAPIThinkingOptionDO2DTO(do.ThinkingOption),
+		ReasoningEffort:      OpenAPIReasoningEffortDO2DTO(do.ReasoningEffort),
+		ReasoningEffortValue: ptr.PtrConvert(do.ReasoningEffortValue, func(value string) string { return value }),
 	}
 }
 
@@ -675,19 +665,7 @@ func OpenAPIReasoningEffortDO2DTO(do *entity.ReasoningEffort) *domainopenapi.Rea
 	if do == nil {
 		return nil
 	}
-	var result domainopenapi.ReasoningEffort
-	switch *do {
-	case entity.ReasoningEffortMinimal:
-		result = domainopenapi.ReasoningEffortMinimal
-	case entity.ReasoningEffortLow:
-		result = domainopenapi.ReasoningEffortLow
-	case entity.ReasoningEffortMedium:
-		result = domainopenapi.ReasoningEffortMedium
-	case entity.ReasoningEffortHigh:
-		result = domainopenapi.ReasoningEffortHigh
-	default:
-		return nil
-	}
+	result := domainopenapi.ReasoningEffort(*do)
 	return &result
 }
 

@@ -4109,7 +4109,7 @@ func TestPromptOpenAPIApplicationImpl_SaveDraftOApi(t *testing.T) {
 			name: "success: save draft",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
-				mockManageRepo.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{PromptID: 123}).Return(&entity.Prompt{
+				mockManageRepo.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{PromptID: 123, WithDraft: true, UserID: "openAPI"}).Return(&entity.Prompt{
 					ID:      123,
 					SpaceID: 123456,
 				}, nil)

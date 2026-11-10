@@ -67,6 +67,12 @@ struct BaseInfo {
     4: optional i64 updated_at (api.js_conv="true", go.tag = 'json:"updated_at"')
 }
 
+struct ThinkingConfig {
+    1: optional string thinking_option // enabled / disabled / auto
+    2: optional string reasoning_effort // 未传沿用旧配置，空串为Auto，非空原样透传
+    3: optional i64 budget_tokens
+}
+
 // 模型配置
 struct ModelConfig {
     1: optional i64 model_id (api.js_conv="true", go.tag = 'json:"model_id"') // 模型id
@@ -74,6 +80,9 @@ struct ModelConfig {
     3: optional double temperature
     4: optional i32 max_tokens
     5: optional double top_p
+    9: optional ThinkingConfig thinking
+
+    50: optional string json_ext
 }
 
 // 参数Schema
@@ -131,6 +140,8 @@ const AgentType AgentType_Vibe = "vibe"
 
 struct AgentConfig {
     1: optional AgentType agent_type
+    2: optional string runtime // claude_code / codex_cli
+    3: optional string search_provider // search_api / serp_api
 }
 
 struct SkillConfig {
