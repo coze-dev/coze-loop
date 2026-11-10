@@ -356,6 +356,7 @@ type FilterField struct {
 	SubFilter  *FilterFields     `thrift:"sub_filter,6,optional" frugal:"6,optional,FilterFields" form:"sub_filter" json:"sub_filter,omitempty" query:"sub_filter"`
 	IsCustom   *bool             `thrift:"is_custom,7,optional" frugal:"7,optional,bool" form:"is_custom" json:"is_custom,omitempty" query:"is_custom"`
 	ExtraInfo  map[string]string `thrift:"extra_info,8,optional" frugal:"8,optional,map<string:string>" form:"extra_info" json:"extra_info,omitempty" query:"extra_info"`
+	IsSystem   *bool             `thrift:"is_system,9,optional" frugal:"9,optional,bool" form:"is_system" json:"is_system,omitempty" query:"is_system"`
 }
 
 func NewFilterField() *FilterField {
@@ -460,6 +461,18 @@ func (p *FilterField) GetExtraInfo() (v map[string]string) {
 	}
 	return p.ExtraInfo
 }
+
+var FilterField_IsSystem_DEFAULT bool
+
+func (p *FilterField) GetIsSystem() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsSystem() {
+		return FilterField_IsSystem_DEFAULT
+	}
+	return *p.IsSystem
+}
 func (p *FilterField) SetFieldName(val *string) {
 	p.FieldName = val
 }
@@ -484,6 +497,9 @@ func (p *FilterField) SetIsCustom(val *bool) {
 func (p *FilterField) SetExtraInfo(val map[string]string) {
 	p.ExtraInfo = val
 }
+func (p *FilterField) SetIsSystem(val *bool) {
+	p.IsSystem = val
+}
 
 var fieldIDToName_FilterField = map[int16]string{
 	1: "field_name",
@@ -494,6 +510,7 @@ var fieldIDToName_FilterField = map[int16]string{
 	6: "sub_filter",
 	7: "is_custom",
 	8: "extra_info",
+	9: "is_system",
 }
 
 func (p *FilterField) IsSetFieldName() bool {
@@ -526,6 +543,10 @@ func (p *FilterField) IsSetIsCustom() bool {
 
 func (p *FilterField) IsSetExtraInfo() bool {
 	return p.ExtraInfo != nil
+}
+
+func (p *FilterField) IsSetIsSystem() bool {
+	return p.IsSystem != nil
 }
 
 func (p *FilterField) Read(iprot thrift.TProtocol) (err error) {
