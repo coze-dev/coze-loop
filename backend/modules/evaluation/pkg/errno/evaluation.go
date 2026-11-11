@@ -547,6 +547,22 @@ const (
 	ManualRetryUnsupportedTypeCode              = 601204108 // same-run manual retry unsupported experiment type
 	manualRetryUnsupportedTypeMessage           = "unsupported_experiment_type"
 	manualRetryUnsupportedTypeNoAffectStability = true
+
+	ExtBizSAAuthorizationCode              = 601207102 // 外部业务服务账号授权缺失
+	extBizSAAuthorizationMessage           = "external business service-account authorization is required"
+	extBizSAAuthorizationNoAffectStability = true
+
+	ExtBizEvaluationAccessCode              = 601207103 // 外部业务评测资源或空间能力不可用
+	extBizEvaluationAccessMessage           = "external business evaluation resources or capabilities are unavailable"
+	extBizEvaluationAccessNoAffectStability = true
+
+	ExtBizAnalysisTemplateCode              = 601207104 // 外部业务分析报告模板不可用
+	extBizAnalysisTemplateMessage           = "external business analysis template is unavailable"
+	extBizAnalysisTemplateNoAffectStability = true
+
+	ExtBizAccessCheckFailedCode              = 601207701 // 外部业务访问检查失败
+	extBizAccessCheckFailedMessage           = "external business access check failed"
+	extBizAccessCheckFailedNoAffectStability = false
 )
 
 func init() {
@@ -1359,6 +1375,30 @@ func init() {
 		ManualRetryUnsupportedTypeCode,
 		manualRetryUnsupportedTypeMessage,
 		code.WithAffectStability(!manualRetryUnsupportedTypeNoAffectStability),
+	)
+
+	code.Register(
+		ExtBizSAAuthorizationCode,
+		extBizSAAuthorizationMessage,
+		code.WithAffectStability(!extBizSAAuthorizationNoAffectStability),
+	)
+
+	code.Register(
+		ExtBizEvaluationAccessCode,
+		extBizEvaluationAccessMessage,
+		code.WithAffectStability(!extBizEvaluationAccessNoAffectStability),
+	)
+
+	code.Register(
+		ExtBizAnalysisTemplateCode,
+		extBizAnalysisTemplateMessage,
+		code.WithAffectStability(!extBizAnalysisTemplateNoAffectStability),
+	)
+
+	code.Register(
+		ExtBizAccessCheckFailedCode,
+		extBizAccessCheckFailedMessage,
+		code.WithAffectStability(!extBizAccessCheckFailedNoAffectStability),
 	)
 
 }

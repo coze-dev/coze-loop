@@ -758,3 +758,27 @@ error_code:
     message: unsupported_experiment_type
     description: same-run manual retry unsupported experiment type
     no_affect_stability: true
+
+  - name: ExtBizSAAuthorization
+    code: 7102
+    message: external business service-account authorization is required
+    description: 外部业务服务账号授权缺失
+    no_affect_stability: true
+
+  - name: ExtBizEvaluationAccess
+    code: 7103
+    message: external business evaluation resources or capabilities are unavailable
+    description: 外部业务评测资源或空间能力不可用
+    no_affect_stability: true
+
+  - name: ExtBizAnalysisTemplate
+    code: 7104
+    message: external business analysis template is unavailable
+    description: 外部业务分析报告模板不可用
+    no_affect_stability: true
+
+  - name: ExtBizAccessCheckFailed
+    code: 7701
+    message: external business access check failed
+    description: 外部业务访问检查失败
+    no_affect_stability: false
