@@ -32,11 +32,12 @@ type ExptFilterKey struct {
 }
 
 type ExptFilterPlan struct {
-	WriteMode       string
-	ReadTarget      ExptFilterTarget
-	RequiredTargets []ExptFilterTarget
-	ExptIDs         []int64
-	ConfigHash      string
+	WriteMode           string
+	ReadTarget          ExptFilterTarget
+	ReadFallbackOnEmpty bool
+	RequiredTargets     []ExptFilterTarget
+	ExptIDs             []int64
+	ConfigHash          string
 }
 
 func (p *ExptFilterPlan) Clone() *ExptFilterPlan {
