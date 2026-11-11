@@ -8,7 +8,7 @@ import (
 	"strconv"
 )
 
-// FluxWorkflowBinding pins one evaluation copy to an experiment. Large YAML lives in private object storage.
+// FluxWorkflowBinding pins a Workflow source to an experiment. Large YAML lives in private object storage.
 type FluxWorkflowBinding struct {
 	ExperimentID          int64           `json:"experiment_id,omitempty"`
 	SpaceID               int64           `json:"space_id,omitempty"`
@@ -21,6 +21,9 @@ type FluxWorkflowBinding struct {
 	SourceTemplateID      string          `json:"source_template_id,omitempty"`
 	SourceSnapshotID      string          `json:"source_snapshot_id,omitempty"`
 	SourceReleaseID       string          `json:"source_release_id,omitempty"`
+	ExecutionSpaceID      string          `json:"execution_space_id,omitempty"`
+	InlineYAMLRef         string          `json:"inline_yaml_ref,omitempty"`
+	InlineYAMLSHA256      string          `json:"inline_yaml_sha256,omitempty"`
 	EvalSpaceID           string          `json:"eval_space_id,omitempty"`
 	EvalWorkflowID        string          `json:"eval_workflow_id,omitempty"`
 	CopyTemplateID        string          `json:"copy_template_id,omitempty"`

@@ -9,7 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-// IFluxWorkflowBindingRepo stores the service-owned copy identity in experiment.eval_conf.
+// IFluxWorkflowBindingRepo stores the frozen Workflow identity in experiment.eval_conf.
 type IFluxWorkflowBindingRepo interface {
 	GetFluxWorkflowBinding(ctx context.Context, spaceID, exptID int64) (*entity.FluxWorkflowBinding, error)
 	ReserveFluxWorkflowBinding(ctx context.Context, spaceID, exptID int64, pending *entity.FluxWorkflowBinding) (*entity.FluxWorkflowBinding, error)

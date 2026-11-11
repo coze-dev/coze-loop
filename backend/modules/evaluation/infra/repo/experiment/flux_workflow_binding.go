@@ -69,6 +69,10 @@ func (r *fluxWorkflowBindingRepo) PutReadyFluxWorkflowBinding(ctx context.Contex
 	if ready == nil || ready.BindingID == "" || ready.State != "ready" {
 		return errors.New("Flux Workflow ready binding must have identity and ready state")
 	}
+	if (ready.InlineYAMLRef != "" || ready.InlineYAMLSHA256 != "" || ready.ExecutionSpaceID != "") &&
+		(ready.InlineYAMLRef == "" || ready.InlineYAMLSHA256 == "" || ready.ExecutionSpaceID == "" || ready.ExecutionSpaceID != ready.SourceSpaceID) {
+		return errors.New("Flux Workflow inline source must have a digest and run in its source space")
+	}
 	if len(ready.AssetMapJSON) != 0 || ready.AssetMapSHA256 != "" {
 		var compact bytes.Buffer
 		if len(ready.AssetMapJSON) == 0 || json.Compact(&compact, ready.AssetMapJSON) != nil {
@@ -90,8 +94,15 @@ func (r *fluxWorkflowBindingRepo) PutReadyFluxWorkflowBinding(ctx context.Contex
 		}
 		if before.State == "ready" {
 			if before.CopyDigest == ready.CopyDigest && before.EvalWorkflowID == ready.EvalWorkflowID && before.CopyTemplateID == ready.CopyTemplateID && before.CopyReleaseID == ready.CopyReleaseID &&
+				before.SourceKind == ready.SourceKind && before.SourceSpaceID == ready.SourceSpaceID && before.SourceWorkflowID == ready.SourceWorkflowID &&
+				before.SourceTemplateID == ready.SourceTemplateID && before.SourceSnapshotID == ready.SourceSnapshotID && before.SourceReleaseID == ready.SourceReleaseID &&
+				before.SourceRevision == ready.SourceRevision && before.SourceDigest == ready.SourceDigest && before.ExecutionSpaceID == ready.ExecutionSpaceID &&
+				before.InlineYAMLRef == ready.InlineYAMLRef && before.InlineYAMLSHA256 == ready.InlineYAMLSHA256 &&
 				before.AssetMapSHA256 == ready.AssetMapSHA256 && bytes.Equal(before.AssetMapJSON, ready.AssetMapJSON) {
 				return nil
+			}
+			if ready.InlineYAMLRef != "" || before.InlineYAMLRef != "" {
+				return errors.New("Flux Workflow binding already ready with another source")
 			}
 			return errors.New("Flux Workflow binding already ready with another copy")
 		}
