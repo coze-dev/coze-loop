@@ -23,8 +23,7 @@ import (
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 )
 
-// F1: multi-set experiments resolve each row's target space from expt_item_ref.
-func TestHotfixResumeSourceUsesPerItemTargetSpace(t *testing.T) {
+func TestHotfixResumeSourceUsesExperimentRecordSpace(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	turns := repomocks.NewMockIExptTurnResultRepo(ctrl)
 	target := svcmocks.NewMockIEvalTargetService(ctrl)
@@ -44,17 +43,16 @@ func TestHotfixResumeSourceUsesPerItemTargetSpace(t *testing.T) {
 		TurnID: 0, TargetResultID: 61, Status: entity.TurnRunState_Processing,
 	}
 	turns.EXPECT().GetItemTurnRunLogs(gomock.Any(), int64(5), int64(7), int64(11), int64(3)).Return([]*entity.ExptTurnResultRunLog{turn}, nil)
-	// Experiment-level target space is 100; the frozen row lives in space 200.
 	manager.EXPECT().GetDetail(gomock.Any(), int64(5), int64(3), gomock.Any()).Return(&entity.Experiment{
 		ID: 5, SpaceID: 3, TargetSpaceID: 100, EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
-	}, nil)
+	}, nil).Times(0)
 	refs.EXPECT().GetByExptIDAndItemID(gomock.Any(), int64(3), int64(5), int64(11)).Return(&entity.ExptItemRef{
 		SpaceID: 3, ExptID: 5, ItemID: 11, ItemVersionID: 13,
 		ItemConfig: &entity.ExptItemConfig{TargetSourceSpaceID: 200},
-	}, nil).AnyTimes()
+	}, nil).Times(0)
 	status := entity.EvalTargetRunStatusSuccess
-	target.EXPECT().GetRecordByID(gomock.Any(), int64(200), int64(61)).Return(&entity.EvalTargetRecord{
-		ID: 61, SpaceID: 200, ExperimentRunID: 7, ItemID: 11, ItemVersionID: 13, TurnID: 0, Status: &status,
+	target.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(61)).Return(&entity.EvalTargetRecord{
+		ID: 61, SpaceID: 3, ExperimentRunID: 7, ItemID: 11, ItemVersionID: 13, TurnID: 0, Status: &status,
 	}, nil)
 
 	valid, err := svc.validateResumeSource(context.Background(), event, current)
@@ -81,8 +79,7 @@ func (r *hotfixScanRepo) StoreCurrentTurnRunResult(context.Context, *entity.Expt
 	return false, nil
 }
 
-// F1: the sandbox sweep must check the same per-row target space execution wrote to.
-func TestHotfixSandboxSweepUsesPerItemTargetSpace(t *testing.T) {
+func TestHotfixSandboxSweepUsesExperimentRecordSpace(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	updated := time.Now()
 	source := &entity.ExptCurrentItemRunSource{
@@ -103,9 +100,9 @@ func TestHotfixSandboxSweepUsesPerItemTargetSpace(t *testing.T) {
 	refs.EXPECT().MGetByExptIDAndItemIDs(gomock.Any(), int64(3), int64(5), []int64{11}).Return([]*entity.ExptItemRef{{
 		SpaceID: 3, ExptID: 5, ItemID: 11, ItemVersionID: 13,
 		ItemConfig: &entity.ExptItemConfig{TargetSourceSpaceID: 200},
-	}}, nil)
-	target.EXPECT().CheckSandboxTerminated(gomock.Any(), int64(200), []int64{61}).Return([]int64{61}, map[int64]string{61: "Failed"})
-	target.EXPECT().TerminateAsyncRecordsAndDestroySandbox(gomock.Any(), int64(200), []int64{61}, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	}}, nil).Times(0)
+	target.EXPECT().CheckSandboxTerminated(gomock.Any(), int64(3), []int64{61}).Return([]int64{61}, map[int64]string{61: "Failed"})
+	target.EXPECT().TerminateAsyncRecordsAndDestroySandbox(gomock.Any(), int64(3), []int64{61}, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	scheduler := &ExptSchedulerImpl{
 		ExptItemResultRepo: scan, evalTargetService: target, exptItemRefRepo: refs,
 		itemLocker: func() lock.ILocker {

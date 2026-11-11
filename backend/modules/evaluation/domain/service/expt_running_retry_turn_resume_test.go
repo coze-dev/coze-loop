@@ -603,19 +603,20 @@ func TestRunningRetryTurnResume_EventCopiesConcurrentCache(t *testing.T) {
 // Storage boundaries return the same preview record that MySQL returns; the
 // item/turn execution and history construction remain real.
 func TestRunningRetryHistoryOutput_LoadsFullSuccessOutputBeforeNextTarget(t *testing.T) {
-	for _, source := range []string{"same space", "frozen target space", "frozen item target space"} {
+	for _, source := range []string{"same space", "frozen target definition space", "frozen item target definition space"} {
 		t.Run(source, func(t *testing.T) {
 			f := newTurnResumeFixture(t, entity.EvaluationModeFailRetry, 0, 20)
 			withManualRetryContext(f)
-			spaceID := int64(3)
+			recordSpaceID := int64(3)
+			definitionSpaceID := recordSpaceID
 			switch source {
-			case "frozen target space":
+			case "frozen target definition space":
 				f.item.Expt.TargetSpaceID = 9
-				spaceID = 9
-			case "frozen item target space":
+				definitionSpaceID = 9
+			case "frozen item target definition space":
 				f.item.Expt.TargetSpaceID = 8
 				f.item.ItemConfig = &entity.ExptItemConfig{TargetSourceSpaceID: 9}
-				spaceID = 9
+				definitionSpaceID = 9
 			}
 			first := f.item.ExistItemEvalResult.TurnResultRunLogs[0]
 			first.Status = entity.TurnRunState_Success
@@ -623,7 +624,7 @@ func TestRunningRetryHistoryOutput_LoadsFullSuccessOutputBeforeNextTarget(t *tes
 			first.EvaluatorResultIds = &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{{VersionID: 401, RecordID: 301}, {VersionID: 402, RecordID: 302}}}
 			full := strings.Repeat("complete previous answer ", 10000)
 			target := resumeTarget(201, 0)
-			target.SpaceID = spaceID
+			target.SpaceID = recordSpaceID
 			target.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey] = &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("preview..."), ContentOmitted: gptr.Of(true), FullContent: &entity.ObjectStorage{URI: gptr.Of("eval_record/history-output")}, FullContentBytes: gptr.Of(int32(len(full)))}
 			preview := target.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey]
 			require.True(t, preview.IsContentOmitted())
@@ -631,12 +632,12 @@ func TestRunningRetryHistoryOutput_LoadsFullSuccessOutputBeforeNextTarget(t *tes
 			e1 := resumeEvaluator(301, 401, 0, "")
 			e1.EvaluatorOutputData = &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(float64(0))}}
 			e2 := resumeEvaluator(302, 402, 0, "") // Successful without a score stays reusable.
-			f.target.EXPECT().GetRecordByID(gomock.Any(), spaceID, int64(201)).Return(target, nil)
+			f.target.EXPECT().GetRecordByID(gomock.Any(), recordSpaceID, int64(201)).Return(target, nil)
 			f.records.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{301, 302}, false, false).Return([]*entity.EvaluatorRecord{e1, e2}, nil)
 			var loaded bool
 			f.target.EXPECT().LoadRecordOutputFields(gomock.Any(), gomock.Any(), []string{consts.OutputSchemaKey}).DoAndReturn(func(_ context.Context, got *entity.EvalTargetRecord, _ []string) error {
 				require.Same(t, target, got)
-				assert.Equal(t, spaceID, got.SpaceID)
+				assert.Equal(t, recordSpaceID, got.SpaceID)
 				require.Equal(t, "eval_record/history-output", gptr.Indirect(got.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey].FullContent.URI))
 				got.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey].Text = gptr.Of(full)
 				loaded = true
@@ -646,8 +647,9 @@ func TestRunningRetryHistoryOutput_LoadsFullSuccessOutputBeforeNextTarget(t *tes
 				assert.True(t, loaded, "success history loads before next turn spends benefit")
 				return &benefit.CheckAndDeductEvalBenefitResult{}, nil
 			}).Times(2)
-			f.target.EXPECT().ExecuteTarget(gomock.Any(), spaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, _ int64, _ int64, exec *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
+			f.target.EXPECT().ExecuteTarget(gomock.Any(), definitionSpaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, _ int64, _ int64, exec *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
 				assert.True(t, loaded)
+				assert.Equal(t, recordSpaceID, exec.ExptSpaceID)
 				assert.Equal(t, int64(20), exec.TurnID)
 				require.Len(t, input.HistoryMessages, 1)
 				assert.Equal(t, entity.RoleAssistant, input.HistoryMessages[0].Role)
@@ -826,7 +828,7 @@ func TestRunningRetryHistoryIsolation_ThreeTurnsSurviveActualRecordStorage(t *te
 			full := strings.Repeat("complete first answer ", 11000)
 			require.Greater(t, len(full), 204800)
 			firstTarget := resumeTarget(201, 0)
-			firstTarget.SpaceID = 9
+			firstTarget.SpaceID = 3
 			firstTarget.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey] = &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of(full)}
 			blobs := map[string][]byte{"initial-full-output": []byte(full)}
 			blob := fsmocks.NewMockBatchObjectStorage(gomock.NewController(t))
@@ -858,7 +860,7 @@ func TestRunningRetryHistoryIsolation_ThreeTurnsSurviveActualRecordStorage(t *te
 				output.ContentOmitted = gptr.Of(true)
 				output.FullContent = &entity.ObjectStorage{URI: gptr.Of("initial-full-output")}
 				output.FullContentBytes = gptr.Of(int32(len(full)))
-				f.target.EXPECT().GetRecordByID(gomock.Any(), int64(9), int64(201)).Return(firstTarget, nil)
+				f.target.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(201)).Return(firstTarget, nil)
 				e1 := resumeEvaluator(301, 401, 0, "")
 				e1.EvaluatorOutputData = &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(float64(0))}}
 				f.records.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{301, 302}, false, false).Return([]*entity.EvaluatorRecord{e1, resumeEvaluator(302, 402, 0, "")}, nil)
@@ -870,6 +872,7 @@ func TestRunningRetryHistoryIsolation_ThreeTurnsSurviveActualRecordStorage(t *te
 			f.benefit.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil).Times(executeCount)
 			var called []int64
 			f.target.EXPECT().ExecuteTarget(gomock.Any(), int64(9), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, _ int64, _ int64, _ int64, exec *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error) {
+				assert.Equal(t, int64(3), exec.ExptSpaceID)
 				called = append(called, exec.TurnID)
 				var record *entity.EvalTargetRecord
 				if exec.TurnID == 0 {
@@ -887,7 +890,7 @@ func TestRunningRetryHistoryIsolation_ThreeTurnsSurviveActualRecordStorage(t *te
 					assert.True(t, full == input.HistoryMessages[0].Content.GetText(), "later target must see complete first output bytes")
 					assert.False(t, input.HistoryMessages[0].Content.IsContentOmitted())
 					record = resumeTarget(201+exec.TurnID, exec.TurnID)
-					record.SpaceID = 9
+					record.SpaceID = 3
 				}
 				record.EvalTargetInputData = input
 				// Actual storage traverses and clips invocation input history before the

@@ -862,37 +862,8 @@ func (e *ExptFailRetryExec) buildPagePlan(ctx context.Context, event *entity.Exp
 	}
 	targetRequired := !shouldSkipTargetNode(expt)
 	targetSpaceByItem := make(map[int64]int64, len(itemIDs))
-	if targetRequired {
-		if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
-			if e.exptItemRefRepo == nil {
-				return nil, e.retryStartDependencyError(ctx, event, "expt_item_ref", errors.New("repo is nil"))
-			}
-			refs, err := e.exptItemRefRepo.MGetByExptIDAndItemIDs(ctx, event.SpaceID, event.ExptID, itemIDs)
-			if err != nil {
-				return nil, e.retryStartDependencyError(ctx, event, "expt_item_ref", err)
-			}
-			refByItem := make(map[int64]*entity.ExptItemRef, len(refs))
-			for _, ref := range refs {
-				if ref != nil {
-					refByItem[ref.ItemID] = ref
-				}
-			}
-			for _, itemID := range itemIDs {
-				ref := refByItem[itemID]
-				targetSourceSpaceID := expt.TargetSpaceID
-				if ref != nil && ref.ItemConfig != nil && ref.ItemConfig.TargetSourceSpaceID > 0 {
-					targetSourceSpaceID = ref.ItemConfig.TargetSourceSpaceID
-				} else if ref == nil || ref.ItemConfig == nil {
-					logs.CtxWarn(ctx, "[ExptFailRetryExec] item config missing, fallback to experiment target space, expt_id=%v, expt_run_id=%v, item_id=%v", event.ExptID, event.ExptRunID, itemID)
-				}
-				targetSpaceByItem[itemID] = resolveLoadSpaceID(event.SpaceID, targetSourceSpaceID)
-			}
-		} else {
-			targetSpaceID := resolveLoadSpaceID(event.SpaceID, expt.TargetSpaceID)
-			for _, itemID := range itemIDs {
-				targetSpaceByItem[itemID] = targetSpaceID
-			}
-		}
+	for _, itemID := range itemIDs {
+		targetSpaceByItem[itemID] = event.SpaceID
 	}
 
 	type targetRecordKey struct {

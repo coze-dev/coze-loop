@@ -164,11 +164,10 @@ func TestRetryFailure_PreEvalEvaluatorGeneration(t *testing.T) {
 		{name: "source log wrong item", change: func(f *retryGenerationFixture) { f.sources[102][0].ItemID = 11 }, wantIDs: map[int64]int64{401: 301}, wantReads: map[int64]int{101: 1, 102: 1}, wantTarget: 201},
 		{name: "source log wrong turn", change: func(f *retryGenerationFixture) { f.sources[102][0].TurnID = 22 }, wantIDs: map[int64]int64{401: 301}, wantReads: map[int64]int{101: 1, 102: 1}, wantTarget: 201},
 		{name: "failed source turn still contains successful evaluator", change: func(f *retryGenerationFixture) { f.sources[102][0].Status = entity.TurnRunState_Fail }, wantIDs: map[int64]int64{401: 301, 402: 302}, wantReads: map[int64]int{101: 1, 102: 1}, wantTarget: 201},
-		{name: "multiset target and shared evaluator use separate spaces", change: func(f *retryGenerationFixture) {
+		{name: "multiset target records use experiment space while shared evaluator retains its space", change: func(f *retryGenerationFixture) {
 			f.expt.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
 			f.expt.TargetSpaceID = 80
 			f.itemConfig = &entity.ExptItemConfig{TargetSourceSpaceID: 90}
-			f.targetSpace = 90
 			f.records[1].SpaceID = 70
 		}, wantIDs: map[int64]int64{401: 301, 402: 302}, wantReads: map[int64]int{101: 1, 102: 1}, wantTarget: 201},
 		{name: "no target version retains old successful records", change: func(f *retryGenerationFixture) { f.expt.TargetVersionID = 0; f.records[1].ExperimentRunID = 0 }, wantIDs: map[int64]int64{401: 301, 402: 302}, wantReads: map[int64]int{}, wantTarget: 0},

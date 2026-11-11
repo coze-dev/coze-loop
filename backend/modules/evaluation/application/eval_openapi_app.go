@@ -1706,14 +1706,7 @@ func (e *EvalOpenAPIApplication) GetEvalTargetOutputFieldContentOApi(ctx context
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval target record not found for the given experiment result"))
 	}
 
-	// ★ 跨空间共享: 评测对象执行记录随执行落在冻结的来源空间(TargetSpaceID>0), 按 space_id 严格过滤;
-	// 用调用方空间读会查不到 record → target 输出/session 丢失。按来源空间读。
-	recordSpaceID := req.GetWorkspaceID()
-	if exptDetail, gErr := e.manager.GetDetail(ctx, req.GetExperimentID(), req.GetWorkspaceID(), entity.NewSession(ctx)); gErr == nil && exptDetail != nil && exptDetail.TargetSpaceID > 0 {
-		recordSpaceID = exptDetail.TargetSpaceID
-	}
-
-	record, err := e.targetSvc.GetRecordByID(ctx, recordSpaceID, targetRecordID)
+	record, err := e.targetSvc.GetRecordByID(ctx, req.GetWorkspaceID(), targetRecordID)
 	if err != nil {
 		return nil, err
 	}
@@ -4085,11 +4078,10 @@ func (e *EvalOpenAPIApplication) GetEvalTargetRecordOApi(ctx context.Context, re
 		}, nil
 	}
 
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(record.TargetID, 10),
-		SpaceID:       req.GetWorkspaceID(),
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
-	})
+	if record.SpaceID != req.GetWorkspaceID() {
+		return nil, errorx.NewByCode(errno.CommonNoPermissionCode)
+	}
+	err = e.auth.Authorization(ctx, targetRecordAuthorization(record))
 	if err != nil {
 		return nil, err
 	}

@@ -600,7 +600,6 @@ func TestCCCurrentSourceCoverageValidateResumeTurnBranches(t *testing.T) {
 			tc.mutate(turn)
 			if tc.name == "legacy_zero_item_version" {
 				ccCurrentSourceCoverageExpectTarget(f, turn, 3, ccCurrentSourceCoverageTargetRecord(entity.EvalTargetRunStatusSuccess), nil)
-				f.manager.EXPECT().GetDetail(gomock.Any(), int64(5), int64(3), gomock.Any()).Return(&entity.Experiment{SpaceID: 3}, nil)
 				valid, err := f.svc.validateResumeSource(context.Background(), f.event, f.current)
 				require.NoError(t, err)
 				require.True(t, valid)
@@ -692,32 +691,31 @@ func TestCCCurrentSourceCoverageValidateResumeTarget(t *testing.T) {
 		require.ErrorContains(t, err, "target source reader missing")
 	})
 
-	t.Run("target_detail_error", func(t *testing.T) {
+	t.Run("target_record_error", func(t *testing.T) {
 		f := ccCurrentSourceCoverageNewResumeFixture(t, "target")
-		fault := errors.New("experiment detail read failed")
+		fault := errors.New("target record read failed")
 		ccCurrentSourceCoverageExpectTurn(f, []*entity.ExptTurnResultRunLog{ccCurrentSourceCoverageResumeTurn()}, nil)
-		f.manager.EXPECT().GetDetail(gomock.Any(), int64(5), int64(3), gomock.Any()).Return(nil, fault)
+		f.target.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(61)).Return(nil, fault)
 		valid, err := f.svc.validateResumeSource(context.Background(), f.event, f.current)
 		require.False(t, valid)
 		require.True(t, errno.NeedMQRetry(err))
 		require.ErrorIs(t, err, fault)
 	})
 
-	t.Run("target_detail_missing", func(t *testing.T) {
+	t.Run("target_record_missing", func(t *testing.T) {
 		f := ccCurrentSourceCoverageNewResumeFixture(t, "target")
 		ccCurrentSourceCoverageExpectTurn(f, []*entity.ExptTurnResultRunLog{ccCurrentSourceCoverageResumeTurn()}, nil)
-		f.manager.EXPECT().GetDetail(gomock.Any(), int64(5), int64(3), gomock.Any()).Return(nil, nil)
+		f.target.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(61)).Return(nil, nil)
 		valid, err := f.svc.validateResumeSource(context.Background(), f.event, f.current)
 		require.False(t, valid)
 		require.True(t, errno.NeedMQRetry(err))
-		require.ErrorContains(t, err, "original target resource source missing")
+		require.ErrorContains(t, err, "original target record missing")
 	})
 
-	t.Run("target_space_resolved_from_experiment", func(t *testing.T) {
+	t.Run("target_record_uses_experiment_space_without_resource_lookup", func(t *testing.T) {
 		f := ccCurrentSourceCoverageNewResumeFixture(t, "target")
 		ccCurrentSourceCoverageExpectTurn(f, []*entity.ExptTurnResultRunLog{ccCurrentSourceCoverageResumeTurn()}, nil)
-		f.manager.EXPECT().GetDetail(gomock.Any(), int64(5), int64(3), gomock.Any()).Return(&entity.Experiment{ID: 5, SpaceID: 3, TargetSpaceID: 99}, nil)
-		f.target.EXPECT().GetRecordByID(gomock.Any(), int64(99), int64(61)).Return(ccCurrentSourceCoverageTargetRecord(entity.EvalTargetRunStatusSuccess), nil)
+		f.target.EXPECT().GetRecordByID(gomock.Any(), int64(3), int64(61)).Return(ccCurrentSourceCoverageTargetRecord(entity.EvalTargetRunStatusSuccess), nil)
 		valid, err := f.svc.validateResumeSource(context.Background(), f.event, f.current)
 		require.NoError(t, err)
 		require.True(t, valid)

@@ -92,7 +92,8 @@ func TestSandboxLifecycleRegistersBeforeDispatch(t *testing.T) {
 	l.service.sandboxLeasePendingRegistrar = func(_ context.Context, r *entity.EvalTargetRecord, expt, space int64) error {
 		require.NotNil(t, s.records[r.ID])
 		require.Equal(t, int64(99), space)
-		require.Equal(t, int64(10), r.SpaceID)
+		require.Equal(t, int64(99), r.SpaceID)
+		require.Equal(t, int64(10), r.TargetSourceSpaceID())
 		registered = true
 		return nil
 	}

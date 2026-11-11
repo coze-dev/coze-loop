@@ -401,14 +401,13 @@ func TestExptFailRetryExec_ExptStart_TargetBatchReadFailureIsObservableAndWriteF
 	assert.Contains(t, err.Error(), "eval_target_record")
 }
 
-func TestExptFailRetryExec_BuildPagePlan_MultiSetGroupsTargetReadsBySourceSpace(t *testing.T) {
+func TestExptFailRetryExec_BuildPagePlan_MultiSetBatchesTargetReadsInExperimentSpace(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	const (
 		exptID         = int64(1)
 		runID          = int64(2)
 		consumerSpace  = int64(3)
 		topTargetSpace = int64(100)
-		rowTargetSpace = int64(200)
 	)
 
 	itemRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
@@ -419,16 +418,12 @@ func TestExptFailRetryExec_BuildPagePlan_MultiSetGroupsTargetReadsBySourceSpace(
 	itemIDs := []int64{10, 11, 12}
 
 	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, runID, itemIDs, consumerSpace).Return(nil, nil)
-	itemRefRepo.EXPECT().MGetByExptIDAndItemIDs(gomock.Any(), consumerSpace, exptID, itemIDs).Return([]*entity.ExptItemRef{
-		{ItemID: 10, ItemConfig: &entity.ExptItemConfig{TargetSourceSpaceID: rowTargetSpace}},
-		{ItemID: 11, ItemConfig: &entity.ExptItemConfig{}},
-		{ItemID: 12, ItemConfig: &entity.ExptItemConfig{TargetSourceSpaceID: rowTargetSpace}},
-	}, nil)
+	itemRefRepo.EXPECT().MGetByExptIDAndItemIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 	success := entity.EvalTargetRunStatusSuccess
-	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), topTargetSpace, []int64{110}).Return([]*entity.EvalTargetRecord{{ID: 110, Status: &success}}, nil)
-	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), rowTargetSpace, []int64{100, 120}).Return([]*entity.EvalTargetRecord{
-		{ID: 100, Status: &success},
-		{ID: 120, Status: &success},
+	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), consumerSpace, []int64{100, 110, 120}).Return([]*entity.EvalTargetRecord{
+		{ID: 100, SpaceID: consumerSpace, Status: &success},
+		{ID: 110, SpaceID: consumerSpace, Status: &success},
+		{ID: 120, SpaceID: consumerSpace, Status: &success},
 	}, nil)
 	idgen.EXPECT().GenMultiIDs(gomock.Any(), 3).Return([]int64{900, 901, 902}, nil)
 
@@ -463,7 +458,7 @@ func TestExptFailRetryExec_BuildPagePlan_MultiSetGroupsTargetReadsBySourceSpace(
 	assert.Empty(t, plan.restoreTurnsByTargetID)
 }
 
-func TestExptFailRetryExec_BuildPagePlan_MultiSetMissingItemRefFallsBackToExperimentTargetSpace(t *testing.T) {
+func TestExptFailRetryExec_BuildPagePlan_MultiSetWithoutItemRefReaderUsesExperimentSpace(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	const (
 		exptID  = int64(1)
@@ -474,16 +469,12 @@ func TestExptFailRetryExec_BuildPagePlan_MultiSetMissingItemRefFallsBackToExperi
 
 	itemRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
 	turnRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
-	itemRefRepo := repoMocks.NewMockIExptItemRefRepo(ctrl)
 	targetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
 	idgen := idgenmocks.NewMockIIDGenerator(ctrl)
 
 	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, runID, []int64{itemID}, spaceID).Return(nil, nil)
-	itemRefRepo.EXPECT().MGetByExptIDAndItemIDs(gomock.Any(), spaceID, exptID, []int64{itemID}).Return([]*entity.ExptItemRef{{
-		ItemID: itemID, ItemConfig: nil,
-	}}, nil)
 	success := entity.EvalTargetRunStatusSuccess
-	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), int64(99), []int64{30}).Return([]*entity.EvalTargetRecord{{ID: 30, Status: &success}}, nil)
+	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), spaceID, []int64{30}).Return([]*entity.EvalTargetRecord{{ID: 30, SpaceID: spaceID, Status: &success}}, nil)
 	idgen.EXPECT().GenMultiIDs(gomock.Any(), 1).Return([]int64{900}, nil)
 
 	expt := buildMockExpt()
@@ -492,7 +483,6 @@ func TestExptFailRetryExec_BuildPagePlan_MultiSetMissingItemRefFallsBackToExperi
 	exec := &ExptFailRetryExec{
 		exptItemResultRepo: itemRepo,
 		exptTurnResultRepo: turnRepo,
-		exptItemRefRepo:    itemRefRepo,
 		evalTargetService:  targetSvc,
 		idgenerator:        idgen,
 	}
@@ -503,6 +493,7 @@ func TestExptFailRetryExec_BuildPagePlan_MultiSetMissingItemRefFallsBackToExperi
 	require.NoError(t, err)
 	require.NotNil(t, plan)
 	assert.Equal(t, []*entity.ItemTurnID{{ItemID: itemID, TurnID: 20}}, plan.preserveTargetTurns)
+	assert.Empty(t, plan.clearTargetTurns)
 }
 
 func TestRetryFailure_ExptStartThroughExecution_ReusesSuccessfulTargetAndOnlyFailedEvaluatorRuns(t *testing.T) {
@@ -1495,7 +1486,7 @@ func TestExptResultBuilder_FillTargetResultID_NonRetryMultiTurnItemInFlight(t *t
 	assert.Equal(t, pendingTargetID, builder.turnResultDO[1].TargetResultID)
 }
 
-func TestExptFailRetryExec_BuildPagePlan_ItemRefReadFailure(t *testing.T) {
+func TestExptFailRetryExec_BuildPagePlan_TargetReadsIndependentOfItemRefs(t *testing.T) {
 	const (
 		exptID  = int64(1)
 		runID   = int64(2)
@@ -1503,30 +1494,47 @@ func TestExptFailRetryExec_BuildPagePlan_ItemRefReadFailure(t *testing.T) {
 		itemID  = int64(10)
 	)
 
-	t.Run("multi-set item ref batch read failure", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		itemRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
-		turnRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
-		itemRefRepo := repoMocks.NewMockIExptItemRefRepo(ctrl)
+	for _, testCase := range []struct {
+		name string
+		refs []*entity.ExptItemRef
+		err  error
+	}{
+		{name: "item_ref_read_failure", err: errors.New("item ref unavailable")},
+		{name: "item_ref_missing"},
+		{name: "item_config_missing", refs: []*entity.ExptItemRef{{ItemID: itemID}}},
+		{name: "foreign_target_source_space", refs: []*entity.ExptItemRef{{ItemID: itemID, ItemConfig: &entity.ExptItemConfig{TargetSourceSpaceID: 200}}}},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			itemRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+			turnRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+			itemRefRepo := repoMocks.NewMockIExptItemRefRepo(ctrl)
+			targetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+			idgen := idgenmocks.NewMockIIDGenerator(ctrl)
 
-		turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, runID, []int64{itemID}, spaceID).Return(nil, nil)
-		itemRefRepo.EXPECT().MGetByExptIDAndItemIDs(gomock.Any(), spaceID, exptID, []int64{itemID}).Return(nil, errors.New("item ref unavailable"))
+			turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, runID, []int64{itemID}, spaceID).Return(nil, nil)
+			itemRefRepo.EXPECT().MGetByExptIDAndItemIDs(gomock.Any(), spaceID, exptID, []int64{itemID}).Return(testCase.refs, testCase.err).Times(0)
+			success := entity.EvalTargetRunStatusSuccess
+			targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), spaceID, []int64{30}).Return([]*entity.EvalTargetRecord{{ID: 30, SpaceID: spaceID, Status: &success}}, nil)
+			idgen.EXPECT().GenMultiIDs(gomock.Any(), 1).Return([]int64{900}, nil)
 
-		expt := buildMockExpt()
-		expt.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
-		exec := &ExptFailRetryExec{
-			exptItemResultRepo: itemRepo, exptTurnResultRepo: turnRepo,
-			exptItemRefRepo: itemRefRepo,
-		}
-		plan, err := exec.buildPagePlan(context.Background(), &entity.ExptScheduleEvent{
-			ExptID: exptID, ExptRunID: runID, SpaceID: spaceID,
-		}, expt, []*entity.ExptTurnResult{{ItemID: itemID, TurnID: 20, TargetResultID: 30}})
+			expt := buildMockExpt()
+			expt.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
+			expt.TargetSpaceID = 100
+			exec := &ExptFailRetryExec{
+				exptItemResultRepo: itemRepo, exptTurnResultRepo: turnRepo,
+				exptItemRefRepo: itemRefRepo, evalTargetService: targetSvc, idgenerator: idgen,
+			}
+			plan, err := exec.buildPagePlan(context.Background(), &entity.ExptScheduleEvent{
+				ExptID: exptID, ExptRunID: runID, SpaceID: spaceID,
+			}, expt, []*entity.ExptTurnResult{{ItemID: itemID, TurnID: 20, TargetResultID: 30}})
 
-		require.Error(t, err)
-		assert.Nil(t, plan)
-		assert.True(t, isSchedulerInfraError(err))
-		assert.Contains(t, err.Error(), "expt_item_ref")
-	})
+			require.NoError(t, err)
+			require.NotNil(t, plan)
+			assert.Equal(t, []*entity.ItemTurnID{{ItemID: itemID, TurnID: 20}}, plan.preserveTargetTurns)
+			assert.Empty(t, plan.clearTargetTurns)
+		})
+	}
 }
 
 func TestExptFailRetryExec_PublicConstructorMissingTargetDependency(t *testing.T) {

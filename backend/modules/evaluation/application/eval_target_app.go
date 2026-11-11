@@ -747,12 +747,11 @@ func (e EvalTargetApplicationImpl) GetEvalTargetRecord(ctx context.Context, requ
 	if targetRecord == nil {
 		return resp, nil
 	}
+	if targetRecord.SpaceID != request.WorkspaceID {
+		return nil, errorx.NewByCode(errno.CommonNoPermissionCode)
+	}
 	// 鉴权
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(targetRecord.TargetID, 10),
-		SpaceID:       request.WorkspaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
-	})
+	err = e.auth.Authorization(ctx, targetRecordAuthorization(targetRecord))
 	if err != nil {
 		return nil, err
 	}
@@ -764,15 +763,6 @@ func (e EvalTargetApplicationImpl) BatchGetEvalTargetRecords(ctx context.Context
 	if request == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	// 鉴权
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(request.WorkspaceID, 10),
-		SpaceID:       request.WorkspaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationTarget"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	})
-	if err != nil {
-		return nil, err
-	}
 	resp := &eval_target.BatchGetEvalTargetRecordsResponse{}
 	recordList, err := e.evalTargetService.BatchGetRecordByIDs(ctx, request.WorkspaceID, request.EvalTargetRecordIds)
 	if err != nil {
@@ -780,6 +770,12 @@ func (e EvalTargetApplicationImpl) BatchGetEvalTargetRecords(ctx context.Context
 	}
 	dtoList := make([]*eval_target_dto.EvalTargetRecord, 0)
 	for _, record := range recordList {
+		if record == nil || record.SpaceID != request.WorkspaceID {
+			return nil, errorx.NewByCode(errno.CommonNoPermissionCode)
+		}
+		if err := e.auth.Authorization(ctx, targetRecordAuthorization(record)); err != nil {
+			return nil, err
+		}
 		dtoList = append(dtoList, target.EvalTargetRecordDO2DTO(record))
 	}
 	resp.EvalTargetRecords = dtoList
@@ -802,12 +798,10 @@ func (e EvalTargetApplicationImpl) GetEvalTargetOutputFieldContent(ctx context.C
 	if record == nil {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval target record not found"))
 	}
-	// 鉴权
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(record.TargetID, 10),
-		SpaceID:       request.WorkspaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
-	})
+	if record.SpaceID != request.WorkspaceID {
+		return nil, errorx.NewByCode(errno.CommonNoPermissionCode)
+	}
+	err = e.auth.Authorization(ctx, targetRecordAuthorization(record))
 	if err != nil {
 		return nil, err
 	}

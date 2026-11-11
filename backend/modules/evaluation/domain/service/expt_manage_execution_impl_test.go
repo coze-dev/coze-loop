@@ -3873,12 +3873,6 @@ func TestExptMangerImpl_emitSandboxAgentExperimentFinished(t *testing.T) {
 	})
 }
 
-// TestExptMangerImpl_terminateSandboxExecutesForCancelledItems_CrossSpace 覆盖实验取消 / 终态时
-// 沙箱销毁传给 TerminateAsyncRecordsAndDestroySandbox 的 spaceID 解析：
-//   - targetSourceSpaceID > 0 → 用来源空间 (跨空间共享评测对象)
-//   - targetSourceSpaceID = 0 → 回退到消费方 spaceID (同空间/老数据)
-//   - 早退分支: evalTargetService = nil / exptRunID = nil or <=0 / len(itemIDs) = 0 均不发 RPC
-//   - record 全空 / MGet 出错 亦不发 RPC
 func TestExptMangerImpl_terminateSandboxExecutesForCancelledItems_CrossSpace(t *testing.T) {
 	ctx := context.Background()
 	exptID := int64(1)
@@ -3886,7 +3880,7 @@ func TestExptMangerImpl_terminateSandboxExecutesForCancelledItems_CrossSpace(t *
 	consumerSpaceID := int64(3)
 	itemIDs := []int64{10}
 
-	t.Run("targetSourceSpaceID>0 → 用来源空间 (99)", func(t *testing.T) {
+	t.Run("cross-space cancellation reads experiment-owned records", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		mgr := newTestExptManager(ctrl)
@@ -3896,7 +3890,7 @@ func TestExptMangerImpl_terminateSandboxExecutesForCancelledItems_CrossSpace(t *
 			Return([]*entity.ExptTurnResultRunLog{{ItemID: 10, TargetResultID: 500}}, nil)
 		mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
 			EXPECT().TerminateAsyncRecordsAndDestroySandbox(
-			gomock.Any(), int64(99), []int64{500}, int32(errno.AsyncEvalTargetTerminatedCode),
+			gomock.Any(), consumerSpaceID, []int64{500}, int32(errno.AsyncEvalTargetTerminatedCode),
 			gomock.Any(), false,
 		).Times(1)
 
