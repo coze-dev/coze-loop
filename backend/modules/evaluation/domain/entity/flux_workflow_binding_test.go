@@ -23,3 +23,23 @@ func TestFluxItemRunRoundTripPreservesRuntimeRecoveryState(t *testing.T) {
 	require.JSONEq(t, `{"phase_1":{"answer_ref":"private://a"}}`, string(fields["interactions"]))
 	require.JSONEq(t, `1`, string(fields["version"]))
 }
+
+func TestFluxItemRunMarshalUpdatesCleanupFieldsWithoutDroppingRuntimeState(t *testing.T) {
+	input := []byte(`{"invoke_id":"5","cleanup_state":"pending","report_completed":true,"cleanup_log_id":"old","cleanup_last_error":"retry","runtime_owned":{"nested":1}}`)
+	var run FluxItemRun
+	require.NoError(t, json.Unmarshal(input, &run))
+	run.CleanupState = "archived"
+	run.CleanupLogID = ""
+	run.CleanupLastError = ""
+
+	output, err := json.Marshal(&run)
+	require.NoError(t, err)
+	var fields map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(output, &fields))
+	require.JSONEq(t, `"archived"`, string(fields["cleanup_state"]))
+	require.JSONEq(t, `true`, string(fields["report_completed"]))
+	require.JSONEq(t, `""`, string(fields["cleanup_log_id"]))
+	require.JSONEq(t, `""`, string(fields["cleanup_last_error"]))
+	require.JSONEq(t, `{"nested":1}`, string(fields["runtime_owned"]))
+	require.JSONEq(t, `"5"`, string(fields["invoke_id"]))
+}

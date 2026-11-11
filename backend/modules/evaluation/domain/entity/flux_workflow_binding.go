@@ -69,8 +69,13 @@ type FluxItemRun struct {
 	LastEventCursor      string `json:"last_event_cursor,omitempty"`
 	FinalDigest          string `json:"final_digest,omitempty"`
 	FinalReceiptKey      string `json:"final_receipt_key,omitempty"`
+	CleanupState         string `json:"cleanup_state,omitempty"`
+	CleanupLogID         string `json:"cleanup_log_id,omitempty"`
+	CleanupLastError     string `json:"cleanup_last_error,omitempty"`
+	ReportCompleted      bool   `json:"report_completed,omitempty"`
 	State                string `json:"state,omitempty"`
 	Version              int64  `json:"version,omitempty"`
+	RecordStatus         int32  `json:"-"`
 	rawFields            map[string]json.RawMessage
 }
 
@@ -128,6 +133,22 @@ func (r FluxItemRun) MarshalJSON() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+	fields["cleanup_state"], err = json.Marshal(r.CleanupState)
+	if err != nil {
+		return nil, err
+	}
+	fields["cleanup_log_id"], err = json.Marshal(r.CleanupLogID)
+	if err != nil {
+		return nil, err
+	}
+	fields["cleanup_last_error"], err = json.Marshal(r.CleanupLastError)
+	if err != nil {
+		return nil, err
+	}
+	fields["report_completed"], err = json.Marshal(r.ReportCompleted)
+	if err != nil {
+		return nil, err
 	}
 	return json.Marshal(fields)
 }

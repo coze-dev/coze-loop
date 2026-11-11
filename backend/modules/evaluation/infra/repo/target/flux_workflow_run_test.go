@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	dbmock "github.com/coze-dev/coze-loop/backend/infra/db/mocks"
@@ -13,6 +14,101 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
+
+func TestScanPendingFluxCleanupUsesBoundedPrimaryKeyPage(t *testing.T) {
+	sqlDB, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlDB.Close() })
+	database, err := gorm.Open(mysql.New(mysql.Config{Conn: sqlDB, SkipInitializeWithVersion: true}), &gorm.Config{})
+	require.NoError(t, err)
+	provider := dbmock.NewMockProvider(gomock.NewController(t))
+	provider.EXPECT().NewSession(gomock.Any()).Return(database)
+	repo := NewFluxItemRunRepo(provider)
+	since := time.Unix(1_767_000_000, 0)
+	before := since.Add(time.Hour)
+	lower := since.Unix() << 32
+	upper := before.Unix() << 32
+	ext := func(run string) string {
+		encoded, err := json.Marshal(map[string]string{"flux_workflow_run": run})
+		require.NoError(t, err)
+		return string(encoded)
+	}
+	mock.ExpectQuery("SELECT .* FROM `eval_target_record` WHERE .*id > \\?.*id < \\?.* ORDER BY id ASC LIMIT \\?").
+		WithArgs(lower-1, upper, 4).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "space_id", "status", "deleted_at", "ext"}).
+			AddRow(lower+1, 11, 3, nil, ext(`{"experiment_id":22,"space_id":11,"invoke_id":`+jsonInt(lower+1)+`,"binding_id":"b","delivery_id":"d-1","cleanup_state":"pending","report_completed":false,"state":"delivery_created"}`)).
+			AddRow(lower+2, 11, 1, nil, ext(`{"experiment_id":22,"space_id":11,"invoke_id":`+jsonInt(lower+2)+`,"binding_id":"b","delivery_id":"d-2","cleanup_state":"pending","report_completed":true,"state":"finalized"}`)).
+			AddRow(lower+3, 11, 2, nil, ext(`{"experiment_id":22,"space_id":11,"invoke_id":`+jsonInt(lower+3)+`,"binding_id":"b","delivery_id":"d-3","cleanup_state":"archived","report_completed":true,"state":"finalized"}`)).
+			AddRow(lower+4, 11, 2, nil, ext(`{"experiment_id":22,"space_id":11,"invoke_id":`+jsonInt(lower+4)+`,"binding_id":"b","delivery_id":"d-4","cleanup_state":"pending","report_completed":true,"state":"finalized"}`)))
+	runs, next, err := repo.ScanPendingFluxCleanup(context.Background(), 0, 4, since, before)
+	require.NoError(t, err)
+	require.Len(t, runs, 2)
+	require.Equal(t, []string{"d-2", "d-4"}, []string{runs[0].DeliveryID, runs[1].DeliveryID})
+	require.Equal(t, int32(1), runs[0].RecordStatus)
+	require.Equal(t, lower+4, next)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestScanPendingFluxCleanupAdvancesPastEmptyMatchPage(t *testing.T) {
+	sqlDB, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlDB.Close() })
+	database, err := gorm.Open(mysql.New(mysql.Config{Conn: sqlDB, SkipInitializeWithVersion: true}), &gorm.Config{})
+	require.NoError(t, err)
+	provider := dbmock.NewMockProvider(gomock.NewController(t))
+	provider.EXPECT().NewSession(gomock.Any()).Return(database)
+	repo := NewFluxItemRunRepo(provider)
+	since := time.Unix(1_767_000_000, 0)
+	before := since.Add(time.Hour)
+	lower := since.Unix() << 32
+	upper := before.Unix() << 32
+	mock.ExpectQuery("SELECT .* FROM `eval_target_record` WHERE .*id > \\?.*id < \\?.* ORDER BY id ASC LIMIT \\?").
+		WithArgs(lower+7, upper, 2).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "space_id", "status", "deleted_at", "ext"}).
+			AddRow(lower+8, 11, 1, nil, `{"other":"record"}`).
+			AddRow(lower+9, 11, 1, nil, `{"other":"record"}`))
+	runs, next, err := repo.ScanPendingFluxCleanup(context.Background(), lower+7, 2, since, before)
+	require.NoError(t, err)
+	require.Empty(t, runs)
+	require.Equal(t, lower+9, next)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestScanPendingFluxCleanupFinalPartialPageResetsCursor(t *testing.T) {
+	sqlDB, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlDB.Close() })
+	database, err := gorm.Open(mysql.New(mysql.Config{Conn: sqlDB, SkipInitializeWithVersion: true}), &gorm.Config{})
+	require.NoError(t, err)
+	provider := dbmock.NewMockProvider(gomock.NewController(t))
+	provider.EXPECT().NewSession(gomock.Any()).Return(database)
+	repo := NewFluxItemRunRepo(provider)
+	since := time.Unix(1_767_000_000, 0)
+	before := since.Add(time.Hour)
+	lower := since.Unix() << 32
+	upper := before.Unix() << 32
+	mock.ExpectQuery("SELECT .* FROM `eval_target_record` WHERE .*id > \\?.*id < \\?.* ORDER BY id ASC LIMIT \\?").
+		WithArgs(lower+9, upper, 2).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "space_id", "status", "deleted_at", "ext"}).
+			AddRow(lower+10, 11, 1, nil, `{"other":"record"}`))
+	runs, next, err := repo.ScanPendingFluxCleanup(context.Background(), lower+9, 2, since, before)
+	require.NoError(t, err)
+	require.Empty(t, runs)
+	require.Zero(t, next)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func jsonInt(v int64) string {
+	encoded, _ := json.Marshal(v)
+	return string(encoded)
+}
+
+func TestFluxRecordIDFloorMatchesGeneratorTimeBits(t *testing.T) {
+	const seconds int64 = 1_767_000_000
+	id, err := fluxRecordIDFloor(time.Unix(seconds, 123_000_000))
+	require.NoError(t, err)
+	require.Equal(t, seconds<<32|123<<22, id)
+}
 
 func TestFluxItemRunCASRejectsStaleVersionWithoutWriting(t *testing.T) {
 	sqlDB, mock, err := sqlmock.New()

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -31,6 +32,63 @@ func (r *fluxItemRunRepo) GetFluxItemRun(ctx context.Context, spaceID, invokeID 
 		return nil, err
 	}
 	return decodeFluxItemRun(row.Ext)
+}
+
+func (r *fluxItemRunRepo) ScanPendingFluxCleanup(ctx context.Context, cursor int64, limit int, since, before time.Time) ([]*entity.FluxItemRun, int64, error) {
+	if cursor < 0 || limit < 1 || limit > 500 || !before.After(since) {
+		return nil, 0, errors.New("invalid Flux Workflow cleanup scan window or page")
+	}
+	lower, err := fluxRecordIDFloor(since)
+	if err != nil {
+		return nil, 0, err
+	}
+	upper, err := fluxRecordIDFloor(before)
+	if err != nil || lower >= upper {
+		return nil, 0, errors.New("invalid Flux Workflow cleanup scan ID range")
+	}
+	if cursor < lower {
+		cursor = lower - 1
+	}
+	if cursor >= upper {
+		return nil, 0, nil
+	}
+	var rows []model.TargetRecord
+	err = r.db.NewSession(ctx).Clauses(dbresolver.Write).
+		Select("id,space_id,status,deleted_at,ext").
+		Where("id > ? AND id < ?", cursor, upper).
+		Order("id ASC").Limit(limit).Find(&rows).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	var pending []*entity.FluxItemRun
+	for _, row := range rows {
+		if row.DeletedAt.Valid || (row.Status != int32(entity.EvalTargetRunStatusSuccess) && row.Status != int32(entity.EvalTargetRunStatusFail)) {
+			continue
+		}
+		run, err := decodeFluxItemRun(row.Ext)
+		if err != nil {
+			return nil, 0, fmt.Errorf("decode Workflow cleanup candidate id=%d: %w", row.ID, err)
+		}
+		if run == nil || run.CleanupState != "pending" || !run.ReportCompleted || run.DeliveryID == "" ||
+			run.InvokeID != row.ID || run.SpaceID != row.SpaceID || run.ExperimentID <= 0 || run.BindingID == "" {
+			continue
+		}
+		run.RecordStatus = row.Status
+		pending = append(pending, run)
+	}
+	if len(rows) == limit {
+		return pending, rows[len(rows)-1].ID, nil
+	}
+	return pending, 0, nil
+}
+
+// The record ID generator stores seconds and milliseconds in the high bits.
+func fluxRecordIDFloor(t time.Time) (int64, error) {
+	seconds := t.Unix()
+	if seconds < 0 || seconds >= 1<<31 {
+		return 0, errors.New("Flux Workflow cleanup scan time is outside the record ID range")
+	}
+	return seconds<<32 | (t.UnixMilli()%1000)<<22, nil
 }
 
 func (r *fluxItemRunRepo) CompareAndSwapFluxItemRun(ctx context.Context, spaceID, invokeID, expectedVersion int64, next *entity.FluxItemRun) (bool, *entity.FluxItemRun, error) {
