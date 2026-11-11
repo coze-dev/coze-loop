@@ -355,6 +355,21 @@ func (mr *MockIExptManagerMockRecorder) LogRetryItemsRun(ctx, exptID, mode, spac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogRetryItemsRun", reflect.TypeOf((*MockIExptManager)(nil).LogRetryItemsRun), ctx, exptID, mode, spaceID, itemIDs, session)
 }
 
+// LogRetryItemsRunFromSource mocks base method.
+func (m *MockIExptManager) LogRetryItemsRunFromSource(ctx context.Context, exptID, expectedSourceRunID, spaceID int64, itemIDs []int64, session *entity.Session) (*entity.RetryItemsRunReceipt, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LogRetryItemsRunFromSource", ctx, exptID, expectedSourceRunID, spaceID, itemIDs, session)
+	ret0, _ := ret[0].(*entity.RetryItemsRunReceipt)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LogRetryItemsRunFromSource indicates an expected call of LogRetryItemsRunFromSource.
+func (mr *MockIExptManagerMockRecorder) LogRetryItemsRunFromSource(ctx, exptID, expectedSourceRunID, spaceID, itemIDs, session any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogRetryItemsRunFromSource", reflect.TypeOf((*MockIExptManager)(nil).LogRetryItemsRunFromSource), ctx, exptID, expectedSourceRunID, spaceID, itemIDs, session)
+}
+
 // LogRun mocks base method.
 func (m *MockIExptManager) LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) error {
 	m.ctrl.T.Helper()

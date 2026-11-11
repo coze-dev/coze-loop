@@ -2340,6 +2340,10 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 }
 
 func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) (runID int64, retried bool, err error) {
+	return e.logRetryItemsRun(ctx, exptID, mode, spaceID, itemIDs, session, nil, nil)
+}
+
+func (e *ExptMangerImpl) logRetryItemsRun(ctx context.Context, exptID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session, expectedSourceRunID *int64, receipt *entity.RetryItemsRunReceipt) (runID int64, retried bool, err error) {
 	expireAt := time.Duration(e.configer.GetExptExecConf(ctx, spaceID).GetZombieIntervalSecond()) * time.Second
 	retryTime := time.Second
 	runID, err = e.idgenerator.GenID(ctx)
@@ -2350,6 +2354,35 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 	locked, existedRunID, err := e.mutex.BackoffLockWithValue(ctx, e.makeExptMutexLockKey(exptID), strconv.FormatInt(runID, 10), expireAt, retryTime)
 	if err != nil {
 		return 0, false, err
+	}
+	if expectedSourceRunID != nil {
+		if !locked {
+			return 0, false, errorx.NewByCode(errno.ManualRetryRunConflictCode)
+		}
+		admitted := false
+		defer func(ownedRunID int64) {
+			if !admitted {
+				_, _ = e.mutex.UnlockWithValue(context.WithoutCancel(ctx), e.makeExptMutexLockKey(exptID), strconv.FormatInt(ownedRunID, 10))
+			}
+		}(runID)
+		sourceLockKey := e.makeExptCompletingLockKey(exptID, *expectedSourceRunID)
+		sourceLocked, lockErr := e.mutex.Lock(ctx, sourceLockKey, 3*time.Minute)
+		if lockErr != nil {
+			return 0, false, lockErr
+		}
+		if !sourceLocked {
+			return 0, false, errorx.NewByCode(errno.ExperimentIsCompletingCode)
+		}
+		defer func() { _, _ = e.mutex.Unlock(sourceLockKey) }()
+		ctx = contexts.WithCtxWriteDB(ctx)
+		if err := e.prepareSourceRetryItems(ctx, exptID, *expectedSourceRunID, spaceID, itemIDs, receipt); err != nil {
+			return 0, false, err
+		}
+		itemIDs = receipt.AcceptedItemIDs
+		if len(itemIDs) == 0 {
+			return 0, false, nil
+		}
+		admitted = true
 	}
 	if locked {
 		ownedRunID := runID

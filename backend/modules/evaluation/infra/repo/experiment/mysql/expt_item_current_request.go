@@ -35,7 +35,7 @@ func (dao *exptItemResultDAOImpl) readCurrentRequests(ctx context.Context, space
 	var rows []currentRequestRow
 	if !dao.supportsCrossTableJoin() {
 		var err error
-		rows, err = dao.readCurrentRequestRowsSplit(ctx, spaceID, exptID, runID, itemIDs, retryFirst, opts...)
+		rows, err = dao.readCurrentRequestRowsSplit(ctx, spaceID, exptID, runID, itemIDs, retryFirst, nil, opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -127,13 +127,16 @@ func (dao *exptItemResultDAOImpl) supportsCrossTableJoin() bool {
 	return !ok || c.SupportsCrossTableJoin()
 }
 
-func (dao *exptItemResultDAOImpl) readCurrentRequestRowsSplit(ctx context.Context, spaceID, exptID, runID int64, itemIDs []int64, retryFirst bool, opts ...db.Option) ([]currentRequestRow, error) {
+func (dao *exptItemResultDAOImpl) readCurrentRequestRowsSplit(ctx context.Context, spaceID, exptID, runID int64, itemIDs []int64, retryFirst bool, statuses []int32, opts ...db.Option) ([]currentRequestRow, error) {
 	opts = append(opts, db.WithMaster())
 	session := dao.provider.NewSession(ctx, opts...).
 		Select("id,item_id,item_version_id,status,result_state,retry_times,quota_reservation_state,updated_at").
 		Where("space_id=? AND expt_id=? AND expt_run_id=?", spaceID, exptID, runID)
 	if itemIDs != nil {
 		session = session.Where("item_id IN ?", itemIDs)
+	}
+	if len(statuses) > 0 {
+		session = session.Where("status IN ?", statuses)
 	}
 	if retryFirst {
 		session = session.Order("retry_times ASC")

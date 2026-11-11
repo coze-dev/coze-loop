@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/bytedance/gg/gptr"
 	"gorm.io/gorm"
@@ -218,22 +219,43 @@ func (d *exptItemDispatchDAOImpl) ResetQuotaReserved(ctx context.Context, spaceI
 }
 
 func (d *exptItemDispatchDAOImpl) dispatchObservations(ctx context.Context, spaceID, exptID, runID int64, itemIDs []int64, activeOnly bool) ([]*repo.ExptDispatchObservation, error) {
-	// Filter canonical soft deletion in ON, not WHERE: a missing/deleted right
-	// row must remain visible as an incomplete binding, never a fake empty run.
-	session := d.db.NewSession(ctx, db.WithMaster()).Table("expt_item_result_run_log AS l").
-		Select("l.id,l.item_id,l.item_version_id,l.status,l.result_state,l.retry_times,l.quota_reservation_state,c.id AS canonical_id,c.expt_run_id AS canonical_run_id,c.status AS canonical_status,c.item_version_id AS canonical_item_version_id,c.ext,r.mode,r.status AS run_status").
-		Joins("LEFT JOIN expt_item_result AS c ON c.space_id=l.space_id AND c.expt_id=l.expt_id AND c.item_id=l.item_id AND c.deleted_at IS NULL").
-		Joins("LEFT JOIN expt_run_log AS r ON r.space_id=l.space_id AND r.expt_id=l.expt_id AND r.expt_run_id=l.expt_run_id AND r.deleted_at IS NULL").
-		Where("l.space_id=? AND l.expt_id=? AND l.expt_run_id=? AND l.deleted_at IS NULL", spaceID, exptID, runID)
-	if itemIDs != nil {
-		session = session.Where("l.item_id IN ?", itemIDs)
-	}
-	if activeOnly {
-		session = session.Where("l.status IN ?", []int32{int32(entity.ItemRunState_Queueing), int32(entity.ItemRunState_Processing)})
-	}
 	var rows []currentRequestRow
-	if err := session.Order("l.id ASC").Find(&rows).Error; err != nil {
-		return nil, err
+	reader := &exptItemResultDAOImpl{provider: d.db}
+	if !reader.supportsCrossTableJoin() {
+		var statuses []int32
+		if activeOnly {
+			statuses = []int32{int32(entity.ItemRunState_Queueing), int32(entity.ItemRunState_Processing)}
+		}
+		var err error
+		rows, err = reader.readCurrentRequestRowsSplit(ctx, spaceID, exptID, runID, itemIDs, false, statuses)
+		if err != nil {
+			return nil, err
+		}
+		// Independent primary statements must describe the same observation on both passes.
+		after, err := reader.readCurrentRequestRowsSplit(ctx, spaceID, exptID, runID, itemIDs, false, statuses)
+		if err != nil {
+			return nil, err
+		}
+		if !reflect.DeepEqual(rows, after) {
+			return nil, fmt.Errorf("dispatch observation changed; retry primary read")
+		}
+	} else {
+		// Filter canonical soft deletion in ON, not WHERE: a missing/deleted right
+		// row must remain visible as an incomplete binding, never a fake empty run.
+		session := d.db.NewSession(ctx, db.WithMaster()).Table("expt_item_result_run_log AS l").
+			Select("l.id,l.item_id,l.item_version_id,l.status,l.result_state,l.retry_times,l.quota_reservation_state,c.id AS canonical_id,c.expt_run_id AS canonical_run_id,c.status AS canonical_status,c.item_version_id AS canonical_item_version_id,c.ext,r.mode,r.status AS run_status").
+			Joins("LEFT JOIN expt_item_result AS c ON c.space_id=l.space_id AND c.expt_id=l.expt_id AND c.item_id=l.item_id AND c.deleted_at IS NULL").
+			Joins("LEFT JOIN expt_run_log AS r ON r.space_id=l.space_id AND r.expt_id=l.expt_id AND r.expt_run_id=l.expt_run_id AND r.deleted_at IS NULL").
+			Where("l.space_id=? AND l.expt_id=? AND l.expt_run_id=? AND l.deleted_at IS NULL", spaceID, exptID, runID)
+		if itemIDs != nil {
+			session = session.Where("l.item_id IN ?", itemIDs)
+		}
+		if activeOnly {
+			session = session.Where("l.status IN ?", []int32{int32(entity.ItemRunState_Queueing), int32(entity.ItemRunState_Processing)})
+		}
+		if err := session.Order("l.id ASC").Find(&rows).Error; err != nil {
+			return nil, err
+		}
 	}
 	out := make([]*repo.ExptDispatchObservation, 0, len(rows))
 	for _, r := range rows {

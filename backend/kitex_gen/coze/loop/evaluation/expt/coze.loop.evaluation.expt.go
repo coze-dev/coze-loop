@@ -10965,7 +10965,9 @@ type UpdateExptRunConfRequest struct {
 	ItemConcurNum *int32 `thrift:"item_concur_num,3,optional" frugal:"3,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty"`
 	// 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
 	ItemRetryNum *int32 `thrift:"item_retry_num,4,optional" frugal:"4,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
-	// 5/6 retired: run-mode limits are fixed at experiment creation. Do not reuse.
+	// 5/6 retired. Do not reuse.
+	// New attempts only; omitting this field preserves the existing timeout.
+	MaxRunMinutes *int32 `thrift:"max_run_minutes,7,optional" frugal:"7,optional,i32" form:"max_run_minutes" json:"max_run_minutes,omitempty"`
 	// 以下两个是中心调度特权参数，字段号与 CreateExperimentRequest 对齐（92/93），
 	// 便于两处对照。未获授权的调用方传了会被丢弃并打 WARN，不报错。
 	// 调度优先级：不传表示不修改。改完下一拍生效（调度器每拍从库重扫队列）。
@@ -11020,6 +11022,18 @@ func (p *UpdateExptRunConfRequest) GetItemRetryNum() (v int32) {
 	return *p.ItemRetryNum
 }
 
+var UpdateExptRunConfRequest_MaxRunMinutes_DEFAULT int32
+
+func (p *UpdateExptRunConfRequest) GetMaxRunMinutes() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMaxRunMinutes() {
+		return UpdateExptRunConfRequest_MaxRunMinutes_DEFAULT
+	}
+	return *p.MaxRunMinutes
+}
+
 var UpdateExptRunConfRequest_PriorityLevel_DEFAULT int32
 
 func (p *UpdateExptRunConfRequest) GetPriorityLevel() (v int32) {
@@ -11067,6 +11081,9 @@ func (p *UpdateExptRunConfRequest) SetItemConcurNum(val *int32) {
 func (p *UpdateExptRunConfRequest) SetItemRetryNum(val *int32) {
 	p.ItemRetryNum = val
 }
+func (p *UpdateExptRunConfRequest) SetMaxRunMinutes(val *int32) {
+	p.MaxRunMinutes = val
+}
 func (p *UpdateExptRunConfRequest) SetPriorityLevel(val *int32) {
 	p.PriorityLevel = val
 }
@@ -11082,6 +11099,7 @@ var fieldIDToName_UpdateExptRunConfRequest = map[int16]string{
 	2:   "expt_id",
 	3:   "item_concur_num",
 	4:   "item_retry_num",
+	7:   "max_run_minutes",
 	92:  "priority_level",
 	93:  "expected_quota_consumption",
 	255: "Base",
@@ -11093,6 +11111,10 @@ func (p *UpdateExptRunConfRequest) IsSetItemConcurNum() bool {
 
 func (p *UpdateExptRunConfRequest) IsSetItemRetryNum() bool {
 	return p.ItemRetryNum != nil
+}
+
+func (p *UpdateExptRunConfRequest) IsSetMaxRunMinutes() bool {
+	return p.MaxRunMinutes != nil
 }
 
 func (p *UpdateExptRunConfRequest) IsSetPriorityLevel() bool {
@@ -11156,6 +11178,14 @@ func (p *UpdateExptRunConfRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -11269,6 +11299,17 @@ func (p *UpdateExptRunConfRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.ItemRetryNum = _field
 	return nil
 }
+func (p *UpdateExptRunConfRequest) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.MaxRunMinutes = _field
+	return nil
+}
 func (p *UpdateExptRunConfRequest) ReadField92(iprot thrift.TProtocol) error {
 
 	var _field *int32
@@ -11317,6 +11358,10 @@ func (p *UpdateExptRunConfRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 		if err = p.writeField92(oprot); err != nil {
@@ -11417,6 +11462,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *UpdateExptRunConfRequest) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMaxRunMinutes() {
+		if err = oprot.WriteFieldBegin("max_run_minutes", thrift.I32, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.MaxRunMinutes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 func (p *UpdateExptRunConfRequest) writeField92(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPriorityLevel() {
 		if err = oprot.WriteFieldBegin("priority_level", thrift.I32, 92); err != nil {
@@ -11498,6 +11561,9 @@ func (p *UpdateExptRunConfRequest) DeepEqual(ano *UpdateExptRunConfRequest) bool
 	if !p.Field4DeepEqual(ano.ItemRetryNum) {
 		return false
 	}
+	if !p.Field7DeepEqual(ano.MaxRunMinutes) {
+		return false
+	}
 	if !p.Field92DeepEqual(ano.PriorityLevel) {
 		return false
 	}
@@ -11544,6 +11610,18 @@ func (p *UpdateExptRunConfRequest) Field4DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.ItemRetryNum != *src {
+		return false
+	}
+	return true
+}
+func (p *UpdateExptRunConfRequest) Field7DeepEqual(src *int32) bool {
+
+	if p.MaxRunMinutes == src {
+		return true
+	} else if p.MaxRunMinutes == nil || src == nil {
+		return false
+	}
+	if *p.MaxRunMinutes != *src {
 		return false
 	}
 	return true
@@ -13822,8 +13900,10 @@ type RetryExperimentRequest struct {
 	ExptID        *int64              `thrift:"expt_id,3,optional" frugal:"3,optional,i64" json:"expt_id" path:"expt_id" `
 	ItemIds       []int64             `thrift:"item_ids,4,optional" frugal:"4,optional,list<i64>" json:"item_ids" form:"item_ids" `
 	ExpectedRunID *int64              `thrift:"expected_run_id,5,optional" frugal:"5,optional,i64" json:"expected_run_id,omitempty" form:"expected_run_id" `
-	Ext           map[string]string   `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	Base          *base.Base          `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// Source run guard for a new retry; mutually exclusive with expected_run_id.
+	ExpectedSourceRunID *int64            `thrift:"expected_source_run_id,6,optional" frugal:"6,optional,i64" json:"expected_source_run_id" form:"expected_source_run_id" `
+	Ext                 map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	Base                *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewRetryExperimentRequest() *RetryExperimentRequest {
@@ -13893,6 +13973,18 @@ func (p *RetryExperimentRequest) GetExpectedRunID() (v int64) {
 	return *p.ExpectedRunID
 }
 
+var RetryExperimentRequest_ExpectedSourceRunID_DEFAULT int64
+
+func (p *RetryExperimentRequest) GetExpectedSourceRunID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExpectedSourceRunID() {
+		return RetryExperimentRequest_ExpectedSourceRunID_DEFAULT
+	}
+	return *p.ExpectedSourceRunID
+}
+
 var RetryExperimentRequest_Ext_DEFAULT map[string]string
 
 func (p *RetryExperimentRequest) GetExt() (v map[string]string) {
@@ -13931,6 +14023,9 @@ func (p *RetryExperimentRequest) SetItemIds(val []int64) {
 func (p *RetryExperimentRequest) SetExpectedRunID(val *int64) {
 	p.ExpectedRunID = val
 }
+func (p *RetryExperimentRequest) SetExpectedSourceRunID(val *int64) {
+	p.ExpectedSourceRunID = val
+}
 func (p *RetryExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -13944,6 +14039,7 @@ var fieldIDToName_RetryExperimentRequest = map[int16]string{
 	3:   "expt_id",
 	4:   "item_ids",
 	5:   "expected_run_id",
+	6:   "expected_source_run_id",
 	100: "ext",
 	255: "Base",
 }
@@ -13966,6 +14062,10 @@ func (p *RetryExperimentRequest) IsSetItemIds() bool {
 
 func (p *RetryExperimentRequest) IsSetExpectedRunID() bool {
 	return p.ExpectedRunID != nil
+}
+
+func (p *RetryExperimentRequest) IsSetExpectedSourceRunID() bool {
+	return p.ExpectedSourceRunID != nil
 }
 
 func (p *RetryExperimentRequest) IsSetExt() bool {
@@ -14029,6 +14129,14 @@ func (p *RetryExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -14147,6 +14255,17 @@ func (p *RetryExperimentRequest) ReadField5(iprot thrift.TProtocol) error {
 	p.ExpectedRunID = _field
 	return nil
 }
+func (p *RetryExperimentRequest) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExpectedSourceRunID = _field
+	return nil
+}
 func (p *RetryExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -14209,6 +14328,10 @@ func (p *RetryExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -14335,6 +14458,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *RetryExperimentRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExpectedSourceRunID() {
+		if err = oprot.WriteFieldBegin("expected_source_run_id", thrift.I64, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ExpectedSourceRunID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *RetryExperimentRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -14412,6 +14553,9 @@ func (p *RetryExperimentRequest) DeepEqual(ano *RetryExperimentRequest) bool {
 	if !p.Field5DeepEqual(ano.ExpectedRunID) {
 		return false
 	}
+	if !p.Field6DeepEqual(ano.ExpectedSourceRunID) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.Ext) {
 		return false
 	}
@@ -14478,6 +14622,18 @@ func (p *RetryExperimentRequest) Field5DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.ExpectedRunID != *src {
+		return false
+	}
+	return true
+}
+func (p *RetryExperimentRequest) Field6DeepEqual(src *int64) bool {
+
+	if p.ExpectedSourceRunID == src {
+		return true
+	} else if p.ExpectedSourceRunID == nil || src == nil {
+		return false
+	}
+	if *p.ExpectedSourceRunID != *src {
 		return false
 	}
 	return true
@@ -14762,11 +14918,12 @@ func (p *RetryRejectedItem) Field2DeepEqual(src *string) bool {
 }
 
 type RetryExperimentResponse struct {
-	RunID         *int64               `thrift:"run_id,1,optional" frugal:"1,optional,i64" json:"run_id" form:"run_id" `
-	AcceptedCount *int32               `thrift:"accepted_count,3,optional" frugal:"3,optional,i32" form:"accepted_count" json:"accepted_count,omitempty" query:"accepted_count"`
-	RejectedItems []*RetryRejectedItem `thrift:"rejected_items,4,optional" frugal:"4,optional,list<RetryRejectedItem>" form:"rejected_items" json:"rejected_items,omitempty" query:"rejected_items"`
-	SnapshotAtMs  *int64               `thrift:"snapshot_at_ms,5,optional" frugal:"5,optional,i64" json:"snapshot_at_ms,omitempty" form:"snapshot_at_ms" query:"snapshot_at_ms"`
-	BaseResp      *base.BaseResp       `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	RunID           *int64               `thrift:"run_id,1,optional" frugal:"1,optional,i64" json:"run_id" form:"run_id" `
+	AcceptedCount   *int32               `thrift:"accepted_count,3,optional" frugal:"3,optional,i32" form:"accepted_count" json:"accepted_count,omitempty" query:"accepted_count"`
+	RejectedItems   []*RetryRejectedItem `thrift:"rejected_items,4,optional" frugal:"4,optional,list<RetryRejectedItem>" form:"rejected_items" json:"rejected_items,omitempty" query:"rejected_items"`
+	SnapshotAtMs    *int64               `thrift:"snapshot_at_ms,5,optional" frugal:"5,optional,i64" json:"snapshot_at_ms,omitempty" form:"snapshot_at_ms" query:"snapshot_at_ms"`
+	AcceptedItemIds []int64              `thrift:"accepted_item_ids,6,optional" frugal:"6,optional,list<i64>" json:"accepted_item_ids" form:"accepted_item_ids" query:"accepted_item_ids"`
+	BaseResp        *base.BaseResp       `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewRetryExperimentResponse() *RetryExperimentResponse {
@@ -14824,6 +14981,18 @@ func (p *RetryExperimentResponse) GetSnapshotAtMs() (v int64) {
 	return *p.SnapshotAtMs
 }
 
+var RetryExperimentResponse_AcceptedItemIds_DEFAULT []int64
+
+func (p *RetryExperimentResponse) GetAcceptedItemIds() (v []int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAcceptedItemIds() {
+		return RetryExperimentResponse_AcceptedItemIds_DEFAULT
+	}
+	return p.AcceptedItemIds
+}
+
 var RetryExperimentResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *RetryExperimentResponse) GetBaseResp() (v *base.BaseResp) {
@@ -14847,6 +15016,9 @@ func (p *RetryExperimentResponse) SetRejectedItems(val []*RetryRejectedItem) {
 func (p *RetryExperimentResponse) SetSnapshotAtMs(val *int64) {
 	p.SnapshotAtMs = val
 }
+func (p *RetryExperimentResponse) SetAcceptedItemIds(val []int64) {
+	p.AcceptedItemIds = val
+}
 func (p *RetryExperimentResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
@@ -14856,6 +15028,7 @@ var fieldIDToName_RetryExperimentResponse = map[int16]string{
 	3:   "accepted_count",
 	4:   "rejected_items",
 	5:   "snapshot_at_ms",
+	6:   "accepted_item_ids",
 	255: "BaseResp",
 }
 
@@ -14873,6 +15046,10 @@ func (p *RetryExperimentResponse) IsSetRejectedItems() bool {
 
 func (p *RetryExperimentResponse) IsSetSnapshotAtMs() bool {
 	return p.SnapshotAtMs != nil
+}
+
+func (p *RetryExperimentResponse) IsSetAcceptedItemIds() bool {
+	return p.AcceptedItemIds != nil
 }
 
 func (p *RetryExperimentResponse) IsSetBaseResp() bool {
@@ -14924,6 +15101,14 @@ func (p *RetryExperimentResponse) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -15022,6 +15207,29 @@ func (p *RetryExperimentResponse) ReadField5(iprot thrift.TProtocol) error {
 	p.SnapshotAtMs = _field
 	return nil
 }
+func (p *RetryExperimentResponse) ReadField6(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.AcceptedItemIds = _field
+	return nil
+}
 func (p *RetryExperimentResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -15051,6 +15259,10 @@ func (p *RetryExperimentResponse) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -15155,6 +15367,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *RetryExperimentResponse) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAcceptedItemIds() {
+		if err = oprot.WriteFieldBegin("accepted_item_ids", thrift.LIST, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I64, len(p.AcceptedItemIds)); err != nil {
+			return err
+		}
+		for _, v := range p.AcceptedItemIds {
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *RetryExperimentResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
@@ -15196,6 +15434,9 @@ func (p *RetryExperimentResponse) DeepEqual(ano *RetryExperimentResponse) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.SnapshotAtMs) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.AcceptedItemIds) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -15250,6 +15491,19 @@ func (p *RetryExperimentResponse) Field5DeepEqual(src *int64) bool {
 	}
 	if *p.SnapshotAtMs != *src {
 		return false
+	}
+	return true
+}
+func (p *RetryExperimentResponse) Field6DeepEqual(src []int64) bool {
+
+	if len(p.AcceptedItemIds) != len(src) {
+		return false
+	}
+	for i, v := range p.AcceptedItemIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
 	}
 	return true
 }

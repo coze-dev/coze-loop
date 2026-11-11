@@ -1105,6 +1105,16 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 	if err != nil {
 		return nil, errno.WrapMQRetryErr(err)
 	}
+	if exptDetail.TriggerType == "evalx" && exptDetail.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		current, err := e.experimentRepo.GetByID(contexts.WithCtxWriteDB(ctx), event.ExptID, event.SpaceID)
+		if err != nil {
+			return nil, errno.WrapMQRetryErr(err)
+		}
+		if current == nil || current.EvalConf == nil {
+			return nil, errno.NewMQRetryErr("task experiment run configuration missing")
+		}
+		exptDetail.EvalConf = current.EvalConf
+	}
 
 	// 默认用实验级主集 (老实验 / SingleSet); MultiSetConfig 下面按 item 归属集覆盖。
 	evalSetID := exptDetail.EvalSet.EvaluationSetVersion.EvaluationSetID

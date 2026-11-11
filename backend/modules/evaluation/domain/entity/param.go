@@ -399,12 +399,13 @@ type ReportEvaluatorRecordParam struct {
 }
 
 // UpdateRunConfParam 修改进行中实验运行配置的参数。
-// ItemConcurNum / ItemRetryNum 为 nil 表示该字段不修改。
+// 可选字段为 nil 表示不修改。
 type UpdateRunConfParam struct {
 	ExptID        int64
 	SpaceID       int64
 	ItemConcurNum *int
 	ItemRetryNum  *int
+	MaxRunMinutes *int
 
 	// PriorityLevel / ExpectedQuotaConsumption 中心调度参数，nil = 不修改。
 	// 两者只对 enforce 实验有意义，legacy 实验既不参与优先级排序也没有额度账本，

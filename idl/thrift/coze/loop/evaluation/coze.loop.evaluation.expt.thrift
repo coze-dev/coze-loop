@@ -261,7 +261,9 @@ struct UpdateExptRunConfRequest {
     3: optional i32 item_concur_num (api.body='item_concur_num')
     // 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
     4: optional i32 item_retry_num (api.body='item_retry_num')
-    // 5/6 retired: run-mode limits are fixed at experiment creation. Do not reuse.
+    // 5/6 retired. Do not reuse.
+    // New attempts only; omitting this field preserves the existing timeout.
+    7: optional i32 max_run_minutes (api.body = 'max_run_minutes')
 
     // 以下两个是中心调度特权参数，字段号与 CreateExperimentRequest 对齐（92/93），
     // 便于两处对照。未获授权的调用方传了会被丢弃并打 WARN，不报错。
@@ -328,6 +330,9 @@ struct RetryExperimentRequest {
 
     5: optional i64 expected_run_id (api.body = 'expected_run_id', api.js_conv = 'true', go.tag = 'json:"expected_run_id,omitempty"')
 
+    // Source run guard for a new retry; mutually exclusive with expected_run_id.
+    6: optional i64 expected_source_run_id (api.body = 'expected_source_run_id', api.js_conv = 'true', go.tag = 'json:"expected_source_run_id"')
+
     100: optional map<string, string> ext (api.body = 'ext')
 
     255: optional base.Base Base
@@ -344,6 +349,8 @@ struct RetryExperimentResponse {
     3: optional i32 accepted_count
     4: optional list<RetryRejectedItem> rejected_items
     5: optional i64 snapshot_at_ms (api.js_conv = 'true', go.tag = 'json:"snapshot_at_ms,omitempty"')
+
+    6: optional list<i64> accepted_item_ids (api.js_conv = 'true', go.tag = 'json:"accepted_item_ids"')
 
     255: base.BaseResp BaseResp
 }
