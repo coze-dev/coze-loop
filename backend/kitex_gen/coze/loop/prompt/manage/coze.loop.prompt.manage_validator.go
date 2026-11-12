@@ -40,6 +40,10 @@ func (p *CreatePromptRequest) IsValid() error {
 	if len(*p.PromptKey) < int(1) {
 		return fmt.Errorf("field PromptKey min_len rule failed, current value: %d", len(*p.PromptKey))
 	}
+	_src := "^[A-Za-z0-9_.-]+$"
+	if ok, _ := regexp.MatchString(_src, *p.PromptKey); !ok {
+		return fmt.Errorf("field PromptKey pattern rule failed, current value: %v", *p.PromptKey)
+	}
 	if p.DraftDetail != nil {
 		if err := p.DraftDetail.IsValid(); err != nil {
 			return fmt.Errorf("field DraftDetail not valid, %w", err)
@@ -84,6 +88,10 @@ func (p *ClonePromptRequest) IsValid() error {
 	}
 	if len(*p.ClonedPromptKey) < int(1) {
 		return fmt.Errorf("field ClonedPromptKey min_len rule failed, current value: %d", len(*p.ClonedPromptKey))
+	}
+	_src := "^[A-Za-z0-9_.-]+$"
+	if ok, _ := regexp.MatchString(_src, *p.ClonedPromptKey); !ok {
+		return fmt.Errorf("field ClonedPromptKey pattern rule failed, current value: %v", *p.ClonedPromptKey)
 	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {

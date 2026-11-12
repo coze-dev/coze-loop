@@ -1518,6 +1518,31 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 	}
 }
 
+func TestCreatePromptOApiRequestPromptKeyValidation(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name    string
+		key     string
+		wantErr bool
+	}{
+		{name: "hyphen and original legal characters", key: "Prompt.v2-key_01"},
+		{name: "space", key: "prompt key", wantErr: true},
+		{name: "slash", key: "prompt/key", wantErr: true},
+		{name: "unicode", key: "提示词", wantErr: true},
+		{name: "at", key: "prompt@key", wantErr: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			req := &openapi.CreatePromptOApiRequest{
+				WorkspaceID: ptr.Of(int64(1)),
+				PromptName:  ptr.Of("name"),
+				PromptKey:   ptr.Of(tt.key),
+			}
+			assert.Equal(t, tt.wantErr, req.IsValid() != nil)
+		})
+	}
+}
+
 func TestValidateExecuteRequest(t *testing.T) {
 	t.Parallel()
 
@@ -1729,10 +1754,10 @@ func TestPromptOpenAPIApplicationImpl_ptaasAllowByPromptKey(t *testing.T) {
 			name: "success: allowed",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
-				mockConfig.EXPECT().GetPTaaSMaxQPSByPromptKey(gomock.Any(), int64(123456), "test_prompt").Return(100, nil)
+				mockConfig.EXPECT().GetPTaaSMaxQPSByPromptKey(gomock.Any(), int64(123456), "legacy-prompt").Return(100, nil)
 
 				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
-				mockRateLimiter.EXPECT().AllowN(gomock.Any(), "ptaas:qps:space_id:123456:prompt_key:test_prompt", 1, gomock.Any()).Return(&limiter.Result{
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), "ptaas:qps:space_id:123456:prompt_key:legacy-prompt", 1, gomock.Any()).Return(&limiter.Result{
 					Allowed: true,
 				}, nil)
 
@@ -1744,7 +1769,7 @@ func TestPromptOpenAPIApplicationImpl_ptaasAllowByPromptKey(t *testing.T) {
 			args: args{
 				ctx:         context.Background(),
 				workspaceID: 123456,
-				promptKey:   "test_prompt",
+				promptKey:   "legacy-prompt",
 			},
 			want: true,
 		},
@@ -2454,23 +2479,23 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 		wantErr      error
 	}{
 		{
-			name: "success: execute prompt",
+			name: "success: execute existing prompt with hyphen key",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
-				mockConfig.EXPECT().GetPTaaSMaxQPSByPromptKey(gomock.Any(), int64(123456), "test_prompt").Return(100, nil)
+				mockConfig.EXPECT().GetPTaaSMaxQPSByPromptKey(gomock.Any(), int64(123456), "legacy-prompt").Return(100, nil)
 
 				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
-				mockRateLimiter.EXPECT().AllowN(gomock.Any(), "ptaas:qps:space_id:123456:prompt_key:test_prompt", 1, gomock.Any()).Return(&limiter.Result{
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), "ptaas:qps:space_id:123456:prompt_key:legacy-prompt", 1, gomock.Any()).Return(&limiter.Result{
 					Allowed: true,
 				}, nil)
 
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
 				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), int64(123456), []string{"test_prompt"}).Return(map[string]int64{
-					"test_prompt": 123,
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), int64(123456), []string{"legacy-prompt"}).Return(map[string]int64{
+					"legacy-prompt": 123,
 				}, nil)
 				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), int64(123456), gomock.Any()).Return(map[service.PromptQueryParam]string{
-					{PromptID: 123, PromptKey: "test_prompt", Version: "1.0.0"}: "1.0.0",
+					{PromptID: 123, PromptKey: "legacy-prompt", Version: "1.0.0"}: "1.0.0",
 				}, nil)
 
 				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
@@ -2478,7 +2503,7 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 				expectedPrompt := &entity.Prompt{
 					ID:        123,
 					SpaceID:   123456,
-					PromptKey: "test_prompt",
+					PromptKey: "legacy-prompt",
 					PromptBasic: &entity.PromptBasic{
 						DisplayName:   "Test Prompt",
 						Description:   "Test Description",
@@ -2559,7 +2584,7 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 				req: &openapi.ExecuteRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
 					PromptIdentifier: &domainopenapi.PromptQuery{
-						PromptKey: ptr.Of("test_prompt"),
+						PromptKey: ptr.Of("legacy-prompt"),
 						Version:   ptr.Of("1.0.0"),
 					},
 					Messages: []*domainopenapi.Message{
@@ -2578,7 +2603,7 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 			wantPromptDO: &entity.Prompt{
 				ID:        123,
 				SpaceID:   123456,
-				PromptKey: "test_prompt",
+				PromptKey: "legacy-prompt",
 			},
 			wantReply: &entity.Reply{
 				DebugID: 456,
