@@ -123,6 +123,11 @@ struct RunModeConfig {
 typedef string Visibility(ts.enum="true")
 const Visibility Visibility_Hidden = "hidden"
 
+// ExptSchedulingMode 实验调度方式。创建时冻结，运行期不可修改；缺省/空值按 legacy 处理。
+typedef string ExptSchedulingMode (ts.enum="true")
+const ExptSchedulingMode ExptSchedulingMode_Legacy = "legacy"
+const ExptSchedulingMode ExptSchedulingMode_Central = "central"
+
 
 typedef string ExptTriggerType (ts.enum="true")
 const ExptTriggerType Manual = "manual"
@@ -202,6 +207,10 @@ struct Experiment {
     // 实验级多轮/SUA 跑法配置回显: 从 experiment.eval_conf.run_mode_config 反序列化, 与 Create/Submit 入参 run_mode_config 同构。
     // 仅 SandboxAgent + MultiSetConfig 实验非空。SUA 模型的 api_key/base_url 是运行时从 TCC 解析注入 case-file, 绝不回显。
     115: optional RunModeConfig run_mode_config
+
+    // ★ 中心调度只读回显。创建时冻结，运行期不可修改；缺省/空值 = legacy。
+    120: optional ExptSchedulingMode scheduling_mode
+    121: optional i32 priority
 }
 
 // 实验模板基础信息

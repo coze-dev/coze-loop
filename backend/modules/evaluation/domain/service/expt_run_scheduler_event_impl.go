@@ -223,13 +223,48 @@ func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEnd
 
 func (e *ExptSchedulerImpl) HandleEventEndpoint(next SchedulerEndPoint) SchedulerEndPoint {
 	return func(ctx context.Context, event *entity.ExptScheduleEvent) error {
-		err := e.schedule(ctx, event)
+		err := e.schedule(ctx, event, false, nil)
 		if err != nil {
 			return err
 		}
 
 		return next(ctx, event)
 	}
+}
+
+// ScheduleOnce 执行一次单实验 tick，但不再发布下一跳 MQ 事件。
+//
+// 中心调度专用：由每 env 唯一的 leader 调用；legacy 的 Schedule/Endpoints 链路完全不变。
+// gate 在 item 真正发布前调用，用于先预占额度再放行。
+func (e *ExptSchedulerImpl) ScheduleOnce(ctx context.Context, event *entity.ExptScheduleEvent, gate DispatchGate) error {
+	ctx = ctxcache.Init(ctx)
+
+	runLog, err := e.Manager.GetRunLog(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session)
+	if err != nil {
+		return err
+	}
+	if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
+		logs.CtxInfo(ctx, "[CentralScheduler] skip finished run, expt_id: %v, expt_run_id: %v, status: %v", event.ExptID, event.ExptRunID, status)
+		return nil
+	}
+
+	key := e.makeExptRunExecLockKey(event.ExptID, event.ExptRunID)
+	locked, ctx, cancel, err := e.Mutex.LockBackoffWithRenew(ctx, key, time.Second*5, time.Second*60*5)
+	if err != nil {
+		return err
+	}
+	if !locked {
+		logs.CtxInfo(ctx, "[CentralScheduler] expt run lock not acquired, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
+		return nil
+	}
+	defer cancel()
+	defer func() {
+		if _, uerr := e.Mutex.Unlock(key); uerr != nil {
+			logs.CtxWarn(ctx, "[CentralScheduler] unlock expt run fail, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, uerr)
+		}
+	}()
+
+	return e.schedule(ctx, event, true, gate)
 }
 
 // SandboxAgentHourlyNotify 中间件: 沙箱 agent 实验每 1h 一张进度快照飞书卡。
@@ -348,7 +383,7 @@ func isSchedulerInfraError(err error) bool {
 	return false
 }
 
-func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptScheduleEvent) error {
+func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptScheduleEvent, transient bool, gate DispatchGate) error {
 	if event.ExptRunMode == entity.EvaluationModeAppend {
 		logs.CtxInfo(ctx, "[ExptEval] consume schedule event (Append), expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
 	}
@@ -417,6 +452,22 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
+	// 中心调度：先结算已完成的 item（成功/失败/僵尸/沙箱终态），再由 gate 原子预占
+	// 即将派发的 item。legacy 链路 gate 为 nil，行为完全不变。
+	if gate != nil {
+		if err = gate.OnCompleted(ctx, event, complete); err != nil {
+			logs.CtxWarn(ctx, "[CentralScheduler] release completed items fail, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
+		}
+		var granted []*entity.ExptEvalItem
+		granted, err = gate.Filter(ctx, event, toSubmit)
+		if err != nil {
+			return err
+		}
+		logs.CtxInfo(ctx, "[CentralScheduler] dispatch gate granted %d/%d items, expt_id: %v, expt_run_id: %v",
+			len(granted), len(toSubmit), event.ExptID, event.ExptRunID)
+		toSubmit = granted
+	}
+
 	if err = e.handleToSubmits(ctx, event, toSubmit); err != nil {
 		return err
 	}
@@ -434,6 +485,11 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	}
 
 	logs.CtxInfo(ctx, "[ExptEval] expt daemon with next tick, expt_id: %v, expt_run_id: %v, space_id: %v, to_submit: %v, incomplete: %v", event.ExptID, event.ExptRunID, event.SpaceID, entity.ExptEvalItems(toSubmit).GetItemIDs(), entity.ExptEvalItems(incomplete).GetItemIDs())
+
+	// 中心调度由 leader 统一驱动下一轮，实验自己不再发布下一跳。
+	if transient {
+		return nil
+	}
 
 	select {
 	case <-time.After(time.Second * 3):

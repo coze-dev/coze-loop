@@ -1288,6 +1288,13 @@ type Visibility = string
 
 type ExptTriggerType = string
 
+const (
+	ExptSchedulingModeLegacy  = "legacy"
+	ExptSchedulingModeCentral = "central"
+)
+
+type ExptSchedulingMode = string
+
 type Frequency = string
 
 type ExptResultExportType = string
@@ -2271,6 +2278,9 @@ type Experiment struct {
 	// 实验级多轮/SUA 跑法配置回显: 从 experiment.eval_conf.run_mode_config 反序列化, 与 Create/Submit 入参 run_mode_config 同构。
 	// 仅 SandboxAgent + MultiSetConfig 实验非空。SUA 模型的 api_key/base_url 是运行时从 TCC 解析注入 case-file, 绝不回显。
 	RunModeConfig *RunModeConfig `thrift:"run_mode_config,115,optional" frugal:"115,optional,RunModeConfig" form:"run_mode_config" json:"run_mode_config,omitempty" query:"run_mode_config"`
+	// 调度方式与优先级：创建后冻结，只读回显；旧实验缺省为 legacy
+	SchedulingMode *ExptSchedulingMode `thrift:"scheduling_mode,120,optional" frugal:"120,optional,string" form:"scheduling_mode" json:"scheduling_mode,omitempty" query:"scheduling_mode"`
+	Priority       *int32              `thrift:"priority,121,optional" frugal:"121,optional,i32" form:"priority" json:"priority,omitempty" query:"priority"`
 }
 
 func NewExperiment() *Experiment {
@@ -3033,6 +3043,8 @@ var fieldIDToName_Experiment = map[int16]string{
 	113: "evaluators_concur_num",
 	114: "total_item_count",
 	115: "run_mode_config",
+	120: "scheduling_mode",
+	121: "priority",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -3189,6 +3201,46 @@ func (p *Experiment) IsSetExperimentGroupKey() bool {
 
 func (p *Experiment) IsSetNotificationConf() bool {
 	return p.NotificationConf != nil
+}
+
+var Experiment_SchedulingMode_DEFAULT ExptSchedulingMode
+
+func (p *Experiment) GetSchedulingMode() (v ExptSchedulingMode) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSchedulingMode() {
+		return Experiment_SchedulingMode_DEFAULT
+	}
+	return *p.SchedulingMode
+}
+
+func (p *Experiment) IsSetSchedulingMode() bool {
+	return p.SchedulingMode != nil
+}
+
+func (p *Experiment) SetSchedulingMode(val *ExptSchedulingMode) {
+	p.SchedulingMode = val
+}
+
+var Experiment_Priority_DEFAULT int32
+
+func (p *Experiment) GetPriority() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPriority() {
+		return Experiment_Priority_DEFAULT
+	}
+	return *p.Priority
+}
+
+func (p *Experiment) IsSetPriority() bool {
+	return p.Priority != nil
+}
+
+func (p *Experiment) SetPriority(val *int32) {
+	p.Priority = val
 }
 
 func (p *Experiment) IsSetExt() bool {
@@ -3612,6 +3664,22 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 115:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField115(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 120:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField120(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 121:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField121(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4226,6 +4294,29 @@ func (p *Experiment) ReadField115(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *Experiment) ReadField120(iprot thrift.TProtocol) error {
+
+	var _field *ExptSchedulingMode
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SchedulingMode = _field
+	return nil
+}
+func (p *Experiment) ReadField121(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Priority = _field
+	return nil
+}
+
 func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("Experiment"); err != nil {
@@ -4418,6 +4509,14 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField115(oprot); err != nil {
 			fieldId = 115
+			goto WriteFieldError
+		}
+		if err = p.writeField120(oprot); err != nil {
+			fieldId = 120
+			goto WriteFieldError
+		}
+		if err = p.writeField121(oprot); err != nil {
+			fieldId = 121
 			goto WriteFieldError
 		}
 	}
@@ -5344,6 +5443,43 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 115 end error: ", p), err)
 }
 
+func (p *Experiment) writeField120(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSchedulingMode() {
+		if err = oprot.WriteFieldBegin("scheduling_mode", thrift.STRING, 120); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SchedulingMode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 120 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 120 end error: ", p), err)
+}
+func (p *Experiment) writeField121(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPriority() {
+		if err = oprot.WriteFieldBegin("priority", thrift.I32, 121); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Priority); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 121 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 121 end error: ", p), err)
+}
+
 func (p *Experiment) String() string {
 	if p == nil {
 		return "<nil>"
@@ -5497,6 +5633,12 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field115DeepEqual(ano.RunModeConfig) {
+		return false
+	}
+	if !p.Field120DeepEqual(ano.SchedulingMode) {
+		return false
+	}
+	if !p.Field121DeepEqual(ano.Priority) {
 		return false
 	}
 	return true
@@ -6029,6 +6171,31 @@ type ExptTemplateMeta struct {
 	ExptType *ExptType `thrift:"expt_type,5,optional" frugal:"5,optional,ExptType" form:"expt_type" json:"expt_type,omitempty" query:"expt_type"`
 	// 实验模板可见性，默认为空，可见
 	Visibility *Visibility `thrift:"visibility,6,optional" frugal:"6,optional,string" form:"visibility" json:"visibility,omitempty" query:"visibility"`
+}
+
+func (p *Experiment) Field120DeepEqual(src *ExptSchedulingMode) bool {
+
+	if p.SchedulingMode == src {
+		return true
+	} else if p.SchedulingMode == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SchedulingMode, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field121DeepEqual(src *int32) bool {
+
+	if p.Priority == src {
+		return true
+	} else if p.Priority == nil || src == nil {
+		return false
+	}
+	if *p.Priority != *src {
+		return false
+	}
+	return true
 }
 
 func NewExptTemplateMeta() *ExptTemplateMeta {

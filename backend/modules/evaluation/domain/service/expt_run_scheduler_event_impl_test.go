@@ -1338,7 +1338,7 @@ func TestExptSchedulerImpl_Schedule_ContextCancelled(t *testing.T) {
 	mockConfiger.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{}).AnyTimes()
 	mockMode.EXPECT().ExptEnd(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 
-	err := svc.schedule(ctx, event)
+	err := svc.schedule(ctx, event, false, nil)
 	assert.Error(t, err)
 	assert.True(t, errors.Is(err, context.DeadlineExceeded))
 }

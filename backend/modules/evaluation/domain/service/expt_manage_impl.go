@@ -1034,6 +1034,11 @@ func (e *ExptMangerImpl) authorizeSharedResource(
 }
 
 func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error) {
+	// 中心调度首期只覆盖离线实验；online/append 仍走 legacy，避免无自循环后无法收敛。
+	if req.ExptConf != nil && req.ExptConf.Scheduling.IsCentral() && req.ExptType != entity.ExptType_Offline {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode,
+			errorx.WithExtraMsg("central scheduling only supports offline experiments"))
+	}
 	if req.ExptType == entity.ExptType_Online && req.CreateEvalTargetParam != nil {
 		et := gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
 		srcID := ""

@@ -548,6 +548,34 @@ func (p *CreateExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 120:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField120(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 121:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField121(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -1157,6 +1185,34 @@ func (p *CreateExperimentRequest) FastReadField110(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreateExperimentRequest) FastReadField120(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *expt.ExptSchedulingMode
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SchedulingMode = _field
+	return offset, nil
+}
+
+func (p *CreateExperimentRequest) FastReadField121(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Priority = _field
+	return offset, nil
+}
+
 func (p *CreateExperimentRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -1234,6 +1290,7 @@ func (p *CreateExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField46(buf[offset:], w)
 		offset += p.fastWriteField47(buf[offset:], w)
 		offset += p.fastWriteField91(buf[offset:], w)
+		offset += p.fastWriteField121(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
@@ -1255,6 +1312,7 @@ func (p *CreateExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField80(buf[offset:], w)
 		offset += p.fastWriteField81(buf[offset:], w)
 		offset += p.fastWriteField110(buf[offset:], w)
+		offset += p.fastWriteField120(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -1301,6 +1359,8 @@ func (p *CreateExperimentRequest) BLength() int {
 		l += p.field81Length()
 		l += p.field91Length()
 		l += p.field110Length()
+		l += p.field120Length()
+		l += p.field121Length()
 		l += p.field100Length()
 		l += p.field200Length()
 		l += p.field255Length()
@@ -1654,6 +1714,24 @@ func (p *CreateExperimentRequest) fastWriteField110(buf []byte, w thrift.NocopyW
 	if p.IsSetNotificationConf() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 110)
 		offset += p.NotificationConf.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *CreateExperimentRequest) fastWriteField120(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSchedulingMode() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 120)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SchedulingMode)
+	}
+	return offset
+}
+
+func (p *CreateExperimentRequest) fastWriteField121(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPriority() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 121)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.Priority)
 	}
 	return offset
 }
@@ -2022,6 +2100,24 @@ func (p *CreateExperimentRequest) field110Length() int {
 	return l
 }
 
+func (p *CreateExperimentRequest) field120Length() int {
+	l := 0
+	if p.IsSetSchedulingMode() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SchedulingMode)
+	}
+	return l
+}
+
+func (p *CreateExperimentRequest) field121Length() int {
+	l := 0
+	if p.IsSetPriority() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *CreateExperimentRequest) field100Length() int {
 	l := 0
 	if p.IsSetExt() {
@@ -2314,6 +2410,16 @@ func (p *CreateExperimentRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.NotificationConf = _notificationConf
+
+	if src.SchedulingMode != nil {
+		tmp := *src.SchedulingMode
+		p.SchedulingMode = &tmp
+	}
+
+	if src.Priority != nil {
+		tmp := *src.Priority
+		p.Priority = &tmp
+	}
 
 	if src.Ext != nil {
 		p.Ext = make(map[string]string, len(src.Ext))
@@ -3074,6 +3180,34 @@ func (p *SubmitExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 120:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField120(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 121:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField121(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 200:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField200(buf[offset:])
@@ -3719,6 +3853,34 @@ func (p *SubmitExperimentRequest) FastReadField110(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SubmitExperimentRequest) FastReadField120(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *expt.ExptSchedulingMode
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SchedulingMode = _field
+	return offset, nil
+}
+
+func (p *SubmitExperimentRequest) FastReadField121(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Priority = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentRequest) FastReadField200(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewSession()
@@ -3764,6 +3926,7 @@ func (p *SubmitExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField46(buf[offset:], w)
 		offset += p.fastWriteField47(buf[offset:], w)
 		offset += p.fastWriteField91(buf[offset:], w)
+		offset += p.fastWriteField121(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
@@ -3788,6 +3951,7 @@ func (p *SubmitExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField81(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField110(buf[offset:], w)
+		offset += p.fastWriteField120(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -3836,6 +4000,8 @@ func (p *SubmitExperimentRequest) BLength() int {
 		l += p.field100Length()
 		l += p.field91Length()
 		l += p.field110Length()
+		l += p.field120Length()
+		l += p.field121Length()
 		l += p.field200Length()
 		l += p.field255Length()
 	}
@@ -4226,6 +4392,24 @@ func (p *SubmitExperimentRequest) fastWriteField110(buf []byte, w thrift.NocopyW
 	return offset
 }
 
+func (p *SubmitExperimentRequest) fastWriteField120(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSchedulingMode() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 120)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SchedulingMode)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentRequest) fastWriteField121(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPriority() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 121)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.Priority)
+	}
+	return offset
+}
+
 func (p *SubmitExperimentRequest) fastWriteField200(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetSession() {
@@ -4606,6 +4790,24 @@ func (p *SubmitExperimentRequest) field110Length() int {
 	return l
 }
 
+func (p *SubmitExperimentRequest) field120Length() int {
+	l := 0
+	if p.IsSetSchedulingMode() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SchedulingMode)
+	}
+	return l
+}
+
+func (p *SubmitExperimentRequest) field121Length() int {
+	l := 0
+	if p.IsSetPriority() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *SubmitExperimentRequest) field200Length() int {
 	l := 0
 	if p.IsSetSession() {
@@ -4913,6 +5115,16 @@ func (p *SubmitExperimentRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.NotificationConf = _notificationConf
+
+	if src.SchedulingMode != nil {
+		tmp := *src.SchedulingMode
+		p.SchedulingMode = &tmp
+	}
+
+	if src.Priority != nil {
+		tmp := *src.Priority
+		p.Priority = &tmp
+	}
 
 	var _session *common.Session
 	if src.Session != nil {

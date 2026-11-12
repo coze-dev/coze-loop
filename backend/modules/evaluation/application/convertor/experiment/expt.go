@@ -38,6 +38,7 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, eva
 		ItemConcurNum: entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
 		Ext:           cer.Ext,
 		RunModeConfig: runModeConfigDTO2DO(cer.GetRunModeConfig()),
+		Scheduling:    entity.BuildSchedulingConfig(cer.GetSchedulingMode(), cer.GetPriority(), cer.Ext),
 	}
 
 	ec.ConnectorConf.TargetConf = &entity.TargetConf{
@@ -985,6 +986,7 @@ func buildExptConfFromEvalSetConfigs(cer *expt.CreateExperimentRequest, runConfi
 		ItemConcurNum: entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
 		Ext:           cer.Ext,
 		RunModeConfig: runModeConfigDTO2DO(cer.GetRunModeConfig()),
+		Scheduling:    entity.BuildSchedulingConfig(cer.GetSchedulingMode(), cer.GetPriority(), cer.Ext),
 	}
 	if cer.GetItemRetryNum() > 0 {
 		ec.ItemRetryNum = gptr.Of(int(cer.GetItemRetryNum()))

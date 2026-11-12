@@ -1334,6 +1334,34 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 120:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField120(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 121:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField121(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2081,6 +2109,34 @@ func (p *Experiment) FastReadField115(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField120(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *ExptSchedulingMode
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SchedulingMode = _field
+	return offset, nil
+}
+
+func (p *Experiment) FastReadField121(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Priority = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -2103,6 +2159,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField64(buf[offset:], w)
 		offset += p.fastWriteField113(buf[offset:], w)
 		offset += p.fastWriteField114(buf[offset:], w)
+		offset += p.fastWriteField121(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
@@ -2135,6 +2192,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField111(buf[offset:], w)
 		offset += p.fastWriteField112(buf[offset:], w)
 		offset += p.fastWriteField115(buf[offset:], w)
+		offset += p.fastWriteField120(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -2190,6 +2248,8 @@ func (p *Experiment) BLength() int {
 		l += p.field113Length()
 		l += p.field114Length()
 		l += p.field115Length()
+		l += p.field120Length()
+		l += p.field121Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2668,6 +2728,24 @@ func (p *Experiment) fastWriteField115(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *Experiment) fastWriteField120(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSchedulingMode() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 120)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SchedulingMode)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField121(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPriority() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 121)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.Priority)
+	}
+	return offset
+}
+
 func (p *Experiment) field1Length() int {
 	l := 0
 	if p.IsSetID() {
@@ -3119,6 +3197,24 @@ func (p *Experiment) field115Length() int {
 	return l
 }
 
+func (p *Experiment) field120Length() int {
+	l := 0
+	if p.IsSetSchedulingMode() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SchedulingMode)
+	}
+	return l
+}
+
+func (p *Experiment) field121Length() int {
+	l := 0
+	if p.IsSetPriority() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *Experiment) DeepCopy(s interface{}) error {
 	src, ok := s.(*Experiment)
 	if !ok {
@@ -3490,6 +3586,16 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		}
 	}
 	p.RunModeConfig = _runModeConfig
+
+	if src.SchedulingMode != nil {
+		tmp := *src.SchedulingMode
+		p.SchedulingMode = &tmp
+	}
+
+	if src.Priority != nil {
+		tmp := *src.Priority
+		p.Priority = &tmp
+	}
 
 	return nil
 }

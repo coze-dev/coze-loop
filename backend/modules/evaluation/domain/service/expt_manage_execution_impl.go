@@ -294,12 +294,32 @@ func (e *ExptMangerImpl) CheckBenefit(ctx context.Context, expt *entity.Experime
 }
 
 func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error {
-	if err := NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session); err != nil {
+	expt, err := e.GetDetail(ctx, exptID, spaceID, session)
+	if err != nil {
 		return err
 	}
 
-	expt, err := e.GetDetail(ctx, exptID, spaceID, session)
-	if err != nil {
+	// 中心调度模式：运行准入改由中心额度账本负责，不占用 legacy 每空间 200 名额；
+	// 同时不再发布每实验 MQ 自循环，由 env 级 leader 统一驱动 ScheduleOnce。
+	if expt.EvalConf != nil && expt.EvalConf.Scheduling.IsCentral() {
+		if expt.ExptType != entity.ExptType_Offline {
+			return errorx.NewByCode(errno.CommonInvalidParamCode,
+				errorx.WithExtraMsg("central scheduling only supports offline experiments"))
+		}
+		logs.CtxInfo(ctx, "[CentralScheduler] experiment registered for central scheduling, expt_id: %v, run_id: %v, owner_env: %v",
+			exptID, runID, expt.EvalConf.Scheduling.OwnerEnv)
+		if expt.NotificationConf == nil {
+			switch runMode {
+			case entity.EvaluationModeSubmit, entity.EvaluationModeTrialRun:
+				if err := e.sendNotifyCard(ctx, expt); err != nil {
+					logs.CtxWarn(ctx, "NotifyCard send failed, expt_id: %v, error: %v", exptID, err)
+				}
+			}
+		}
+		return nil
+	}
+
+	if err := NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session); err != nil {
 		return err
 	}
 
@@ -395,12 +415,23 @@ func buildExptNotifyParam(expt *entity.Experiment, toStatus entity.ExptStatus) (
 }
 
 func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, itemIDs []int64, session *entity.Session, ext map[string]string) error {
-	if err := NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session); err != nil {
+	expt, err := e.GetDetail(ctx, exptID, spaceID, session)
+	if err != nil {
 		return err
 	}
 
-	expt, err := e.GetDetail(ctx, exptID, spaceID, session)
-	if err != nil {
+	// 重试跟原实验：调度方式从 experiment.eval_conf.scheduling 读取，不因本次请求改变。
+	// 中心调度没有每实验 MQ 自循环，RetryItems 必须自己把待重试条目重置为 Queueing
+	// 并把实验拉回 Processing，后续由 env 级 leader 扫描并发起派发。
+	if expt.EvalConf != nil && expt.EvalConf.Scheduling.IsCentral() {
+		if err := e.resetItemsForCentralRetry(ctx, expt, runID, itemIDs, spaceID); err != nil {
+			return err
+		}
+		logs.CtxInfo(ctx, "[CentralScheduler] retry items reset for central scheduling, expt_id: %v, run_id: %v, item_cnt: %v", exptID, runID, len(itemIDs))
+		return nil
+	}
+
+	if err := NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session); err != nil {
 		return err
 	}
 
@@ -419,6 +450,102 @@ func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID 
 		return err
 	}
 
+	return nil
+}
+
+// resetItemsForCentralRetry 把重试条目恢复为 Queueing，并重建该 run 下的 item run log。
+// 与 ExptRetryItemsExec.resetEvalItems 的语义一致，但不依赖 MQ 自循环。
+func (e *ExptMangerImpl) resetItemsForCentralRetry(ctx context.Context, expt *entity.Experiment, runID int64, itemIDs []int64, spaceID int64) error {
+	if len(itemIDs) == 0 {
+		return nil
+	}
+	itemResults, err := e.itemResultRepo.BatchGet(ctx, spaceID, expt.ID, itemIDs)
+	if err != nil {
+		return err
+	}
+	stats, err := e.statsRepo.Get(ctx, expt.ID, spaceID)
+	if err != nil {
+		return err
+	}
+	if stats != nil {
+		for _, ir := range itemResults {
+			if ir == nil {
+				continue
+			}
+			switch ir.Status {
+			case entity.ItemRunState_Processing:
+				stats.ProcessingItemCnt--
+			case entity.ItemRunState_Success:
+				stats.SuccessItemCnt--
+			case entity.ItemRunState_Fail:
+				stats.FailItemCnt--
+			case entity.ItemRunState_Terminal:
+				stats.TerminatedItemCnt--
+			}
+			stats.PendingItemCnt++
+		}
+	}
+
+	if err := e.itemResultRepo.UpdateItemRunLog(ctx, expt.ID, runID, itemIDs, map[string]any{
+		"status":       int32(entity.ItemRunState_Queueing),
+		"result_state": int32(0),
+		"err_msg":      []byte{},
+	}, spaceID); err != nil {
+		return err
+	}
+	if err := e.itemResultRepo.UpdateItemsResult(ctx, spaceID, expt.ID, itemIDs, map[string]any{
+		"status":      int32(entity.ItemRunState_Queueing),
+		"expt_run_id": runID,
+	}); err != nil {
+		return err
+	}
+	if err := e.turnResultRepo.UpdateTurnResultsWithItemIDs(ctx, expt.ID, itemIDs, spaceID, map[string]any{
+		"status":           int32(entity.TurnRunState_Queueing),
+		"target_result_id": int64(0),
+		"expt_run_id":      runID,
+	}); err != nil {
+		return err
+	}
+
+	ids, err := e.idgenerator.GenMultiIDs(ctx, len(itemIDs))
+	if err != nil {
+		return err
+	}
+	versionByItemID := make(map[int64]int64, len(itemResults))
+	for _, ir := range itemResults {
+		if ir != nil {
+			versionByItemID[ir.ItemID] = ir.ItemVersionID
+		}
+	}
+	runLogs := make([]*entity.ExptItemResultRunLog, 0, len(itemIDs))
+	for i, itemID := range itemIDs {
+		runLogs = append(runLogs, &entity.ExptItemResultRunLog{
+			ID:            ids[i],
+			SpaceID:       spaceID,
+			ExptID:        expt.ID,
+			ExptRunID:     runID,
+			ItemID:        itemID,
+			ItemVersionID: versionByItemID[itemID],
+			Status:        int32(entity.ItemRunState_Queueing),
+		})
+	}
+	if err := e.itemResultRepo.BatchCreateNXRunLogs(ctx, runLogs); err != nil {
+		return err
+	}
+	if stats != nil {
+		if err := e.statsRepo.Save(ctx, stats); err != nil {
+			return err
+		}
+	}
+
+	// 让中心调度把实验视为活跃；已存在 run 的 latest_run_id 不变。
+	if err := e.exptRepo.Update(ctx, &entity.Experiment{
+		ID:      expt.ID,
+		SpaceID: spaceID,
+		Status:  entity.ExptStatus_Processing,
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 

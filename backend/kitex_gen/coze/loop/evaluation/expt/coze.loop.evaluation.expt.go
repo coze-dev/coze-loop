@@ -76,6 +76,8 @@ type CreateExperimentRequest struct {
 	RefGroupExperimentID *int64 `thrift:"ref_group_experiment_id,91,optional" frugal:"91,optional,i64" json:"ref_group_experiment_id" form:"ref_group_experiment_id" `
 	// 通知配置
 	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,110,optional" frugal:"110,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
+	SchedulingMode   *expt.ExptSchedulingMode   `thrift:"scheduling_mode,120,optional" frugal:"120,optional,string" form:"scheduling_mode" json:"scheduling_mode,omitempty"`
+	Priority         *int32                     `thrift:"priority,121,optional" frugal:"121,optional,i32" form:"priority" json:"priority,omitempty"`
 	Ext              map[string]string          `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
 	Session          *common.Session            `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
 	Base             *base.Base                 `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
@@ -689,6 +691,8 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	81:  "target_shared_option",
 	91:  "ref_group_experiment_id",
 	110: "notification_conf",
+	120: "scheduling_mode",
+	121: "priority",
 	100: "ext",
 	200: "session",
 	255: "Base",
@@ -828,6 +832,38 @@ func (p *CreateExperimentRequest) IsSetRefGroupExperimentID() bool {
 
 func (p *CreateExperimentRequest) IsSetNotificationConf() bool {
 	return p.NotificationConf != nil
+}
+
+var CreateExperimentRequest_SchedulingMode_DEFAULT expt.ExptSchedulingMode
+
+func (p *CreateExperimentRequest) GetSchedulingMode() (v expt.ExptSchedulingMode) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSchedulingMode() {
+		return CreateExperimentRequest_SchedulingMode_DEFAULT
+	}
+	return *p.SchedulingMode
+}
+
+func (p *CreateExperimentRequest) IsSetSchedulingMode() bool {
+	return p.SchedulingMode != nil
+}
+
+var CreateExperimentRequest_Priority_DEFAULT int32
+
+func (p *CreateExperimentRequest) GetPriority() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPriority() {
+		return CreateExperimentRequest_Priority_DEFAULT
+	}
+	return *p.Priority
+}
+
+func (p *CreateExperimentRequest) IsSetPriority() bool {
+	return p.Priority != nil
 }
 
 func (p *CreateExperimentRequest) IsSetExt() bool {
@@ -1137,6 +1173,22 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 110:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField110(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 120:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField120(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 121:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField121(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1634,6 +1686,29 @@ func (p *CreateExperimentRequest) ReadField110(iprot thrift.TProtocol) error {
 	p.NotificationConf = _field
 	return nil
 }
+func (p *CreateExperimentRequest) ReadField120(iprot thrift.TProtocol) error {
+
+	var _field *expt.ExptSchedulingMode
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SchedulingMode = _field
+	return nil
+}
+func (p *CreateExperimentRequest) ReadField121(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Priority = _field
+	return nil
+}
+
 func (p *CreateExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -1824,6 +1899,14 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField110(oprot); err != nil {
 			fieldId = 110
+			goto WriteFieldError
+		}
+		if err = p.writeField120(oprot); err != nil {
+			fieldId = 120
+			goto WriteFieldError
+		}
+		if err = p.writeField121(oprot); err != nil {
+			fieldId = 121
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -2527,6 +2610,43 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 110 end error: ", p), err)
 }
+func (p *CreateExperimentRequest) writeField120(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSchedulingMode() {
+		if err = oprot.WriteFieldBegin("scheduling_mode", thrift.STRING, 120); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SchedulingMode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 120 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 120 end error: ", p), err)
+}
+func (p *CreateExperimentRequest) writeField121(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPriority() {
+		if err = oprot.WriteFieldBegin("priority", thrift.I32, 121); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Priority); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 121 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 121 end error: ", p), err)
+}
+
 func (p *CreateExperimentRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -2710,6 +2830,12 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 		return false
 	}
 	if !p.Field110DeepEqual(ano.NotificationConf) {
+		return false
+	}
+	if !p.Field120DeepEqual(ano.SchedulingMode) {
+		return false
+	}
+	if !p.Field121DeepEqual(ano.Priority) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
@@ -3109,6 +3235,31 @@ func (p *CreateExperimentRequest) Field110DeepEqual(src *expt.ExptNotificationCo
 	}
 	return true
 }
+func (p *CreateExperimentRequest) Field120DeepEqual(src *expt.ExptSchedulingMode) bool {
+
+	if p.SchedulingMode == src {
+		return true
+	} else if p.SchedulingMode == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SchedulingMode, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CreateExperimentRequest) Field121DeepEqual(src *int32) bool {
+
+	if p.Priority == src {
+		return true
+	} else if p.Priority == nil || src == nil {
+		return false
+	}
+	if *p.Priority != *src {
+		return false
+	}
+	return true
+}
+
 func (p *CreateExperimentRequest) Field100DeepEqual(src map[string]string) bool {
 
 	if len(p.Ext) != len(src) {
@@ -3433,6 +3584,8 @@ type SubmitExperimentRequest struct {
 	RefGroupExperimentID *int64 `thrift:"ref_group_experiment_id,91,optional" frugal:"91,optional,i64" json:"ref_group_experiment_id" form:"ref_group_experiment_id" `
 	// 通知配置
 	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,110,optional" frugal:"110,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
+	SchedulingMode   *expt.ExptSchedulingMode   `thrift:"scheduling_mode,120,optional" frugal:"120,optional,string" form:"scheduling_mode" json:"scheduling_mode,omitempty"`
+	Priority         *int32                     `thrift:"priority,121,optional" frugal:"121,optional,i32" form:"priority" json:"priority,omitempty"`
 	Session          *common.Session            `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
 	Base             *base.Base                 `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -4078,6 +4231,8 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	100: "ext",
 	91:  "ref_group_experiment_id",
 	110: "notification_conf",
+	120: "scheduling_mode",
+	121: "priority",
 	200: "session",
 	255: "Base",
 }
@@ -4228,6 +4383,38 @@ func (p *SubmitExperimentRequest) IsSetRefGroupExperimentID() bool {
 
 func (p *SubmitExperimentRequest) IsSetNotificationConf() bool {
 	return p.NotificationConf != nil
+}
+
+var SubmitExperimentRequest_SchedulingMode_DEFAULT expt.ExptSchedulingMode
+
+func (p *SubmitExperimentRequest) GetSchedulingMode() (v expt.ExptSchedulingMode) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSchedulingMode() {
+		return SubmitExperimentRequest_SchedulingMode_DEFAULT
+	}
+	return *p.SchedulingMode
+}
+
+func (p *SubmitExperimentRequest) IsSetSchedulingMode() bool {
+	return p.SchedulingMode != nil
+}
+
+var SubmitExperimentRequest_Priority_DEFAULT int32
+
+func (p *SubmitExperimentRequest) GetPriority() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPriority() {
+		return SubmitExperimentRequest_Priority_DEFAULT
+	}
+	return *p.Priority
+}
+
+func (p *SubmitExperimentRequest) IsSetPriority() bool {
+	return p.Priority != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetSession() bool {
@@ -4557,6 +4744,22 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 110:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField110(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 120:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField120(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 121:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField121(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5088,6 +5291,29 @@ func (p *SubmitExperimentRequest) ReadField110(iprot thrift.TProtocol) error {
 	p.NotificationConf = _field
 	return nil
 }
+func (p *SubmitExperimentRequest) ReadField120(iprot thrift.TProtocol) error {
+
+	var _field *expt.ExptSchedulingMode
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SchedulingMode = _field
+	return nil
+}
+func (p *SubmitExperimentRequest) ReadField121(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Priority = _field
+	return nil
+}
+
 func (p *SubmitExperimentRequest) ReadField200(iprot thrift.TProtocol) error {
 	_field := common.NewSession()
 	if err := _field.Read(iprot); err != nil {
@@ -5261,6 +5487,14 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField110(oprot); err != nil {
 			fieldId = 110
+			goto WriteFieldError
+		}
+		if err = p.writeField120(oprot); err != nil {
+			fieldId = 120
+			goto WriteFieldError
+		}
+		if err = p.writeField121(oprot); err != nil {
+			fieldId = 121
 			goto WriteFieldError
 		}
 		if err = p.writeField200(oprot); err != nil {
@@ -6022,6 +6256,43 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 110 end error: ", p), err)
 }
+func (p *SubmitExperimentRequest) writeField120(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSchedulingMode() {
+		if err = oprot.WriteFieldBegin("scheduling_mode", thrift.STRING, 120); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SchedulingMode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 120 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 120 end error: ", p), err)
+}
+func (p *SubmitExperimentRequest) writeField121(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPriority() {
+		if err = oprot.WriteFieldBegin("priority", thrift.I32, 121); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Priority); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 121 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 121 end error: ", p), err)
+}
+
 func (p *SubmitExperimentRequest) writeField200(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSession() {
 		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
@@ -6185,6 +6456,12 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field110DeepEqual(ano.NotificationConf) {
+		return false
+	}
+	if !p.Field120DeepEqual(ano.SchedulingMode) {
+		return false
+	}
+	if !p.Field121DeepEqual(ano.Priority) {
 		return false
 	}
 	if !p.Field200DeepEqual(ano.Session) {
@@ -6613,6 +6890,31 @@ func (p *SubmitExperimentRequest) Field110DeepEqual(src *expt.ExptNotificationCo
 	}
 	return true
 }
+func (p *SubmitExperimentRequest) Field120DeepEqual(src *expt.ExptSchedulingMode) bool {
+
+	if p.SchedulingMode == src {
+		return true
+	} else if p.SchedulingMode == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SchedulingMode, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field121DeepEqual(src *int32) bool {
+
+	if p.Priority == src {
+		return true
+	} else if p.Priority == nil || src == nil {
+		return false
+	}
+	if *p.Priority != *src {
+		return false
+	}
+	return true
+}
+
 func (p *SubmitExperimentRequest) Field200DeepEqual(src *common.Session) bool {
 
 	if !p.Session.DeepEqual(src) {
@@ -9472,6 +9774,8 @@ var fieldIDToName_UpdateExperimentRequest = map[int16]string{
 	3:   "name",
 	4:   "desc",
 	110: "notification_conf",
+	120: "scheduling_mode",
+	121: "priority",
 	255: "Base",
 }
 

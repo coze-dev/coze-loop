@@ -65,6 +65,10 @@ struct CreateExperimentRequest {
     // 通知配置
     110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
+    // ★ 中心调度可选字段。缺省 = legacy；创建后冻结，Update/Retry 不接受该字段。
+    120: optional expt.ExptSchedulingMode scheduling_mode (api.body = 'scheduling_mode')
+    121: optional i32 priority (api.body = 'priority')
+
     100: optional map<string, string> ext (api.body = 'ext')
 
     200: optional common.Session session
@@ -141,6 +145,10 @@ struct SubmitExperimentRequest {
 
     // 通知配置
     110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
+
+    // ★ 中心调度可选字段。缺省 = legacy；创建后冻结，Update/Retry 不接受该字段。
+    120: optional expt.ExptSchedulingMode scheduling_mode (api.body = 'scheduling_mode')
+    121: optional i32 priority (api.body = 'priority')
 
     200: optional common.Session session
 

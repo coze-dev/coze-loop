@@ -348,6 +348,10 @@ type EvaluationConfiguration struct {
 	// RunModeConfig 实验级跑法配置 (仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效)。
 	// 序列化进 experiment.eval_conf; 提交时展开到各 item 的 ItemTargetConf.RunConf 兜底默认值。
 	RunModeConfig *RunModeConfig `json:"run_mode_config,omitempty"`
+
+	// Scheduling 中心调度元数据。创建时冻结；legacy 实验可为空。
+	// 序列化进 experiment.eval_conf，不新增 experiment 表列。
+	Scheduling *SchedulingConfig `json:"scheduling,omitempty"`
 }
 
 // RunMode 实验级评测模式 (跑法)。与 runtime domain RunMode / IDL ExptRunMode 对齐。
