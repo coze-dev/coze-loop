@@ -156,7 +156,7 @@ func (f *fakeLeader) Acquire(ctx context.Context, ownerEnv string, ttl time.Dura
 type fakeLease struct{}
 
 func (fakeLease) Renew(ctx context.Context) (bool, error) { return true, nil }
-func (fakeLease) Release(ctx context.Context) error      { return nil }
+func (fakeLease) Release(ctx context.Context) error       { return nil }
 
 type fakeConfiger struct{ conf *entity.CentralSchedulerConf }
 
@@ -318,4 +318,66 @@ func TestSchedulingConfig_ImmutabilitySemantics(t *testing.T) {
 	bad := entity.BuildSchedulingConfig("unknown", 1, nil)
 	require.NotNil(t, bad)
 	assert.Equal(t, entity.SchedulingModeLegacy, bad.EffectiveMode(), "unknown mode must not silently become central")
+}
+
+func TestCentralScheduler_Settle_FailureRelease(t *testing.T) {
+	ctx := context.Background()
+	repo := &fakeCentralRepo{
+		states:    map[int64][]*entity.CentralItemState{1: {{ItemID: 11, Status: entity.ItemRunState_Fail}}},
+		runStatus: map[int64]entity.ExptStatus{1: entity.ExptStatus_Processing},
+	}
+	ledger := newFakeLedger(entity.ResourceVector{ItemSlots: 10, EvaluatorSlots: 10})
+	ledger.rsvs["1:11"] = &entity.Reservation{ID: "1:11", ExptRunID: 1, ItemID: 11, Vector: entity.ResourceVector{ItemSlots: 1, EvaluatorSlots: 1}, State: entity.ReservationStateDispatched}
+	ledger.used = entity.ResourceVector{ItemSlots: 1, EvaluatorSlots: 1}
+	s := newTestScheduler(t, repo, ledger, &fakeExecutor{}, "prod")
+	require.NoError(t, s.Tick(ctx))
+	assert.Equal(t, 0, len(ledger.rsvs))
+	assert.Equal(t, entity.ResourceVector{}, ledger.used)
+}
+
+func TestCentralScheduler_Settle_CancelledRunRelease(t *testing.T) {
+	ctx := context.Background()
+	repo := &fakeCentralRepo{
+		runStatus: map[int64]entity.ExptStatus{1: entity.ExptStatus_Terminated},
+	}
+	ledger := newFakeLedger(entity.ResourceVector{ItemSlots: 10, EvaluatorSlots: 10})
+	ledger.rsvs["1:11"] = &entity.Reservation{ID: "1:11", ExptRunID: 1, ItemID: 11, Vector: entity.ResourceVector{ItemSlots: 1, EvaluatorSlots: 1}, State: entity.ReservationStateDispatched}
+	ledger.used = entity.ResourceVector{ItemSlots: 1, EvaluatorSlots: 1}
+	s := newTestScheduler(t, repo, ledger, &fakeExecutor{}, "prod")
+	require.NoError(t, s.Tick(ctx))
+	assert.Equal(t, 0, len(ledger.rsvs))
+	assert.Equal(t, entity.ResourceVector{}, ledger.used)
+}
+
+func TestCentralScheduler_Settle_DeletedRunRelease(t *testing.T) {
+	ctx := context.Background()
+	repo := &fakeCentralRepo{runFound: map[int64]bool{1: false}}
+	ledger := newFakeLedger(entity.ResourceVector{ItemSlots: 10, EvaluatorSlots: 10})
+	ledger.rsvs["1:11"] = &entity.Reservation{ID: "1:11", ExptRunID: 1, ItemID: 11, Vector: entity.ResourceVector{ItemSlots: 1, EvaluatorSlots: 1}, State: entity.ReservationStateDispatched}
+	ledger.used = entity.ResourceVector{ItemSlots: 1, EvaluatorSlots: 1}
+	s := newTestScheduler(t, repo, ledger, &fakeExecutor{}, "prod")
+	require.NoError(t, s.Tick(ctx))
+	assert.Equal(t, 0, len(ledger.rsvs))
+	assert.Equal(t, entity.ResourceVector{}, ledger.used)
+}
+
+func TestCentralScheduler_RetryDoesNotDoubleCharge(t *testing.T) {
+	ctx := context.Background()
+	repo := &fakeCentralRepo{
+		active: []*entity.CentralActiveExperiment{
+			{SpaceID: 1, ExptID: 100, ExptRunID: 1, ExptRunMode: entity.EvaluationModeSubmit, ExptStatus: entity.ExptStatus_Processing, ItemConcurNum: 1, EvaluatorConcurNum: 1, OwnerEnv: "prod", RetryItemIDs: []int64{11}},
+		},
+		states:    map[int64][]*entity.CentralItemState{1: {{ItemID: 11, Status: entity.ItemRunState_Queueing}}},
+		runStatus: map[int64]entity.ExptStatus{1: entity.ExptStatus_Processing},
+	}
+	ledger := newFakeLedger(entity.ResourceVector{ItemSlots: 10, EvaluatorSlots: 10})
+	ledger.rsvs["1:11"] = &entity.Reservation{ID: "1:11", ExptRunID: 1, ItemID: 11, Vector: entity.ResourceVector{ItemSlots: 1, EvaluatorSlots: 1}, State: entity.ReservationStateDispatching}
+	ledger.used = entity.ResourceVector{ItemSlots: 1, EvaluatorSlots: 1}
+	exec := &fakeExecutor{dispatch: map[int64][]*entity.ExptEvalItem{1: {item(11)}}}
+	s := newTestScheduler(t, repo, ledger, exec, "prod")
+
+	require.NoError(t, s.Tick(ctx))
+	require.Equal(t, 1, len(ledger.rsvs))
+	assert.Equal(t, entity.ResourceVector{ItemSlots: 1, EvaluatorSlots: 1}, ledger.used, "重试复用同一 reservation，不得重复扣额度")
+	require.Equal(t, 1, exec.calls)
 }
