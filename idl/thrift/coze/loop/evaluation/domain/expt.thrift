@@ -209,7 +209,7 @@ struct Experiment {
     115: optional RunModeConfig run_mode_config
 
     // ★ 中心调度只读回显。创建时冻结，运行期不可修改；缺省/空值 = legacy。
-    120: optional ExptSchedulingMode scheduling_mode
+    120: optional string scheduling_mode
     121: optional i32 priority
 }
 
