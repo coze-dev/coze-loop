@@ -124,7 +124,7 @@ typedef string Visibility(ts.enum="true")
 const Visibility Visibility_Hidden = "hidden"
 
 // ExptSchedulingMode 实验调度方式。创建时冻结，运行期不可修改；缺省/空值按 legacy 处理。
-typedef string ExptSchedulingMode (ts.enum="true")
+typedef string ExptSchedulingMode
 const ExptSchedulingMode ExptSchedulingMode_Legacy = "legacy"
 const ExptSchedulingMode ExptSchedulingMode_Central = "central"
 
