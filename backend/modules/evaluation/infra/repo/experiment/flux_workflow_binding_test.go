@@ -96,6 +96,34 @@ func TestReadyFluxWorkflowBindingRejectsChangedInlineSource(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestReadyFluxWorkflowBindingRejectsChangedResolvedModel(t *testing.T) {
+	sqlDB, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlDB.Close() })
+	database, err := gorm.Open(mysql.New(mysql.Config{Conn: sqlDB, SkipInitializeWithVersion: true}), &gorm.Config{})
+	require.NoError(t, err)
+	provider := dbmock.NewMockProvider(gomock.NewController(t))
+	provider.EXPECT().NewSession(gomock.Any()).Return(database)
+	repo := NewFluxWorkflowBindingRepo(provider)
+	stored := &entity.FluxWorkflowBinding{
+		BindingID: "binding", State: "ready", SourceSpaceID: "source-space",
+		ExecutionSpaceID: "source-space", InlineYAMLRef: "frozen/a.yaml", InlineYAMLSHA256: "sha-a",
+		ResolvedModelName: "gpt-6-sol", ResolvedAgentType: "codex", ModelSource: "workflow_entry_agent",
+	}
+	conf, err := json.Marshal(map[string]any{"flux_workflow_binding": stored})
+	require.NoError(t, err)
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT .* FROM `experiment` WHERE .* FOR UPDATE").
+		WithArgs(int64(9), int64(8), 1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "eval_conf"}).AddRow(9, conf))
+	mock.ExpectRollback()
+	changed := *stored
+	changed.ResolvedModelName = "gpt-5.6"
+	err = repo.PutReadyFluxWorkflowBinding(context.Background(), 8, 9, &changed)
+	require.ErrorContains(t, err, "another source")
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestReadyFluxWorkflowBindingRejectsCrossSpaceInlineExecution(t *testing.T) {
 	repo := NewFluxWorkflowBindingRepo(nil)
 	err := repo.PutReadyFluxWorkflowBinding(context.Background(), 8, 9, &entity.FluxWorkflowBinding{

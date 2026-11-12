@@ -43,3 +43,12 @@ func TestFluxItemRunMarshalUpdatesCleanupFieldsWithoutDroppingRuntimeState(t *te
 	require.JSONEq(t, `{"nested":1}`, string(fields["runtime_owned"]))
 	require.JSONEq(t, `"5"`, string(fields["invoke_id"]))
 }
+
+func TestFluxWorkflowBindingKeepsResolvedModelProvenance(t *testing.T) {
+	const stored = `{"resolved_model_name":"gpt-6-sol","resolved_agent_type":"codex","model_source":"workflow_entry_agent","entry_node_key":"clarify-req","entry_agent_id":"agent-1","entry_agent_version_id":"version-2","entry_agent_digest":"sha256:abc"}`
+	var binding FluxWorkflowBinding
+	require.NoError(t, json.Unmarshal([]byte(stored), &binding))
+	encoded, err := json.Marshal(binding)
+	require.NoError(t, err)
+	require.JSONEq(t, stored, string(encoded))
+}

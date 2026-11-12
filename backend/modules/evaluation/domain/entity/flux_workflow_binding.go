@@ -43,6 +43,13 @@ type FluxWorkflowBinding struct {
 	EvalOperatorUsername  string          `json:"eval_operator_username,omitempty"`
 	WorkerPostSetupURL    string          `json:"worker_post_setup_url,omitempty"`
 	WorkerPostSetupSHA256 string          `json:"worker_post_setup_sha256,omitempty"`
+	ResolvedModelName     string          `json:"resolved_model_name,omitempty"`
+	ResolvedAgentType     string          `json:"resolved_agent_type,omitempty"`
+	ModelSource           string          `json:"model_source,omitempty"`
+	EntryNodeKey          string          `json:"entry_node_key,omitempty"`
+	EntryAgentID          string          `json:"entry_agent_id,omitempty"`
+	EntryAgentVersionID   string          `json:"entry_agent_version_id,omitempty"`
+	EntryAgentDigest      string          `json:"entry_agent_digest,omitempty"`
 	State                 string          `json:"state,omitempty"`
 }
 

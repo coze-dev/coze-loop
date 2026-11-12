@@ -98,6 +98,10 @@ func (r *fluxWorkflowBindingRepo) PutReadyFluxWorkflowBinding(ctx context.Contex
 				before.SourceTemplateID == ready.SourceTemplateID && before.SourceSnapshotID == ready.SourceSnapshotID && before.SourceReleaseID == ready.SourceReleaseID &&
 				before.SourceRevision == ready.SourceRevision && before.SourceDigest == ready.SourceDigest && before.ExecutionSpaceID == ready.ExecutionSpaceID &&
 				before.InlineYAMLRef == ready.InlineYAMLRef && before.InlineYAMLSHA256 == ready.InlineYAMLSHA256 &&
+				before.ResolvedModelName == ready.ResolvedModelName && before.ResolvedAgentType == ready.ResolvedAgentType &&
+				before.ModelSource == ready.ModelSource && before.EntryNodeKey == ready.EntryNodeKey &&
+				before.EntryAgentID == ready.EntryAgentID && before.EntryAgentVersionID == ready.EntryAgentVersionID &&
+				before.EntryAgentDigest == ready.EntryAgentDigest &&
 				before.AssetMapSHA256 == ready.AssetMapSHA256 && bytes.Equal(before.AssetMapJSON, ready.AssetMapJSON) {
 				return nil
 			}
