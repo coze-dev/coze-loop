@@ -52,3 +52,12 @@ func TestFluxWorkflowBindingKeepsResolvedModelProvenance(t *testing.T) {
 	require.NoError(t, err)
 	require.JSONEq(t, stored, string(encoded))
 }
+
+func TestFluxWorkflowBindingKeepsSetupLauncher(t *testing.T) {
+	const stored = `{"setup_launcher_url":"https://tos.example/bridge.sh","setup_launcher_sha256":"abc123"}`
+	var binding FluxWorkflowBinding
+	require.NoError(t, json.Unmarshal([]byte(stored), &binding))
+	encoded, err := json.Marshal(binding)
+	require.NoError(t, err)
+	require.JSONEq(t, stored, string(encoded))
+}
