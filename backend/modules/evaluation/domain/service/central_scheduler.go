@@ -141,6 +141,8 @@ func (s *CentralSchedulerImpl) Tick(ctx context.Context) error {
 			logs.CtxWarn(ctx, "[CentralScheduler] release lease fail, env: %v, err: %v", ownerEnv, err)
 		}
 	}()
+	stopRenew := s.keepLease(ctx, lease, conf.LeaseRenew())
+	defer stopRenew()
 
 	// 权威源读主库，避免主从延迟导致把 Processing 误判成 Queueing。
 	ctx = contexts.WithCtxWriteDB(ctx)
@@ -400,6 +402,30 @@ func abs64(v int64) int64 {
 	return v
 }
 
+// keepLease 在 tick/rebuild 期间续租，避免 DB 扫描耗时超过 TTL 后出现双 leader。
+func (s *CentralSchedulerImpl) keepLease(ctx context.Context, lease LeaderLease, interval time.Duration) func() {
+	if interval <= 0 {
+		interval = 5 * time.Second
+	}
+	stop := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-ticker.C:
+				ok, err := lease.Renew(ctx)
+				if err != nil || !ok {
+					logs.CtxWarn(ctx, "[CentralScheduler] renew lease fail, ok: %v, err: %v", ok, err)
+				}
+			}
+		}
+	}()
+	return func() { close(stop) }
+}
+
 // settle 以 DB 实际状态收尾已有 reservation：
 //   - run 已结束/不存在 → 释放整个 run；
 //   - item 已成功/失败/终止 → 释放；
@@ -491,6 +517,8 @@ func (s *CentralSchedulerImpl) Rebuild(ctx context.Context) error {
 		return nil
 	}
 	defer func() { _ = lease.Release(ctx) }()
+	stopRenew := s.keepLease(ctx, lease, conf.LeaseRenew())
+	defer stopRenew()
 
 	ctx = contexts.WithCtxWriteDB(ctx)
 	active, err := s.Repo.ListActiveExperiments(ctx, ownerEnv, s.maxActive())
