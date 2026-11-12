@@ -50,7 +50,7 @@ struct CreatePromptRequest {
     1: optional i64 workspace_id (api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"workspace_id"')
 
     11: optional string prompt_name (vt.not_nil="true", vt.min_size="1")
-    12: optional string prompt_key (vt.not_nil="true", vt.min_size="1")
+    12: optional string prompt_key (vt.not_nil="true", vt.min_size="1", vt.pattern="^[A-Za-z0-9_.-]+$")
     13: optional string prompt_description
     14: optional prompt.PromptType prompt_type
     15: optional prompt.SecurityLevel security_level
@@ -70,7 +70,7 @@ struct ClonePromptRequest {
     2: optional string commit_version (vt.not_nil="true", vt.min_size="1")
 
     11: optional string cloned_prompt_name (vt.not_nil="true", vt.min_size="1")
-    12: optional string cloned_prompt_key (vt.not_nil="true", vt.min_size="1")
+    12: optional string cloned_prompt_key (vt.not_nil="true", vt.min_size="1", vt.pattern="^[A-Za-z0-9_.-]+$")
     13: optional string cloned_prompt_description
 
     255: optional base.Base Base

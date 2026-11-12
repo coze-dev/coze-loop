@@ -93,7 +93,7 @@ struct CreatePromptOApiRequest {
     1: optional i64 workspace_id (api.body="workspace_id", api.js_conv='true', go.tag='json:"workspace_id"')
 
     11: optional string prompt_name (api.body="prompt_name", vt.not_nil="true", vt.min_size="1")
-    12: optional string prompt_key (api.body="prompt_key", vt.not_nil="true", vt.min_size="1")
+    12: optional string prompt_key (api.body="prompt_key", vt.not_nil="true", vt.min_size="1", vt.pattern="^[A-Za-z0-9_.-]+$")
     13: optional string prompt_description (api.body="prompt_description")
     14: optional prompt.PromptType prompt_type (api.body="prompt_type")
     15: optional prompt.SecurityLevel security_level (api.body="security_level")

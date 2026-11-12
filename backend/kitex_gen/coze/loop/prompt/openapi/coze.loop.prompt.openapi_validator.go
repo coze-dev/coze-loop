@@ -163,6 +163,10 @@ func (p *CreatePromptOApiRequest) IsValid() error {
 	if len(*p.PromptKey) < int(1) {
 		return fmt.Errorf("field PromptKey min_len rule failed, current value: %d", len(*p.PromptKey))
 	}
+	_src := "^[A-Za-z0-9_.-]+$"
+	if ok, _ := regexp.MatchString(_src, *p.PromptKey); !ok {
+		return fmt.Errorf("field PromptKey pattern rule failed, current value: %v", *p.PromptKey)
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)

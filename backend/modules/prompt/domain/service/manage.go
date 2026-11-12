@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/bytedance/gg/gmap"
@@ -18,6 +19,16 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
+
+var promptKeyPattern = regexp.MustCompile(`^[A-Za-z0-9_.-]+$`)
+
+func ValidatePromptKey(promptKey string) error {
+	if !promptKeyPattern.MatchString(promptKey) {
+		return errorx.NewByCode(prompterr.CommonInvalidParamCode,
+			errorx.WithExtraMsg("promptKey contains invalid characters"))
+	}
+	return nil
+}
 
 func (p *PromptServiceImpl) MGetPromptIDs(ctx context.Context, spaceID int64, promptKeys []string) (PromptKeyIDMap map[string]int64, err error) {
 	promptKeyIDMap := make(map[string]int64)
@@ -346,6 +357,9 @@ func (p *PromptServiceImpl) CreatePrompt(ctx context.Context, promptDO *entity.P
 	}
 	if promptDO.PromptKey == "" {
 		return 0, errorx.New("promptKey is empty")
+	}
+	if err = ValidatePromptKey(promptDO.PromptKey); err != nil {
+		return 0, err
 	}
 	if promptDO.PromptBasic == nil {
 		return 0, errorx.New("promptBasic is empty")

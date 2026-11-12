@@ -242,6 +242,38 @@ func TestPromptManageApplicationImpl_ClonePrompt(t *testing.T) {
 	}
 }
 
+func TestPromptManageRequestPromptKeyValidation(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name    string
+		key     string
+		wantErr bool
+	}{
+		{name: "hyphen and original legal characters", key: "Prompt.v2-key_01"},
+		{name: "space", key: "prompt key", wantErr: true},
+		{name: "slash", key: "prompt/key", wantErr: true},
+		{name: "unicode", key: "提示词", wantErr: true},
+		{name: "at", key: "prompt@key", wantErr: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			createReq := &manage.CreatePromptRequest{
+				WorkspaceID: ptr.Of(int64(1)),
+				PromptName:  ptr.Of("name"),
+				PromptKey:   ptr.Of(tt.key),
+			}
+			cloneReq := &manage.ClonePromptRequest{
+				PromptID:         ptr.Of(int64(1)),
+				CommitVersion:    ptr.Of("1.0.0"),
+				ClonedPromptName: ptr.Of("name"),
+				ClonedPromptKey:  ptr.Of(tt.key),
+			}
+			assert.Equal(t, tt.wantErr, createReq.IsValid() != nil)
+			assert.Equal(t, tt.wantErr, cloneReq.IsValid() != nil)
+		})
+	}
+}
+
 func TestPromptManageApplicationImpl_DeletePrompt(t *testing.T) {
 	type fields struct {
 		manageRepo      repo.IManageRepo

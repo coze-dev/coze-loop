@@ -32,6 +32,28 @@ type fakeSnippetParser struct {
 	serializeFunc func(*SnippetReference) string
 }
 
+func TestValidatePromptKey(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		key     string
+		wantErr bool
+	}{
+		{name: "hyphen and original legal characters", key: "Prompt.v2-key_01"},
+		{name: "single segment uppercase", key: "PROMPT"},
+		{name: "space", key: "prompt key", wantErr: true},
+		{name: "slash", key: "prompt/key", wantErr: true},
+		{name: "unicode", key: "提示词", wantErr: true},
+		{name: "at", key: "prompt@key", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.wantErr, ValidatePromptKey(tt.key) != nil)
+		})
+	}
+}
+
 func (f fakeSnippetParser) ParseReferences(content string) ([]*SnippetReference, error) {
 	if f.parseFunc != nil {
 		return f.parseFunc(content)
@@ -390,6 +412,23 @@ func TestPromptServiceImpl_CreatePrompt(t *testing.T) {
 				},
 			},
 			wantErr: errorx.New("promptBasic is empty"),
+		},
+		{
+			name: "prompt key contains invalid characters",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				promptDO: &entity.Prompt{
+					SpaceID:   1,
+					PromptKey: "prompt/key",
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeNormal,
+					},
+				},
+			},
+			wantErr: errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("promptKey contains invalid characters")),
 		},
 		{
 			name: "space id invalid",
