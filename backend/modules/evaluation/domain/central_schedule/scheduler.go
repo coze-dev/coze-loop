@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -31,6 +32,12 @@ type Scheduler struct {
 	// RunDone 在 DB 已无 Queueing/Processing 且额度已全部归还时触发。
 	// 实现方负责幂等（重复触发不应重复结束实验）。
 	RunDone func(ctx context.Context, run *RunView) error
+	// Reconciler 增量对账 + 周期全量重建；为空时跳过。
+	Reconciler *Reconciler
+	// rebuildMu/lastRebuild 控制全量重建节奏。重建在派发之后执行，
+	// 且账本用 generation 双缓冲原子切换，重建期间派发不中断。
+	rebuildMu   sync.Mutex
+	lastRebuild time.Time
 }
 
 // Tick 扫描 active central run，按优先级补 item。
@@ -81,10 +88,43 @@ func (s *Scheduler) Tick(ctx context.Context) (TickStats, error) {
 			}
 		}
 	}
+
+	// 周期全量重建在派发之后执行：本轮已派发的 item 不受影响；
+	// 账本用影子代原子切换，下一轮 tick 继续用旧代/新代派发，不会出现整段停派。
+	if s.Reconciler != nil {
+		s.rebuildMu.Lock()
+		if s.now().Sub(s.lastRebuild) >= cfg.RebuildInterval {
+			s.lastRebuild = s.now()
+			rec := *s.Reconciler
+			rec.Config = cfg
+			rstat, rerr := rec.FullRebuild(ctx, cfg.OwnerScope)
+			s.rebuildMu.Unlock()
+			if rerr != nil {
+				stats.Errors++
+				return stats, fmt.Errorf("periodic rebuild: %w", rerr)
+			}
+			stats.Compensated += rstat.Rebuilt
+			stats.Released += rstat.Released
+		} else {
+			s.rebuildMu.Unlock()
+		}
+	}
 	return stats, nil
 }
 
 func (s *Scheduler) tickRun(ctx context.Context, run *RunView, cfg Config, stats *TickStats) error {
+	// 先做增量对账：释放 DB 已终态/超期孤儿的预占，再按释放后的额度派发。
+	if s.Reconciler != nil {
+		rec := *s.Reconciler
+		rec.Config = cfg
+		rstat, rerr := rec.Incremental(ctx, run, 0)
+		if rerr != nil {
+			return fmt.Errorf("incremental reconcile: %w", rerr)
+		}
+		stats.Released += rstat.Released
+		stats.Compensated += rstat.Uncertain
+	}
+
 	if s.Admission != nil {
 		if err := s.Admission.Check(ctx, run); err != nil {
 			return fmt.Errorf("admission check: %w", err)

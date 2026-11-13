@@ -38,6 +38,13 @@ func NewScheduler(
 		Ledger:     l,
 		Dispatcher: adapter,
 		Projection: adapter,
+		Reconciler: &central_schedule.Reconciler{
+			Runs:       adapter,
+			Items:      adapter,
+			Ledger:     l,
+			Projection: adapter,
+			Clock:      central_schedule.NewRealClock(),
+		},
 		InstanceID: fmt.Sprintf("%s-%d", hostname, os.Getpid()),
 		ConfigProvider: func(ctx context.Context) central_schedule.Config {
 			conf := configer.GetExptExecConf(ctx, 0).GetCentralScheduleConf()

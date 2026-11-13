@@ -333,3 +333,30 @@ func TestRunDoneAndDisabled(t *testing.T) {
 	require.Equal(t, cs.TickStats{}, stats)
 	require.Equal(t, 0, done)
 }
+
+// 周期全量重建在派发之后跑：本轮仍能正常派发，且重建不双算、不中断下一轮。
+func TestPeriodicRebuildAfterDispatch(t *testing.T) {
+	ctx := context.Background()
+	run := &cs.RunView{OwnerScope: "ppe:test:cn:stone.cozeloop.evaluation", ExptID: 1, RunID: 1, Mode: cs.ModeCentral, TargetConcurrency: 2, DimensionLimits: map[string]int64{"item": 2, "evaluator:1": 2}, CreatedAt: time.Unix(100, 0)}
+	s, l, items, _, _ := newHarness(t, []*cs.RunView{run}, 2)
+	s.Reconciler = &cs.Reconciler{Runs: s.Runs, Items: items, Ledger: l, Projection: s.Projection, Clock: s.Clock}
+	items.queueing[1] = []*cs.ItemView{
+		{RunID: 1, ItemID: 11, Dimensions: dims()},
+		{RunID: 1, ItemID: 12, Dimensions: dims()},
+	}
+	stats, err := s.Tick(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 2, stats.Dispatched, "dispatch must complete before rebuild")
+
+	usage, err := l.Usage(ctx, 1)
+	require.NoError(t, err)
+	require.Equal(t, int64(2), usage["item"], "rebuild must not double count")
+
+	// 下一轮仍可派发：释放一条后缺口重新出现。
+	s.RunDone = nil
+	require.NoError(t, s.ReleaseItem(ctx, 1, 11, 0))
+	items.queueing[1] = []*cs.ItemView{{RunID: 1, ItemID: 13, Dimensions: dims()}}
+	stats, err = s.Tick(ctx)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, stats.Dispatched, 1, "dispatch continues across rebuild")
+}
