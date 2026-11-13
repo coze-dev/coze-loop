@@ -48,6 +48,8 @@ import (
 	ck2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/redis/dao"
+	rediscentral "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/redis/central_schedule"
+	cshchedule "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/schedule"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/idem"
 	redis2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/idem/redis"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target"
@@ -175,7 +177,12 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 		return nil, err
 	}
 	resourceAccessAuthorizer := service.NewResourceAccessAuthorizer(iAuthProvider, sharedResourceConfigProvider)
-	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, componentIConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, serviceEvaluatorService, benefitSvc, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics)
+	runScheduleDAO := mysql.NewRunScheduleDAO(db2)
+	runScheduleRepo := experiment.NewRunScheduleRepo(runScheduleDAO)
+	centralLedger := rediscentral.NewLedger(cmdable)
+	centralAdapter := service.NewCentralScheduleAdapter(runScheduleRepo, iExptItemResultRepo, iExperimentRepo, quotaRepo, componentIConfiger, exptEventPublisher)
+	centralScheduler := cshchedule.NewScheduler(centralAdapter, centralLedger, componentIConfiger)
+	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, componentIConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, serviceEvaluatorService, benefitSvc, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics, service.WithCentralSchedule(runScheduleRepo, centralScheduler))
 	v4 := service.ProvideNoSandboxAgentNotifiers()
 	schedulerModeFactory := service.NewSchedulerModeFactory(iExptManager, iExptItemResultRepo, iExptStatsRepo, iExptTurnResultRepo, idgen2, evaluationSetItemService, iExperimentRepo, iExptItemRefRepo, idempotentService, componentIConfiger, exptEventPublisher, evaluatorRecordService, exptResultService, iExptTemplateManager, iExptRunLogRepo, iLocker, v4...)
 	iItemCompletePublisher := service.ProvideNilItemCompletePublisher()
@@ -446,7 +453,12 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 		return nil, err
 	}
 	resourceAccessAuthorizer := service.NewResourceAccessAuthorizer(iAuthProvider, sharedResourceConfigProvider)
-	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, iConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, evaluatorService, benefitService, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics)
+	runScheduleDAO := mysql.NewRunScheduleDAO(db2)
+	runScheduleRepo := experiment.NewRunScheduleRepo(runScheduleDAO)
+	centralLedger := rediscentral.NewLedger(cmdable)
+	centralAdapter := service.NewCentralScheduleAdapter(runScheduleRepo, iExptItemResultRepo, iExperimentRepo, quotaRepo, iConfiger, exptEventPublisher)
+	centralScheduler := cshchedule.NewScheduler(centralAdapter, centralLedger, iConfiger)
+	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, iConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, evaluatorService, benefitService, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics, service.WithCentralSchedule(runScheduleRepo, centralScheduler))
 	v4 := service.ProvideNoSandboxAgentNotifiers()
 	schedulerModeFactory := service.NewSchedulerModeFactory(iExptManager, iExptItemResultRepo, iExptStatsRepo, iExptTurnResultRepo, idgen2, evaluationSetItemService, iExperimentRepo, iExptItemRefRepo, idempotentService, iConfiger, exptEventPublisher, evaluatorRecordService, exptResultService, iExptTemplateManager, iExptRunLogRepo, iLocker, v4...)
 	iItemCompletePublisher := service.ProvideNilItemCompletePublisher()

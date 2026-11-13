@@ -10,9 +10,11 @@ import (
 	dataapp "github.com/coze-dev/coze-loop/backend/modules/data/application"
 	dataconsumer "github.com/coze-dev/coze-loop/backend/modules/data/infra/mq/consumer"
 	exptapp "github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/central_schedule"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	evalconsumer "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/consumer"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/producer"
+	schedule "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/schedule"
 	obapp "github.com/coze-dev/coze-loop/backend/modules/observability/application"
 	obconsumer "github.com/coze-dev/coze-loop/backend/modules/observability/infra/mq/consumer"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -43,6 +45,13 @@ func MustInitConsumerWorkers(
 		panic(err)
 	}
 	res = append(res, workers...)
+
+	// 中心调度 tick：独立于旧 per-experiment MQ 自循环；多实例由 leader lease 收敛。
+	if provider, ok := experimentApplication.(interface {
+		CentralScheduler() *central_schedule.Scheduler
+	}); ok {
+		schedule.StartTicker(context.Background(), provider.CentralScheduler())
+	}
 
 	workers, err = dataconsumer.NewConsumerWorkers(cfactory, datasetApplication)
 	if err != nil {

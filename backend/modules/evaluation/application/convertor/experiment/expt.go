@@ -6,6 +6,7 @@ package experiment
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/bytedance/gg/gcond"
@@ -39,6 +40,7 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, eva
 		Ext:           cer.Ext,
 		RunModeConfig: runModeConfigDTO2DO(cer.GetRunModeConfig()),
 	}
+	applyScheduleMeta(ec, cer.Ext)
 
 	ec.ConnectorConf.TargetConf = &entity.TargetConf{
 		TargetVersionID: cer.GetTargetVersionID(),
@@ -986,6 +988,7 @@ func buildExptConfFromEvalSetConfigs(cer *expt.CreateExperimentRequest, runConfi
 		Ext:           cer.Ext,
 		RunModeConfig: runModeConfigDTO2DO(cer.GetRunModeConfig()),
 	}
+	applyScheduleMeta(ec, cer.Ext)
 	if cer.GetItemRetryNum() > 0 {
 		ec.ItemRetryNum = gptr.Of(int(cer.GetItemRetryNum()))
 	}
@@ -1523,5 +1526,27 @@ func suaModeDO2DTO(m entity.SuaMode) domain_expt.SuaMode {
 		return domain_expt.SuaMode_Fixed
 	default:
 		return domain_expt.SuaMode_HumanLoop
+	}
+}
+
+// applyScheduleMeta 从实验创建/提交请求的 ext 兼容字段解析调度模式与优先级。
+// 新字段未上线前用 ext 承载，保持旧调用方不传即 legacy 的兼容语义。
+// owner_scope 不由客户端指定，必须在服务端创建/run 创建时解析后写入。
+func applyScheduleMeta(ec *entity.EvaluationConfiguration, ext map[string]string) {
+	if ec == nil || len(ext) == 0 {
+		return
+	}
+	if raw, ok := ext["schedule_mode"]; ok {
+		switch strings.ToLower(strings.TrimSpace(raw)) {
+		case "central", "1":
+			ec.ScheduleMode = 1
+		default:
+			ec.ScheduleMode = 0
+		}
+	}
+	if raw, ok := ext["priority"]; ok {
+		if v, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 32); err == nil {
+			ec.Priority = int32(v)
+		}
 	}
 }

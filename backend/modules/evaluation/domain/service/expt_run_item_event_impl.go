@@ -116,6 +116,7 @@ func NewExptRecordEvalService(
 	i.endpoints = RecordEvalChain(
 		i.HandleEventErr,
 		i.HandleEventCheck,
+		i.HandleScheduleAck,
 		i.HandleEventLock,
 		i.HandleEventExec,
 	)(func(_ context.Context, _ *entity.ExptItemEvalEvent) error { return nil })
@@ -159,6 +160,30 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventCheck(next RecordEvalEndPoint)
 			return nil
 		}
 
+		return next(ctx, event)
+	}
+}
+
+// HandleScheduleAck 执行侧确认。带派发凭证的消息必须 CAS 成功才执行；
+// 重复/迟到回调直接跳过，不重复扣额度。legacy 消息无凭证，直接放行。
+func (e *ExptItemEventEvalServiceImpl) HandleScheduleAck(next RecordEvalEndPoint) RecordEvalEndPoint {
+	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+		if event.ScheduleReservationID == "" {
+			return next(ctx, event)
+		}
+		gate, ok := e.manager.(CentralScheduleAckGate)
+		if !ok {
+			return next(ctx, event)
+		}
+		confirmed, err := gate.AckCentralScheduleItem(ctx, event)
+		if err != nil {
+			return err
+		}
+		if !confirmed {
+			logs.CtxInfo(ctx, "[CentralSchedule] duplicate/late ack skipped, expt_id: %v, run_id: %v, item_id: %v, rid: %v",
+				event.ExptID, event.ExptRunID, event.EvalSetItemID, event.ScheduleReservationID)
+			return nil
+		}
 		return next(ctx, event)
 	}
 }
@@ -336,6 +361,19 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 
 	if err := mode.PostEval(ctx, eiec); err != nil {
 		return err
+	}
+
+	// item 已落终态：归还该条预占。释放失败不改变已落库结果，
+	// 但必须留痕，由增量/全量对账补偿；重复释放幂等。
+	if event.ScheduleReservationID != "" {
+		if releaser, ok := e.manager.(interface {
+			ReleaseCentralScheduleItem(context.Context, *entity.ExptItemEvalEvent) error
+		}); ok {
+			if err := releaser.ReleaseCentralScheduleItem(ctx, event); err != nil {
+				logs.CtxWarn(ctx, "[CentralSchedule] release item reservation fail, expt_id: %v, run_id: %v, item_id: %v, err: %v",
+					event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+			}
+		}
 	}
 
 	return nil

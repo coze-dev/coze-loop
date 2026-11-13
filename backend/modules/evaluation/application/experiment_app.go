@@ -30,6 +30,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/central_schedule"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -51,6 +52,14 @@ type IExperimentApplication interface {
 	service.IExptResultExportService
 	service.IExptInsightAnalysisService
 	service.ExptLifecycleEventHandler
+}
+
+func (e *experimentApplication) CentralScheduler() *central_schedule.Scheduler {
+	p, ok := e.manager.(service.CentralSchedulerProvider)
+	if !ok {
+		return nil
+	}
+	return p.CentralScheduler()
 }
 
 type experimentApplication struct {

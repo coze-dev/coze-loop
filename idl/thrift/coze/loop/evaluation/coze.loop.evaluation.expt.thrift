@@ -62,6 +62,10 @@ struct CreateExperimentRequest {
     // 引用分组实验 id：填写时校验其为当前空间内的实验 id
     91: optional i64 ref_group_experiment_id (api.js_conv = 'true', api.body = 'ref_group_experiment_id', go.tag='json:"ref_group_experiment_id"')
 
+    // 中心调度：仅创建/提交时生效，创建后固定；重试请求不提供这些字段，新 run 继承实验配置。
+    120: optional i32 schedule_mode (api.body = 'schedule_mode') // 0=legacy(默认) 1=central
+    121: optional i32 priority (api.body = 'priority')       // 越大越优先；同级按等待时长
+
     // 通知配置
     110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
@@ -138,6 +142,10 @@ struct SubmitExperimentRequest {
     // 实验分组 key 默认为实验 id；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）
     // 引用分组实验 id：填写时校验其为当前空间内的实验 id
     91: optional i64 ref_group_experiment_id (api.js_conv = 'true', api.body = 'ref_group_experiment_id', go.tag='json:"ref_group_experiment_id"')
+
+    // 中心调度：仅创建/提交时生效，创建后固定；重试请求不提供这些字段，新 run 继承实验配置。
+    120: optional i32 schedule_mode (api.body = 'schedule_mode') // 0=legacy(默认) 1=central
+    121: optional i32 priority (api.body = 'priority')       // 越大越优先；同级按等待时长
 
     // 通知配置
     110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')

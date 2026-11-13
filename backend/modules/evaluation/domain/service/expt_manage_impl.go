@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/central_schedule"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
@@ -66,8 +67,9 @@ func NewExptManager(
 	pipelineListAdapter rpc.IPipelineListAdapter,
 	resourceAccessAuthorizer ResourceAccessAuthorizer,
 	sandboxAgentMetrics metrics.SandboxAgentMetrics,
+	opts ...ExptManagerOption,
 ) IExptManager {
-	return &ExptMangerImpl{
+	e := &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
 		exptResultService:           exptResultService,
 		exptRepo:                    exptRepo,
@@ -99,6 +101,10 @@ func NewExptManager(
 		resourceAccessAuthorizer:    resourceAccessAuthorizer,
 		sandboxAgentMetrics:         sandboxAgentMetrics,
 	}
+	for _, opt := range opts {
+		opt(e)
+	}
+	return e
 }
 
 type ExptMangerImpl struct {
@@ -133,6 +139,10 @@ type ExptMangerImpl struct {
 	resourceAccessAuthorizer    ResourceAccessAuthorizer
 	// 沙箱 agent 稳定性打点，CompleteExpt 里上报 experiment_finished / experiment_duration
 	sandboxAgentMetrics metrics.SandboxAgentMetrics
+
+	// 中心调度：run 级元数据投影 + 额度账本入口。未装配时 legacy 行为不变。
+	scheduleRepo     repo.IRunScheduleRepo
+	centralScheduler *central_schedule.Scheduler
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {

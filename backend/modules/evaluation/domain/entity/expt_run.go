@@ -221,6 +221,47 @@ type ExptExecConf struct {
 	SpaceExptConcurLimit int `json:"space_expt_concur_limit" mapstructure:"space_expt_concur_limit"`
 
 	ExptItemEvalConf *ExptItemEvalConf `json:"expt_item_eval_conf" mapstructure:"expt_item_eval_conf"`
+
+	// 中心调度运行参数。缺省时 central 模式关闭、legacy 链路行为不变。
+	CentralScheduleConf *CentralScheduleConf `json:"central_schedule_conf" mapstructure:"central_schedule_conf"`
+}
+
+// CentralScheduleConf 中心调度配置。owner scope 由部署环境注入的
+// env/lane/region/psm 组成，不能由调用方在请求里指定。
+type CentralScheduleConf struct {
+	Enabled            bool  `json:"enabled" mapstructure:"enabled"`
+	TickSecond         int   `json:"tick_second" mapstructure:"tick_second"`
+	AckTimeoutSecond   int   `json:"ack_timeout_second" mapstructure:"ack_timeout_second"`
+	CompensationLimit  int   `json:"compensation_limit" mapstructure:"compensation_limit"`
+	BatchLimit         int   `json:"batch_limit" mapstructure:"batch_limit"`
+	RunLimit           int   `json:"run_limit" mapstructure:"run_limit"`
+	DefaultTargetConcur int64 `json:"default_target_concur" mapstructure:"default_target_concur"`
+	Env                string `json:"env" mapstructure:"env"`
+	Lane               string `json:"lane" mapstructure:"lane"`
+	Region             string `json:"region" mapstructure:"region"`
+	PSM                string `json:"psm" mapstructure:"psm"`
+}
+
+// OwnerScope 返回 env+lane+region+psm 组成的隔离键；任一段缺失返回空串，
+// 由调用方 fail-closed，绝不回落到公共池。
+func (c *CentralScheduleConf) OwnerScope() string {
+	if c == nil {
+		return ""
+	}
+	parts := []string{c.Env, c.Lane, c.Region, c.PSM}
+	for _, p := range parts {
+		if p == "" {
+			return ""
+		}
+	}
+	return strings.Join(parts, ":")
+}
+
+func (e *ExptExecConf) GetCentralScheduleConf() *CentralScheduleConf {
+	if e != nil {
+		return e.CentralScheduleConf
+	}
+	return nil
 }
 
 func (e *ExptExecConf) GetSpaceExptConcurLimit() int {

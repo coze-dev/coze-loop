@@ -44,6 +44,12 @@ type ExptItemEvalEvent struct {
 	MaxRetryTimes int
 	Ext           map[string]string
 	Session       *Session
+
+	// 中心调度派发凭证。只有 central 模式的派发才会带上；
+	// 执行侧消费时用它做 CAS 确认，legacy 事件为空则完全不经过账本。
+	ScheduleReservationID string
+	ScheduleDedupKey      string
+	ScheduleAttempt       int32
 }
 
 func (e *ExptItemEvalEvent) WithCtxForceNoRetry(ctx context.Context) {

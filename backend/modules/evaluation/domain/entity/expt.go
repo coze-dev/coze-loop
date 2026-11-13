@@ -348,6 +348,14 @@ type EvaluationConfiguration struct {
 	// RunModeConfig 实验级跑法配置 (仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效)。
 	// 序列化进 experiment.eval_conf; 提交时展开到各 item 的 ItemTargetConf.RunConf 兜底默认值。
 	RunModeConfig *RunModeConfig `json:"run_mode_config,omitempty"`
+
+	// ScheduleMode 调度模式：0=legacy（默认，走旧 MQ 自循环），1=central。
+	// 实验创建时固定，重试的新 run 继承实验模式，重试路径不可切换。
+	ScheduleMode int32 `json:"schedule_mode,omitempty"`
+	// Priority 中心调度优先级，越大越优先；同级按 run 等待时长升序。
+	Priority int32 `json:"priority,omitempty"`
+	// OwnerScope 所有权隔离键：env+lane+region+psm。缺失即拒绝，不落公共池。
+	OwnerScope string `json:"owner_scope,omitempty"`
 }
 
 // RunMode 实验级评测模式 (跑法)。与 runtime domain RunMode / IDL ExptRunMode 对齐。

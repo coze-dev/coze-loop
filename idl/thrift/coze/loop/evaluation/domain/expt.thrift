@@ -202,6 +202,12 @@ struct Experiment {
     // 实验级多轮/SUA 跑法配置回显: 从 experiment.eval_conf.run_mode_config 反序列化, 与 Create/Submit 入参 run_mode_config 同构。
     // 仅 SandboxAgent + MultiSetConfig 实验非空。SUA 模型的 api_key/base_url 是运行时从 TCC 解析注入 case-file, 绝不回显。
     115: optional RunModeConfig run_mode_config
+
+    // 中心调度读视图。schedule_mode/priority 在实验创建时固定，重试创建的新 run 只继承不切换。
+    // owner_scope 由服务端按部署环境(env+lane+region+psm)解析，只回显，不接受客户端写入。
+    120: optional i32 schedule_mode (api.js_conv='true', go.tag='json:"schedule_mode"')
+    121: optional i32 priority (api.js_conv='true', go.tag='json:"priority"')
+    122: optional string owner_scope (go.tag='json:"owner_scope"')
 }
 
 // 实验模板基础信息

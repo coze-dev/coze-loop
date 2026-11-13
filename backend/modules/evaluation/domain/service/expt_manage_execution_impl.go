@@ -320,6 +320,18 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 		logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Run] online expt heartbeat lock acquired, expt_id: %v, run_id: %v, space_id: %v", exptID, runID, spaceID)
 	}
 
+	// 进入 Pending 时落 run 级调度元数据并初始化额度账户。
+	// central 模式由全局 tick 接管派发，不再发旧 per-experiment 自循环事件；
+	// legacy 模式只多一行投影，原有 MQ 链路完全不变。
+	centralRun, err := e.initRunSchedule(ctx, expt, runID, spaceID)
+	if err != nil {
+		return err
+	}
+	if centralRun {
+		logs.CtxInfo(ctx, "[CentralSchedule] run handed to central scheduler, expt_id: %v, run_id: %v", exptID, runID)
+		return nil
+	}
+
 	if err := e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
 		SpaceID:        spaceID,
 		ExptID:         exptID,
@@ -402,6 +414,15 @@ func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID 
 	expt, err := e.GetDetail(ctx, exptID, spaceID, session)
 	if err != nil {
 		return err
+	}
+
+	centralRun, err := e.initRunSchedule(ctx, expt, runID, spaceID)
+	if err != nil {
+		return err
+	}
+	if centralRun {
+		logs.CtxInfo(ctx, "[CentralSchedule] retried run handed to central scheduler, expt_id: %v, run_id: %v", exptID, runID)
+		return nil
 	}
 
 	if err := e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
@@ -682,6 +703,12 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 
 	if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(ctx, exptID, spaceID, session); err != nil {
 		return err
+	}
+
+	// 所有权终态：投影置 terminal 并归还该 run 所有未终态预占。
+	// 成功/失败/取消/终止/派发异常都汇聚到 CompleteExpt，重复调用幂等。
+	if exptRunID != nil && *exptRunID > 0 {
+		e.finishRunSchedule(ctx, exptID, *exptRunID, spaceID)
 	}
 
 	if len(opt.CID) > 0 {
