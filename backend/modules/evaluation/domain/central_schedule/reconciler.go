@@ -51,7 +51,7 @@ func (r *Reconciler) Incremental(ctx context.Context, run *RunView, limit int) (
 		if res == nil || res.State.Terminal() {
 			continue
 		}
-		status, serr := r.Items.GetItemStatus(ctx, run.RunID, res.ItemID)
+		status, serr := r.Items.GetItemStatus(ctx, run, res.ItemID)
 		if serr != nil {
 			stats.Drift++
 			continue

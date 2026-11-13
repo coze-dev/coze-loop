@@ -73,7 +73,7 @@ type ActiveRunSource interface {
 // ItemSource item 状态来源（DB 为对账权威）。
 type ItemSource interface {
 	ScanQueueing(ctx context.Context, run *RunView, limit int) ([]*ItemView, error)
-	GetItemStatus(ctx context.Context, runID, itemID int64) (ItemStatus, error)
+	GetItemStatus(ctx context.Context, run *RunView, itemID int64) (ItemStatus, error)
 	// ListProcessing 用于全量重建：DB 已 Processing 但账本可能缺失的 item。
 	ListProcessing(ctx context.Context, run *RunView) ([]*ItemView, error)
 }

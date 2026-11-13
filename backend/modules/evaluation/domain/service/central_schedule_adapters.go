@@ -120,8 +120,15 @@ func (a *CentralScheduleAdapter) ScanQueueing(ctx context.Context, run *central_
 	return out, nil
 }
 
-func (a *CentralScheduleAdapter) GetItemStatus(ctx context.Context, runID, itemID int64) (central_schedule.ItemStatus, error) {
-	return central_schedule.ItemQueueing, nil
+func (a *CentralScheduleAdapter) GetItemStatus(ctx context.Context, run *central_schedule.RunView, itemID int64) (central_schedule.ItemStatus, error) {
+	rl, err := a.ItemRepo.GetItemRunLog(ctx, run.ExptID, run.RunID, itemID, run.SpaceID)
+	if err != nil {
+		return central_schedule.ItemQueueing, err
+	}
+	if rl == nil {
+		return central_schedule.ItemQueueing, nil
+	}
+	return central_schedule.ItemStatus(rl.Status), nil
 }
 
 func (a *CentralScheduleAdapter) ListProcessing(ctx context.Context, run *central_schedule.RunView) ([]*central_schedule.ItemView, error) {

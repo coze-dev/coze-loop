@@ -54,7 +54,7 @@ func (f *fakeItems) ScanQueueing(_ context.Context, run *cs.RunView, limit int) 
 	return items, nil
 }
 
-func (f *fakeItems) GetItemStatus(_ context.Context, _runID, itemID int64) (cs.ItemStatus, error) {
+func (f *fakeItems) GetItemStatus(_ context.Context, _ *cs.RunView, itemID int64) (cs.ItemStatus, error) {
 	return f.status[itemID], nil
 }
 
