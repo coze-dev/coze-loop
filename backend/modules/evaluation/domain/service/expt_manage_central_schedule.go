@@ -58,6 +58,9 @@ func runScheduleMode(expt *entity.Experiment) central_schedule.Mode {
 }
 
 func (e *ExptMangerImpl) runOwnerScope(ctx context.Context, spaceID int64) string {
+	if e.configer == nil {
+		return ""
+	}
 	conf := e.configer.GetExptExecConf(ctx, spaceID).GetCentralScheduleConf()
 	if conf == nil {
 		return ""
@@ -71,8 +74,10 @@ func (e *ExptMangerImpl) runTargetConcurrency(ctx context.Context, expt *entity.
 			return int64(v)
 		}
 	}
-	if conf := e.configer.GetExptExecConf(ctx, spaceID).GetCentralScheduleConf(); conf != nil && conf.DefaultTargetConcur > 0 {
-		return conf.DefaultTargetConcur
+	if e.configer != nil {
+		if conf := e.configer.GetExptExecConf(ctx, spaceID).GetCentralScheduleConf(); conf != nil && conf.DefaultTargetConcur > 0 {
+			return conf.DefaultTargetConcur
+		}
 	}
 	return int64(entity.DefaultSubmitItemConcurNum)
 }
@@ -94,12 +99,15 @@ func (e *ExptMangerImpl) initRunSchedule(ctx context.Context, expt *entity.Exper
 		mode = central_schedule.ModeLegacy
 	}
 	if mode != central_schedule.ModeCentral {
-		// legacy run 也落投影，保证全局扫描能看到它；但额度/准入仍走旧链路。
-		return false, e.persistRunSchedule(ctx, expt, runID, spaceID, mode)
+		// legacy run 的投影只用于观测/对账可见性，写失败绝不能影响旧链路。
+		// 新表未部署、DB 抖动、DDL 灰度差异都只能记日志，不能返回错误。
+		e.persistLegacyRunSchedule(ctx, expt, runID, spaceID, mode)
+		return false, nil
 	}
 	if !e.centralEnabled(ctx, spaceID) {
 		// 配置关闭时保持旧链路，不因为新字段出现而改变存量行为。
-		return false, e.persistRunSchedule(ctx, expt, runID, spaceID, central_schedule.ModeLegacy)
+		e.persistLegacyRunSchedule(ctx, expt, runID, spaceID, central_schedule.ModeLegacy)
+		return false, nil
 	}
 	scope := e.runOwnerScope(ctx, spaceID)
 	if scope == "" {
@@ -128,11 +136,27 @@ func (e *ExptMangerImpl) initRunSchedule(ctx context.Context, expt *entity.Exper
 }
 
 func (e *ExptMangerImpl) centralEnabled(ctx context.Context, spaceID int64) bool {
+	if e.configer == nil {
+		return false
+	}
 	conf := e.configer.GetExptExecConf(ctx, spaceID).GetCentralScheduleConf()
 	return conf != nil && conf.Enabled
 }
 
+// persistLegacyRunSchedule 旧链路投影 best-effort：任何失败只记日志，不影响旧实验派发。
+func (e *ExptMangerImpl) persistLegacyRunSchedule(ctx context.Context, expt *entity.Experiment, runID, spaceID int64, mode central_schedule.Mode) {
+	if e.scheduleRepo == nil || expt == nil {
+		return
+	}
+	if err := e.persistRunSchedule(ctx, expt, runID, spaceID, mode); err != nil {
+		logs.CtxWarn(ctx, "[CentralSchedule] legacy projection skipped, expt_id=%d run_id=%d err=%v", expt.ID, runID, err)
+	}
+}
+
 func (e *ExptMangerImpl) persistRunSchedule(ctx context.Context, expt *entity.Experiment, runID, spaceID int64, mode central_schedule.Mode) error {
+	if expt == nil {
+		return nil
+	}
 	scope := e.runOwnerScope(ctx, spaceID)
 	var priority int32
 	if expt != nil && expt.EvalConf != nil {
