@@ -198,6 +198,64 @@ func (e *ExptMangerImpl) ReleaseCentralScheduleItem(ctx context.Context, event *
 	return e.centralScheduler.ReleaseItem(ctx, event.ExptRunID, event.EvalSetItemID, event.ScheduleAttempt)
 }
 
+// GetRunSchedule 供内部运维入口回读 run 级调度元数据。
+func (e *ExptMangerImpl) GetRunSchedule(ctx context.Context, spaceID, exptID, runID int64) (*entity.ExptRunSchedule, error) {
+	if e.scheduleRepo == nil {
+		return nil, central_schedule.ErrNotInitialized
+	}
+	return e.scheduleRepo.Get(ctx, spaceID, exptID, runID)
+}
+
+// CentralRunView 从持久化投影构造对账单 run 视图。
+func (e *ExptMangerImpl) CentralRunView(ctx context.Context, row *entity.ExptRunSchedule) *central_schedule.RunView {
+	if row == nil {
+		return nil
+	}
+	return &central_schedule.RunView{
+		OwnerScope:        row.OwnerScope,
+		SpaceID:           row.SpaceID,
+		ExptID:            row.ExptID,
+		RunID:             row.RunID,
+		Mode:              central_schedule.Mode(row.ScheduleMode),
+		Priority:          row.Priority,
+		TargetConcurrency: row.TargetConcurrency,
+		DimensionLimits:   e.dimensionLimits(row.TargetConcurrency),
+		CreatedAt:         row.CreatedAt,
+	}
+}
+
+// ReconcileCentralRun 运维入口：增量对账或单 run 全量重建。
+func (e *ExptMangerImpl) ReconcileCentralRun(ctx context.Context, ownerScope string, spaceID, exptID, runID int64, fullRebuild bool) (central_schedule.ReconcileStats, error) {
+	if e.centralScheduler == nil {
+		return central_schedule.ReconcileStats{}, central_schedule.ErrNotInitialized
+	}
+	row, err := e.GetRunSchedule(ctx, spaceID, exptID, runID)
+	if err != nil {
+		return central_schedule.ReconcileStats{}, err
+	}
+	if ownerScope != "" && row.OwnerScope != ownerScope {
+		return central_schedule.ReconcileStats{}, central_schedule.ErrOwnerScopeMissing
+	}
+	run := e.CentralRunView(ctx, row)
+	rec := *e.centralScheduler.Reconciler
+	if fullRebuild {
+		return rec.RebuildRun(ctx, run)
+	}
+	return rec.Incremental(ctx, run, 0)
+}
+
+// RebuildCentralScope 运维入口：scope 级全量重建。
+func (e *ExptMangerImpl) RebuildCentralScope(ctx context.Context, ownerScope string) (central_schedule.ReconcileStats, error) {
+	if e.centralScheduler == nil || e.centralScheduler.Reconciler == nil {
+		return central_schedule.ReconcileStats{}, central_schedule.ErrNotInitialized
+	}
+	if ownerScope == "" {
+		return central_schedule.ReconcileStats{}, central_schedule.ErrOwnerScopeMissing
+	}
+	rec := *e.centralScheduler.Reconciler
+	return rec.FullRebuild(ctx, ownerScope)
+}
+
 // finishRunSchedule 结束路径统一投影终态并归还额度。重复调用幂等。
 func (e *ExptMangerImpl) finishRunSchedule(ctx context.Context, exptID, runID, spaceID int64) {
 	if e.scheduleRepo != nil {

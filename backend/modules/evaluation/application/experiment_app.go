@@ -25,12 +25,12 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/experiment"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/central_schedule"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	metricscomp "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/central_schedule"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -53,6 +53,8 @@ type IExperimentApplication interface {
 	service.IExptInsightAnalysisService
 	service.ExptLifecycleEventHandler
 }
+
+func (e *experimentApplication) ExptManager() service.IExptManager { return e.manager }
 
 func (e *experimentApplication) CentralScheduler() *central_schedule.Scheduler {
 	p, ok := e.manager.(service.CentralSchedulerProvider)

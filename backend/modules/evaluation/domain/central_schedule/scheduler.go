@@ -45,12 +45,20 @@ type Scheduler struct {
 // 顺序不可交换：leader -> 扫描 -> 准入 -> 计算缺口 -> 全量预占 -> claim ->
 // 发布 -> 投影。预占失败绝不发布；发布失败立即归还。
 func (s *Scheduler) Tick(ctx context.Context) (TickStats, error) {
+	return s.TickWithScope(ctx, "")
+}
+
+// TickWithScope 允许运维入口显式指定 owner scope；空串沿用配置。
+func (s *Scheduler) TickWithScope(ctx context.Context, ownerScope string) (TickStats, error) {
 	stats := TickStats{}
 	cfg := s.Config
 	if s.ConfigProvider != nil {
 		cfg = s.ConfigProvider(ctx)
 	}
 	cfg = cfg.WithDefaults()
+	if ownerScope != "" {
+		cfg.OwnerScope = ownerScope
+	}
 	if cfg.Disabled {
 		return stats, nil
 	}
@@ -68,6 +76,7 @@ func (s *Scheduler) Tick(ctx context.Context) (TickStats, error) {
 		// 其他实例持有 scope lease：本 tick 不做任何派发。
 		return stats, nil
 	}
+	stats.Leader = true
 
 	runs, err := s.Runs.ScanActive(ctx, cfg.OwnerScope, cfg.RunLimit)
 	if err != nil {

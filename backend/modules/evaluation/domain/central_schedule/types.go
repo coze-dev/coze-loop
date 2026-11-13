@@ -205,6 +205,8 @@ func (c Config) WithDefaults() Config {
 
 // TickStats 单次 tick 的可观测结果。
 type TickStats struct {
+	// Leader 本实例是否持有 scope lease；false 表示本 tick 被其他实例接管。
+	Leader           bool
 	ScannedRuns      int
 	ScannedItems     int
 	Reserved         int

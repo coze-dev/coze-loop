@@ -109,6 +109,7 @@ func (r *Reconciler) FullRebuild(ctx context.Context, scope string) (ReconcileSt
 			continue
 		}
 		active := make([]*Reservation, 0, len(live))
+		active = append(active, live...)
 		// 账本 live 维度由 Ledger.Rebuild 自己从 res 记录重算；这里只补
 		// “DB 已 Processing 但账本缺失”的保守 item 槽，避免重建把在途算没。
 		expected := make(map[string]int64)
@@ -145,6 +146,57 @@ func (r *Reconciler) FullRebuild(ctx context.Context, scope string) (ReconcileSt
 		if result.Swapped {
 			stats.Rebuilt++
 		}
+	}
+	return stats, nil
+}
+
+// RebuildRun 只重建单个 run，供运维入口使用；语义与 FullRebuild 中的单 run 相同。
+func (r *Reconciler) RebuildRun(ctx context.Context, run *RunView) (ReconcileStats, error) {
+	stats := ReconcileStats{}
+	if run == nil || r.Ledger == nil {
+		return stats, nil
+	}
+	stats.Runs = 1
+	if _, err := r.Incremental(ctx, run, 0); err != nil {
+		stats.Drift++
+	}
+	live, err := r.Ledger.ListRunReservations(ctx, run.RunID, "")
+	if err != nil {
+		return stats, err
+	}
+	active := make([]*Reservation, 0, len(live))
+	active = append(active, live...)
+	expected := make(map[string]int64)
+	if r.Items != nil {
+		processing, perr := r.Items.ListProcessing(ctx, run)
+		if perr == nil {
+			present := make(map[int64]struct{}, len(active))
+			for _, res := range active {
+				present[res.ItemID] = struct{}{}
+			}
+			for _, item := range processing {
+				if _, ok := present[item.ItemID]; ok {
+					continue
+				}
+				expected["item"] += 1
+				stats.Drift++
+			}
+		}
+	}
+	result, rerr := r.Ledger.Rebuild(ctx, &RunAccount{
+		OwnerScope:        run.OwnerScope,
+		ExptID:            run.ExptID,
+		RunID:             run.RunID,
+		Mode:              run.Mode,
+		Priority:          run.Priority,
+		TargetConcurrency: run.TargetConcurrency,
+		DimensionLimits:   run.DimensionLimits,
+	}, expected, active)
+	if rerr != nil {
+		return stats, rerr
+	}
+	if result.Swapped {
+		stats.Rebuilt++
 	}
 	return stats, nil
 }
