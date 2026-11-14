@@ -295,3 +295,17 @@ func (mr *MockIConfigerMockRecorder) GetTargetTrajectoryConf(ctx any) *gomock.Ca
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTargetTrajectoryConf", reflect.TypeOf((*MockIConfiger)(nil).GetTargetTrajectoryConf), ctx)
 }
+
+// GetCentralSchedulingConf mocks base method.
+func (m *MockIConfiger) GetCentralSchedulingConf(ctx context.Context) *entity.CentralSchedulingConf {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCentralSchedulingConf", ctx)
+	ret0, _ := ret[0].(*entity.CentralSchedulingConf)
+	return ret0
+}
+
+// GetCentralSchedulingConf indicates an expected call of GetCentralSchedulingConf.
+func (mr *MockIConfigerMockRecorder) GetCentralSchedulingConf(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCentralSchedulingConf", reflect.TypeOf((*MockIConfiger)(nil).GetCentralSchedulingConf), ctx)
+}

@@ -134,6 +134,17 @@ func (c *configer) GetCrossSpaceRecordReadEnforce(ctx context.Context) bool {
 	return cfg.Enforce
 }
 
+// GetCentralSchedulingConf reads the central scheduling roll-out config.
+// Open-source deployments normally leave it absent; absence means legacy.
+func (c *configer) GetCentralSchedulingConf(ctx context.Context) *entity.CentralSchedulingConf {
+	const key = "central_scheduling_conf"
+	var cfg *entity.CentralSchedulingConf
+	if err := c.loader.UnmarshalKey(ctx, key, &cfg); err != nil {
+		return nil
+	}
+	return cfg
+}
+
 func (c *configer) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
 	const key = "system_maintainer_conf"
 	var maintainerConf *entity.SystemMaintainerConf

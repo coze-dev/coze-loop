@@ -362,6 +362,20 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
+	// Central ownership gate. Two schedulers in different environments can
+	// consume the same event when MQ is shared; only the submitter's env may
+	// touch the run. Shadow mode still lets the legacy loop dispatch; enforce
+	// mode suppresses legacy submits below.
+	state, err := e.centralOwnership(ctx, event, exptDetail)
+	if err != nil {
+		return err
+	}
+	if state == centralOwnershipForeign {
+		logs.CtxWarn(ctx, "[ExptEval] skip foreign central run, expt_id: %v, expt_run_id: %v, event_env: %v", event.ExptID, event.ExptRunID, event.Env)
+		return nil
+	}
+	owned := state == centralOwnershipOwned
+
 	err = mode.ExptStart(ctx, event, exptDetail)
 	if err != nil {
 		return err
@@ -396,6 +410,15 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	toSubmit, incomplete, complete, err := mode.ScanEvalItems(ctx, event, exptDetail)
 	if err != nil {
 		return err
+	}
+
+	if owned {
+		// The central scheduler is the only dispatcher for this run. Keep
+		// lifecycle/zombie/completion bookkeeping here, but do not submit.
+		if len(toSubmit) > 0 {
+			logs.CtxInfo(ctx, "[ExptEval] central owned run, suppress %d legacy submits, expt_id: %v, expt_run_id: %v", len(toSubmit), event.ExptID, event.ExptRunID)
+		}
+		toSubmit = nil
 	}
 
 	incomplete, sandboxTerminated, err := e.sweepTerminatedSandboxItems(ctx, event, incomplete, exptDetail)
@@ -686,6 +709,63 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 	}
 
 	return nil
+}
+
+// SubmitItems exposes the exact legacy submission path to the central
+// scheduler. Central dispatch therefore shares item fan-out, run-log state
+// transitions, stats accounting and ClickHouse acceleration with legacy.
+func (e *ExptSchedulerImpl) SubmitItems(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem) error {
+	return e.handleToSubmits(ctx, event, items)
+}
+
+type centralOwnershipState int
+
+const (
+	centralOwnershipNotApplicable centralOwnershipState = iota
+	centralOwnershipShadow
+	centralOwnershipOwned
+	centralOwnershipForeign
+)
+
+// centralOwnership decides who may touch this run. A run is applicable only
+// when central mode is configured, the experiment is allowlisted, and the
+// event carries an environment namespace. The claim key is not namespaced by
+// env so a foreign environment can see it and refuse the run.
+func (e *ExptSchedulerImpl) centralOwnership(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (centralOwnershipState, error) {
+	if event == nil || event.Env == "" || e.Configer == nil || e.Mutex == nil {
+		return centralOwnershipNotApplicable, nil
+	}
+	conf := e.Configer.GetCentralSchedulingConf(ctx).Normalize()
+	if !conf.Enabled || conf.Mode == entity.CentralModeLegacy {
+		return centralOwnershipNotApplicable, nil
+	}
+	experimentMode := conf.ModeFor(event.SpaceID, event.ExptID)
+	if expt != nil {
+		if ext := expt.EvalConf; ext != nil && ext.Ext != nil {
+			experimentMode = entity.CentralModeFromExt(ext.Ext, experimentMode)
+		}
+	}
+	if experimentMode == entity.CentralModeLegacy {
+		return centralOwnershipNotApplicable, nil
+	}
+	// The event was produced by the Run/Retry path in this service.
+	if event.Env != conf.EnvNamespace {
+		return centralOwnershipForeign, nil
+	}
+	key := entity.CentralKeyPrefix + "owner:expt:" + strconv.FormatInt(event.ExptID, 10)
+	locked, holder, err := e.Mutex.BackoffLockWithValue(ctx, key, event.Env, conf.OwnershipTTL(), time.Millisecond)
+	if err != nil {
+		return centralOwnershipNotApplicable, err
+	}
+	ownedByThisEnv := locked || holder == event.Env
+	if !ownedByThisEnv {
+		return centralOwnershipForeign, nil
+	}
+	// Shadow is observation-only: the legacy loop keeps full dispatch.
+	if experimentMode == entity.CentralModeShadow {
+		return centralOwnershipShadow, nil
+	}
+	return centralOwnershipOwned, nil
 }
 
 func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, expt *entity.Experiment) (alives, zombies []*entity.ExptEvalItem, err error) {

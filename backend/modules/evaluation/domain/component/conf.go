@@ -50,4 +50,7 @@ type IConfiger interface {
 	// GetCrossSpaceRecordReadEnforce 跨空间读取评估记录且未命中共享白名单时是否拒绝。
 	// 未配置默认 false：只告警放行，用于观察存量调用后再收紧。
 	GetCrossSpaceRecordReadEnforce(ctx context.Context) bool
+	// GetCentralSchedulingConf 返回中心化实验调度配置（TCC key:
+	// central_scheduling_conf）。未配置返回 nil，调用方按 legacy 处理。
+	GetCentralSchedulingConf(ctx context.Context) *entity.CentralSchedulingConf
 }

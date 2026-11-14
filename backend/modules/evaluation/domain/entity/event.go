@@ -19,6 +19,10 @@ type ExptScheduleEvent struct {
 	CreatedAt int64
 	Ext       map[string]string
 	Session   *Session
+	// Env is the central-scheduling environment namespace of the service that
+	// submitted the run (e.g. "prod" or "ppe_lane_x"). It is empty for runs
+	// created before central rollout; such runs stay on the legacy loop.
+	Env string
 
 	ItemRetryTimes       int
 	ExecEvalSetItemIDs   []int64

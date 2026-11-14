@@ -328,6 +328,7 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 		ExptType:       expt.ExptType,
 		CreatedAt:      time.Now().Unix(),
 		ItemRetryTimes: itemRetryNum,
+		Env:            e.centralEnv(ctx),
 		Session:        session,
 		Ext:            ext,
 	}, gptr.Of(time.Second*3)); err != nil {
@@ -415,6 +416,7 @@ func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID 
 		ExecEvalSetItemIDs: itemIDs,
 		Session:            session,
 		Ext:                ext,
+		Env:                e.centralEnv(ctx),
 	}, gptr.Of(time.Second*3)); err != nil {
 		return err
 	}
@@ -1307,4 +1309,18 @@ func (e *ExptMangerImpl) SetExptTerminating(ctx context.Context, exptID, exptRun
 		return err
 	}
 	return nil
+}
+
+// centralEnv returns the environment namespace stamped onto schedule events so
+// that a shared MQ / shared Redis deployment cannot let another environment's
+// scheduler claim this run. Empty means "not a central run" (legacy).
+func (e *ExptMangerImpl) centralEnv(ctx context.Context) string {
+	if e.configer == nil {
+		return ""
+	}
+	conf := e.configer.GetCentralSchedulingConf(ctx).Normalize()
+	if !conf.Enabled || conf.Mode == entity.CentralModeLegacy {
+		return ""
+	}
+	return conf.EnvNamespace
 }

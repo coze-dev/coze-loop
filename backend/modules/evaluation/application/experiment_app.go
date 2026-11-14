@@ -47,6 +47,7 @@ type IExperimentApplication interface {
 	evaluation.ExperimentService
 	service.ExptSchedulerEvent
 	service.ExptItemEvalEvent
+	service.CentralItemSubmitter
 	service.ExptAggrResultService
 	service.IExptResultExportService
 	service.IExptInsightAnalysisService
@@ -148,6 +149,17 @@ func NewExperimentApplication(
 		sandboxSchedulerAdapter:     sandboxSchedulerAdapter,
 		sandboxAgentMetrics:         sandboxAgentMetrics,
 	}
+}
+
+// SubmitItems delegates central dispatch to the same scheduler instance that
+// owns the legacy MQ loop. Keeping one write path avoids a second, divergent
+// copy of item fan-out / stats accounting.
+func (e *experimentApplication) SubmitItems(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem) error {
+	submitter, ok := e.ExptSchedulerEvent.(service.CentralItemSubmitter)
+	if !ok {
+		return errorx.New("experiment application: scheduler does not implement CentralItemSubmitter")
+	}
+	return submitter.SubmitItems(ctx, event, items)
 }
 
 func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.CreateExperimentRequest) (r *expt.CreateExperimentResponse, err error) {
