@@ -556,6 +556,11 @@ func NewCentralSchedulingDAO(cmdable redis.Cmdable) *CentralSchedulingDAO {
 	return &CentralSchedulingDAO{cmdable: cmdable}
 }
 
+// CmdableForTest 暴露底层客户端，仅用于审计与测试（生产调度只走上面的封装方法）。
+func (d *CentralSchedulingDAO) CmdableForTest() redis.Cmdable {
+	return d.cmdable
+}
+
 func centralKey(scope entity.CentralEnvScope, suffix string) string {
 	s := scope.Sanitize()
 	return fmt.Sprintf("%s%s:%s:%s", CentralKeyPrefix, s.Env, s.Lane, suffix)
