@@ -447,7 +447,7 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 				ResultSvc:          f.resultSvc,
 			}
 
-			err := svc.handleToSubmits(tt.args.ctx, tt.args.event, tt.args.toSubmits)
+			err := svc.handleToSubmits(tt.args.ctx, tt.args.event, tt.args.expt, tt.args.toSubmits)
 			if tt.assertErr != nil {
 				tt.assertErr(t, err)
 			}

@@ -69,6 +69,8 @@ type ExptSchedulerImpl struct {
 	sandboxAgentMetrics metrics.SandboxAgentMetrics
 	// sandboxAgentNotifier 每 1h 进度快照飞书通知; 允许为 nil (未接入通知)。
 	sandboxAgentNotifier ISandboxAgentNotifier
+	// centralGate 中心调度门面；nil 或未启用时完全保持旧调度行为。
+	centralGate CentralDispatchGate
 }
 
 func NewExptSchedulerSvc(
@@ -179,6 +181,12 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 
 		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
 			logs.CtxInfo(ctx, "ExptSchedulerConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
+			// 实验运行已终态：把它从中心活跃集合移除，避免中心 ticker 继续为它投递事件。
+			if gate := e.centralDispatchGate(); gate != nil {
+				if err := gate.UnregisterRun(ctx, event.ExptID, event.ExptRunID); err != nil {
+					logs.CtxWarn(ctx, "[central] unregister finished run failed, expt_id=%v, run_id=%v, err=%v", event.ExptID, event.ExptRunID, err)
+				}
+			}
 			return nil
 		}
 
@@ -357,6 +365,12 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
+	// 中心调度：enforce 模式下登记活跃实验，并把本次事件标记为 one-shot
+	// （本次 tick 结束后不再自我重投递，改由中心 ticker 驱动）。
+	if gate := e.centralDispatchGate(); gate != nil && gate.Observe(ctx, exptDetail, event) {
+		event.OneShot = true
+	}
+
 	mode, err := e.schedulerModeFactory.NewSchedulerMode(event.ExptRunMode)
 	if err != nil {
 		return err
@@ -417,7 +431,16 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
-	if err = e.handleToSubmits(ctx, event, toSubmit); err != nil {
+	// item 已落到成功/失败/终止（含僵尸与沙箱提前终态）：幂等释放其中心资源预占。
+	// 完成、失败、取消、重试等路径最终都会汇聚到这里，因此不需要在每个分支各写一份释放逻辑。
+	if gate := e.centralDispatchGate(); gate != nil && len(complete) > 0 {
+		if err = gate.ReleaseItems(ctx, event.ExptID, event.ExptRunID, entity.ExptEvalItems(complete).GetItemIDs()); err != nil {
+			// 释放失败不回滚调度：下一轮中心对账会修复账本漂移。
+			logs.CtxWarn(ctx, "[central] release completed items failed, expt_id=%v, run_id=%v, err=%v", event.ExptID, event.ExptRunID, err)
+		}
+	}
+
+	if err = e.handleToSubmits(ctx, event, exptDetail, toSubmit); err != nil {
 		return err
 	}
 
@@ -617,9 +640,27 @@ func (e *ExptSchedulerImpl) sendItemComplete(ctx context.Context, event *entity.
 	return nil
 }
 
-func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.ExptScheduleEvent, toSubmits []*entity.ExptEvalItem) error {
+func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmits []*entity.ExptEvalItem) error {
 	if len(toSubmits) == 0 {
 		return nil
+	}
+
+	// 中心调度：派发前先原子预占多资源。legacy 模式下 ReserveItems 原样放行。
+	var leases []*entity.CentralLease
+	if gate := e.centralDispatchGate(); gate != nil {
+		allowed, gotLeases, reserveErr := gate.ReserveItems(ctx, expt, event, toSubmits)
+		if reserveErr != nil {
+			return reserveErr
+		}
+		leases = gotLeases
+		if len(allowed) < len(toSubmits) {
+			logs.CtxInfo(ctx, "[central] defer %d items due to resource pool, expt_id=%v, run_id=%v",
+				len(toSubmits)-len(allowed), event.ExptID, event.ExptRunID)
+		}
+		toSubmits = allowed
+		if len(toSubmits) == 0 {
+			return nil
+		}
 	}
 
 	now := time.Now().Unix()
@@ -647,6 +688,12 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 
 	interval := e.Configer.GetExptExecConf(ctx, event.SpaceID).GetExptItemEvalConf().GetInterval()
 	if err := e.Publisher.BatchPublishExptRecordEvalEvent(ctx, itemEvalEvents, gptr.Of(interval)); err != nil {
+		// 派发异常：把本次已预占的额度补偿释放，避免资源永久悬挂。
+		if gate := e.centralDispatchGate(); gate != nil && len(leases) > 0 {
+			if relErr := gate.ReleaseLeases(ctx, leases); relErr != nil {
+				logs.CtxWarn(ctx, "[central] release leases after dispatch failure failed, expt_id=%v, run_id=%v, err=%v", event.ExptID, event.ExptRunID, relErr)
+			}
+		}
 		return err
 	}
 

@@ -745,6 +745,10 @@ func (e *ExptSubmitExec) ScheduleStart(ctx context.Context, event *entity.ExptSc
 }
 
 func (e *ExptSubmitExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error {
+	if event.OneShot {
+		logs.CtxInfo(ctx, "[central] one-shot tick done, expt_id=%v, run_id=%v, next_tick=%v", event.ExptID, event.ExptRunID, nextTick)
+		return nil
+	}
 	interval := e.configer.GetExptExecConf(ctx, event.SpaceID).GetDaemonInterval()
 	return e.publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(interval))
 }
@@ -989,6 +993,10 @@ func (e *ExptFailRetryExec) ScheduleStart(ctx context.Context, event *entity.Exp
 }
 
 func (e *ExptFailRetryExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error {
+	if event.OneShot {
+		logs.CtxInfo(ctx, "[central] one-shot tick done, expt_id=%v, run_id=%v, next_tick=%v", event.ExptID, event.ExptRunID, nextTick)
+		return nil
+	}
 	interval := e.configer.GetExptExecConf(ctx, event.SpaceID).GetDaemonInterval()
 	return e.publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(interval))
 }
@@ -1176,6 +1184,11 @@ func (e *ExptAppendExec) ScheduleStart(ctx context.Context, event *entity.ExptSc
 }
 
 func (e *ExptAppendExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error {
+	// 中心调度 one-shot：本次 tick 结束即返回，不再自我重投递；下一 tick 由中心 ticker 驱动。
+	if event.OneShot {
+		logs.CtxInfo(ctx, "[central] one-shot tick done, expt_id=%v, run_id=%v, next_tick=%v", event.ExptID, event.ExptRunID, nextTick)
+		return nil
+	}
 	conf := e.configer.GetExptExecConf(ctx, event.SpaceID)
 	interval := 20 * time.Second
 	if conf != nil {
@@ -1849,6 +1862,10 @@ func (e *ExptRetryAllExec) ScheduleStart(ctx context.Context, event *entity.Expt
 }
 
 func (e *ExptRetryAllExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error {
+	if event.OneShot {
+		logs.CtxInfo(ctx, "[central] one-shot tick done, expt_id=%v, run_id=%v, next_tick=%v", event.ExptID, event.ExptRunID, nextTick)
+		return nil
+	}
 	interval := e.configer.GetExptExecConf(ctx, event.SpaceID).GetDaemonInterval()
 	return e.publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(interval))
 }
@@ -2347,6 +2364,10 @@ func (e *ExptRetryItemsExec) ScheduleStart(ctx context.Context, event *entity.Ex
 }
 
 func (e *ExptRetryItemsExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error {
+	if event.OneShot {
+		logs.CtxInfo(ctx, "[central] one-shot tick done, expt_id=%v, run_id=%v, next_tick=%v", event.ExptID, event.ExptRunID, nextTick)
+		return nil
+	}
 	interval := e.configer.GetExptExecConf(ctx, event.SpaceID).GetDaemonInterval()
 	return e.publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(interval))
 }

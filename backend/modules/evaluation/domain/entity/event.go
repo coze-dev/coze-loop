@@ -23,6 +23,9 @@ type ExptScheduleEvent struct {
 	ItemRetryTimes       int
 	ExecEvalSetItemIDs   []int64
 	InfraErrorRetryTimes int
+	// OneShot 为 true 表示本条事件由中心 tick 驱动：本次调度完成后不再自我重投递，
+	// 由中心 ticker 按优先级重新投递。旧实验该字段恒为 false，自循环行为不变。
+	OneShot bool
 }
 
 type ctxTargetCalledCacheKey struct{}
