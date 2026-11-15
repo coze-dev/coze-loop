@@ -185,6 +185,26 @@ func TestQuotaServiceImpl_AllowExptRun(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:    "已存在实验重试在200边界不被误拒",
+			cur:     &entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{2: 1, 3: 2}},
+			exptID:  2,
+			spaceID: 104,
+			setupMock: func() {
+				mockConfiger.EXPECT().GetExptExecConf(gomock.Any(), int64(104)).Return(fakeConf).Times(2)
+				mockQuotaRepo.EXPECT().CreateOrUpdate(gomock.Any(), int64(104), gomock.Any(), session).DoAndReturn(
+					func(_ context.Context, _ int64, updater func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), _ *entity.Session) error {
+						cur := &entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{2: 1, 3: 2}}
+						newCur, changed, err := updater(cur)
+						assert.NotNil(t, newCur)
+						assert.True(t, changed)
+						assert.NoError(t, err, "an already admitted experiment must be idempotent even at the limit")
+						return nil
+					},
+				)
+			},
+			wantErr: false,
+		},
+		{
 			name:    "正常插入并清理zombie",
 			cur:     &entity.QuotaSpaceExpt{ExptID2RunTime: map[int64]int64{5: 1}},
 			exptID:  6,

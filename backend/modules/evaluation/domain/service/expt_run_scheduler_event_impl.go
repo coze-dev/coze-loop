@@ -688,13 +688,30 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 
 	interval := e.Configer.GetExptExecConf(ctx, event.SpaceID).GetExptItemEvalConf().GetInterval()
 	if err := e.Publisher.BatchPublishExptRecordEvalEvent(ctx, itemEvalEvents, gptr.Of(interval)); err != nil {
-		// 派发异常：把本次已预占的额度补偿释放，避免资源永久悬挂。
 		if gate := e.centralDispatchGate(); gate != nil && len(leases) > 0 {
-			if relErr := gate.ReleaseLeases(ctx, leases); relErr != nil {
+			if isCentralDispatchUnknownError(err) {
+				// 派发结果不明（超时/断连）：可能是“已投递但没收到回执”，直接释放会和真实执行重叠。
+				// 标为待确认并设 deadline，由 leader sweeper 到期收敛；这期间该 item 不会被重复派发。
+				if markErr := gate.MarkPendingConfirm(ctx, leases); markErr != nil {
+					logs.CtxWarn(ctx, "[central] mark pending confirm failed, expt_id=%v, run_id=%v, err=%v", event.ExptID, event.ExptRunID, markErr)
+				}
+			} else if relErr := gate.ReleaseLeases(ctx, leases); relErr != nil {
+				// 明确的派发失败：立即补偿释放，避免资源永久悬挂。
 				logs.CtxWarn(ctx, "[central] release leases after dispatch failure failed, expt_id=%v, run_id=%v, err=%v", event.ExptID, event.ExptRunID, relErr)
 			}
 		}
 		return err
+	}
+	// 派发明确成功后才进入执行：把 reserved 置为 dispatched，并激活 run。
+	if gate := e.centralDispatchGate(); gate != nil && len(leases) > 0 {
+		userID := ""
+		if event.Session != nil {
+			userID = event.Session.UserID
+		}
+		if confirmErr := gate.ConfirmDispatched(ctx, leases, userID); confirmErr != nil {
+			// 状态确认失败不回滚已经成功的派发；完成回调会以同一 lease 身份幂等释放。
+			logs.CtxWarn(ctx, "[central] confirm dispatched failed, expt_id=%v, run_id=%v, err=%v", event.ExptID, event.ExptRunID, confirmErr)
+		}
 	}
 
 	defer e.Metric.EmitItemExecEval(event.SpaceID, int64(event.ExptRunMode), len(toSubmits))

@@ -60,22 +60,34 @@ func (q *QuotaServiceImpl) AllowExptRun(ctx context.Context, exptID, spaceID int
 			}, true, nil
 		}
 
-		if len(cur.ExptID2RunTime) >= concurLimit {
-			return nil, false, errorx.NewByCode(errno.ExperimentRunningCountLimitCode, errorx.WithExtraMsg(fmt.Sprintf("max limit: %v", concurLimit)))
-		}
-
 		if cur.ExptID2RunTime == nil {
 			cur.ExptID2RunTime = make(map[int64]int64)
 		}
 
-		cur.ExptID2RunTime[exptID] = now
-
-		for eid, rt := range cur.ExptID2RunTime {
-			if int(now-rt) > zombieInterval {
-				delete(cur.ExptID2RunTime, eid)
-			}
+		// 幂等：同一实验重复 Run/RetryItems 只刷新时间，不重复占名额。
+		// 必须先判“已存在”，再判 200 上限；否则在正好 200 个运行时，
+		// 已在 map 里的实验重试会被误判为超限，导致重试被拒（双计/漏计）。
+		if _, exists := cur.ExptID2RunTime[exptID]; exists {
+			cur.ExptID2RunTime[exptID] = now
+			pruneZombieExptRuns(cur.ExptID2RunTime, now, zombieInterval)
+			return cur, true, nil
 		}
+
+		if len(cur.ExptID2RunTime) >= concurLimit {
+			return nil, false, errorx.NewByCode(errno.ExperimentRunningCountLimitCode, errorx.WithExtraMsg(fmt.Sprintf("max limit: %v", concurLimit)))
+		}
+
+		cur.ExptID2RunTime[exptID] = now
+		pruneZombieExptRuns(cur.ExptID2RunTime, now, zombieInterval)
 
 		return cur, true, nil
 	}, session)
+}
+
+func pruneZombieExptRuns(runs map[int64]int64, now int64, zombieInterval int) {
+	for eid, rt := range runs {
+		if int(now-rt) > zombieInterval {
+			delete(runs, eid)
+		}
+	}
 }

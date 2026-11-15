@@ -1675,6 +1675,12 @@ func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, sess
 		return err
 	}
 
+	// 删除后释放该实验所有在途预占：删除也是明确的释放路径之一，且必须幂等。
+	// 未接入中心调度时该调用为 no-op；释放失败不回滚删除（对账会修复账本）。
+	if err := ReleaseCentralExptOnDelete(ctx, exptID); err != nil {
+		logs.CtxWarn(ctx, "[central] release expt leases on delete failed, expt_id=%v, err=%v", exptID, err)
+	}
+
 	// 如果实验关联了模板，更新模板的 ExptInfo（删除实验，数量 -1）
 	if expt != nil && expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
 		if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, spaceID, exptID, expt.Status, -1, nil); err != nil {
