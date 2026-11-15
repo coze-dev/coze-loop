@@ -228,6 +228,10 @@ func TestAcquireLeaderIsExclusiveWithTTL(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, ok)
 
+	ok, err = dao.AcquireLeader(ctx, scope, "instance-a", 30*time.Second)
+	require.NoError(t, err)
+	assert.True(t, ok, "same owner must be able to renew the leader lock")
+
 	ok, err = dao.AcquireLeader(ctx, scope, "instance-b", 30*time.Second)
 	require.NoError(t, err)
 	assert.False(t, ok, "second instance must not hold leader lock")

@@ -102,6 +102,79 @@ end
 return 0
 `
 
+// 主实例锁：同 owner 重复获取时应续期而不是失败，否则 ticker 每两个 tick 才能跑一次。
+const centralLeaderScript = `
+local key = KEYS[1]
+local owner = ARGV[1]
+local ttlMs = tonumber(ARGV[2])
+local current = redis.call('GET', key)
+if current == false then
+  redis.call('SET', key, owner, 'PX', ttlMs)
+  return 1
+end
+if current == owner then
+  redis.call('PEXPIRE', key, ttlMs)
+  return 1
+end
+return 0
+`
+
+// 账本重建：在脚本内读取 lease_index 与存活 lease，并原子替换 usage，
+// 避免“删除 usage 之后、写回之前”有并发 acquire 造成占用丢失。
+const centralRebuildScript = `
+local usageKey = KEYS[1]
+local indexKey = KEYS[2]
+local leasePrefix = ARGV[1]
+local ttl = tonumber(ARGV[2])
+local now = tonumber(ARGV[3])
+local nk = tonumber(ARGV[4])
+local kinds = {}
+local counts = {}
+for i = 1, nk do
+  local kind = ARGV[4 + i]
+  kinds[i] = kind
+  counts[kind] = 0
+end
+local ids = redis.call('ZRANGE', indexKey, 0, -1)
+local repaired = 0
+for i = 1, #ids do
+  local fields = redis.call('HGETALL', leasePrefix .. ids[i])
+  if #fields > 0 then
+    local expireAt = 0
+    for j = 1, #fields, 2 do
+      if fields[j] == 'expire_at' then
+        expireAt = tonumber(fields[j + 1]) or 0
+      end
+    end
+    if expireAt == 0 or expireAt >= now then
+      repaired = repaired + 1
+      for j = 1, #fields, 2 do
+        local field = fields[j]
+        if string.sub(field, 1, 6) == 'claim:' then
+          local kind = string.sub(field, 7)
+          local amount = tonumber(fields[j + 1]) or 0
+          if counts[kind] == nil then
+            counts[kind] = 0
+          end
+          counts[kind] = counts[kind] + amount
+        end
+      end
+    end
+  end
+end
+redis.call('DEL', usageKey)
+for kind, amount in pairs(counts) do
+  redis.call('HSET', usageKey, kind, amount)
+end
+redis.call('EXPIRE', usageKey, ttl)
+local out = {repaired}
+for i = 1, nk do
+  out[#out + 1] = kinds[i]
+  out[#out + 1] = counts[kinds[i]] or 0
+end
+return out
+`
+
 // CentralSchedulingDAO 中心调度 Redis 账本实现。
 type CentralSchedulingDAO struct {
 	cmdable redis.Cmdable
@@ -249,47 +322,36 @@ func (d *CentralSchedulingDAO) RebuildUsage(ctx context.Context, scope entity.Ce
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	leases, err := d.ListLeases(ctx, scope)
-	if err != nil {
-		return nil, nil, 0, err
-	}
 	after = make(map[entity.CentralResourceKind]int64, len(capacities))
-	for kind := range capacities {
-		after[kind] = 0
-	}
-	for _, lease := range leases {
-		if lease.ExpireAt > 0 && lease.ExpireAt < time.Now().Unix() {
-			// 过期 lease 的残留条目由 Redis TTL 自行清理；重建时不再计入。
-			continue
-		}
-		for _, claim := range lease.Claims {
-			after[claim.Kind] += claim.Amount
-		}
-	}
-	if sameUsage(before, after) {
-		return before, after, 0, nil
-	}
-
-	usageKey := centralKey(scope, "usage")
-	if err := d.cmdable.Del(ctx, usageKey).Err(); err != nil {
-		return before, after, 0, errorx.Wrapf(err, "central rebuild: del usage failed")
-	}
-	if len(after) > 0 {
-		values := make([]interface{}, 0, len(after)*2)
-		for kind, amount := range after {
-			values = append(values, string(kind), amount)
-		}
-		if err := d.cmdable.HSet(ctx, usageKey, values...).Err(); err != nil {
-			return before, after, 0, errorx.Wrapf(err, "central rebuild: hset usage failed")
-		}
-	}
 	if ttl <= 0 {
 		ttl = 24 * time.Hour
 	}
-	if err := d.cmdable.Expire(ctx, usageKey, ttl).Err(); err != nil {
-		return before, after, 0, errorx.Wrapf(err, "central rebuild: expire usage failed")
+	kinds := make([]entity.CentralResourceKind, 0, len(capacities))
+	for kind := range capacities {
+		kinds = append(kinds, kind)
+		after[kind] = 0
 	}
-	return before, after, len(leases), nil
+	args := make([]interface{}, 0, 4+len(kinds))
+	args = append(args, centralKey(scope, "lease:"), int64(ttl/time.Second), time.Now().Unix(), len(kinds))
+	for _, kind := range kinds {
+		args = append(args, string(kind))
+	}
+	usageKey := centralKey(scope, "usage")
+	indexKey := centralKey(scope, "lease_index")
+	res, err := d.cmdable.Eval(ctx, centralRebuildScript, []string{usageKey, indexKey}, args...).Result()
+	if err != nil {
+		return before, after, 0, errorx.Wrapf(err, "central rebuild: eval failed")
+	}
+	values, ok := res.([]interface{})
+	if !ok || len(values) != 1+len(kinds)*2 {
+		return before, after, 0, errorx.New("central rebuild: unexpected script result")
+	}
+	repaired = int(toInt64(values[0]))
+	for i := 1; i+1 < len(values); i += 2 {
+		kind, _ := values[i].(string)
+		after[entity.CentralResourceKind(kind)] = toInt64(values[i+1])
+	}
+	return before, after, repaired, nil
 }
 
 func (d *CentralSchedulingDAO) RegisterActive(ctx context.Context, scope entity.CentralEnvScope, run *entity.CentralActiveRun, ttl time.Duration) error {
@@ -371,11 +433,12 @@ func (d *CentralSchedulingDAO) AcquireLeader(ctx context.Context, scope entity.C
 	if ttl <= 0 {
 		ttl = 20 * time.Second
 	}
-	ok, err := d.cmdable.SetNX(ctx, centralKey(scope, "leader"), owner, ttl).Result()
+	key := centralKey(scope, "leader")
+	res, err := d.cmdable.Eval(ctx, centralLeaderScript, []string{key}, owner, int64(ttl/time.Millisecond)).Result()
 	if err != nil && !redis.IsNilError(err) {
-		return false, errorx.Wrapf(err, "central leader: setnx failed")
+		return false, errorx.Wrapf(err, "central leader: eval failed")
 	}
-	return ok, nil
+	return toInt64(res) == 1, nil
 }
 
 func toInt64(value interface{}) int64 {
@@ -397,16 +460,4 @@ func toInt64(value interface{}) int64 {
 func mustParseInt64(raw string) int64 {
 	v, _ := strconv.ParseInt(raw, 10, 64)
 	return v
-}
-
-func sameUsage(a, b map[entity.CentralResourceKind]int64) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for kind, amount := range a {
-		if b[kind] != amount {
-			return false
-		}
-	}
-	return true
 }
