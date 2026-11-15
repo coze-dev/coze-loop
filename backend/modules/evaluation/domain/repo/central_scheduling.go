@@ -85,6 +85,8 @@ type ICentralSchedulingRepo interface {
 	MarkDegradedRecovered(ctx context.Context, scope entity.CentralEnvScope, ttl time.Duration) error
 	// IsDegradedRecovered 返回降级恢复标记。
 	IsDegradedRecovered(ctx context.Context, scope entity.CentralEnvScope) (bool, error)
+	// ClearDegradedRecovered 在异常 tick 立即撤销恢复标记。
+	ClearDegradedRecovered(ctx context.Context, scope entity.CentralEnvScope) error
 
 	// AcquireLeader 以 SetNX+TTL 抢占中心 tick 的主实例锁，避免多实例重复派发。
 	AcquireLeader(ctx context.Context, scope entity.CentralEnvScope, owner string, ttl time.Duration) (bool, error)

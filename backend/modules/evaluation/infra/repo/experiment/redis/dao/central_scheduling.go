@@ -1306,6 +1306,17 @@ func (d *CentralSchedulingDAO) IsDegradedRecovered(ctx context.Context, scope en
 	return n > 0, nil
 }
 
+// ClearDegradedRecovered 在异常 tick 立即撤销恢复标记，避免恢复窗口内继续满量派发。
+func (d *CentralSchedulingDAO) ClearDegradedRecovered(ctx context.Context, scope entity.CentralEnvScope) error {
+	if !scope.IsValid() {
+		return invalidScopeErr("clear degrade recovered")
+	}
+	if err := d.cmdable.Del(ctx, d.Keys(scope).DegradeRecovered).Err(); err != nil && !redis.IsNilError(err) {
+		return errorx.Wrapf(err, "central degrade: clear recovered failed")
+	}
+	return nil
+}
+
 func (d *CentralSchedulingDAO) AcquireLeader(ctx context.Context, scope entity.CentralEnvScope, owner string, ttl time.Duration) (bool, error) {
 	if !scope.IsValid() {
 		return false, invalidScopeErr("leader")

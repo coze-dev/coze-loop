@@ -265,6 +265,9 @@ func (t *CentralTicker) maintainDegraded(ctx context.Context, scope entity.Centr
 		if err := t.Repo.ResetHealthyDegradedTicks(ctx, scope); err != nil {
 			logs.CtxWarn(ctx, "[central] reset degrade healthy ticks failed, err=%v", err)
 		}
+		if err := t.Repo.ClearDegradedRecovered(ctx, scope); err != nil {
+			logs.CtxWarn(ctx, "[central] clear degrade recovered failed, err=%v", err)
+		}
 		return
 	}
 	ticks, err := t.Repo.RecordHealthyDegradedTick(ctx, scope)
