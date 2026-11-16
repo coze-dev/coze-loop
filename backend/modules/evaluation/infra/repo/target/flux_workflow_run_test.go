@@ -33,19 +33,19 @@ func TestScanPendingFluxCleanupUsesBoundedPrimaryKeyPage(t *testing.T) {
 		require.NoError(t, err)
 		return string(encoded)
 	}
-	mock.ExpectQuery("SELECT .* FROM `eval_target_record` WHERE .*id > \\?.*id < \\?.* ORDER BY id ASC LIMIT \\?").
-		WithArgs(lower-1, upper, 4).
+	mock.ExpectQuery("SELECT .* FROM `eval_target_record` WHERE .*JSON_CONTAINS_PATH.* ORDER BY id DESC LIMIT \\?").
+		WithArgs(upper, lower, 4).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "space_id", "status", "deleted_at", "ext"}).
-			AddRow(lower+1, 11, 3, nil, ext(`{"experiment_id":22,"space_id":11,"invoke_id":`+jsonInt(lower+1)+`,"binding_id":"b","delivery_id":"d-1","cleanup_state":"pending","report_completed":false,"state":"delivery_created"}`)).
-			AddRow(lower+2, 11, 1, nil, ext(`{"experiment_id":22,"space_id":11,"invoke_id":`+jsonInt(lower+2)+`,"binding_id":"b","delivery_id":"d-2","cleanup_state":"pending","report_completed":true,"state":"finalized"}`)).
+			AddRow(lower+4, 11, 2, nil, ext(`{"experiment_id":22,"space_id":11,"invoke_id":`+jsonInt(lower+4)+`,"binding_id":"b","delivery_id":"d-4","cleanup_state":"pending","report_completed":true,"state":"finalized"}`)).
 			AddRow(lower+3, 11, 2, nil, ext(`{"experiment_id":22,"space_id":11,"invoke_id":`+jsonInt(lower+3)+`,"binding_id":"b","delivery_id":"d-3","cleanup_state":"archived","report_completed":true,"state":"finalized"}`)).
-			AddRow(lower+4, 11, 2, nil, ext(`{"experiment_id":22,"space_id":11,"invoke_id":`+jsonInt(lower+4)+`,"binding_id":"b","delivery_id":"d-4","cleanup_state":"pending","report_completed":true,"state":"finalized"}`)))
+			AddRow(lower+2, 11, 1, nil, ext(`{"experiment_id":22,"space_id":11,"invoke_id":`+jsonInt(lower+2)+`,"binding_id":"b","delivery_id":"d-2","cleanup_state":"pending","report_completed":true,"state":"finalized"}`)).
+			AddRow(lower+1, 11, 3, nil, ext(`{"experiment_id":22,"space_id":11,"invoke_id":`+jsonInt(lower+1)+`,"binding_id":"b","delivery_id":"d-1","cleanup_state":"pending","report_completed":false,"state":"delivery_created"}`)))
 	runs, next, err := repo.ScanPendingFluxCleanup(context.Background(), 0, 4, since, before)
 	require.NoError(t, err)
 	require.Len(t, runs, 2)
-	require.Equal(t, []string{"d-2", "d-4"}, []string{runs[0].DeliveryID, runs[1].DeliveryID})
-	require.Equal(t, int32(1), runs[0].RecordStatus)
-	require.Equal(t, lower+4, next)
+	require.Equal(t, []string{"d-4", "d-2"}, []string{runs[0].DeliveryID, runs[1].DeliveryID})
+	require.Equal(t, int32(2), runs[0].RecordStatus)
+	require.Equal(t, lower+1, next)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -67,18 +67,18 @@ func TestScanPendingFluxCleanupFindsFailedItemWithoutRuntimeReport(t *testing.T)
 		require.NoError(t, err)
 		return string(encoded)
 	}
-	mock.ExpectQuery("SELECT .* FROM `eval_target_record` WHERE .*id > \\?.*id < \\?.* ORDER BY id ASC LIMIT \\?").
-		WithArgs(lower-1, upper, 4).
+	mock.ExpectQuery("SELECT .* FROM `eval_target_record` WHERE .*JSON_CONTAINS_PATH.* ORDER BY id DESC LIMIT \\?").
+		WithArgs(upper, lower, 4).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "space_id", "experiment_run_id", "item_id", "status", "deleted_at", "ext"}).
-			AddRow(lower+1, 11, 33, 44, 2, nil, ext(lower+1)).
+			AddRow(lower+3, 11, 33, 46, 1, nil, ext(lower+3)).
 			AddRow(lower+2, 11, 33, 45, 2, nil, ext(lower+2)).
-			AddRow(lower+3, 11, 33, 46, 1, nil, ext(lower+3)))
-	mock.ExpectQuery("SELECT .* FROM `expt_item_result_run_log` WHERE .*space_id = \\?.*expt_id = \\?.*expt_run_id = \\?.*item_id = \\?.*deleted_at IS NULL").
-		WithArgs(int64(11), int64(22), int64(33), int64(44), 1).
-		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow(int32(entity.ItemRunState_Fail)))
+			AddRow(lower+1, 11, 33, 44, 2, nil, ext(lower+1)))
 	mock.ExpectQuery("SELECT .* FROM `expt_item_result_run_log` WHERE .*space_id = \\?.*expt_id = \\?.*expt_run_id = \\?.*item_id = \\?.*deleted_at IS NULL").
 		WithArgs(int64(11), int64(22), int64(33), int64(45), 1).
 		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow(int32(entity.ItemRunState_Processing)))
+	mock.ExpectQuery("SELECT .* FROM `expt_item_result_run_log` WHERE .*space_id = \\?.*expt_id = \\?.*expt_run_id = \\?.*item_id = \\?.*deleted_at IS NULL").
+		WithArgs(int64(11), int64(22), int64(33), int64(44), 1).
+		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow(int32(entity.ItemRunState_Fail)))
 	runs, next, err := repo.ScanPendingFluxCleanup(context.Background(), 0, 4, since, before)
 	require.NoError(t, err)
 	require.Len(t, runs, 1)
@@ -100,16 +100,15 @@ func TestScanPendingFluxCleanupAdvancesPastEmptyMatchPage(t *testing.T) {
 	since := time.Unix(1_767_000_000, 0)
 	before := since.Add(time.Hour)
 	lower := since.Unix() << 32
-	upper := before.Unix() << 32
-	mock.ExpectQuery("SELECT .* FROM `eval_target_record` WHERE .*id > \\?.*id < \\?.* ORDER BY id ASC LIMIT \\?").
-		WithArgs(lower+7, upper, 2).
+	mock.ExpectQuery("SELECT .* FROM `eval_target_record` WHERE .*JSON_CONTAINS_PATH.* ORDER BY id DESC LIMIT \\?").
+		WithArgs(lower+10, lower, 2).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "space_id", "status", "deleted_at", "ext"}).
-			AddRow(lower+8, 11, 1, nil, `{"other":"record"}`).
-			AddRow(lower+9, 11, 1, nil, `{"other":"record"}`))
-	runs, next, err := repo.ScanPendingFluxCleanup(context.Background(), lower+7, 2, since, before)
+			AddRow(lower+9, 11, 1, nil, `{"other":"record"}`).
+			AddRow(lower+8, 11, 1, nil, `{"other":"record"}`))
+	runs, next, err := repo.ScanPendingFluxCleanup(context.Background(), lower+10, 2, since, before)
 	require.NoError(t, err)
 	require.Empty(t, runs)
-	require.Equal(t, lower+9, next)
+	require.Equal(t, lower+8, next)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -125,12 +124,11 @@ func TestScanPendingFluxCleanupFinalPartialPageResetsCursor(t *testing.T) {
 	since := time.Unix(1_767_000_000, 0)
 	before := since.Add(time.Hour)
 	lower := since.Unix() << 32
-	upper := before.Unix() << 32
-	mock.ExpectQuery("SELECT .* FROM `eval_target_record` WHERE .*id > \\?.*id < \\?.* ORDER BY id ASC LIMIT \\?").
-		WithArgs(lower+9, upper, 2).
+	mock.ExpectQuery("SELECT .* FROM `eval_target_record` WHERE .*JSON_CONTAINS_PATH.* ORDER BY id DESC LIMIT \\?").
+		WithArgs(lower+11, lower, 2).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "space_id", "status", "deleted_at", "ext"}).
 			AddRow(lower+10, 11, 1, nil, `{"other":"record"}`))
-	runs, next, err := repo.ScanPendingFluxCleanup(context.Background(), lower+9, 2, since, before)
+	runs, next, err := repo.ScanPendingFluxCleanup(context.Background(), lower+11, 2, since, before)
 	require.NoError(t, err)
 	require.Empty(t, runs)
 	require.Zero(t, next)

@@ -47,17 +47,15 @@ func (r *fluxItemRunRepo) ScanPendingFluxCleanup(ctx context.Context, cursor int
 	if err != nil || lower >= upper {
 		return nil, 0, errors.New("invalid Flux Workflow cleanup scan ID range")
 	}
-	if cursor < lower {
-		cursor = lower - 1
-	}
-	if cursor >= upper {
-		return nil, 0, nil
+	if cursor <= lower || cursor > upper {
+		cursor = upper
 	}
 	var rows []model.TargetRecord
 	err = r.db.NewSession(ctx).Clauses(dbresolver.Write).
 		Select("id,space_id,experiment_run_id,item_id,status,deleted_at,ext").
-		Where("id > ? AND id < ?", cursor, upper).
-		Order("id ASC").Limit(limit).Find(&rows).Error
+		Where("id < ? AND id > ?", cursor, lower).
+		Where("JSON_CONTAINS_PATH(ext, 'one', '$.flux_workflow_run') = 1").
+		Order("id DESC").Limit(limit).Find(&rows).Error
 	if err != nil {
 		return nil, 0, err
 	}
