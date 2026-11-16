@@ -10,6 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	exptmodel "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target/mysql/gorm_gen/model"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -54,7 +55,7 @@ func (r *fluxItemRunRepo) ScanPendingFluxCleanup(ctx context.Context, cursor int
 	}
 	var rows []model.TargetRecord
 	err = r.db.NewSession(ctx).Clauses(dbresolver.Write).
-		Select("id,space_id,status,deleted_at,ext").
+		Select("id,space_id,experiment_run_id,item_id,status,deleted_at,ext").
 		Where("id > ? AND id < ?", cursor, upper).
 		Order("id ASC").Limit(limit).Find(&rows).Error
 	if err != nil {
@@ -69,11 +70,30 @@ func (r *fluxItemRunRepo) ScanPendingFluxCleanup(ctx context.Context, cursor int
 		if err != nil {
 			return nil, 0, fmt.Errorf("decode Workflow cleanup candidate id=%d: %w", row.ID, err)
 		}
-		if run == nil || run.CleanupState != "pending" || !run.ReportCompleted || run.DeliveryID == "" ||
+		if run == nil || run.CleanupState != "pending" || run.DeliveryID == "" ||
 			run.InvokeID != row.ID || run.SpaceID != row.SpaceID || run.ExperimentID <= 0 || run.BindingID == "" {
 			continue
 		}
 		run.RecordStatus = row.Status
+		if !run.ReportCompleted {
+			if row.Status != int32(entity.EvalTargetRunStatusFail) || row.ExperimentRunID <= 0 || row.ItemID <= 0 {
+				continue
+			}
+			var item exptmodel.ExptItemResultRunLog
+			err := r.db.NewSession(ctx).Clauses(dbresolver.Write).Select("status").
+				Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND item_id = ? AND deleted_at IS NULL",
+					row.SpaceID, run.ExperimentID, row.ExperimentRunID, row.ItemID).Take(&item).Error
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				continue
+			}
+			if err != nil {
+				return nil, 0, err
+			}
+			run.ItemRunTerminal = item.Status == int32(entity.ItemRunState_Fail) || item.Status == int32(entity.ItemRunState_Terminal)
+			if !run.ItemRunTerminal {
+				continue
+			}
+		}
 		pending = append(pending, run)
 	}
 	if len(rows) == limit {

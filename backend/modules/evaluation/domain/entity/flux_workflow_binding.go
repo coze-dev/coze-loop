@@ -85,6 +85,7 @@ type FluxItemRun struct {
 	State                string `json:"state,omitempty"`
 	Version              int64  `json:"version,omitempty"`
 	RecordStatus         int32  `json:"-"`
+	ItemRunTerminal      bool   `json:"-"`
 	rawFields            map[string]json.RawMessage
 }
 

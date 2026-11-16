@@ -49,6 +49,45 @@ func TestScanPendingFluxCleanupUsesBoundedPrimaryKeyPage(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestScanPendingFluxCleanupFindsFailedItemWithoutRuntimeReport(t *testing.T) {
+	sqlDB, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlDB.Close() })
+	database, err := gorm.Open(mysql.New(mysql.Config{Conn: sqlDB, SkipInitializeWithVersion: true}), &gorm.Config{})
+	require.NoError(t, err)
+	provider := dbmock.NewMockProvider(gomock.NewController(t))
+	provider.EXPECT().NewSession(gomock.Any()).Return(database).Times(3)
+	repo := NewFluxItemRunRepo(provider)
+	since := time.Unix(1_767_000_000, 0)
+	before := since.Add(time.Hour)
+	lower := since.Unix() << 32
+	upper := before.Unix() << 32
+	ext := func(id int64) string {
+		encoded, err := json.Marshal(map[string]string{"flux_workflow_run": `{"experiment_id":22,"space_id":11,"invoke_id":` + jsonInt(id) + `,"binding_id":"b","delivery_id":"d","cleanup_state":"pending","report_completed":false,"state":"delivery_created"}`})
+		require.NoError(t, err)
+		return string(encoded)
+	}
+	mock.ExpectQuery("SELECT .* FROM `eval_target_record` WHERE .*id > \\?.*id < \\?.* ORDER BY id ASC LIMIT \\?").
+		WithArgs(lower-1, upper, 4).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "space_id", "experiment_run_id", "item_id", "status", "deleted_at", "ext"}).
+			AddRow(lower+1, 11, 33, 44, 2, nil, ext(lower+1)).
+			AddRow(lower+2, 11, 33, 45, 2, nil, ext(lower+2)).
+			AddRow(lower+3, 11, 33, 46, 1, nil, ext(lower+3)))
+	mock.ExpectQuery("SELECT .* FROM `expt_item_result_run_log` WHERE .*space_id = \\?.*expt_id = \\?.*expt_run_id = \\?.*item_id = \\?.*deleted_at IS NULL").
+		WithArgs(int64(11), int64(22), int64(33), int64(44), 1).
+		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow(int32(entity.ItemRunState_Fail)))
+	mock.ExpectQuery("SELECT .* FROM `expt_item_result_run_log` WHERE .*space_id = \\?.*expt_id = \\?.*expt_run_id = \\?.*item_id = \\?.*deleted_at IS NULL").
+		WithArgs(int64(11), int64(22), int64(33), int64(45), 1).
+		WillReturnRows(sqlmock.NewRows([]string{"status"}).AddRow(int32(entity.ItemRunState_Processing)))
+	runs, next, err := repo.ScanPendingFluxCleanup(context.Background(), 0, 4, since, before)
+	require.NoError(t, err)
+	require.Len(t, runs, 1)
+	require.Equal(t, lower+1, runs[0].InvokeID)
+	require.True(t, runs[0].ItemRunTerminal)
+	require.Zero(t, next)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestScanPendingFluxCleanupAdvancesPastEmptyMatchPage(t *testing.T) {
 	sqlDB, mock, err := sqlmock.New()
 	require.NoError(t, err)
