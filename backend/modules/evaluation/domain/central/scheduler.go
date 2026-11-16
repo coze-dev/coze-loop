@@ -59,10 +59,10 @@ func (s *Scheduler) limits() Limits {
 // It is intentionally best-effort: a failure to drive one run does not abort the
 // pass for other runs. The returned error is non-nil only when the source,
 // ledger or listing is unavailable, because then no decision can be trusted.
-func (s *Scheduler) Tick(ctx Ctx, scope Scope) (TickResult, error) {
+func (s *Scheduler) Tick(ctx Ctx, scope Scope) (result TickResult, err error) {
 	limits := s.limits()
 	now := s.Clock.Now()
-	result := TickResult{Scope: scope, StartedAt: now}
+	result = TickResult{Scope: scope, StartedAt: now}
 	defer func() { result.FinishedAt = s.Clock.Now() }()
 
 	if err := scope.Validate(); err != nil {
@@ -142,6 +142,12 @@ func (s *Scheduler) Tick(ctx Ctx, scope Scope) (TickResult, error) {
 	if lerr != nil {
 		result.Errors = append(result.Errors, fmt.Sprintf("list registered runs: %v", lerr))
 	} else {
+		// Driving may have created new reservations for a run that vanished from
+		// the source during this same pass. Refresh the snapshot before retiring
+		// so those holds are compensated immediately instead of waiting for TTL.
+		if fresh, ferr := s.Store.ListReservations(ctx, scope); ferr == nil {
+			reservations = fresh
+		}
 		for _, run := range registered {
 			if _, ok := activeKeys[run.Key]; ok {
 				continue
@@ -154,7 +160,7 @@ func (s *Scheduler) Tick(ctx Ctx, scope Scope) (TickResult, error) {
 		}
 	}
 
-	result.Released = s.reconcileExpired(ctx, scope, reservations, limits, now)
+	result.Released = s.reconcileExpired(ctx, scope, reservations, now)
 
 	// Ledger drift detection: available + reserved must equal capacity and the
 	// reserved side must equal the sum of live holds.
@@ -192,11 +198,13 @@ func (s *Scheduler) releaseRun(ctx Ctx, scope Scope, key RunKey, reservations []
 	return s.Store.UnregisterRun(ctx, scope, key)
 }
 
-// reconcileExpired releases reservations that are past their TTL or that have
-// stayed held beyond the dispatch grace window. The latter is the recovery path
-// for an uncertain dispatch: the event may or may not have reached the consumer,
-// so releasing is safe because a still-queueing item will be picked up again.
-func (s *Scheduler) reconcileExpired(ctx Ctx, scope Scope, reservations []Reservation, limits Limits, now time.Time) int {
+// reconcileExpired releases reservations whose lease is no longer renewed.
+// A healthy in-flight item is renewed by Heartbeat on every central pass; when
+// the run stops heartbeating (completion, crash, lost dispatch) the lease
+// expires and the capacity is refunded exactly once. Reservations are kept
+// readable in Redis for a short grace window after their logical expiry so the
+// refund can still be applied.
+func (s *Scheduler) reconcileExpired(ctx Ctx, scope Scope, reservations []Reservation, now time.Time) int {
 	released := 0
 	for _, r := range reservations {
 		if r.State == ReservationReleased {
@@ -205,9 +213,7 @@ func (s *Scheduler) reconcileExpired(ctx Ctx, scope Scope, reservations []Reserv
 		if err := ValidateOwnership(scope, r); err != nil {
 			continue
 		}
-		expired := r.ExpiresAt.IsZero() || !r.ExpiresAt.After(now)
-		stale := r.CreatedAt.IsZero() || now.Sub(r.CreatedAt) > limits.DispatchGrace+limits.ReservationTTL
-		if !expired && !stale {
+		if !r.ExpiresAt.IsZero() && r.ExpiresAt.After(now) {
 			continue
 		}
 		if _, err := s.Store.Release(ctx, scope, r.ID); err != nil {

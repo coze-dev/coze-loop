@@ -697,6 +697,11 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 		}
 		granted, err := e.centralAdmission.AcquireItems(ctx, event, ids)
 		if err != nil {
+			// A partial batch may already be reserved when a later reservation
+			// fails; compensate immediately so the next tick can retry.
+			if mode == central.ModeEnforce && len(granted) > 0 {
+				e.centralAdmission.ReleaseItems(ctx, event, granted)
+			}
 			return err
 		}
 		if mode == central.ModeEnforce {

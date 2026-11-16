@@ -494,3 +494,43 @@ func TestScopeRequiresEnvAndRegion(t *testing.T) {
 		t.Fatalf("namespace=%s", ns)
 	}
 }
+
+func TestHeartbeatRenewalPreventsExpiryRelease(t *testing.T) {
+	clock := newFakeClock()
+	store := NewMemoryStore(clock)
+	scope := Scope{Env: "ppe_renew", Region: "cn"}
+	capacity := map[ResourceKind]int64{ResourceItemSlot: 1, ResourceTargetSlot: 1, ResourceSandboxSlot: 1}
+	_ = store.EnsureLedger(nil, scope, capacity)
+	key := RunKey{SpaceID: 1, ExptID: 20, ExptRunID: 200}
+	if res, err := store.TryReserve(nil, scope, key, 1, map[ResourceKind]int64{ResourceItemSlot: 1}, time.Second); err != nil || res != ReserveGranted {
+		t.Fatalf("reserve: %v %v", res, err)
+	}
+	clock.Advance(500 * time.Millisecond)
+	if n, err := store.RenewReservations(nil, scope, key, 10*time.Second); err != nil || n != 1 {
+		t.Fatalf("renew: n=%d err=%v", n, err)
+	}
+	clock.Advance(2 * time.Second)
+	sched := &Scheduler{Store: store, Source: &fakeSource{}, Driver: &fakeDriver{}, Limits: Limits{Capacity: capacity}, Clock: clock}
+	res, err := sched.Tick(nil, scope)
+	if err != nil {
+		t.Fatalf("tick: %v", err)
+	}
+	if res.Released != 0 {
+		t.Fatalf("renewed reservation must not be released, result=%+v", res)
+	}
+	if res.FinishedAt.IsZero() {
+		t.Fatalf("TickResult.FinishedAt must be populated")
+	}
+	clock.Advance(11 * time.Second)
+	res, err = sched.Tick(nil, scope)
+	if err != nil {
+		t.Fatalf("tick2: %v", err)
+	}
+	if res.Released != 1 {
+		t.Fatalf("expired reservation must be released, result=%+v", res)
+	}
+	ledger, _ := store.Ledger(nil, scope)
+	if ledger.Available[ResourceItemSlot] != 1 {
+		t.Fatalf("available=%d want 1", ledger.Available[ResourceItemSlot])
+	}
+}

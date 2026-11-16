@@ -25,6 +25,12 @@ import (
 // Structural key TTL. Individual reservations use the configured reservation TTL.
 const structuralTTL = 30 * 24 * time.Hour
 
+// reservationKeyGrace keeps the Redis hash alive a little after its logical
+// expiry so the scheduler can still refund the hold exactly once. Without it,
+// Redis would evict the hash at the same moment the hold becomes reclaimable
+// and the reserved capacity would leak until the next ledger rebuild.
+const reservationKeyGrace = time.Minute
+
 type Store struct {
 	cmd   redis.Cmdable
 	clock domain.Clock
@@ -44,6 +50,13 @@ func NewStoreWithClock(cmd redis.Cmdable, clock domain.Clock) *Store {
 }
 
 func (s *Store) now() time.Time { return s.clock.Now() }
+
+func (s *Store) reservationLifetime(ttl time.Duration) time.Duration {
+	if ttl <= 0 {
+		ttl = 5 * time.Minute
+	}
+	return ttl + reservationKeyGrace
+}
 
 func (s *Store) keys(scope domain.Scope) (ledger, capacity, resIdx, runs, runIdx, runExp, prio, prioExp, keysIdx string) {
 	ns := scope.Namespace()
@@ -345,6 +358,9 @@ func (s *Store) Release(c domain.Ctx, scope domain.Scope, id string) (bool, erro
 	if res == -1 {
 		return false, domain.ErrCrossEnvironment
 	}
+	// The release script HINCRBYs the ledger; never leave a key without TTL, even
+	// when the ledger had expired before the release was applied.
+	_ = s.cmd.Expire(ctxOf(c), ledger, structuralTTL).Err()
 	_ = s.cmd.Expire(ctxOf(c), resIdx, structuralTTL).Err()
 	_ = s.cmd.Expire(ctxOf(c), keysIdx, structuralTTL).Err()
 	return res == 1, nil
@@ -364,12 +380,19 @@ func (s *Store) RenewReservations(c domain.Ctx, scope domain.Scope, key domain.R
 	_, _, resIdx, _, _, _, _, _, keysIdx := s.keys(scope)
 	now := s.now()
 	n := 0
+	lifetime := s.reservationLifetime(ttl)
 	for _, r := range reservations {
 		if r.Key != key {
 			continue
 		}
 		rkey := resKey(scope.Namespace(), r.ID)
-		if err := s.cmd.Expire(ctxOf(c), rkey, ttl).Err(); err != nil {
+		// Renew both the logical expiry (read by the reconciler) and the Redis
+		// key TTL (which is kept slightly longer so an expired hold can still be
+		// refunded exactly once).
+		if err := s.cmd.HSet(ctxOf(c), rkey, "exp", now.Add(ttl).Unix()).Err(); err != nil {
+			continue
+		}
+		if err := s.cmd.Expire(ctxOf(c), rkey, lifetime).Err(); err != nil {
 			continue
 		}
 		_ = s.cmd.ZAdd(ctxOf(c), resIdx, redisZ(now.Add(ttl).Unix(), r.ID)).Err()
@@ -527,6 +550,7 @@ return 1
 const tryReserveScript = `
 local ledger=KEYS[1]; local res=KEYS[2]; local idx=KEYS[3]; local keysidx=KEYS[4]
 local id=ARGV[1]; local ttl=tonumber(ARGV[4]); local now=tonumber(ARGV[5])
+local keyttl=ttl+60
 if redis.call('EXISTS', res)==1 then
   local exp=tonumber(redis.call('HGET', res, 'exp') or '0')
   if exp > now then
@@ -558,7 +582,7 @@ for i=9,#ARGV,2 do
   redis.call('HSET', res, 'hold:'..field, amt)
 end
 redis.call('HSET', res, 'id', id, 'run', ARGV[2], 'item', ARGV[3], 'env', ARGV[6], 'region', ARGV[7], 'space', ARGV[8], 'created', now, 'exp', now+ttl)
-redis.call('EXPIRE', res, ttl)
+redis.call('EXPIRE', res, keyttl)
 redis.call('ZADD', idx, now+ttl, id)
 redis.call('ZADD', keysidx, now, res)
 return 1
