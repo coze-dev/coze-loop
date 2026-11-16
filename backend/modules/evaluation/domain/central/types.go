@@ -257,24 +257,99 @@ func (r ActiveRun) HoldsFor(n int64) (map[ResourceKind]int64, error) {
 	return holds, nil
 }
 
-// ReservationState is kept for observability and drift analysis.
+// ReservationState is the lifecycle of one atomic multi-resource hold.
+//
+// Migration is idempotent: entering the same state again is a no-op, and only
+// reserved/dispatched/running states hold quota. pending_release still holds
+// quota until Release refunds it; released never holds quota.
 type ReservationState string
 
 const (
-	ReservationHeld     ReservationState = "held"
-	ReservationReleased ReservationState = "released"
+	ReservationReserved       ReservationState = "reserved"
+	ReservationDispatched     ReservationState = "dispatched"
+	ReservationRunning        ReservationState = "running"
+	ReservationCompleted      ReservationState = "completed"
+	ReservationFailed         ReservationState = "failed"
+	ReservationCanceled       ReservationState = "canceled"
+	ReservationPendingRelease ReservationState = "pending_release"
+	ReservationReleased       ReservationState = "released"
 )
+
+var reservationTransitions = map[ReservationState][]ReservationState{
+	ReservationReserved:       {ReservationDispatched, ReservationRunning, ReservationCompleted, ReservationFailed, ReservationCanceled, ReservationPendingRelease, ReservationReleased},
+	ReservationDispatched:     {ReservationDispatched, ReservationRunning, ReservationCompleted, ReservationFailed, ReservationCanceled, ReservationPendingRelease, ReservationReleased},
+	ReservationRunning:        {ReservationRunning, ReservationCompleted, ReservationFailed, ReservationCanceled, ReservationPendingRelease, ReservationReleased},
+	ReservationCompleted:      {ReservationCompleted, ReservationPendingRelease, ReservationReleased},
+	ReservationFailed:         {ReservationFailed, ReservationPendingRelease, ReservationReleased},
+	ReservationCanceled:       {ReservationCanceled, ReservationPendingRelease, ReservationReleased},
+	ReservationPendingRelease: {ReservationPendingRelease, ReservationReleased},
+	ReservationReleased:       {ReservationReleased},
+}
+
+func (s ReservationState) Valid() bool {
+	_, ok := reservationTransitions[s]
+	return ok
+}
+
+// HoldsQuota reports whether the state still owns the reserved resources.
+func (s ReservationState) HoldsQuota() bool {
+	switch s {
+	case ReservationReserved, ReservationDispatched, ReservationRunning, ReservationPendingRelease:
+		return true
+	default:
+		return false
+	}
+}
+
+// CanTransition reports whether from -> to is an allowed idempotent migration.
+func CanTransition(from, to ReservationState) bool {
+	if from == to {
+		return from.Valid()
+	}
+	for _, next := range reservationTransitions[from] {
+		if next == to {
+			return true
+		}
+	}
+	return false
+}
 
 // Reservation is one atomic multi-resource hold.
 type Reservation struct {
-	ID        string
-	Scope     Scope
-	Key       RunKey
-	ItemID    int64
-	Holds     map[ResourceKind]int64
-	State     ReservationState
-	CreatedAt time.Time
-	ExpiresAt time.Time
+	ID           string
+	Scope        Scope
+	Key          RunKey
+	ItemID       int64
+	Holds        map[ResourceKind]int64
+	State        ReservationState
+	CreatedAt    time.Time
+	DispatchedAt time.Time
+	StateAt      time.Time
+	Reason       string
+	ExpiresAt    time.Time
+}
+
+// ItemObservation is the authoritative item state used to resolve uncertain
+// dispatches without waiting for lease expiry.
+type ItemObservation string
+
+const (
+	ItemMissing    ItemObservation = "missing"
+	ItemQueueing   ItemObservation = "queueing"
+	ItemProcessing ItemObservation = "processing"
+	ItemSuccess    ItemObservation = "success"
+	ItemFail       ItemObservation = "fail"
+	ItemTerminal   ItemObservation = "terminal"
+)
+
+func (o ItemObservation) Terminal() bool {
+	return o == ItemSuccess || o == ItemFail || o == ItemTerminal
+}
+
+// ItemObserver reads the item state from the execution side. It is optional;
+// when absent the scheduler keeps the hold and reports an error (fail-closed).
+type ItemObserver interface {
+	ObserveItem(ctx Ctx, scope Scope, key RunKey, itemID int64) (ItemObservation, error)
 }
 
 func (r Reservation) Validate() error {
@@ -295,9 +370,12 @@ func (r Reservation) Validate() error {
 	return nil
 }
 
-// ReservationID is deterministic so retries and releases are idempotent.
-func ReservationID(key RunKey, itemID int64) string {
-	return key.String() + ":item:" + strconv.FormatInt(itemID, 10)
+// ReservationID is deterministic and carries the full ownership identity:
+// env, region, space, experiment, run and item. Retries and releases are
+// therefore idempotent and cannot collide across scopes.
+func ReservationID(scope Scope, key RunKey, itemID int64) string {
+	return sanitizeKeyPart(scope.Env) + "|" + sanitizeKeyPart(scope.Region) + "|" +
+		key.String() + ":item:" + strconv.FormatInt(itemID, 10)
 }
 
 // ReserveResult is the outcome of an atomic reservation attempt.
@@ -313,11 +391,13 @@ const (
 
 // Ledger is a point-in-time view of the scope's resource pool.
 type Ledger struct {
-	Scope     Scope
-	Capacity  map[ResourceKind]int64
-	Available map[ResourceKind]int64
-	Reserved  map[ResourceKind]int64
-	UpdatedAt time.Time
+	Scope         Scope
+	Capacity      map[ResourceKind]int64
+	Available     map[ResourceKind]int64
+	Reserved      map[ResourceKind]int64
+	Generation    int64
+	ReconcileMode string // incremental|full
+	UpdatedAt     time.Time
 }
 
 // Limits is the pool configuration for one scope.
@@ -342,15 +422,15 @@ func (l Limits) withDefaults() Limits {
 	if l.MaxDrift <= 0 {
 		l.MaxDrift = 0
 	}
-	if len(l.Capacity) == 0 {
-		l.Capacity = map[ResourceKind]int64{
-			ResourceItemSlot:    200,
-			ResourceTargetSlot:  200,
-			ResourceSandboxSlot: 50,
-		}
-	}
+	// Capacity is intentionally not defaulted. Missing/disabled capacity must
+	// fail closed instead of silently becoming an unlimited or guessed pool.
 	return l
 }
+
+var (
+	ErrQuotaDisabled  = errors.New("central: quota disabled or capacity not configured")
+	ErrConfigDegraded = errors.New("central: config degraded; failing closed")
+)
 
 func (l Limits) capacityOf(kind ResourceKind) int64 {
 	if l.Capacity == nil {
@@ -360,12 +440,21 @@ func (l Limits) capacityOf(kind ResourceKind) int64 {
 }
 
 func (l Limits) Validate() error {
+	if len(l.Capacity) == 0 {
+		return ErrQuotaDisabled
+	}
+	for _, kind := range KnownResources {
+		cap, ok := l.Capacity[kind]
+		if !ok || cap <= 0 {
+			return fmt.Errorf("%w: resource %q", ErrQuotaDisabled, kind)
+		}
+	}
 	for kind, cap := range l.Capacity {
 		if !kind.Valid() {
 			return fmt.Errorf("%w: unknown capacity resource %q", ErrInvalidReserve, kind)
 		}
-		if cap < 0 {
-			return fmt.Errorf("%w: negative capacity for %q", ErrInvalidReserve, kind)
+		if cap <= 0 {
+			return fmt.Errorf("%w: resource %q", ErrQuotaDisabled, kind)
 		}
 	}
 	return nil
@@ -407,13 +496,26 @@ type Store interface {
 	TryReserve(ctx Ctx, scope Scope, key RunKey, itemID int64, holds map[ResourceKind]int64, ttl time.Duration) (ReserveResult, error)
 	GetReservation(ctx Ctx, scope Scope, id string) (*Reservation, bool, error)
 	ListReservations(ctx Ctx, scope Scope) ([]Reservation, error)
-	Release(ctx Ctx, scope Scope, id string) (bool, error)
+	Release(ctx Ctx, scope Scope, id string, reason string) (bool, error)
+	Transition(ctx Ctx, scope Scope, id string, from, to ReservationState, reason string, dispatchedAt time.Time) (bool, ReservationState, error)
 	RenewReservations(ctx Ctx, scope Scope, key RunKey, ttl time.Duration) (int, error)
 
-	// RebuildLedger resets available counters from the authoritative reservation
-	// set: available = capacity - sum(held). It is safe to call concurrently; the
-	// store must use a short-lived lock and only one rebuild writes.
+	// IncrementalReconcile adjusts available counters by the delta between the
+	// ledger and the authoritative reservation set. It is the normal path.
+	IncrementalReconcile(ctx Ctx, scope Scope, capacity map[ResourceKind]int64, maxDrift int64) (Ledger, bool, error)
+	// RebuildLedger performs a full rebuild, increments generation and resets
+	// available = capacity - sum(held). Atomic against in-flight reserve/release.
 	RebuildLedger(ctx Ctx, scope Scope, capacity map[ResourceKind]int64) (Ledger, error)
+
+	// Run-mode lineage makes retries inherit the mode/ownership of the run that
+	// was first adopted by central scheduling.
+	GetRunMode(ctx Ctx, scope Scope, key RunKey) (Mode, bool, error)
+	SetRunMode(ctx Ctx, scope Scope, key RunKey, mode Mode, ttl time.Duration) error
+
+	// Leader election guarantees one dispatcher at a time per scope.
+	AcquireLeadership(ctx Ctx, scope Scope, holder string, ttl time.Duration) (bool, error)
+	RenewLeadership(ctx Ctx, scope Scope, holder string, ttl time.Duration) (bool, error)
+	ReleaseLeadership(ctx Ctx, scope Scope, holder string) error
 
 	// Cleanup removes all qn:central: keys owned by this scope. It must never
 	// touch keys outside the scope prefix. Called when a run/verification finishes.
@@ -433,6 +535,13 @@ type Ctx = interface {
 // because they need DB access.
 type RunSource interface {
 	ListActive(ctx Ctx, scope Scope) ([]ActiveRun, error)
+}
+
+// PendingRunSource is the separate scan for Pending run initialization. It must
+// not share cursor/phase with ListActive; the scheduler runs it before active
+// maintenance and never reserves quota for pending initialization.
+type PendingRunSource interface {
+	ListPending(ctx Ctx, scope Scope) ([]ActiveRun, error)
 }
 
 // Driver invokes the existing per-experiment scheduling chain for one run.
@@ -511,7 +620,7 @@ func ValidateOwnership(scope Scope, r Reservation) error {
 	if scope.Env != r.Scope.Env || scope.Region != r.Scope.Region {
 		return ErrCrossEnvironment
 	}
-	if scope.SpaceID != 0 && r.Scope.SpaceID != 0 && scope.SpaceID != r.Scope.SpaceID {
+	if scope.SpaceID != r.Scope.SpaceID {
 		return ErrCrossEnvironment
 	}
 	return nil

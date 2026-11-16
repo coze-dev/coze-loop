@@ -89,6 +89,9 @@ func TestCentralE2EPriorityReserveReleaseCleanup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(res.Errors) > 0 {
+		t.Fatalf("tick errors: %v result=%+v granted=%v", res.Errors, res, driver.granted)
+	}
 	if res.RunsDriven != 2 || len(driver.order) != 2 {
 		t.Fatalf("driven=%d order=%v result=%+v", res.RunsDriven, driver.order, res)
 	}

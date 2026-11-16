@@ -24,7 +24,13 @@ type CentralAdmission interface {
 	// AcquireItems atomically reserves multi-resource holds for the items about
 	// to be dispatched and returns the subset that may be published.
 	AcquireItems(ctx context.Context, event *entity.ExptScheduleEvent, itemIDs []int64) ([]int64, error)
-	// ReleaseItems releases holds for items that reached a terminal state.
+	// ConfirmDispatch marks holds as dispatched after a successful publish.
+	ConfirmDispatch(ctx context.Context, event *entity.ExptScheduleEvent, itemIDs []int64)
+	// ConfirmRunning marks dispatched holds as running after execution is observed.
+	ConfirmRunning(ctx context.Context, event *entity.ExptScheduleEvent, itemIDs []int64)
+	// ReleaseItem moves one terminal item through pending_release to released.
+	ReleaseItem(ctx context.Context, event *entity.ExptScheduleEvent, itemID int64, terminal central.ReservationState, reason string) bool
+	// ReleaseItems releases holds for items whose precise terminal state is unknown.
 	ReleaseItems(ctx context.Context, event *entity.ExptScheduleEvent, itemIDs []int64)
 	// ReleaseRun releases all holds for a completed/cancelled/retried run.
 	ReleaseRun(ctx context.Context, event *entity.ExptScheduleEvent)
@@ -48,13 +54,8 @@ func (g *CentralGate) Mode(ctx context.Context, event *entity.ExptScheduleEvent)
 	if g == nil || g.admission == nil || event == nil {
 		return central.ModeLegacy
 	}
-	conf := g.configer.GetExptExecConf(ctx, event.SpaceID)
-	mode := central.ParseMode(conf.GetCentralSchedulingMode())
-	if mode == central.ModeEnforce && !conf.CentralEnforced(event.SpaceID, event.ExptID) {
-		// Not in the allow-list: keep legacy exactly intact.
-		return central.ModeLegacy
-	}
-	return mode
+	key := central.RunKey{SpaceID: event.SpaceID, ExptID: event.ExptID, ExptRunID: event.ExptRunID}
+	return g.admission.Mode(ctx, key)
 }
 
 func (g *CentralGate) runFromEvent(ctx context.Context, event *entity.ExptScheduleEvent) central.ActiveRun {
@@ -99,6 +100,27 @@ func (g *CentralGate) AcquireItems(ctx context.Context, event *entity.ExptSchedu
 	run := g.runFromEvent(ctx, event)
 	run.Budget = central.Plan(run, g.admission.HeldItems(ctx, run))
 	return g.admission.Acquire(ctx, run, itemIDs)
+}
+
+func (g *CentralGate) ConfirmDispatch(ctx context.Context, event *entity.ExptScheduleEvent, itemIDs []int64) {
+	if g.Mode(ctx, event) == central.ModeLegacy {
+		return
+	}
+	g.admission.ConfirmDispatch(ctx, g.runFromEvent(ctx, event), itemIDs)
+}
+
+func (g *CentralGate) ConfirmRunning(ctx context.Context, event *entity.ExptScheduleEvent, itemIDs []int64) {
+	if g.Mode(ctx, event) == central.ModeLegacy {
+		return
+	}
+	g.admission.ConfirmRunning(ctx, g.runFromEvent(ctx, event), itemIDs)
+}
+
+func (g *CentralGate) ReleaseItem(ctx context.Context, event *entity.ExptScheduleEvent, itemID int64, terminal central.ReservationState, reason string) bool {
+	if g.Mode(ctx, event) == central.ModeLegacy {
+		return false
+	}
+	return g.admission.ReleaseItem(ctx, g.runFromEvent(ctx, event), itemID, terminal, reason)
 }
 
 func (g *CentralGate) ReleaseItems(ctx context.Context, event *entity.ExptScheduleEvent, itemIDs []int64) {

@@ -76,11 +76,11 @@ func TestRedisReleaseIsIdempotent(t *testing.T) {
 	if res, err := store.TryReserve(ctx, scope, key, 7, holds(), time.Minute); err != nil || res != domain.ReserveGranted {
 		t.Fatalf("reserve: %v %v", res, err)
 	}
-	id := domain.ReservationID(key, 7)
-	if ok, err := store.Release(ctx, scope, id); err != nil || !ok {
+	id := domain.ReservationID(scope, key, 7)
+	if ok, err := store.Release(ctx, scope, id, "test"); err != nil || !ok {
 		t.Fatalf("release: %v %v", ok, err)
 	}
-	if ok, err := store.Release(ctx, scope, id); err != nil || ok {
+	if ok, err := store.Release(ctx, scope, id, "test"); err != nil || ok {
 		t.Fatalf("second release should be no-op: %v %v", ok, err)
 	}
 	ledger, _ := store.Ledger(ctx, scope)
@@ -105,10 +105,10 @@ func TestRedisCrossEnvironmentReleaseRejected(t *testing.T) {
 	}
 	// Keys are namespaced by env/region: another environment literally cannot
 	// address this reservation, so release is a no-op (not found), never a mutation.
-	if ok, err := store.Release(ctx, other, domain.ReservationID(key, 1)); err != nil || ok {
+	if ok, err := store.Release(ctx, other, domain.ReservationID(owner, key, 1), "test"); err != nil || ok {
 		t.Fatalf("cross-env release must not touch the owner's key: ok=%v err=%v", ok, err)
 	}
-	if _, found, err := store.GetReservation(ctx, other, domain.ReservationID(key, 1)); err != nil || found {
+	if _, found, err := store.GetReservation(ctx, other, domain.ReservationID(owner, key, 1)); err != nil || found {
 		t.Fatalf("cross-env get must not find the reservation: found=%v err=%v", found, err)
 	}
 	ownerLedger, _ := store.Ledger(ctx, owner)

@@ -91,9 +91,11 @@ type IExptRunLogRepo interface {
 	Save(ctx context.Context, exptRunLog *entity.ExptRunLog) error
 	Update(ctx context.Context, exptID, exptRunID int64, ufields map[string]any) error
 	Get(ctx context.Context, exptID, exptRunID int64) (*entity.ExptRunLog, error)
-	// ListActive returns Pending/Processing run logs for the central scheduler
-	// scan. cursor is the last seen run id (exclusive).
+	// ListActive returns Processing run logs for active maintenance. cursor is
+	// the last seen run id (exclusive).
 	ListActive(ctx context.Context, cursor, limit int64) ([]*entity.ExptRunLog, error)
+	// ListPending returns Pending run logs for the separate initialization phase.
+	ListPending(ctx context.Context, cursor, limit int64) ([]*entity.ExptRunLog, error)
 }
 
 type IExptAggrResultRepo interface {

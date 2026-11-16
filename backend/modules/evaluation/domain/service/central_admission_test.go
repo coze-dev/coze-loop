@@ -39,11 +39,11 @@ func newTestGate(t *testing.T, mode string, spaces, expts []int64) (*CentralGate
 	adm := &central.Admission{
 		Store: store,
 		Clock: clock,
-		LimitsFn: func(_ central.Ctx, _ int64) central.Limits {
+		LimitsFn: func(_ central.Ctx, _ int64) (central.Limits, error) {
 			return central.Limits{
 				Capacity:       CentralCapacity(conf.GetCentralCapacity()),
 				ReservationTTL: conf.GetCentralReservationTTL(),
-			}
+			}, nil
 		},
 		ModeFn: func(ctx central.Ctx, key central.RunKey) central.Mode {
 			// The gate's config-driven allow-list is exercised separately; here we

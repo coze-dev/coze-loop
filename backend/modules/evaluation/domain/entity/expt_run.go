@@ -228,7 +228,7 @@ type ExptExecConf struct {
 	CentralSchedulingMode string `json:"central_scheduling_mode" mapstructure:"central_scheduling_mode"`
 	// enforce 白名单：两者都为空时 enforce 不生效（避免误配置全局接管）。
 	CentralSchedulingSpaceIDs []int64 `json:"central_scheduling_space_ids" mapstructure:"central_scheduling_space_ids"`
-	CentralSchedulingExptIDs   []int64 `json:"central_scheduling_expt_ids" mapstructure:"central_scheduling_expt_ids"`
+	CentralSchedulingExptIDs  []int64 `json:"central_scheduling_expt_ids" mapstructure:"central_scheduling_expt_ids"`
 
 	// 全局资源池容量（跨空间共享）。0 表示使用默认值。
 	CentralResourceItemSlot    int64 `json:"central_resource_item_slot" mapstructure:"central_resource_item_slot"`
@@ -304,19 +304,15 @@ func (e *ExptExecConf) CentralEnforced(spaceID, exptID int64) bool {
 	return false
 }
 
-// GetCentralCapacity 返回多资源池容量。0 使用保守默认值。
+// GetCentralCapacity 返回多资源池容量。缺失或 0 不再回落到默认值：中心
+// admission 会把它当作 disabled/degraded 并 fail-closed，避免把缺失配置当成
+// 无限或猜测额度。
 func (e *ExptExecConf) GetCentralCapacity() map[string]int64 {
-	item, target, sandbox := int64(200), int64(200), int64(200)
+	var item, target, sandbox int64
 	if e != nil {
-		if e.CentralResourceItemSlot > 0 {
-			item = e.CentralResourceItemSlot
-		}
-		if e.CentralResourceTargetSlot > 0 {
-			target = e.CentralResourceTargetSlot
-		}
-		if e.CentralResourceSandboxSlot > 0 {
-			sandbox = e.CentralResourceSandboxSlot
-		}
+		item = e.CentralResourceItemSlot
+		target = e.CentralResourceTargetSlot
+		sandbox = e.CentralResourceSandboxSlot
 	}
 	return map[string]int64{
 		"item_slot":    item,

@@ -17,9 +17,10 @@ type DecisionRecorder interface {
 // Admission is the pre-dispatch gate. It is called by the existing experiment
 // scheduler immediately before item events are published:
 //
-//	Acquire  -> atomically reserve one multi-resource hold per item
-//	publish  -> existing MQ event
-//	Release  -> on item completion/failure, or on publish failure (compensation)
+//	Acquire          -> reserve one multi-resource hold per item
+//	ConfirmDispatch  -> mark reserved -> dispatched after publish succeeds
+//	ConfirmRunning   -> mark dispatched -> running after execution is observed
+//	ReleaseItem      -> completed/failed/canceled -> pending_release -> released
 //
 // Legacy mode is a strict no-op, which preserves the historical MQ self-loop and
 // 200-running-experiment admission.
@@ -28,10 +29,14 @@ type Admission struct {
 	Clock  Clock
 	Limits Limits
 
-	// LimitsFn returns the current pool configuration for a space.
-	LimitsFn func(ctx Ctx, spaceID int64) Limits
-	// ModeFn returns the effective mode for a run. Allow-list logic belongs here.
+	// LimitsFn returns the current pool configuration for a space. Returning an
+	// error means the config is missing/degraded and the gate fails closed.
+	LimitsFn func(ctx Ctx, spaceID int64) (Limits, error)
+	// ModeFn returns the raw configured mode (legacy/shadow/enforce), without
+	// allow-list filtering, so a recorded enforce mode can survive allow-list changes.
 	ModeFn func(ctx Ctx, key RunKey) Mode
+	// AllowedFn decides first adoption when the configured mode is enforce.
+	AllowedFn func(ctx Ctx, key RunKey) bool
 	// ScopeFn builds the ownership scope for a space (env + region + space).
 	ScopeFn func(ctx Ctx, spaceID int64) Scope
 	// Recorder is optional.
@@ -45,11 +50,22 @@ func (a *Admission) clock() Clock {
 	return a.Clock
 }
 
-func (a *Admission) limits(ctx Ctx, spaceID int64) Limits {
+func (a *Admission) limits(ctx Ctx, spaceID int64) (Limits, error) {
+	var limits Limits
 	if a.LimitsFn != nil {
-		return a.LimitsFn(ctx, spaceID).withDefaults()
+		var err error
+		limits, err = a.LimitsFn(ctx, spaceID)
+		if err != nil {
+			return Limits{}, err
+		}
+	} else {
+		limits = a.Limits
 	}
-	return a.Limits.withDefaults()
+	limits = limits.withDefaults()
+	if err := limits.Validate(); err != nil {
+		return Limits{}, err
+	}
+	return limits, nil
 }
 
 func (a *Admission) scope(ctx Ctx, spaceID int64) Scope {
@@ -76,20 +92,40 @@ func (a *Admission) HeldItems(ctx Ctx, run ActiveRun) int64 {
 	return CountHeldByRun(reservations, run.Key)
 }
 
-// Mode returns the effective mode for a run.
+// Mode returns the effective mode for a run. A recorded run mode wins over the
+// current allow-list so a retry cannot flip from enforce back to legacy. A
+// global legacy config still wins, which is the rollback path.
 func (a *Admission) Mode(ctx Ctx, key RunKey) Mode {
-	if a.ModeFn == nil {
+	configured := ModeLegacy
+	if a.ModeFn != nil {
+		configured = a.ModeFn(ctx, key)
+	}
+	if configured == ModeLegacy {
 		return ModeLegacy
 	}
-	return a.ModeFn(ctx, key)
+	if a.Store == nil {
+		return configured
+	}
+	scope := a.scope(ctx, key.SpaceID)
+	if mode, ok, err := a.Store.GetRunMode(ctx, scope, key); err == nil && ok {
+		return mode
+	}
+	if configured == ModeEnforce && a.AllowedFn != nil && !a.AllowedFn(ctx, key) {
+		return ModeLegacy
+	}
+	if configured == ModeEnforce {
+		_ = a.Store.SetRunMode(ctx, scope, key, ModeEnforce, 24*time.Hour)
+	}
+	return configured
 }
 
 // Acquire reserves resources for the supplied items and returns the subset that
-// was granted. In legacy mode it returns (nil, nil) to signal "gate disabled";
-// in shadow mode it returns all items unchanged and records a would-be decision.
+// should be published this pass. In legacy mode it returns (nil, nil) to signal
+// "gate disabled"; in shadow mode it returns all items unchanged.
 //
-// run.Budget bounds how many *new* holds may be created this pass. Holds that
-// already exist (retry/idempotency) do not consume budget.
+// run.Budget bounds how many *new* holds may be created this pass. Existing
+// reservations in dispatched/running state are not re-published; only a
+// reserved hold (a previous publish that never confirmed) may be retried.
 func (a *Admission) Acquire(ctx Ctx, run ActiveRun, itemIDs []int64) ([]int64, error) {
 	run = run.Normalize()
 	if err := run.Validate(); err != nil {
@@ -107,8 +143,8 @@ func (a *Admission) Acquire(ctx Ctx, run ActiveRun, itemIDs []int64) ([]int64, e
 	if run.Budget <= 0 || len(itemIDs) == 0 {
 		return nil, nil
 	}
-	limits := a.limits(ctx, run.Key.SpaceID)
-	if err := limits.Validate(); err != nil {
+	limits, err := a.limits(ctx, run.Key.SpaceID)
+	if err != nil {
 		return nil, err
 	}
 	scope := run.Scope
@@ -144,13 +180,17 @@ func (a *Admission) Acquire(ctx Ctx, run ActiveRun, itemIDs []int64) ([]int64, e
 			newHolds++
 			granted = append(granted, itemID)
 		case ReserveExisting:
-			// Already held from a previous pass; safe to dispatch again because the
-			// item event is idempotent downstream.
-			granted = append(granted, itemID)
+			// A dispatched/running hold is already in flight; publish again would
+			// duplicate work. Only a still-reserved hold may be retried.
+			id := ReservationID(scope, run.Key, itemID)
+			res, ok, gerr := a.Store.GetReservation(ctx, scope, id)
+			if gerr != nil {
+				return granted, gerr
+			}
+			if ok && res.State == ReservationReserved {
+				granted = append(granted, itemID)
+			}
 		case ReserveDenied:
-			// Capacity exhausted for this priority level; leave the remaining items
-			// queued. Higher-priority runs were driven first, so this is the intended
-			// preemption point.
 			if a.Recorder != nil {
 				a.Recorder.RecordDecision(scope, run.Key, mode, run.Budget, int64(len(granted)))
 			}
@@ -165,7 +205,11 @@ func (a *Admission) Acquire(ctx Ctx, run ActiveRun, itemIDs []int64) ([]int64, e
 
 // observeShadow evaluates feasibility without mutating the ledger.
 func (a *Admission) observeShadow(ctx Ctx, run ActiveRun, itemIDs []int64) {
-	limits := a.limits(ctx, run.Key.SpaceID)
+	limits, lerr := a.limits(ctx, run.Key.SpaceID)
+	if lerr != nil || a.Store == nil {
+		return
+	}
+	_ = limits
 	ledger, err := a.Store.Ledger(ctx, run.Scope)
 	if err != nil {
 		return
@@ -194,24 +238,80 @@ func (a *Admission) observeShadow(ctx Ctx, run ActiveRun, itemIDs []int64) {
 		}
 		feasible++
 	}
-	_ = limits
 	if a.Recorder != nil {
 		a.Recorder.RecordDecision(run.Scope, run.Key, ModeShadow, run.Budget, feasible)
 	}
 }
 
-// ReleaseItems releases holds for completed/failed items. Idempotent.
-func (a *Admission) ReleaseItems(ctx Ctx, run ActiveRun, itemIDs []int64) int {
-	run = run.Normalize()
-	if a.Mode(ctx, run.Key) == ModeLegacy || a.Store == nil {
+// ConfirmDispatch marks the holds as dispatched after a successful publish.
+// Repeating it is idempotent; already running/completed holds are left alone.
+func (a *Admission) ConfirmDispatch(ctx Ctx, run ActiveRun, itemIDs []int64) int {
+	if a.Store == nil {
 		return 0
 	}
-	released := 0
+	run = run.Normalize()
+	now := a.clock().Now()
+	n := 0
 	for _, itemID := range itemIDs {
 		if itemID <= 0 {
 			continue
 		}
-		if ok, err := a.Store.Release(ctx, run.Scope, ReservationID(run.Key, itemID)); err == nil && ok {
+		id := ReservationID(run.Scope, run.Key, itemID)
+		if ok, _, err := a.Store.Transition(ctx, run.Scope, id, ReservationReserved, ReservationDispatched, "dispatch_confirmed", now); err == nil && ok {
+			n++
+		}
+	}
+	return n
+}
+
+// ConfirmRunning marks a dispatched hold as running after execution is observed.
+func (a *Admission) ConfirmRunning(ctx Ctx, run ActiveRun, itemIDs []int64) int {
+	if a.Store == nil {
+		return 0
+	}
+	run = run.Normalize()
+	n := 0
+	for _, itemID := range itemIDs {
+		if itemID <= 0 {
+			continue
+		}
+		id := ReservationID(run.Scope, run.Key, itemID)
+		if ok, _, err := a.Store.Transition(ctx, run.Scope, id, ReservationDispatched, ReservationRunning, "execution_observed", time.Time{}); err == nil && ok {
+			n++
+		}
+	}
+	return n
+}
+
+// ReleaseItem moves a terminal item through pending_release to released.
+// Repeated/late callbacks are no-ops once released.
+func (a *Admission) ReleaseItem(ctx Ctx, run ActiveRun, itemID int64, terminal ReservationState, reason string) bool {
+	if a.Store == nil || itemID <= 0 {
+		return false
+	}
+	run = run.Normalize()
+	scope := run.Scope
+	id := ReservationID(scope, run.Key, itemID)
+	res, ok, err := a.Store.GetReservation(ctx, scope, id)
+	if err != nil || !ok {
+		return false
+	}
+	if res.State == ReservationReleased {
+		return false
+	}
+	if terminal.Valid() && terminal != res.State {
+		_, _, _ = a.Store.Transition(ctx, scope, id, "", terminal, reason, time.Time{})
+	}
+	_, _, _ = a.Store.Transition(ctx, scope, id, "", ReservationPendingRelease, reason, time.Time{})
+	released, rerr := a.Store.Release(ctx, scope, id, reason)
+	return rerr == nil && released
+}
+
+// ReleaseItems releases holds for items whose precise terminal state is unknown.
+func (a *Admission) ReleaseItems(ctx Ctx, run ActiveRun, itemIDs []int64) int {
+	released := 0
+	for _, itemID := range itemIDs {
+		if a.ReleaseItem(ctx, run, itemID, "", "item_terminal") {
 			released++
 		}
 	}
@@ -221,13 +321,10 @@ func (a *Admission) ReleaseItems(ctx Ctx, run ActiveRun, itemIDs []int64) int {
 // ReleaseRun releases every reservation owned by the run. Used on completion,
 // cancellation, terminal failure and retry supersession.
 func (a *Admission) ReleaseRun(ctx Ctx, run ActiveRun) int {
-	run = run.Normalize()
 	if a.Store == nil {
 		return 0
 	}
-	if a.Mode(ctx, run.Key) == ModeLegacy {
-		return 0
-	}
+	run = run.Normalize()
 	reservations, err := a.Store.ListReservations(ctx, run.Scope)
 	if err != nil {
 		return 0
@@ -237,10 +334,10 @@ func (a *Admission) ReleaseRun(ctx Ctx, run ActiveRun) int {
 		if r.Key != run.Key {
 			continue
 		}
-		if err := ValidateOwnership(run.Scope, r); err != nil {
+		if err := ValidateOwnership(r.Scope, r); err != nil {
 			continue
 		}
-		if ok, rerr := a.Store.Release(ctx, run.Scope, r.ID); rerr == nil && ok {
+		if a.ReleaseItem(ctx, run, r.ItemID, ReservationCanceled, "run_terminal") {
 			released++
 		}
 	}
@@ -255,11 +352,14 @@ func (a *Admission) Heartbeat(ctx Ctx, run ActiveRun) error {
 	if a.Mode(ctx, run.Key) == ModeLegacy {
 		return nil
 	}
-	limits := a.limits(ctx, run.Key.SpaceID)
+	limits, err := a.limits(ctx, run.Key.SpaceID)
+	if err != nil {
+		return err
+	}
 	if err := a.Store.RegisterRun(ctx, run, 2*limits.ReservationTTL); err != nil {
 		return err
 	}
-	_, err := a.Store.RenewReservations(ctx, run.Scope, run.Key, limits.ReservationTTL)
+	_, err = a.Store.RenewReservations(ctx, run.Scope, run.Key, limits.ReservationTTL)
 	return err
 }
 

@@ -135,11 +135,11 @@ func TestReleaseIsIdempotentAndRefundsAllResources(t *testing.T) {
 	if res, err := store.TryReserve(nil, scope, key, 7, holds, time.Minute); err != nil || res != ReserveGranted {
 		t.Fatalf("reserve: %v %v", res, err)
 	}
-	id := ReservationID(key, 7)
-	if ok, err := store.Release(nil, scope, id); err != nil || !ok {
+	id := ReservationID(scope, key, 7)
+	if ok, err := store.Release(nil, scope, id, "test"); err != nil || !ok {
 		t.Fatalf("first release: ok=%v err=%v", ok, err)
 	}
-	if ok, err := store.Release(nil, scope, id); err != nil || ok {
+	if ok, err := store.Release(nil, scope, id, "test"); err != nil || ok {
 		t.Fatalf("second release must be a no-op: ok=%v err=%v", ok, err)
 	}
 	ledger, _ := store.Ledger(nil, scope)
@@ -160,15 +160,15 @@ func TestCrossEnvironmentReleaseIsRejected(t *testing.T) {
 	if res, err := store.TryReserve(nil, owner, key, 1, map[ResourceKind]int64{ResourceItemSlot: 1}, time.Minute); err != nil || res != ReserveGranted {
 		t.Fatalf("reserve owner: %v %v", res, err)
 	}
-	id := ReservationID(key, 1)
-	if _, err := store.Release(nil, other, id); !errors.Is(err, ErrCrossEnvironment) {
+	id := ReservationID(owner, key, 1)
+	if _, err := store.Release(nil, other, id, "test"); !errors.Is(err, ErrCrossEnvironment) {
 		t.Fatalf("cross-env release must be rejected, got %v", err)
 	}
 	if _, _, err := store.GetReservation(nil, other, id); !errors.Is(err, ErrCrossEnvironment) {
 		t.Fatalf("cross-env get must be rejected, got %v", err)
 	}
 	// The original scope can still release.
-	if ok, err := store.Release(nil, owner, id); err != nil || !ok {
+	if ok, err := store.Release(nil, owner, id, "test"); err != nil || !ok {
 		t.Fatalf("owner release: ok=%v err=%v", ok, err)
 	}
 }

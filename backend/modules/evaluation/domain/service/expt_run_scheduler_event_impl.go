@@ -159,6 +159,31 @@ func (e *ExptSchedulerImpl) releaseCentralRun(ctx context.Context, event *entity
 	}
 }
 
+func terminalReservationState(state entity.ItemRunState) central.ReservationState {
+	switch state {
+	case entity.ItemRunState_Success:
+		return central.ReservationCompleted
+	case entity.ItemRunState_Fail:
+		return central.ReservationFailed
+	case entity.ItemRunState_Terminal:
+		return central.ReservationCanceled
+	default:
+		return ""
+	}
+}
+
+// ambiguousPublishError means the MQ call may have delivered the message. The
+// reservation is kept as reserved (not refunded) so the next central tick can
+// retry the idempotent item event instead of silently dropping capacity.
+func ambiguousPublishError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "timeout") || strings.Contains(msg, "deadline exceeded") ||
+		strings.Contains(msg, "context canceled") || strings.Contains(msg, "unknown")
+}
+
 func (e *ExptSchedulerImpl) Schedule(ctx context.Context, event *entity.ExptScheduleEvent) error {
 	ctx = ctxcache.Init(ctx)
 
@@ -520,7 +545,7 @@ func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *en
 		// item 已落终态 (success/fail/zombie): 释放该 item 的多资源预占。
 		// 失败时保留到 reconcile 兜底, 避免与 record 落库重试竞争。
 		if e.centralAdmission != nil {
-			e.centralAdmission.ReleaseItems(ctx, event, []int64{item.ItemID})
+			e.centralAdmission.ReleaseItem(ctx, event, item.ItemID, terminalReservationState(item.State), "item_terminal")
 		}
 		time.Sleep(time.Millisecond * 50)
 
@@ -739,11 +764,16 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 
 	interval := e.Configer.GetExptExecConf(ctx, event.SpaceID).GetExptItemEvalConf().GetInterval()
 	if err := e.Publisher.BatchPublishExptRecordEvalEvent(ctx, itemEvalEvents, gptr.Of(interval)); err != nil {
-		// 派发确定失败: 立即补偿释放本批预占, 让下一 tick 重新排队。
-		if len(centralGranted) > 0 {
+		// Ambiguous publish (timeout/unknown) may already have delivered. Keep the
+		// reserved holds so the next tick can retry the idempotent event; only a
+		// definitive failure is refunded immediately.
+		if len(centralGranted) > 0 && !ambiguousPublishError(err) {
 			e.centralAdmission.ReleaseItems(ctx, event, centralGranted)
 		}
 		return err
+	}
+	if len(centralGranted) > 0 {
+		e.centralAdmission.ConfirmDispatch(ctx, event, centralGranted)
 	}
 
 	defer e.Metric.EmitItemExecEval(event.SpaceID, int64(event.ExptRunMode), len(toSubmits))
@@ -755,6 +785,9 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 
 	if err := e.ExptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, itemIDs, map[string]any{"status": int32(entity.ItemRunState_Processing)}); err != nil {
 		return err
+	}
+	if len(centralGranted) > 0 {
+		e.centralAdmission.ConfirmRunning(ctx, event, centralGranted)
 	}
 
 	err := e.ResultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, itemIDs)
