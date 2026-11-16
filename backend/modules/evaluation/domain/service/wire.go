@@ -14,6 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	evaluatormtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluator"
 	rmqproducer "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/producer"
+	centralredis "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/central_scheduling/redis"
 	evaluatorrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator"
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	targetrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target"
@@ -58,9 +59,34 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	wire.Bind(new(IWebhookSecretProvider), new(*NoopWebhookSecretProvider)),
 	// Repo Sets
 	experimentrepo.ExperimentRepoSet,
+	// 中心调度：账本/活跃集/配置/环境/派发/释放
+	CentralSchedulingSet,
 	// Open-source has no BMQ impl; commercial overrides via its own ProducerSet
 	ProvideNilItemCompletePublisher,
 )
+
+// CentralSchedulingSet 中心调度依赖。Redis key 全部使用 qn:central:{env} 命名空间。
+var CentralSchedulingSet = wire.NewSet(
+	evalconf.NewCentralSchedulingConfigProvider,
+	evalconf.NewEnvironmentProvider,
+	centralredis.NewLedger,
+	centralredis.NewActiveRepo,
+	wire.Bind(new(repo.ICentralLedgerRepo), new(*centralredis.Ledger)),
+	wire.Bind(new(repo.ICentralActiveRepo), new(*centralredis.ActiveRepo)),
+	rmqproducer.NewCentralItemDispatcher,
+	NewCentralScheduler,
+	NewCentralReservationReleaser,
+	ProvideCentralSchedulers,
+	ProvideCentralReleasers,
+)
+
+func ProvideCentralSchedulers(s *CentralScheduler) []*CentralScheduler {
+	return []*CentralScheduler{s}
+}
+
+func ProvideCentralReleasers(r ICentralReservationReleaser) []ICentralReservationReleaser {
+	return []ICentralReservationReleaser{r}
+}
 
 func ProvideNoSandboxAgentNotifiers() []ISandboxAgentNotifier {
 	return nil

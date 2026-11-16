@@ -2275,3 +2275,26 @@ expt_export_white_list:
 
 clickhouse_config:
   expt_turn_result_filter_db_name: "cozeloop-clickhouse"
+
+# 中心调度（实验级自循环 → 全局调度器）。默认关闭，需显式启用并配置容量。
+central_scheduling:
+  enabled: false
+  tick_interval_second: 60
+  reconcile_interval_second: 300
+  max_dispatch_per_tick: 100
+  max_inflight_per_experiment: 5
+  capacity_item_exec: 100
+  capacity_sandbox_exec: 50
+  capacity_model_credit: 10000
+  credit_per_item: 1
+  sandbox_slots_per_item: 1
+  disable_item_exec: false
+  disable_sandbox_exec: false
+  disable_model_credit: false
+  publish_timeout_second: 60
+  ack_timeout_second: 120
+  compensation_timeout_second: 600
+  reservation_ttl_second: 259200
+  leader_lease_second: 90
+  leader_renew_second: 30
+  expt_lease_second: 300

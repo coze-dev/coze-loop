@@ -129,6 +129,14 @@ const ExptTriggerType Manual = "manual"
 const ExptTriggerType OpenAPI = "openapi"
 const ExptTriggerType Schedule = "schedule"
 
+// 实验调度元数据。创建时冻结；运行中切换需显式授权。
+struct SchedulingMeta {
+    1: optional string mode      // legacy / central_shadow / central
+    2: optional i32 priority     // 0..100，越高越先；0 为默认最低档
+    3: optional string env       // 实验环境归属；空表示归属不明，中心调度 fail-closed
+    4: optional i64 wait_since_ms (api.js_conv='true', go.tag='json:"wait_since_ms"') // 进入等待队列时间，用于同优先级 FIFO
+}
+
 struct Experiment {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
     2: optional string name
@@ -187,6 +195,8 @@ struct Experiment {
     100: optional map<string, string> ext
     // 离线实验分析状态
     101: optional OfflineExptAnalysisStatus offline_expt_analysis_status
+    // 调度元数据（可选；legacy 老数据为空）
+    102: optional SchedulingMeta scheduling
 
     // ★ 新增段位 110~119: 多评测集读视图
     // 读接口分流开关: SingleSet=1(老实验) / MultiSetConfig=2(新实验); 直读 experiment 表同名列

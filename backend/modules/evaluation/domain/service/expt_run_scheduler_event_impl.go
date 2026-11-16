@@ -182,6 +182,16 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 			return nil
 		}
 
+		// 同一实验不能被两条链路同时派发：central 模式下旧 MQ 自循环静默退出。
+		expt, err := e.ExptRepo.GetByID(ctx, event.ExptID, event.SpaceID)
+		if err != nil {
+			return err
+		}
+		if entity.GetSchedulingMeta(expt.EvalConf).Mode.IsCentralDispatchMode() {
+			logs.CtxInfo(ctx, "[ExptEval] central scheduling owns expt %d, legacy loop skip, run_id: %v", event.ExptID, event.ExptRunID)
+			return nil
+		}
+
 		interval := int64(e.Configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond())
 		if time.Now().Unix()-event.CreatedAt >= interval {
 			return errno.NewExptZombieTimeoutErr(interval, event.ExptID, event.ExptRunID)

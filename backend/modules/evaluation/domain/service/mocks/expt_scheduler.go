@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -47,4 +48,18 @@ func (m *MockSchedulerModeFactory) NewSchedulerMode(arg0 entity.ExptRunMode) (en
 func (mr *MockSchedulerModeFactoryMockRecorder) NewSchedulerMode(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewSchedulerMode", reflect.TypeOf((*MockSchedulerModeFactory)(nil).NewSchedulerMode), arg0)
+}
+
+// EnsureRunInitialized mocks base method.
+func (m *MockSchedulerModeFactory) EnsureRunInitialized(ctx context.Context, exptID, runID, spaceID int64, mode entity.ExptRunMode, session *entity.Session) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureRunInitialized", ctx, exptID, runID, spaceID, mode, session)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureRunInitialized indicates an expected call of EnsureRunInitialized.
+func (mr *MockSchedulerModeFactoryMockRecorder) EnsureRunInitialized(ctx, exptID, runID, spaceID, mode, session interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureRunInitialized", reflect.TypeOf((*MockSchedulerModeFactory)(nil).EnsureRunInitialized), ctx, exptID, runID, spaceID, mode, session)
 }

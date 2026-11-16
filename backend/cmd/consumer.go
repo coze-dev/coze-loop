@@ -11,6 +11,7 @@ import (
 	dataconsumer "github.com/coze-dev/coze-loop/backend/modules/data/infra/mq/consumer"
 	exptapp "github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	domainservice "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	evalconsumer "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/consumer"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/producer"
 	obapp "github.com/coze-dev/coze-loop/backend/modules/observability/application"
@@ -38,7 +39,16 @@ func MustInitConsumerWorkers(
 		panic(err)
 	}
 
-	workers, err := evalconsumer.NewConsumerWorkers(loader, experimentApplication, publisher)
+	var settlement []domainservice.CentralItemSettlementDeps
+	if provider, ok := experimentApplication.(interface {
+		CentralSettlementDeps() (domainservice.CentralItemSettlementDeps, bool)
+	}); ok {
+		if deps, ready := provider.CentralSettlementDeps(); ready {
+			settlement = append(settlement, deps)
+		}
+	}
+
+	workers, err := evalconsumer.NewConsumerWorkers(loader, experimentApplication, publisher, settlement...)
 	if err != nil {
 		panic(err)
 	}

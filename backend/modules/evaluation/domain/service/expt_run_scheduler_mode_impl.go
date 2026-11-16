@@ -51,6 +51,9 @@ type SchedulerModeFactory interface {
 	NewSchedulerMode(
 		mode entity.ExptRunMode,
 	) (entity.ExptSchedulerMode, error)
+	// EnsureRunInitialized 幂等初始化一次运行 attempt 的 item 行（复用各 run mode 的 ExptStart）。
+	// 中心调度激活实验时调用；不依赖旧 MQ daemon 在线。
+	EnsureRunInitialized(ctx context.Context, exptID, runID, spaceID int64, mode entity.ExptRunMode, session *entity.Session) error
 }
 
 func NewSchedulerModeFactory(
@@ -115,6 +118,28 @@ type DefaultSchedulerModeFactory struct {
 	exptRunLogRepo           repo.IExptRunLogRepo
 	mutex                    lock.ILocker
 	sandboxAgentNotifier     ISandboxAgentNotifier // 沙箱 agent 通知器,传递给三种重试执行器
+}
+
+func (f *DefaultSchedulerModeFactory) EnsureRunInitialized(
+	ctx context.Context, exptID, runID, spaceID int64, mode entity.ExptRunMode, session *entity.Session,
+) error {
+	expt, err := f.exptRepo.GetByID(ctx, exptID, spaceID)
+	if err != nil {
+		return err
+	}
+	exec, err := f.NewSchedulerMode(mode)
+	if err != nil {
+		return err
+	}
+	return exec.ExptStart(ctx, &entity.ExptScheduleEvent{
+		SpaceID:     spaceID,
+		ExptID:      exptID,
+		ExptRunID:   runID,
+		ExptRunMode: mode,
+		ExptType:    expt.ExptType,
+		CreatedAt:   time.Now().Unix(),
+		Session:     session,
+	}, expt)
 }
 
 func (f *DefaultSchedulerModeFactory) NewSchedulerMode(

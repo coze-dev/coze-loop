@@ -294,13 +294,16 @@ func (e *ExptMangerImpl) CheckBenefit(ctx context.Context, expt *entity.Experime
 }
 
 func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error {
-	if err := NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session); err != nil {
-		return err
-	}
-
 	expt, err := e.GetDetail(ctx, exptID, spaceID, session)
 	if err != nil {
 		return err
+	}
+
+	// legacy 实验保留每空间 200 运行实验准入；central 实验不占 legacy 池，也不受其限制。
+	if entity.GetSchedulingMeta(expt.EvalConf).Mode.IsLegacyLoopMode() {
+		if err := NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session); err != nil {
+			return err
+		}
 	}
 
 	// 在线实验：抢心跳锁成功才发送 MQ daemon，与 Invoke 一致。ExptEnd 会通过 UnlockForce 主动释放，适配分布式架构
@@ -395,13 +398,21 @@ func buildExptNotifyParam(expt *entity.Experiment, toStatus entity.ExptStatus) (
 }
 
 func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, itemIDs []int64, session *entity.Session, ext map[string]string) error {
-	if err := NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session); err != nil {
-		return err
-	}
-
 	expt, err := e.GetDetail(ctx, exptID, spaceID, session)
 	if err != nil {
 		return err
+	}
+	if entity.GetSchedulingMeta(expt.EvalConf).Mode.IsLegacyLoopMode() {
+		if err := NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session); err != nil {
+			return err
+		}
+	}
+
+	// 重试按新一次尝试重新预占：先释放本次重试 item 的旧预占，再让中心调度重新预占。
+	if e.centralReleaser != nil {
+		if rerr := e.centralReleaser.ReleaseItems(ctx, expt, runID, itemIDs, "retry_release_previous_attempt"); rerr != nil {
+			logs.CtxWarn(ctx, "[CentralReleaser] retry release fail, expt_id: %v, run_id: %v, err: %v", exptID, runID, rerr)
+		}
 	}
 
 	if err := e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
@@ -474,6 +485,13 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID, spa
 	if len(opt.CID) > 0 {
 		if err := e.idem.Set(ctx, idemKeyPrefix+opt.CID, time.Second*60*3); err != nil {
 			logs.CtxWarn(ctx, "CompleteRun SetNX fail, err: %v", err)
+		}
+	}
+
+	// run 终态释放该 attempt 的全部预占维度；重复调用由账本终态幂等。
+	if e.centralReleaser != nil {
+		if rerr := e.centralReleaser.ReleaseRunByID(ctx, exptID, exptRunID, spaceID, "complete_run"); rerr != nil {
+			logs.CtxWarn(ctx, "[CentralReleaser] complete run release fail, expt_id: %v, run_id: %v, err: %v", exptID, exptRunID, rerr)
 		}
 	}
 
@@ -682,6 +700,13 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 
 	if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(ctx, exptID, spaceID, session); err != nil {
 		return err
+	}
+
+	// 实验终态（完成/失败/取消 Kill 均走这里）释放该 run 全部维度。
+	if e.centralReleaser != nil && exptRunID != nil {
+		if rerr := e.centralReleaser.ReleaseRun(ctx, got, *exptRunID, "complete_expt"); rerr != nil {
+			logs.CtxWarn(ctx, "[CentralReleaser] complete expt release fail, expt_id: %v, run_id: %v, err: %v", exptID, *exptRunID, rerr)
+		}
 	}
 
 	if len(opt.CID) > 0 {

@@ -5,6 +5,7 @@ package consumer
 
 import (
 	"context"
+	"strings"
 
 	"github.com/bytedance/gg/gptr"
 
@@ -20,16 +21,30 @@ func NewConsumerWorkers(
 	loader conf.IConfigLoader,
 	exptApp application.IExperimentApplication,
 	publisher events.ExptEventPublisher,
+	settlement ...service.CentralItemSettlementDeps,
 ) ([]mq.IConsumerWorker, error) {
 	webhookHandler := NewWebhookRetryConsumer(publisher, service.NewNoopWebhookSecretProvider())
-	return []mq.IConsumerWorker{
+	// 中心调度事件在原有 eval 链路后做预占结算；旧事件 CentralReservationID 为空，包装器直接透传。
+	recordEval := service.NewCentralItemEvalService(exptApp, settlement...)
+	workers := []mq.IConsumerWorker{
 		NewExptSchedulerEventConsumer(NewExptSchedulerConsumer(exptApp), loader),
-		NewExptRecordEvalEventConsumer(NewExptRecordEvalConsumer(exptApp), loader),
+		NewExptRecordEvalEventConsumer(NewExptRecordEvalConsumer(recordEval), loader),
 		NewExptAggrCalculateEventConsumer(NewAggrCalculateConsumer(exptApp), loader),
 		NewExptTurnResultFilterEventConsumer(NewExptTurnResultFilterConsumer(exptApp), loader),
 		NewExptExportEventConsumer(NewExptExportConsumer(exptApp, exptApp), loader),
 		NewExptLifecycleEventConsumer(NewExptLifecycleConsumer(exptApp, webhookHandler), loader),
-	}, nil
+	}
+	if len(settlement) > 0 && settlement[0].Env != nil {
+		env, err := settlement[0].Env.CurrentEnvID(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		// env 专属 group：同一 group 跨泳道会造成消息被任一泳道抢走；消息内容仍按 CentralEnv 二次过滤。
+		suffix := strings.NewReplacer(":", "-", "{", "_", "}", "_").Replace(env)
+		workers = append(workers,
+			NewCentralExptRecordEvalEventConsumer(NewCentralExptRecordEvalConsumer(recordEval, settlement[0].Env), loader, suffix))
+	}
+	return workers, nil
 }
 
 func NewExptSchedulerEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
@@ -87,9 +102,19 @@ func NewExptRecordEvalEventConsumer(handler mq.IConsumerHandler, loader conf.ICo
 	}
 }
 
+// NewCentralExptRecordEvalEventConsumer 使用 env 专属 consumer group，避免多泳道争抢同一 group。
+func NewCentralExptRecordEvalEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader, envSuffix string) mq.IConsumerWorker {
+	return &ExptRecordEvalEventConsumer{
+		IConsumerHandler: handler,
+		IConfigLoader:    loader,
+		groupSuffix:      envSuffix,
+	}
+}
+
 type ExptRecordEvalEventConsumer struct {
 	mq.IConsumerHandler
 	conf.IConfigLoader
+	groupSuffix string
 }
 
 func (e *ExptRecordEvalEventConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig, error) {
@@ -97,7 +122,11 @@ func (e *ExptRecordEvalEventConsumer) ConsumerCfg(ctx context.Context) (*mq.Cons
 	if err := e.UnmarshalKey(ctx, rocket.ExptRecordEvalEventRMQKey, rmqCfg); err != nil {
 		return nil, err
 	}
-	return gptr.Of(rmqCfg.ToConsumerCfg()), nil
+	cfg := rmqCfg.ToConsumerCfg()
+	if e.groupSuffix != "" {
+		cfg.ConsumerGroup = cfg.ConsumerGroup + "-central-" + e.groupSuffix
+	}
+	return gptr.Of(cfg), nil
 }
 
 func NewExptAggrCalculateEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {

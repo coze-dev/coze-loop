@@ -387,7 +387,9 @@ type UpdateRunConfParam struct {
 	SpaceID       int64
 	ItemConcurNum *int
 	ItemRetryNum  *int
-	Session       *Session
+	// Ext 运行中更新调度元数据（模式/优先级等）；仅合并键，不整体覆盖。
+	Ext     map[string]string
+	Session *Session
 }
 
 type CreateExptParam struct {

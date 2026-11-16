@@ -85,6 +85,9 @@ type experimentApplication struct {
 
 	// 沙箱 agent 稳定性打点（experiment_started / experiment_finished / experiment_duration）
 	sandboxAgentMetrics metricscomp.SandboxAgentMetrics
+
+	// 中心调度器；未启用中心调度时仍构建但 Run 会按配置直接退出。
+	centralScheduler *service.CentralScheduler
 }
 
 const sandboxSchedulerInitTimeout = 5 * time.Second
@@ -124,8 +127,9 @@ func NewExperimentApplication(
 	lifecycleEventHandler service.ExptLifecycleEventHandler,
 	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter,
 	sandboxAgentMetrics metricscomp.SandboxAgentMetrics,
+	centralScheduler ...*service.CentralScheduler,
 ) IExperimentApplication {
-	return &experimentApplication{
+	app := &experimentApplication{
 		resultSvc:                   resultSvc,
 		manager:                     manager,
 		idgen:                       idgen,
@@ -148,6 +152,69 @@ func NewExperimentApplication(
 		sandboxSchedulerAdapter:     sandboxSchedulerAdapter,
 		sandboxAgentMetrics:         sandboxAgentMetrics,
 	}
+	if len(centralScheduler) > 0 {
+		app.centralScheduler = centralScheduler[0]
+	}
+	return app
+}
+
+// applyScheduling 校验并冻结实验调度模式/优先级/环境归属，并写入审计留痕。
+// 创建时未显式指定则固定为 legacy；运行中切换 central 需配置授权。
+func (e *experimentApplication) applyScheduling(ctx context.Context, conf *entity.EvaluationConfiguration, operator string, spaceID int64, reason string) error {
+	if e.centralScheduler == nil {
+		// 未接中心调度时只允许 legacy；显式 central 请求必须报错，不能静默降级。
+		if entity.GetSchedulingMeta(conf).Mode != entity.SchedulingModeLegacy {
+			return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("central scheduling is not available in this environment"))
+		}
+		return nil
+	}
+	env, err := e.centralScheduler.CurrentEnvID(ctx)
+	if err != nil {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("scheduling environment is unknown: "+err.Error()))
+	}
+	meta := entity.GetSchedulingMeta(conf)
+	authorized := meta.Mode == entity.SchedulingModeLegacy || e.centralScheduler.Authorized(ctx, operator, spaceID)
+	if err := entity.ApplySchedulingMeta(conf, entity.SchedulingApplyInput{
+		Authorized:    authorized,
+		Authorization: fmt.Sprintf("operator=%s space=%d mode=%s", operator, spaceID, meta.Mode),
+		Operator:      operator,
+		Reason:        reason,
+		Env:           env,
+	}); err != nil {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
+	return nil
+}
+
+// activateCentralIfNeeded 把 central/central_shadow 实验加入活跃集；legacy 不做任何事。
+func (e *experimentApplication) activateCentralIfNeeded(ctx context.Context, exptID, spaceID int64, session *entity.Session, runMode entity.ExptRunMode) error {
+	if e.centralScheduler == nil {
+		return nil
+	}
+	expt, err := e.manager.Get(ctx, exptID, spaceID, session)
+	if err != nil {
+		return err
+	}
+	meta := entity.GetSchedulingMeta(expt.EvalConf)
+	if meta.Mode != entity.SchedulingModeCentral && meta.Mode != entity.SchedulingModeCentralShadow {
+		return nil
+	}
+	return e.centralScheduler.Activate(ctx, expt, runMode)
+}
+
+// StartCentralScheduler 启动分钟级中心调度循环；不依赖旧 MQ 常驻。
+func (e *experimentApplication) StartCentralScheduler(ctx context.Context) {
+	if e.centralScheduler != nil {
+		go e.centralScheduler.Run(ctx)
+	}
+}
+
+// CentralSettlementDeps 暴露消费者侧预占结算所需依赖。
+func (e *experimentApplication) CentralSettlementDeps() (service.CentralItemSettlementDeps, bool) {
+	if e.centralScheduler == nil {
+		return service.CentralItemSettlementDeps{}, false
+	}
+	return e.centralScheduler.SettlementDeps(), true
 }
 
 func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.CreateExperimentRequest) (r *expt.CreateExperimentResponse, err error) {
@@ -234,6 +301,10 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 
 	param, err := experiment.ConvertCreateReq(req, evaluatorVersionRunConfigs)
 	if err != nil {
+		return nil, err
+	}
+	// 调度模式/优先级/环境在创建时冻结；central 需显式授权。
+	if err := e.applyScheduling(ctx, param.ExptConf, session.UserID, req.GetWorkspaceID(), "create_experiment"); err != nil {
 		return nil, err
 	}
 	createExpt, err := e.manager.CreateExpt(ctx, param, session)
@@ -1389,13 +1460,30 @@ func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt
 		itemRetryNum = gptr.Of(v)
 	}
 
-	if err = e.manager.UpdateRunConf(ctx, &entity.UpdateRunConfParam{
+	param := &entity.UpdateRunConfParam{
 		ExptID:        req.GetExptID(),
 		SpaceID:       req.GetWorkspaceID(),
 		ItemConcurNum: itemConcurNum,
 		ItemRetryNum:  itemRetryNum,
 		Session:       session,
-	}); err != nil {
+	}
+	// 运行中修改调度模式/优先级：只影响后续扫描，不抢占已派发 item；切换 central 需授权。
+	if len(req.GetExt()) > 0 {
+		merged := make(map[string]string, len(got.EvalConf.Ext)+len(req.GetExt()))
+		for k, v := range got.EvalConf.Ext {
+			merged[k] = v
+		}
+		for k, v := range req.GetExt() {
+			merged[k] = v
+		}
+		tmpConf := &entity.EvaluationConfiguration{Ext: merged}
+		if err := e.applyScheduling(ctx, tmpConf, session.UserID, req.GetWorkspaceID(), "update_run_conf"); err != nil {
+			return nil, err
+		}
+		param.Ext = tmpConf.Ext
+	}
+
+	if err = e.manager.UpdateRunConf(ctx, param); err != nil {
 		return nil, err
 	}
 
@@ -1564,6 +1652,9 @@ func (e *experimentApplication) RunExperiment(ctx context.Context, req *expt.Run
 	if err := e.manager.Run(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), int(req.GetItemRetryNum()), session, evalMode, req.GetExt()); err != nil {
 		return nil, err
 	}
+	if err := e.activateCentralIfNeeded(ctx, req.GetExptID(), req.GetWorkspaceID(), session, evalMode); err != nil {
+		return nil, err
+	}
 
 	return &expt.RunExperimentResponse{
 		RunID:    gptr.Of(runID),
@@ -1637,6 +1728,9 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 				return nil, err
 			}
 		}
+		if err := e.activateCentralIfNeeded(ctx, req.GetExptID(), req.GetWorkspaceID(), session, runMode); err != nil {
+			return nil, err
+		}
 	default:
 		if runID, err = e.idgen.GenID(ctx); err != nil {
 			return nil, err
@@ -1645,6 +1739,9 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 			return nil, err
 		}
 		if err := e.manager.Run(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), gptr.Indirect(got.EvalConf.ItemRetryNum), session, runMode, req.GetExt()); err != nil {
+			return nil, err
+		}
+		if err := e.activateCentralIfNeeded(ctx, req.GetExptID(), req.GetWorkspaceID(), session, runMode); err != nil {
 			return nil, err
 		}
 	}

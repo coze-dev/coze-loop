@@ -233,6 +233,10 @@ struct UpdateExptRunConfRequest {
     // 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
     4: optional i32 item_retry_num (api.body='item_retry_num')
 
+    // 可选：运行中更新调度元数据（central_scheduling_mode / central_priority）。
+    // 切换 central 模式需要配置授权；变更会写入 central_mode_trace/central_priority_trace 审计留痕。
+    5: optional map<string, string> ext (api.body='ext')
+
     255: optional base.Base Base
 }
 

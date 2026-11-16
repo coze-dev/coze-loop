@@ -2206,6 +2206,423 @@ func (p *RunModeConfig) Field11DeepEqual(src *string) bool {
 	return true
 }
 
+// 实验调度元数据。创建时冻结；运行中切换需显式授权。
+type SchedulingMeta struct {
+	// legacy / central_shadow / central
+	Mode *string `thrift:"mode,1,optional" frugal:"1,optional,string" form:"mode" json:"mode,omitempty" query:"mode"`
+	// 0..100，越高越先；0 为默认最低档
+	Priority *int32 `thrift:"priority,2,optional" frugal:"2,optional,i32" form:"priority" json:"priority,omitempty" query:"priority"`
+	// 实验环境归属；空表示归属不明，中心调度 fail-closed
+	Env *string `thrift:"env,3,optional" frugal:"3,optional,string" form:"env" json:"env,omitempty" query:"env"`
+	// 进入等待队列时间，用于同优先级 FIFO
+	WaitSinceMs *int64 `thrift:"wait_since_ms,4,optional" frugal:"4,optional,i64" json:"wait_since_ms" form:"wait_since_ms" query:"wait_since_ms"`
+}
+
+func NewSchedulingMeta() *SchedulingMeta {
+	return &SchedulingMeta{}
+}
+
+func (p *SchedulingMeta) InitDefault() {
+}
+
+var SchedulingMeta_Mode_DEFAULT string
+
+func (p *SchedulingMeta) GetMode() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMode() {
+		return SchedulingMeta_Mode_DEFAULT
+	}
+	return *p.Mode
+}
+
+var SchedulingMeta_Priority_DEFAULT int32
+
+func (p *SchedulingMeta) GetPriority() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPriority() {
+		return SchedulingMeta_Priority_DEFAULT
+	}
+	return *p.Priority
+}
+
+var SchedulingMeta_Env_DEFAULT string
+
+func (p *SchedulingMeta) GetEnv() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnv() {
+		return SchedulingMeta_Env_DEFAULT
+	}
+	return *p.Env
+}
+
+var SchedulingMeta_WaitSinceMs_DEFAULT int64
+
+func (p *SchedulingMeta) GetWaitSinceMs() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWaitSinceMs() {
+		return SchedulingMeta_WaitSinceMs_DEFAULT
+	}
+	return *p.WaitSinceMs
+}
+func (p *SchedulingMeta) SetMode(val *string) {
+	p.Mode = val
+}
+func (p *SchedulingMeta) SetPriority(val *int32) {
+	p.Priority = val
+}
+func (p *SchedulingMeta) SetEnv(val *string) {
+	p.Env = val
+}
+func (p *SchedulingMeta) SetWaitSinceMs(val *int64) {
+	p.WaitSinceMs = val
+}
+
+var fieldIDToName_SchedulingMeta = map[int16]string{
+	1: "mode",
+	2: "priority",
+	3: "env",
+	4: "wait_since_ms",
+}
+
+func (p *SchedulingMeta) IsSetMode() bool {
+	return p.Mode != nil
+}
+
+func (p *SchedulingMeta) IsSetPriority() bool {
+	return p.Priority != nil
+}
+
+func (p *SchedulingMeta) IsSetEnv() bool {
+	return p.Env != nil
+}
+
+func (p *SchedulingMeta) IsSetWaitSinceMs() bool {
+	return p.WaitSinceMs != nil
+}
+
+func (p *SchedulingMeta) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SchedulingMeta[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SchedulingMeta) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Mode = _field
+	return nil
+}
+func (p *SchedulingMeta) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Priority = _field
+	return nil
+}
+func (p *SchedulingMeta) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Env = _field
+	return nil
+}
+func (p *SchedulingMeta) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WaitSinceMs = _field
+	return nil
+}
+
+func (p *SchedulingMeta) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SchedulingMeta"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SchedulingMeta) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMode() {
+		if err = oprot.WriteFieldBegin("mode", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Mode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SchedulingMeta) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPriority() {
+		if err = oprot.WriteFieldBegin("priority", thrift.I32, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Priority); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *SchedulingMeta) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnv() {
+		if err = oprot.WriteFieldBegin("env", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Env); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *SchedulingMeta) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWaitSinceMs() {
+		if err = oprot.WriteFieldBegin("wait_since_ms", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WaitSinceMs); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *SchedulingMeta) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SchedulingMeta(%+v)", *p)
+
+}
+
+func (p *SchedulingMeta) DeepEqual(ano *SchedulingMeta) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Mode) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Priority) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Env) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.WaitSinceMs) {
+		return false
+	}
+	return true
+}
+
+func (p *SchedulingMeta) Field1DeepEqual(src *string) bool {
+
+	if p.Mode == src {
+		return true
+	} else if p.Mode == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Mode, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SchedulingMeta) Field2DeepEqual(src *int32) bool {
+
+	if p.Priority == src {
+		return true
+	} else if p.Priority == nil || src == nil {
+		return false
+	}
+	if *p.Priority != *src {
+		return false
+	}
+	return true
+}
+func (p *SchedulingMeta) Field3DeepEqual(src *string) bool {
+
+	if p.Env == src {
+		return true
+	} else if p.Env == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Env, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SchedulingMeta) Field4DeepEqual(src *int64) bool {
+
+	if p.WaitSinceMs == src {
+		return true
+	} else if p.WaitSinceMs == nil || src == nil {
+		return false
+	}
+	if *p.WaitSinceMs != *src {
+		return false
+	}
+	return true
+}
+
 type Experiment struct {
 	ID            *int64      `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
 	Name          *string     `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
@@ -2257,6 +2674,8 @@ type Experiment struct {
 	Ext              map[string]string     `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
 	// 离线实验分析状态
 	OfflineExptAnalysisStatus *OfflineExptAnalysisStatus `thrift:"offline_expt_analysis_status,101,optional" frugal:"101,optional,OfflineExptAnalysisStatus" form:"offline_expt_analysis_status" json:"offline_expt_analysis_status,omitempty" query:"offline_expt_analysis_status"`
+	// 调度元数据（可选；legacy 老数据为空）
+	Scheduling *SchedulingMeta `thrift:"scheduling,102,optional" frugal:"102,optional,SchedulingMeta" form:"scheduling" json:"scheduling,omitempty" query:"scheduling"`
 	// ★ 新增段位 110~119: 多评测集读视图
 	// 读接口分流开关: SingleSet=1(老实验) / MultiSetConfig=2(新实验); 直读 experiment 表同名列
 	EvalSetSourceType *ExptEvalSetSourceType `thrift:"eval_set_source_type,110,optional" frugal:"110,optional,ExptEvalSetSourceType" form:"eval_set_source_type" json:"eval_set_source_type,omitempty" query:"eval_set_source_type"`
@@ -2772,6 +3191,18 @@ func (p *Experiment) GetOfflineExptAnalysisStatus() (v OfflineExptAnalysisStatus
 	return *p.OfflineExptAnalysisStatus
 }
 
+var Experiment_Scheduling_DEFAULT *SchedulingMeta
+
+func (p *Experiment) GetScheduling() (v *SchedulingMeta) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetScheduling() {
+		return Experiment_Scheduling_DEFAULT
+	}
+	return p.Scheduling
+}
+
 var Experiment_EvalSetSourceType_DEFAULT ExptEvalSetSourceType
 
 func (p *Experiment) GetEvalSetSourceType() (v ExptEvalSetSourceType) {
@@ -2966,6 +3397,9 @@ func (p *Experiment) SetExt(val map[string]string) {
 func (p *Experiment) SetOfflineExptAnalysisStatus(val *OfflineExptAnalysisStatus) {
 	p.OfflineExptAnalysisStatus = val
 }
+func (p *Experiment) SetScheduling(val *SchedulingMeta) {
+	p.Scheduling = val
+}
 func (p *Experiment) SetEvalSetSourceType(val *ExptEvalSetSourceType) {
 	p.EvalSetSourceType = val
 }
@@ -3027,6 +3461,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	80:  "notification_conf",
 	100: "ext",
 	101: "offline_expt_analysis_status",
+	102: "scheduling",
 	110: "eval_set_source_type",
 	111: "eval_set_configs",
 	112: "eval_set_details",
@@ -3197,6 +3632,10 @@ func (p *Experiment) IsSetExt() bool {
 
 func (p *Experiment) IsSetOfflineExptAnalysisStatus() bool {
 	return p.OfflineExptAnalysisStatus != nil
+}
+
+func (p *Experiment) IsSetScheduling() bool {
+	return p.Scheduling != nil
 }
 
 func (p *Experiment) IsSetEvalSetSourceType() bool {
@@ -3564,6 +4003,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 101:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField101(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 102:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField102(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4137,6 +4584,14 @@ func (p *Experiment) ReadField101(iprot thrift.TProtocol) error {
 	p.OfflineExptAnalysisStatus = _field
 	return nil
 }
+func (p *Experiment) ReadField102(iprot thrift.TProtocol) error {
+	_field := NewSchedulingMeta()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Scheduling = _field
+	return nil
+}
 func (p *Experiment) ReadField110(iprot thrift.TProtocol) error {
 
 	var _field *ExptEvalSetSourceType
@@ -4394,6 +4849,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField101(oprot); err != nil {
 			fieldId = 101
+			goto WriteFieldError
+		}
+		if err = p.writeField102(oprot); err != nil {
+			fieldId = 102
 			goto WriteFieldError
 		}
 		if err = p.writeField110(oprot); err != nil {
@@ -5219,6 +5678,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
 }
+func (p *Experiment) writeField102(oprot thrift.TProtocol) (err error) {
+	if p.IsSetScheduling() {
+		if err = oprot.WriteFieldBegin("scheduling", thrift.STRUCT, 102); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Scheduling.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 end error: ", p), err)
+}
 func (p *Experiment) writeField110(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvalSetSourceType() {
 		if err = oprot.WriteFieldBegin("eval_set_source_type", thrift.I32, 110); err != nil {
@@ -5479,6 +5956,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field101DeepEqual(ano.OfflineExptAnalysisStatus) {
+		return false
+	}
+	if !p.Field102DeepEqual(ano.Scheduling) {
 		return false
 	}
 	if !p.Field110DeepEqual(ano.EvalSetSourceType) {
@@ -5945,6 +6425,13 @@ func (p *Experiment) Field101DeepEqual(src *OfflineExptAnalysisStatus) bool {
 		return false
 	}
 	if *p.OfflineExptAnalysisStatus != *src {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field102DeepEqual(src *SchedulingMeta) bool {
+
+	if !p.Scheduling.DeepEqual(src) {
 		return false
 	}
 	return true

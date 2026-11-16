@@ -68,6 +68,7 @@ type SortedSetCmdable interface {
 	ZAdd(ctx context.Context, key string, members ...redis.Z) *redis.IntCmd
 	ZAddNX(ctx context.Context, key string, members ...redis.Z) *redis.IntCmd
 	ZRange(ctx context.Context, key string, start, stop int64) *redis.StringSliceCmd
+	ZRem(ctx context.Context, key string, members ...any) *redis.IntCmd
 }
 
 // ListCmdable copy methods we need in [redis.ListCmdable]

@@ -24,6 +24,9 @@ var (
 func (p *RunModeConfig) IsValid() error {
 	return nil
 }
+func (p *SchedulingMeta) IsValid() error {
+	return nil
+}
 func (p *Experiment) IsValid() error {
 	if p.EvalSet != nil {
 		if err := p.EvalSet.IsValid(); err != nil {
@@ -73,6 +76,11 @@ func (p *Experiment) IsValid() error {
 	if p.NotificationConf != nil {
 		if err := p.NotificationConf.IsValid(); err != nil {
 			return fmt.Errorf("field NotificationConf not valid, %w", err)
+		}
+	}
+	if p.Scheduling != nil {
+		if err := p.Scheduling.IsValid(); err != nil {
+			return fmt.Errorf("field Scheduling not valid, %w", err)
 		}
 	}
 	if p.RunModeConfig != nil {

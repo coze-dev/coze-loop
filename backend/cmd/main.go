@@ -66,6 +66,13 @@ func main() {
 	signalCtx, signalCancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer signalCancel()
 
+	// 中心调度与 MQ consumer 生命周期并行；不依赖旧 daemon 在线。
+	if starter, ok := any(handler.EvaluationHandler.IExperimentApplication).(interface {
+		StartCentralScheduler(context.Context)
+	}); ok {
+		starter.StartCentralScheduler(signalCtx)
+	}
+
 	r := registry.NewConsumerRegistryWithShutdown(signalCtx, c.mqFactory).Register(MustInitConsumerWorkers(c.cfgFactory, c.mqFactory, handler, handler, handler, handler))
 	if err := r.StartAll(ctx); err != nil {
 		panic(err)

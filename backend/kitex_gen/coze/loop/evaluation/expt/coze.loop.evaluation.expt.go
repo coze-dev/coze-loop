@@ -10151,8 +10151,11 @@ type UpdateExptRunConfRequest struct {
 	// 评测项并发度：不传或 0 表示不修改；范围 (0, MaxItemConcurNum]
 	ItemConcurNum *int32 `thrift:"item_concur_num,3,optional" frugal:"3,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty"`
 	// 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
-	ItemRetryNum *int32     `thrift:"item_retry_num,4,optional" frugal:"4,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
-	Base         *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	ItemRetryNum *int32 `thrift:"item_retry_num,4,optional" frugal:"4,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
+	// 可选：运行中更新调度元数据（central_scheduling_mode / central_priority）。
+	// 切换 central 模式需要配置授权；变更会写入 central_mode_trace/central_priority_trace 审计留痕。
+	Ext  map[string]string `thrift:"ext,5,optional" frugal:"5,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	Base *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUpdateExptRunConfRequest() *UpdateExptRunConfRequest {
@@ -10200,6 +10203,18 @@ func (p *UpdateExptRunConfRequest) GetItemRetryNum() (v int32) {
 	return *p.ItemRetryNum
 }
 
+var UpdateExptRunConfRequest_Ext_DEFAULT map[string]string
+
+func (p *UpdateExptRunConfRequest) GetExt() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExt() {
+		return UpdateExptRunConfRequest_Ext_DEFAULT
+	}
+	return p.Ext
+}
+
 var UpdateExptRunConfRequest_Base_DEFAULT *base.Base
 
 func (p *UpdateExptRunConfRequest) GetBase() (v *base.Base) {
@@ -10223,6 +10238,9 @@ func (p *UpdateExptRunConfRequest) SetItemConcurNum(val *int32) {
 func (p *UpdateExptRunConfRequest) SetItemRetryNum(val *int32) {
 	p.ItemRetryNum = val
 }
+func (p *UpdateExptRunConfRequest) SetExt(val map[string]string) {
+	p.Ext = val
+}
 func (p *UpdateExptRunConfRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -10232,6 +10250,7 @@ var fieldIDToName_UpdateExptRunConfRequest = map[int16]string{
 	2:   "expt_id",
 	3:   "item_concur_num",
 	4:   "item_retry_num",
+	5:   "ext",
 	255: "Base",
 }
 
@@ -10241,6 +10260,10 @@ func (p *UpdateExptRunConfRequest) IsSetItemConcurNum() bool {
 
 func (p *UpdateExptRunConfRequest) IsSetItemRetryNum() bool {
 	return p.ItemRetryNum != nil
+}
+
+func (p *UpdateExptRunConfRequest) IsSetExt() bool {
+	return p.Ext != nil
 }
 
 func (p *UpdateExptRunConfRequest) IsSetBase() bool {
@@ -10296,6 +10319,14 @@ func (p *UpdateExptRunConfRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10393,6 +10424,35 @@ func (p *UpdateExptRunConfRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.ItemRetryNum = _field
 	return nil
 }
+func (p *UpdateExptRunConfRequest) ReadField5(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.Ext = _field
+	return nil
+}
 func (p *UpdateExptRunConfRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -10422,6 +10482,10 @@ func (p *UpdateExptRunConfRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -10514,6 +10578,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *UpdateExptRunConfRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExt() {
+		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Ext)); err != nil {
+			return err
+		}
+		for k, v := range p.Ext {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 func (p *UpdateExptRunConfRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -10559,6 +10652,9 @@ func (p *UpdateExptRunConfRequest) DeepEqual(ano *UpdateExptRunConfRequest) bool
 	if !p.Field4DeepEqual(ano.ItemRetryNum) {
 		return false
 	}
+	if !p.Field5DeepEqual(ano.Ext) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -10600,6 +10696,19 @@ func (p *UpdateExptRunConfRequest) Field4DeepEqual(src *int32) bool {
 	}
 	if *p.ItemRetryNum != *src {
 		return false
+	}
+	return true
+}
+func (p *UpdateExptRunConfRequest) Field5DeepEqual(src map[string]string) bool {
+
+	if len(p.Ext) != len(src) {
+		return false
+	}
+	for k, v := range p.Ext {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }

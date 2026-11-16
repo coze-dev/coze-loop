@@ -66,8 +66,9 @@ func NewExptManager(
 	pipelineListAdapter rpc.IPipelineListAdapter,
 	resourceAccessAuthorizer ResourceAccessAuthorizer,
 	sandboxAgentMetrics metrics.SandboxAgentMetrics,
+	centralReleaser ...ICentralReservationReleaser,
 ) IExptManager {
-	return &ExptMangerImpl{
+	mgr := &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
 		exptResultService:           exptResultService,
 		exptRepo:                    exptRepo,
@@ -99,6 +100,10 @@ func NewExptManager(
 		resourceAccessAuthorizer:    resourceAccessAuthorizer,
 		sandboxAgentMetrics:         sandboxAgentMetrics,
 	}
+	if len(centralReleaser) > 0 {
+		mgr.centralReleaser = centralReleaser[0]
+	}
+	return mgr
 }
 
 type ExptMangerImpl struct {
@@ -133,6 +138,8 @@ type ExptMangerImpl struct {
 	resourceAccessAuthorizer    ResourceAccessAuthorizer
 	// 沙箱 agent 稳定性打点，CompleteExpt 里上报 experiment_finished / experiment_duration
 	sandboxAgentMetrics metrics.SandboxAgentMetrics
+	// 中心调度预占释放；legacy 实验为空实现（不触碰 old 链路）。
+	centralReleaser ICentralReservationReleaser
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {
@@ -1651,6 +1658,14 @@ func (e *ExptMangerImpl) UpdateRunConf(ctx context.Context, param *entity.Update
 	if param.ItemRetryNum != nil {
 		evalConf.ItemRetryNum = param.ItemRetryNum
 	}
+	if len(param.Ext) > 0 {
+		if evalConf.Ext == nil {
+			evalConf.Ext = make(map[string]string, len(param.Ext))
+		}
+		for k, v := range param.Ext {
+			evalConf.Ext[k] = v
+		}
+	}
 
 	bytes, err := json.Marshal(evalConf)
 	if err != nil {
@@ -1668,6 +1683,13 @@ func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, sess
 	expt, err := e.exptRepo.GetByID(ctx, exptID, spaceID)
 	if err != nil {
 		return err
+	}
+
+	// 删除实验前释放该实验所有中心调度预占；归属不明时不释放（fail-closed）。
+	if e.centralReleaser != nil {
+		if rerr := e.centralReleaser.ReleaseExperiment(ctx, expt, "delete_experiment"); rerr != nil {
+			logs.CtxWarn(ctx, "[CentralReleaser] delete release fail, expt_id: %v, err: %v", exptID, rerr)
+		}
 	}
 
 	// 删除实验

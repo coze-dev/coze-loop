@@ -134,6 +134,10 @@ func (p *provider) ZRange(ctx context.Context, key string, start, stop int64) *r
 	return p.cli.ZRange(ctx, key, start, stop)
 }
 
+func (p *provider) ZRem(ctx context.Context, key string, members ...any) *redis.IntCmd {
+	return p.cli.ZRem(ctx, key, members...)
+}
+
 func (p *provider) Del(ctx context.Context, keys ...string) *redis.IntCmd {
 	return p.cli.Del(ctx, keys...)
 }

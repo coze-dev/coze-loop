@@ -44,6 +44,11 @@ type ExptItemEvalEvent struct {
 	MaxRetryTimes int
 	Ext           map[string]string
 	Session       *Session
+
+	// 中心调度可选字段；旧事件为空，走 legacy 逻辑。
+	CentralReservationID string `json:"central_reservation_id,omitempty"`
+	CentralEnv           string `json:"central_env,omitempty"`
+	CentralMode          string `json:"central_mode,omitempty"`
 }
 
 func (e *ExptItemEvalEvent) WithCtxForceNoRetry(ctx context.Context) {

@@ -400,6 +400,13 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		}
 		res.EnableExtractTrajectory = experiment.EvalConf.EnableExtractTrajectory
 		res.Ext = experiment.EvalConf.Ext
+		meta := entity.GetSchedulingMeta(experiment.EvalConf)
+		res.Scheduling = &domain_expt.SchedulingMeta{
+			Mode:        gptr.Of(string(meta.Mode)),
+			Priority:    gptr.Of(meta.Priority),
+			Env:         gptr.Of(meta.Env),
+			WaitSinceMs: gptr.Of(meta.WaitSinceMS),
+		}
 	}
 
 	// 填充权重配置（score_weight_config 和 enable_weighted_score）
