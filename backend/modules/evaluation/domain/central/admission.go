@@ -188,14 +188,14 @@ func (a *Admission) Acquire(ctx Ctx, run ActiveRun, itemIDs []int64) ([]int64, e
 		case ReserveGranted:
 			ok, cerr := claim(itemID)
 			if cerr != nil {
-				_, _, _ = a.Store.Transition(ctx, scope, ReservationID(scope, run.Key, itemID), "", ReservationPendingRelease, "claim_error", time.Time{})
-				_, _ = a.Store.Release(ctx, scope, ReservationID(scope, run.Key, itemID), "claim_error")
+				// The reservation may or may not have been claimed. Do not refund
+				// it here: a lost claim response could belong to another winner.
+				// Leave it reserved/dispatched for the observer and TTL reconcile.
 				return granted, cerr
 			}
 			if !ok {
-				// Another dispatcher claimed this item between reserve and claim.
-				_, _, _ = a.Store.Transition(ctx, scope, ReservationID(scope, run.Key, itemID), "", ReservationPendingRelease, "claim_lost", time.Time{})
-				_, _ = a.Store.Release(ctx, scope, ReservationID(scope, run.Key, itemID), "claim_lost")
+				// Another dispatcher owns this reservation now. Releasing it here
+				// would refund the winner's live hold and invite a duplicate.
 				continue
 			}
 			newHolds++

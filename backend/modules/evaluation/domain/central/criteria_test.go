@@ -126,6 +126,49 @@ func TestDispatchClaimFencesTwoInstances(t *testing.T) {
 	}
 }
 
+type losingClaimStore struct{ *MemoryStore }
+
+// Claim lets the underlying store perform the winning claim, then reports a loss
+// to the caller to simulate two racers that both read "reserved".
+func (s *losingClaimStore) Claim(ctx Ctx, scope Scope, id string, reason string, at time.Time) (bool, ReservationState, error) {
+	_, state, err := s.MemoryStore.Claim(ctx, scope, id, reason, at)
+	return false, state, err
+}
+
+func TestLostClaimDoesNotReleaseWinnerReservation(t *testing.T) {
+	clock := newFakeClock()
+	base := NewMemoryStore(clock)
+	scope := testScope().WithSpace(10)
+	capacity := fullCapacity(1)
+	if err := base.EnsureLedger(nil, scope, capacity); err != nil {
+		t.Fatal(err)
+	}
+	run := testRun(10, 20, 30, 0, clock.Now())
+	run.Scope = scope
+	run.Budget = 1
+	adm := &Admission{
+		Store:     &losingClaimStore{MemoryStore: base},
+		Clock:     clock,
+		Limits:    Limits{Capacity: capacity, ReservationTTL: time.Minute},
+		ModeFn:    func(Ctx, RunKey) Mode { return ModeEnforce },
+		ScopeFn:   func(_ Ctx, id int64) Scope { return scope.WithSpace(id) },
+		AllowedFn: func(Ctx, RunKey) bool { return true },
+	}
+	granted, err := adm.Acquire(nil, run, []int64{7})
+	if err != nil || len(granted) != 0 {
+		t.Fatalf("loser granted=%v err=%v", granted, err)
+	}
+	id := ReservationID(scope, run.Key, 7)
+	rec, found, gerr := base.GetReservation(nil, scope, id)
+	if gerr != nil || !found || rec.State != ReservationDispatched {
+		t.Fatalf("winner reservation was released: found=%v rec=%+v err=%v", found, rec, gerr)
+	}
+	ledger, _ := base.Ledger(nil, scope)
+	if ledger.Available[ResourceItemSlot] != 0 {
+		t.Fatalf("winner hold was refunded: available=%d", ledger.Available[ResourceItemSlot])
+	}
+}
+
 func TestMemoryDispatchClaimHasSingleWinner(t *testing.T) {
 	clock := newFakeClock()
 	store := NewMemoryStore(clock)
