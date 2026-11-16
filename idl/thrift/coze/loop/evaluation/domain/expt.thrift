@@ -129,6 +129,48 @@ const ExptTriggerType Manual = "manual"
 const ExptTriggerType OpenAPI = "openapi"
 const ExptTriggerType Schedule = "schedule"
 
+// ---- 中心化调度契约 (central scheduling) ----
+// 只做向后兼容的追加: 旧字段号/语义不变, 新字段均为 optional。
+// 调度状态本身存放在 Redis (qn:central:<env>:<region>:*), 不新增 DB 列。
+enum ExptSchedulingMode {
+    Legacy  = 0 // 旧模式: 每实验 MQ 20s 自循环 + 200 运行实验准入
+    Shadow  = 1 // 只评估中心决策, 不改派发
+    Enforce = 2 // 预占多资源额度后派发, 抑制该 run 的自循环
+}
+
+// 一种资源的原子预占记录。
+struct CentralResourceHold {
+    1: optional string resource_kind // item_slot / target_slot / sandbox_slot
+    2: optional i64 amount
+}
+
+// 实验/运行的调度策略与账本视图 (只读回显; 写入走平台配置或 Redis)。
+struct ExptSchedulingPolicy {
+    1: optional ExptSchedulingMode mode
+    2: optional i32 priority // 越小越优先
+    3: optional map<string, i64> resource_capacity
+    4: optional map<string, i64> resource_available
+    5: optional map<string, i64> resource_reserved
+    6: optional string env_scope // 如 ppe_<lane> / online_<region>
+    7: optional string region_scope
+    8: optional i64 reservation_ttl_seconds
+}
+
+// 单条多资源预占的可观测记录。
+struct CentralReservation {
+    1: optional string reservation_id
+    2: optional i64 space_id (api.js_conv='true', go.tag='json:"space_id"')
+    3: optional i64 expt_id (api.js_conv='true', go.tag='json:"expt_id"')
+    4: optional i64 expt_run_id (api.js_conv='true', go.tag='json:"expt_run_id"')
+    5: optional i64 item_id (api.js_conv='true', go.tag='json:"item_id"')
+    6: optional list<CentralResourceHold> holds
+    7: optional string state // held / released
+    8: optional i64 created_at (api.js_conv='true', go.tag='json:"created_at"')
+    9: optional i64 expires_at (api.js_conv='true', go.tag='json:"expires_at"')
+    10: optional string env
+    11: optional string region
+}
+
 struct Experiment {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
     2: optional string name
@@ -202,6 +244,11 @@ struct Experiment {
     // 实验级多轮/SUA 跑法配置回显: 从 experiment.eval_conf.run_mode_config 反序列化, 与 Create/Submit 入参 run_mode_config 同构。
     // 仅 SandboxAgent + MultiSetConfig 实验非空。SUA 模型的 api_key/base_url 是运行时从 TCC 解析注入 case-file, 绝不回显。
     115: optional RunModeConfig run_mode_config
+
+    // ★ 中心化调度 (120~122): 只读回显; 实际调度状态在 Redis, 不落 DB。
+    120: optional ExptSchedulingMode scheduling_mode
+    121: optional i32 scheduling_priority // 越小越优先; 未配置时由 Redis qn:central:*:prio 提供
+    122: optional ExptSchedulingPolicy scheduling_policy
 }
 
 // 实验模板基础信息

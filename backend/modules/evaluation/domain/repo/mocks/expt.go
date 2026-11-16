@@ -1006,6 +1006,21 @@ func (mr *MockIExptRunLogRepoMockRecorder) Get(arg0, arg1, arg2 any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIExptRunLogRepo)(nil).Get), arg0, arg1, arg2)
 }
 
+// ListActive mocks base method.
+func (m *MockIExptRunLogRepo) ListActive(arg0 context.Context, arg1, arg2 int64) ([]*entity.ExptRunLog, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListActive", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]*entity.ExptRunLog)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListActive indicates an expected call of ListActive.
+func (mr *MockIExptRunLogRepoMockRecorder) ListActive(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActive", reflect.TypeOf((*MockIExptRunLogRepo)(nil).ListActive), arg0, arg1, arg2)
+}
+
 // Save mocks base method.
 func (m *MockIExptRunLogRepo) Save(arg0 context.Context, arg1 *entity.ExptRunLog) error {
 	m.ctrl.T.Helper()

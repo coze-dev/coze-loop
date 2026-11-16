@@ -51,6 +51,9 @@ type IExperimentApplication interface {
 	service.IExptResultExportService
 	service.IExptInsightAnalysisService
 	service.ExptLifecycleEventHandler
+	// AttachCentralAdmission injects the optional central scheduling gate after
+	// wire construction. nil keeps the legacy MQ self-loop unchanged.
+	AttachCentralAdmission(admission service.CentralAdmission)
 }
 
 type experimentApplication struct {
@@ -85,6 +88,15 @@ type experimentApplication struct {
 
 	// 沙箱 agent 稳定性打点（experiment_started / experiment_finished / experiment_duration）
 	sandboxAgentMetrics metricscomp.SandboxAgentMetrics
+}
+
+// AttachCentralAdmission attaches the central scheduling gate to the concrete
+// scheduler when present. The interface assertion keeps this a no-op in tests
+// that substitute a plain ExptSchedulerEvent mock.
+func (e *experimentApplication) AttachCentralAdmission(admission service.CentralAdmission) {
+	if impl, ok := e.ExptSchedulerEvent.(*service.ExptSchedulerImpl); ok {
+		impl.SetCentralAdmission(admission)
+	}
 }
 
 const sandboxSchedulerInitTimeout = 5 * time.Second

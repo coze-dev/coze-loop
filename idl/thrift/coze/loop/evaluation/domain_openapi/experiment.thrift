@@ -305,6 +305,12 @@ struct Experiment {
     // 用本文件已有的 RunModeConfig (字符串枚举), 不要 include domain/expt.thrift —— 会符号冲突。
     115: optional RunModeConfig run_mode_config
 
+    // ★ 中心化调度读视图 (与 domain/expt.thrift 120~122 同义)。
+    // 调度状态存放在 Redis (qn:central:<env>:<region>:*), 不新增 DB 列。
+    // 120: legacy / shadow / enforce
+    120: optional string scheduling_mode
+    121: optional i32 scheduling_priority // 越小越优先
+    122: optional map<string, i64> scheduling_resource_limits
 
     100: optional common.BaseInfo base_info
 }

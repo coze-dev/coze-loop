@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/central"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
@@ -69,6 +70,15 @@ type ExptSchedulerImpl struct {
 	sandboxAgentMetrics metrics.SandboxAgentMetrics
 	// sandboxAgentNotifier 每 1h 进度快照飞书通知; 允许为 nil (未接入通知)。
 	sandboxAgentNotifier ISandboxAgentNotifier
+	// centralAdmission 中心化调度闸门; 允许为 nil (默认完全走历史 MQ 自循环)。
+	// 用 SetCentralAdmission 在 wire 之后注入，避免修改既有构造函数签名破坏旧调用方。
+	centralAdmission CentralAdmission
+}
+
+// SetCentralAdmission attaches the optional central scheduling gate. nil keeps
+// the legacy path unchanged.
+func (e *ExptSchedulerImpl) SetCentralAdmission(admission CentralAdmission) {
+	e.centralAdmission = admission
 }
 
 func NewExptSchedulerSvc(
@@ -136,6 +146,19 @@ func NewExptSchedulerSvc(
 	return i
 }
 
+func (e *ExptSchedulerImpl) centralMode(ctx context.Context, event *entity.ExptScheduleEvent) central.Mode {
+	if e.centralAdmission == nil {
+		return central.ModeLegacy
+	}
+	return e.centralAdmission.Mode(ctx, event)
+}
+
+func (e *ExptSchedulerImpl) releaseCentralRun(ctx context.Context, event *entity.ExptScheduleEvent) {
+	if e.centralAdmission != nil {
+		e.centralAdmission.ReleaseRun(ctx, event)
+	}
+}
+
 func (e *ExptSchedulerImpl) Schedule(ctx context.Context, event *entity.ExptScheduleEvent) error {
 	ctx = ctxcache.Init(ctx)
 
@@ -179,6 +202,8 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 
 		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
 			logs.CtxInfo(ctx, "ExptSchedulerConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
+			// 终态/收敛中: 释放该 run 的中心额度 (legacy 模式下是 no-op)。
+			e.releaseCentralRun(ctx, event)
 			return nil
 		}
 
@@ -311,6 +336,8 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 			return errorx.Wrapf(err, "complete expt fail, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 		}
 
+		// 业务错误终止: 释放中心额度 (legacy no-op)。
+		e.releaseCentralRun(ctx, event)
 		return nil
 	}
 }
@@ -427,6 +454,8 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	}
 
 	if !nextTick {
+		// run 收敛: 释放该 run 剩余的中心额度 (legacy no-op)。
+		e.releaseCentralRun(ctx, event)
 		if event.ExptRunMode == entity.EvaluationModeAppend {
 			logs.CtxInfo(ctx, "[ExptEval] online expt daemon ended, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
 		}
@@ -434,6 +463,15 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	}
 
 	logs.CtxInfo(ctx, "[ExptEval] expt daemon with next tick, expt_id: %v, expt_run_id: %v, space_id: %v, to_submit: %v, incomplete: %v", event.ExptID, event.ExptRunID, event.SpaceID, entity.ExptEvalItems(toSubmit).GetItemIDs(), entity.ExptEvalItems(incomplete).GetItemIDs())
+
+	// enforce 模式: 抑制每实验 MQ 自循环, 由中心 worker 统一驱动下一次 tick。
+	// legacy/shadow 模式仍走历史 NextTick, 保证旧链路不变。
+	if e.centralMode(ctx, event) == central.ModeEnforce {
+		if err := e.centralAdmission.Heartbeat(ctx, event); err != nil {
+			return err
+		}
+		return nil
+	}
 
 	select {
 	case <-time.After(time.Second * 3):
@@ -478,6 +516,11 @@ func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *en
 			return err
 		}); err != nil {
 			return err
+		}
+		// item 已落终态 (success/fail/zombie): 释放该 item 的多资源预占。
+		// 失败时保留到 reconcile 兜底, 避免与 record 落库重试竞争。
+		if e.centralAdmission != nil {
+			e.centralAdmission.ReleaseItems(ctx, event, []int64{item.ItemID})
 		}
 		time.Sleep(time.Millisecond * 50)
 
@@ -617,9 +660,53 @@ func (e *ExptSchedulerImpl) sendItemComplete(ctx context.Context, event *entity.
 	return nil
 }
 
+func filterItemsByID(items []*entity.ExptEvalItem, ids []int64) []*entity.ExptEvalItem {
+	if len(ids) == 0 {
+		return nil
+	}
+	allowed := make(map[int64]struct{}, len(ids))
+	for _, id := range ids {
+		allowed[id] = struct{}{}
+	}
+	out := make([]*entity.ExptEvalItem, 0, len(ids))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		if _, ok := allowed[item.ItemID]; ok {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
 func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.ExptScheduleEvent, toSubmits []*entity.ExptEvalItem) error {
 	if len(toSubmits) == 0 {
 		return nil
+	}
+
+	// 中心化调度闸门: 派发前原子预占多资源额度。
+	// legacy 模式下 Mode==Legacy, 整段逻辑不生效, 行为与历史完全一致。
+	var centralGranted []int64
+	if mode := e.centralMode(ctx, event); mode != central.ModeLegacy {
+		ids := make([]int64, 0, len(toSubmits))
+		for _, ts := range toSubmits {
+			if !entity.IsItemRunFinished(ts.State) {
+				ids = append(ids, ts.ItemID)
+			}
+		}
+		granted, err := e.centralAdmission.AcquireItems(ctx, event, ids)
+		if err != nil {
+			return err
+		}
+		if mode == central.ModeEnforce {
+			centralGranted = granted
+			toSubmits = filterItemsByID(toSubmits, granted)
+			if len(toSubmits) == 0 {
+				logs.CtxInfo(ctx, "[ExptEval] central gate denied all items (quota exhausted), expt_id=%v run_id=%v", event.ExptID, event.ExptRunID)
+				return nil
+			}
+		}
 	}
 
 	now := time.Now().Unix()
@@ -647,6 +734,10 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 
 	interval := e.Configer.GetExptExecConf(ctx, event.SpaceID).GetExptItemEvalConf().GetInterval()
 	if err := e.Publisher.BatchPublishExptRecordEvalEvent(ctx, itemEvalEvents, gptr.Of(interval)); err != nil {
+		// 派发确定失败: 立即补偿释放本批预占, 让下一 tick 重新排队。
+		if len(centralGranted) > 0 {
+			e.centralAdmission.ReleaseItems(ctx, event, centralGranted)
+		}
 		return err
 	}
 

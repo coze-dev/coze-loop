@@ -129,6 +129,9 @@ struct SubmitExperimentRequest {
     // 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
     76: optional expt.ExptEvalSetSourceType eval_set_source_type (api.body = 'eval_set_source_type')
 
+    // ★ 中心化调度优先级 (越小越优先)。缺省 0; 实际调度状态由 Redis qn:central:*:prio 承载。
+    80: optional i32 scheduling_priority (api.body = 'scheduling_priority')
+
     // 单评测集(SingleSet)跨空间共享来源; 多评测集走 eval_set_configs 内每个 EvalSetConfig 的 shared_option
     80: optional common.SharedResourceOption eval_set_shared_option (api.body = 'eval_set_shared_option') // 评测集来源空间
     81: optional common.SharedResourceOption target_shared_option (api.body = 'target_shared_option')     // 评测对象来源空间

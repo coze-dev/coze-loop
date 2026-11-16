@@ -648,6 +648,9 @@ struct SubmitExperimentOApiRequest {
     // 通知配置
     50: optional experiment.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
+    // ★ 中心化调度优先级 (越小越优先)。缺省 0; 实际调度状态由 Redis qn:central:*:prio 承载。
+    55: optional i32 scheduling_priority (api.body = 'scheduling_priority')
+
     100: optional map<string, string> ext (api.body = 'ext')
 
     // 实验分组 key 默认以实验 ID 兜底；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）。

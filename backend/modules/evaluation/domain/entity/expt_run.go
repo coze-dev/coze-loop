@@ -221,6 +221,23 @@ type ExptExecConf struct {
 	SpaceExptConcurLimit int `json:"space_expt_concur_limit" mapstructure:"space_expt_concur_limit"`
 
 	ExptItemEvalConf *ExptItemEvalConf `json:"expt_item_eval_conf" mapstructure:"expt_item_eval_conf"`
+
+	// ---- 中心化调度（central scheduling）----
+	// 空值/legacy = 完全保持历史 MQ 20s 自循环 + 200 运行实验准入。
+	// shadow = 只评估中心决策、不改派发；enforce = 对白名单命中项预占后派发并抑制自循环。
+	CentralSchedulingMode string `json:"central_scheduling_mode" mapstructure:"central_scheduling_mode"`
+	// enforce 白名单：两者都为空时 enforce 不生效（避免误配置全局接管）。
+	CentralSchedulingSpaceIDs []int64 `json:"central_scheduling_space_ids" mapstructure:"central_scheduling_space_ids"`
+	CentralSchedulingExptIDs   []int64 `json:"central_scheduling_expt_ids" mapstructure:"central_scheduling_expt_ids"`
+
+	// 全局资源池容量（跨空间共享）。0 表示使用默认值。
+	CentralResourceItemSlot    int64 `json:"central_resource_item_slot" mapstructure:"central_resource_item_slot"`
+	CentralResourceTargetSlot  int64 `json:"central_resource_target_slot" mapstructure:"central_resource_target_slot"`
+	CentralResourceSandboxSlot int64 `json:"central_resource_sandbox_slot" mapstructure:"central_resource_sandbox_slot"`
+
+	CentralReservationTTLSecond  int `json:"central_reservation_ttl_second" mapstructure:"central_reservation_ttl_second"`
+	CentralDispatchGraceSecond   int `json:"central_dispatch_grace_second" mapstructure:"central_dispatch_grace_second"`
+	CentralLedgerRebuildInterval int `json:"central_ledger_rebuild_interval" mapstructure:"central_ledger_rebuild_interval"`
 }
 
 func (e *ExptExecConf) GetSpaceExptConcurLimit() int {
@@ -249,6 +266,77 @@ func (e *ExptExecConf) GetExptItemEvalConf() *ExptItemEvalConf {
 		return e.ExptItemEvalConf
 	}
 	return nil
+}
+
+// GetCentralSchedulingMode 返回配置的调度模式字符串（legacy/shadow/enforce）。
+// 空值视为 legacy；未知值也按 legacy 处理，避免误配置接管线上调度。
+func (e *ExptExecConf) GetCentralSchedulingMode() string {
+	if e == nil {
+		return "legacy"
+	}
+	switch e.CentralSchedulingMode {
+	case "shadow", "enforce", "legacy":
+		return e.CentralSchedulingMode
+	default:
+		return "legacy"
+	}
+}
+
+// CentralEnforced 判断某实验是否命中 enforce 白名单。
+// 两个白名单都为空时返回 false：enforce 必须有明确灰度范围。
+func (e *ExptExecConf) CentralEnforced(spaceID, exptID int64) bool {
+	if e == nil {
+		return false
+	}
+	if len(e.CentralSchedulingSpaceIDs) == 0 && len(e.CentralSchedulingExptIDs) == 0 {
+		return false
+	}
+	for _, id := range e.CentralSchedulingSpaceIDs {
+		if id == spaceID {
+			return true
+		}
+	}
+	for _, id := range e.CentralSchedulingExptIDs {
+		if id == exptID {
+			return true
+		}
+	}
+	return false
+}
+
+// GetCentralCapacity 返回多资源池容量。0 使用保守默认值。
+func (e *ExptExecConf) GetCentralCapacity() map[string]int64 {
+	item, target, sandbox := int64(200), int64(200), int64(200)
+	if e != nil {
+		if e.CentralResourceItemSlot > 0 {
+			item = e.CentralResourceItemSlot
+		}
+		if e.CentralResourceTargetSlot > 0 {
+			target = e.CentralResourceTargetSlot
+		}
+		if e.CentralResourceSandboxSlot > 0 {
+			sandbox = e.CentralResourceSandboxSlot
+		}
+	}
+	return map[string]int64{
+		"item_slot":    item,
+		"target_slot":  target,
+		"sandbox_slot": sandbox,
+	}
+}
+
+func (e *ExptExecConf) GetCentralReservationTTL() time.Duration {
+	if e != nil && e.CentralReservationTTLSecond > 0 {
+		return time.Duration(e.CentralReservationTTLSecond) * time.Second
+	}
+	return 5 * time.Minute
+}
+
+func (e *ExptExecConf) GetCentralDispatchGrace() time.Duration {
+	if e != nil && e.CentralDispatchGraceSecond > 0 {
+		return time.Duration(e.CentralDispatchGraceSecond) * time.Second
+	}
+	return time.Minute
 }
 
 type ExptItemEvalConf struct {

@@ -31,6 +31,23 @@ func (e *ExptRunLogImpl) Get(ctx context.Context, exptID, exptRunID int64) (*ent
 	return convert.NewExptRunLogConvertor().PO2DO(po)
 }
 
+func (e *ExptRunLogImpl) ListActive(ctx context.Context, cursor, limit int64) ([]*entity.ExptRunLog, error) {
+	pos, err := e.exptRunLogDAO.ListActive(ctx, cursor, limit)
+	if err != nil {
+		return nil, err
+	}
+	convertor := convert.NewExptRunLogConvertor()
+	out := make([]*entity.ExptRunLog, 0, len(pos))
+	for _, po := range pos {
+		do, cerr := convertor.PO2DO(po)
+		if cerr != nil {
+			return nil, cerr
+		}
+		out = append(out, do)
+	}
+	return out, nil
+}
+
 func (e *ExptRunLogImpl) Create(ctx context.Context, exptRunLog *entity.ExptRunLog) error {
 	po, err := convert.NewExptRunLogConvertor().DO2PO(exptRunLog)
 	if err != nil {

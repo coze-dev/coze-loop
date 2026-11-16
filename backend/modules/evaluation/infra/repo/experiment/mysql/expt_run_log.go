@@ -20,6 +20,9 @@ type IExptRunLogDAO interface {
 	Save(ctx context.Context, exptRunLog *model.ExptRunLog, opts ...db.Option) error
 	Update(ctx context.Context, exptID, exptRunID int64, ufields map[string]any, opts ...db.Option) error
 	Get(ctx context.Context, exptID, exptRunID int64, opts ...db.Option) (*model.ExptRunLog, error)
+	// ListActive returns Pending/Processing runs ordered by id ascending. It is a
+	// read-only scan used by the central scheduler; no schema change is involved.
+	ListActive(ctx context.Context, cursor, limit int64, opts ...db.Option) ([]*model.ExptRunLog, error)
 }
 
 type ExptRunLogDAOImpl struct {
@@ -39,6 +42,26 @@ func (dao *ExptRunLogDAOImpl) Get(ctx context.Context, exptID, exptRunID int64, 
 		return nil, errorx.Wrapf(err, "mget expt fail, expt_id: %v, expt_run_id: %v", exptID, exptRunID)
 	}
 	return &exptRunLog, nil
+}
+
+func (dao *ExptRunLogDAOImpl) ListActive(ctx context.Context, cursor, limit int64, opts ...db.Option) ([]*model.ExptRunLog, error) {
+	if limit <= 0 || limit > 1000 {
+		limit = 200
+	}
+	session := dao.provider.NewSession(ctx, opts...)
+	q := query.Use(session).ExptRunLog
+	runs, err := q.WithContext(ctx).
+		Where(q.ID.Gt(cursor)).
+		// entity.ExptStatus_Pending(2) / Processing(3); kept as literals to avoid
+		// pulling a domain import into the generated-query layer.
+		Where(q.Status.In(int64(2), int64(3))).
+		Order(q.ID).
+		Limit(int(limit)).
+		Find()
+	if err != nil {
+		return nil, errorx.Wrapf(err, "list active expt run logs fail, cursor: %v", cursor)
+	}
+	return runs, nil
 }
 
 func (dao *ExptRunLogDAOImpl) Create(ctx context.Context, exptRunLog *model.ExptRunLog, opts ...db.Option) error {
