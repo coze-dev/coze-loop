@@ -87,6 +87,43 @@ func TestScopeOwnershipHasNoWildcard(t *testing.T) {
 	}
 }
 
+func TestDispatchClaimFencesTwoInstances(t *testing.T) {
+	clock := newFakeClock()
+	store := NewMemoryStore(clock)
+	scope := testScope().WithSpace(10)
+	capacity := fullCapacity(1)
+	if err := store.EnsureLedger(nil, scope, capacity); err != nil {
+		t.Fatal(err)
+	}
+	run := testRun(10, 20, 30, 0, clock.Now())
+	run.Scope = scope
+	run.Budget = 1
+	mk := func() *Admission {
+		return &Admission{
+			Store: store, Clock: clock,
+			Limits:    Limits{Capacity: capacity, ReservationTTL: time.Minute},
+			ModeFn:    func(Ctx, RunKey) Mode { return ModeEnforce },
+			ScopeFn:   func(_ Ctx, id int64) Scope { return scope.WithSpace(id) },
+			AllowedFn: func(Ctx, RunKey) bool { return true },
+		}
+	}
+	first, err := mk().Acquire(nil, run, []int64{7})
+	if err != nil || len(first) != 1 {
+		t.Fatalf("first instance grant=%v err=%v", first, err)
+	}
+	second, err := mk().Acquire(nil, run, []int64{7})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(second) != 0 {
+		t.Fatalf("second instance must not publish a claimed item, got %v", second)
+	}
+	rec, found, _ := store.GetReservation(nil, scope, ReservationID(scope, run.Key, 7))
+	if !found || rec.State != ReservationDispatched {
+		t.Fatalf("fenced reservation state=%+v found=%v", rec, found)
+	}
+}
+
 func TestAdmissionFailsClosedWhenCapacityDisabled(t *testing.T) {
 	clock := newFakeClock()
 	store := NewMemoryStore(clock)

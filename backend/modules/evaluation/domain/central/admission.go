@@ -157,9 +157,18 @@ func (a *Admission) Acquire(ctx Ctx, run ActiveRun, itemIDs []int64) ([]int64, e
 		return nil, err
 	}
 
+	now := a.clock().Now()
 	granted := make([]int64, 0, len(itemIDs))
 	seen := make(map[int64]struct{}, len(itemIDs))
 	var newHolds int64
+	claim := func(itemID int64) (bool, error) {
+		id := ReservationID(scope, run.Key, itemID)
+		ok, state, err := a.Store.Transition(ctx, scope, id, ReservationReserved, ReservationDispatched, "dispatch_claim", now)
+		if err != nil {
+			return false, err
+		}
+		return ok && state == ReservationDispatched, nil
+	}
 	for _, itemID := range itemIDs {
 		if itemID <= 0 {
 			continue
@@ -177,17 +186,37 @@ func (a *Admission) Acquire(ctx Ctx, run ActiveRun, itemIDs []int64) ([]int64, e
 		}
 		switch result {
 		case ReserveGranted:
+			ok, cerr := claim(itemID)
+			if cerr != nil {
+				_, _, _ = a.Store.Transition(ctx, scope, ReservationID(scope, run.Key, itemID), "", ReservationPendingRelease, "claim_error", time.Time{})
+				_, _ = a.Store.Release(ctx, scope, ReservationID(scope, run.Key, itemID), "claim_error")
+				return granted, cerr
+			}
+			if !ok {
+				// Another dispatcher claimed this item between reserve and claim.
+				_, _, _ = a.Store.Transition(ctx, scope, ReservationID(scope, run.Key, itemID), "", ReservationPendingRelease, "claim_lost", time.Time{})
+				_, _ = a.Store.Release(ctx, scope, ReservationID(scope, run.Key, itemID), "claim_lost")
+				continue
+			}
 			newHolds++
 			granted = append(granted, itemID)
 		case ReserveExisting:
-			// A dispatched/running hold is already in flight; publish again would
-			// duplicate work. Only a still-reserved hold may be retried.
+			// The reservation state is the dispatch fence: only the instance that
+			// atomically moves reserved -> dispatched may publish. A second instance
+			// sees dispatched/running and must not publish again.
 			id := ReservationID(scope, run.Key, itemID)
 			res, ok, gerr := a.Store.GetReservation(ctx, scope, id)
 			if gerr != nil {
 				return granted, gerr
 			}
-			if ok && res.State == ReservationReserved {
+			if !ok || res.State != ReservationReserved {
+				continue
+			}
+			claimed, cerr := claim(itemID)
+			if cerr != nil {
+				return granted, cerr
+			}
+			if claimed {
 				granted = append(granted, itemID)
 			}
 		case ReserveDenied:
@@ -257,7 +286,8 @@ func (a *Admission) ConfirmDispatch(ctx Ctx, run ActiveRun, itemIDs []int64) int
 			continue
 		}
 		id := ReservationID(run.Scope, run.Key, itemID)
-		if ok, _, err := a.Store.Transition(ctx, run.Scope, id, ReservationReserved, ReservationDispatched, "dispatch_confirmed", now); err == nil && ok {
+		ok, state, err := a.Store.Transition(ctx, run.Scope, id, ReservationReserved, ReservationDispatched, "dispatch_confirmed", now)
+		if err == nil && (ok || state == ReservationDispatched) {
 			n++
 		}
 	}

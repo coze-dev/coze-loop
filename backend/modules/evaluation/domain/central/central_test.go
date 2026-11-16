@@ -270,14 +270,14 @@ func TestAdmissionEnforceRespectsBudgetAndCapacity(t *testing.T) {
 	if len(granted) != 2 {
 		t.Fatalf("budget=2 should grant 2 items, got %v", granted)
 	}
-	// A second acquire in the same tick with the same items must only return the
-	// existing holds (idempotent) and create no duplicates.
+	// A second acquire must not re-publish already claimed items: the reservation
+	// state is the dispatch fence, so only reserved items can be claimed again.
 	again, err := adm.Acquire(nil, run, []int64{1, 2})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(again) != 2 {
-		t.Fatalf("existing holds should be re-granted, got %v", again)
+	if len(again) != 0 {
+		t.Fatalf("claimed items must not be re-granted, got %v", again)
 	}
 	reservations, _ := store.ListReservations(nil, scope)
 	if len(reservations) != 2 {

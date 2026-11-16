@@ -140,7 +140,7 @@ func TestCentralGateDispatchAckStateMachine(t *testing.T) {
 	scope := central.Scope{Env: "ppe_gate_test", Region: "cn", SpaceID: 11}
 	id := central.ReservationID(scope, central.RunKey{SpaceID: 11, ExptID: event.ExptID, ExptRunID: event.ExptRunID}, 101)
 	rec, found, err := store.GetReservation(ctx, scope, id)
-	if err != nil || !found || rec.State != central.ReservationReserved {
+	if err != nil || !found || rec.State != central.ReservationDispatched {
 		t.Fatalf("after acquire state=%v found=%v err=%v", rec, found, err)
 	}
 	gate.ConfirmDispatch(ctx, event, granted)
