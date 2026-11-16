@@ -163,11 +163,11 @@ func (a *Admission) Acquire(ctx Ctx, run ActiveRun, itemIDs []int64) ([]int64, e
 	var newHolds int64
 	claim := func(itemID int64) (bool, error) {
 		id := ReservationID(scope, run.Key, itemID)
-		ok, state, err := a.Store.Transition(ctx, scope, id, ReservationReserved, ReservationDispatched, "dispatch_claim", now)
+		claimed, state, err := a.Store.Claim(ctx, scope, id, "dispatch_claim", now)
 		if err != nil {
 			return false, err
 		}
-		return ok && state == ReservationDispatched, nil
+		return claimed && state == ReservationDispatched, nil
 	}
 	for _, itemID := range itemIDs {
 		if itemID <= 0 {

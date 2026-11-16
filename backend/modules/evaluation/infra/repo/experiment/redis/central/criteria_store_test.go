@@ -5,6 +5,8 @@ package central
 
 import (
 	"context"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -52,6 +54,46 @@ func TestRedisStateTransitionsAndReleaseAreIdempotent(t *testing.T) {
 	ledger, _ := store.Ledger(ctx, scope)
 	if ledger.Available[domain.ResourceItemSlot] != 2 {
 		t.Fatalf("available=%d want 2", ledger.Available[domain.ResourceItemSlot])
+	}
+}
+
+func TestRedisDispatchClaimHasSingleWinner(t *testing.T) {
+	store, _ := newTestStore(t)
+	ctx := context.Background()
+	scope := testScope()
+	capacity := map[domain.ResourceKind]int64{
+		domain.ResourceItemSlot: 2, domain.ResourceTargetSlot: 2, domain.ResourceSandboxSlot: 2,
+	}
+	if err := store.EnsureLedger(ctx, scope, capacity); err != nil {
+		t.Fatal(err)
+	}
+	key := testKey()
+	if res, err := store.TryReserve(ctx, scope, key, 7, holds(), time.Minute); err != nil || res != domain.ReserveGranted {
+		t.Fatalf("reserve=%v err=%v", res, err)
+	}
+	id := domain.ReservationID(scope, key, 7)
+	var winners atomic.Int32
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			ok, state, err := store.Claim(ctx, scope, id, "dispatch_claim", time.Time{})
+			if err == nil && ok && state == domain.ReservationDispatched {
+				winners.Add(1)
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+	if got := winners.Load(); got != 1 {
+		t.Fatalf("claim winners=%d want exactly 1", got)
+	}
+	rec, found, err := store.GetReservation(ctx, scope, id)
+	if err != nil || !found || rec.State != domain.ReservationDispatched {
+		t.Fatalf("state=%+v found=%v err=%v", rec, found, err)
 	}
 }
 

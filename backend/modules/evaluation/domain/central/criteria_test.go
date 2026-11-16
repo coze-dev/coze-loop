@@ -5,6 +5,8 @@ package central
 
 import (
 	"errors"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -121,6 +123,41 @@ func TestDispatchClaimFencesTwoInstances(t *testing.T) {
 	rec, found, _ := store.GetReservation(nil, scope, ReservationID(scope, run.Key, 7))
 	if !found || rec.State != ReservationDispatched {
 		t.Fatalf("fenced reservation state=%+v found=%v", rec, found)
+	}
+}
+
+func TestMemoryDispatchClaimHasSingleWinner(t *testing.T) {
+	clock := newFakeClock()
+	store := NewMemoryStore(clock)
+	scope := testScope().WithSpace(10)
+	capacity := fullCapacity(2)
+	if err := store.EnsureLedger(nil, scope, capacity); err != nil {
+		t.Fatal(err)
+	}
+	run := testRun(10, 20, 30, 0, clock.Now())
+	run.Scope = scope
+	if res, err := store.TryReserve(nil, scope, run.Key, 7, map[ResourceKind]int64{ResourceItemSlot: 1}, time.Minute); err != nil || res != ReserveGranted {
+		t.Fatalf("reserve=%v err=%v", res, err)
+	}
+	id := ReservationID(scope, run.Key, 7)
+	var winners int32
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			ok, state, err := store.Claim(nil, scope, id, "dispatch_claim", time.Time{})
+			if err == nil && ok && state == ReservationDispatched {
+				atomic.AddInt32(&winners, 1)
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+	if winners != 1 {
+		t.Fatalf("claim winners=%d want exactly 1", winners)
 	}
 }
 

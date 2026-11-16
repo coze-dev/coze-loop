@@ -498,6 +498,11 @@ type Store interface {
 	ListReservations(ctx Ctx, scope Scope) ([]Reservation, error)
 	Release(ctx Ctx, scope Scope, id string, reason string) (bool, error)
 	Transition(ctx Ctx, scope Scope, id string, from, to ReservationState, reason string, dispatchedAt time.Time) (bool, ReservationState, error)
+	// Claim atomically moves reserved -> dispatched and reports true only to the
+	// single caller that performed the transition. Repeated/already-dispatched
+	// calls return false with the current state; Transition's idempotent repeat
+	// semantics must not be used as a dispatch fence.
+	Claim(ctx Ctx, scope Scope, id string, reason string, dispatchedAt time.Time) (bool, ReservationState, error)
 	RenewReservations(ctx Ctx, scope Scope, key RunKey, ttl time.Duration) (int, error)
 
 	// IncrementalReconcile adjusts available counters by the delta between the

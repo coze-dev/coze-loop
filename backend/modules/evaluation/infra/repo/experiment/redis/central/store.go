@@ -372,6 +372,29 @@ func (s *Store) Transition(c domain.Ctx, scope domain.Scope, id string, from, to
 	return res == 1, rec.State, nil
 }
 
+func (s *Store) Claim(c domain.Ctx, scope domain.Scope, id string, reason string, dispatchedAt time.Time) (bool, domain.ReservationState, error) {
+	if err := scope.Validate(); err != nil {
+		return false, "", err
+	}
+	rkey := resKey(scope.Namespace(), id)
+	disp := int64(0)
+	if !dispatchedAt.IsZero() {
+		disp = dispatchedAt.Unix()
+	}
+	res, err := s.cmd.Eval(ctxOf(c), claimScript, []string{rkey}, id, reason, s.now().Unix(), disp).Int64()
+	if err != nil {
+		return false, "", fmt.Errorf("central redis: claim: %w", err)
+	}
+	rec, ok, rerr := s.readReservation(c, rkey)
+	if rerr != nil {
+		return false, "", rerr
+	}
+	if !ok {
+		return false, "", nil
+	}
+	return res == 1, rec.State, nil
+}
+
 func (s *Store) RenewReservations(c domain.Ctx, scope domain.Scope, key domain.RunKey, ttl time.Duration) (int, error) {
 	if err := scope.Validate(); err != nil {
 		return 0, err
@@ -695,6 +718,16 @@ redis.call('HSET', res, 'state', 'released', 'state_at', now, 'reason', ARGV[4])
 redis.call('EXPIRE', res, tonumber(ARGV[6]))
 redis.call('ZREM', idx, id)
 redis.call('ZADD', keysidx, now, res)
+return 1
+`
+
+const claimScript = `
+local res=KEYS[1]; local id=ARGV[1]; local reason=ARGV[2]; local now=ARGV[3]; local disp=ARGV[4]
+if redis.call('EXISTS', res)==0 then return 0 end
+local cur=redis.call('HGET', res,'state') or 'reserved'
+if cur ~= 'reserved' then return 0 end
+redis.call('HSET', res, 'state', 'dispatched', 'state_at', tonumber(now), 'reason', reason)
+if disp ~= '0' then redis.call('HSET', res, 'dispatch_at', tonumber(disp)) end
 return 1
 `
 

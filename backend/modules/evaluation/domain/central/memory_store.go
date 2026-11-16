@@ -349,6 +349,29 @@ func (m *MemoryStore) Transition(_ Ctx, scope Scope, id string, from, to Reserva
 	return true, r.State, nil
 }
 
+func (m *MemoryStore) Claim(_ Ctx, scope Scope, id string, reason string, dispatchedAt time.Time) (bool, ReservationState, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	r, ok := m.res[resStoreKey(scope, id)]
+	if !ok {
+		return false, "", nil
+	}
+	if err := ValidateOwnership(scope, r); err != nil {
+		return false, r.State, err
+	}
+	if r.State != ReservationReserved {
+		return false, r.State, nil
+	}
+	r.State = ReservationDispatched
+	r.StateAt = m.now()
+	r.Reason = reason
+	if !dispatchedAt.IsZero() {
+		r.DispatchedAt = dispatchedAt
+	}
+	m.res[resStoreKey(scope, id)] = r
+	return true, r.State, nil
+}
+
 func (m *MemoryStore) RenewReservations(_ Ctx, scope Scope, key RunKey, ttl time.Duration) (int, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
