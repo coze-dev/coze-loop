@@ -143,3 +143,38 @@ func TestCheckSandboxTerminated_SingleSandboxNoExt_KeepsBareRecordID(t *testing.
 	assert.Equal(t, []int64{7590116637119703042}, got)
 	assert.Equal(t, "Failed (main)", statuses[7590116637119703042])
 }
+
+func TestCheckSandboxTerminated_OrchestratorProcessExited(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	const recordID int64 = 7590116637119703042
+	const orchID = "7590116637119703042-orch"
+	mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+	mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+	svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+	record := &entity.EvalTargetRecord{
+		ID: recordID, TargetVersionID: 20, SpaceID: 1,
+		Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+		EvalTargetOutputData: &entity.EvalTargetOutputData{Ext: map[string]string{
+			consts.OutputDataExtKeySandboxExecuteIDs:           `["7590116637119703042-agent","` + orchID + `"]`,
+			consts.OutputDataExtKeySandboxOrchestratorWatchdog: "v1",
+		}},
+	}
+	mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), gomock.Any()).Return([]*entity.EvalTargetRecord{record}, nil)
+	mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).Return([]*entity.EvalTarget{{
+		EvalTargetType:    entity.EvalTargetTypeSandboxAgent,
+		EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+	}}, nil)
+	mockSched.EXPECT().Get(gomock.Any(), gomock.Any()).Times(2).Return(&rpc.SandboxGetResponse{
+		ExecuteInfo: &rpc.SandboxExecuteInfo{Status: rpc.SandboxExecuteStatusRunning},
+	}, nil)
+	mockSched.EXPECT().RunCommand(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, req *rpc.SandboxRunCommandRequest) (*rpc.SandboxRunCommandResponse, error) {
+			assert.Equal(t, orchID, req.ExecuteID)
+			assert.Equal(t, int64(1), req.WorkspaceID)
+			return &rpc.SandboxRunCommandResponse{Stdout: "exited", ExitCode: 0}, nil
+		})
+	got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{recordID})
+	assert.Equal(t, []int64{recordID}, got)
+	assert.Equal(t, "Exited (orchestrator process)", statuses[recordID])
+}

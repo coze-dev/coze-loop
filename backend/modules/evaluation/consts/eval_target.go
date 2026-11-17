@@ -23,5 +23,6 @@ const (
 	OutputDataExtKeySandboxExecuteIDs = "sandbox_execute_ids"
 
 	// OutputDataExtKeySandboxWorkspaceID 保存执行时的调度空间，与对象来源空间独立。
-	OutputDataExtKeySandboxWorkspaceID = "sandbox_workspace_id"
+	OutputDataExtKeySandboxWorkspaceID          = "sandbox_workspace_id"
+	OutputDataExtKeySandboxOrchestratorWatchdog = "sandbox_orchestrator_watchdog"
 )

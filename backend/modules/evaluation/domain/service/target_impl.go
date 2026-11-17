@@ -1336,6 +1336,17 @@ func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spac
 					labelParts = append(labelParts, sandboxStatusText(status)+" ("+sideForExecuteID(eid, r.ID)+")")
 				}
 			}
+			if !anyTerminal && r.EvalTargetOutputData != nil &&
+				r.EvalTargetOutputData.Ext[consts.OutputDataExtKeySandboxOrchestratorWatchdog] == "v1" {
+				for _, eid := range executeIDs {
+					if sideForExecuteID(eid, r.ID) == "orchestrator" &&
+						e.querySandboxOrchestratorExited(ctx, eid, sandboxWorkspaceIDOf(r), r.ID) {
+						anyTerminal = true
+						labelParts = append(labelParts, "Exited (orchestrator process)")
+						break
+					}
+				}
+			}
 			if !anyTerminal {
 				return
 			}
@@ -1351,6 +1362,26 @@ func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spac
 		return nil, nil
 	}
 	return terminated, statusMap
+}
+
+const sandboxOrchestratorProbe = `if [ ! -s /fornax/eval-orchestrator.pid ]; then exit 0; fi
+pid=$(cat /fornax/eval-orchestrator.pid)
+if kill -0 "$pid" 2>/dev/null; then exit 0; fi
+marker=/fornax/eval-orchestrator.pid
+if [ -f /fornax/eval-orchestrator.exit ]; then marker=/fornax/eval-orchestrator.exit; fi
+now=$(date +%s)
+ended=$(stat -c %Y "$marker") || exit 0
+if [ $((now-ended)) -ge 120 ]; then printf exited; fi`
+
+func (e *EvalTargetServiceImpl) querySandboxOrchestratorExited(ctx context.Context, executeID string, spaceID, recordID int64) bool {
+	resp, err := e.sandboxSchedulerAdapter.RunCommand(ctx, &rpc.SandboxRunCommandRequest{
+		ExecuteID: executeID, WorkspaceID: spaceID, Command: sandboxOrchestratorProbe, TimeoutMS: 5000,
+	})
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxStatusCheck] orchestrator probe fail, record_id=%d, execute_id=%s, err=%v", recordID, executeID, err)
+		return false
+	}
+	return resp != nil && resp.ExitCode == 0 && strings.TrimSpace(resp.Stdout) == "exited"
 }
 
 // querySandboxTerminalStatus 查询单个 sandbox execute 状态；返回 (是否终态, 状态)。
